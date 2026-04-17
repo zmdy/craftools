@@ -1,5 +1,6 @@
 import { Craftools_Setup } from "./components/Setup.js";
 import { Craftools_Editor } from "./components/Editor.js";
+import { Craftools_Element } from "./components/Element.js";
 import { Craftools_Settings } from "./settings/Settings.js";
 import { I18n } from "./settings/Translations.js";
 
@@ -14,7 +15,7 @@ export class Craftools{
         window.craftoolsApp = this;
         
         // Defines the components of the application
-        this.components = [Craftools_Setup, Craftools_Editor];
+        this.components = [Craftools_Setup, Craftools_Editor, Craftools_Element];
         this.screen = Craftools_Setup; // setup, module_MODULENAME
         
         this.initComponents();

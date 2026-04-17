@@ -1,5 +1,7 @@
 import { Craftools_Settings } from "../settings/Settings.js";
 import { PageTool } from "../tools/PageTool.js";
+import { TextTool } from "../tools/TextTool.js";
+import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 
 export class Craftools_Editor extends HTMLElement {
@@ -64,12 +66,17 @@ export class Craftools_Editor extends HTMLElement {
 
                     <span class="craftools-sec-label">${I18n.t('editor.tools')}</span>
                     
-                    <button class="craftools-tool-btn" data-tool="texto" title="${I18n.t('editor.text')}">
+                    <button class="craftools-tool-btn" data-tool="titulo" draggable="true" title="Título">
                         <span class="material-symbols-outlined">title</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.text')}</span>
+                        <span class="craftools-tool-label">Título</span>
                     </button>
                     
-                    <button class="craftools-tool-btn" data-tool="imagem" title="${I18n.t('editor.image')}">
+                    <button class="craftools-tool-btn" data-tool="paragrafo" draggable="true" title="Parágrafo">
+                        <span class="material-symbols-outlined">notes</span>
+                        <span class="craftools-tool-label">Parágrafo</span>
+                    </button>
+                    
+                    <button class="craftools-tool-btn" data-tool="imagem" draggable="true" title="${I18n.t('editor.image')}">
                         <span class="material-symbols-outlined">image</span>
                         <span class="craftools-tool-label">${I18n.t('editor.image')}</span>
                     </button>
@@ -90,7 +97,6 @@ export class Craftools_Editor extends HTMLElement {
                         <section class="craftools-page" style="width: ${dimWidth}; min-height: ${dimHeight}; background: white;" id="main-page">
                              <!-- Página Vazia -->
                              <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">
-                                ${I18n.t('editor.canvasPlaceholder')}
                              </div>
                         </section>
                     </div>
@@ -111,10 +117,37 @@ export class Craftools_Editor extends HTMLElement {
         </div>
         `;
 
+        this.ctxBar = new CtxBar(this.querySelector('.craftools-app'));
         this.bindEvents();
     }
 
     bindEvents() {
+        // Element selection integration
+        this.addEventListener('craftools-element-select', (e) => {
+            const el = e.detail.element;
+            const toolType = el.getAttribute('data-craftool');
+            
+            if (toolType === 'titulo' || toolType === 'paragrafo') {
+                this.ctxBar.show(el, TextTool.getCtxOptions(el));
+                
+                // Open panel with properties for the selected element
+                const rightPanel = this.querySelector('#right-panel');
+                const panelTitle = this.querySelector('#panel-title');
+                const panelBody = this.querySelector('#panel-body');
+                
+                panelTitle.textContent = toolType === 'titulo' ? 'Propriedades do Título' : 'Propriedades do Parágrafo';
+                TextTool.renderPropertiesPanel(panelBody, el);
+                rightPanel.classList.remove('hidden');
+                this.activePage = null;
+            } else {
+                this.ctxBar.show(el, []);
+            }
+        });
+
+        this.addEventListener('craftools-element-deselect', (e) => {
+            this.ctxBar.hide();
+        });
+
         // Language Select
         this.querySelector('#lang-select').addEventListener('change', (e) => {
             I18n.lang = e.target.value;
@@ -136,18 +169,29 @@ export class Craftools_Editor extends HTMLElement {
         const closePanel = this.querySelector('#close-panel');
         const panelBody = this.querySelector('#panel-body');
 
-        const emptyPanelHtml = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">Opções para esta ferramenta em breve...</p></div>`;
-
+        // Setup Drag & Drop starting from sidebar buttons
         toolBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                panelTitle.textContent = btn.title;
-                panelBody.innerHTML = emptyPanelHtml;
-                rightPanel.classList.remove('hidden');
-                this.activePage = null;
-            });
+            if(btn.getAttribute('draggable') === 'true') {
+                btn.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('ToolType', btn.dataset.tool);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+            }
+        });
+
+        // Some buttons like "gerador" still trigger click actions
+        toolBtns.forEach(btn => {
+            if(btn.dataset.tool === 'gerador' || btn.dataset.tool === 'album' || btn.dataset.tool === 'papeis') {
+                btn.addEventListener('click', () => {
+                    this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    panelTitle.textContent = btn.title;
+                    panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
+                    rightPanel.classList.remove('hidden');
+                    this.activePage = null;
+                });
+            }
         });
 
         closePanel.addEventListener('click', () => {
@@ -170,6 +214,7 @@ export class Craftools_Editor extends HTMLElement {
 
         // Zoom Logic
         let zoomLevel = 1.0;
+        window.craftoolsZoomLevel = 1.0;
         const zoomLevelLabel = this.querySelector('#zoom-level');
         const pagesWrapper = this.querySelector('#pages-wrapper');
         
@@ -177,6 +222,7 @@ export class Craftools_Editor extends HTMLElement {
             if (pagesWrapper) {
                 pagesWrapper.style.transform = `scale(${zoomLevel})`;
                 zoomLevelLabel.textContent = Math.round(zoomLevel * 100) + '%';
+                window.craftoolsZoomLevel = zoomLevel;
             }
         };
 
