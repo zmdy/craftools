@@ -14,7 +14,6 @@ export const Translations = {
             image: "Imagem",
             album: "Álbum",
             papers: "Papéis",
-            canvasPlaceholder: "O seu canvas estará aqui",
             panelTitle: "Ferramenta",
             emptyPanel: "Opções para esta ferramenta em breve...",
             zoomOut: "Menos Zoom",
@@ -45,6 +44,16 @@ export const Translations = {
             screenDesc: "Quero editar fotos",
             socialMedia: "Redes Sociais",
             socialMediaDesc: "Quero criar artes para redes sociais"
+        },
+        textTool: {
+            addTitle: "Adicionar Título",
+            addSubtitle: "Adicionar Subtítulo",
+            addText: "Adicionar Texto",
+            font: "Fonte",
+            color: "Cor",
+            chooseColor: "Escolha a cor",
+            size: "Tamanho",
+            align: "Alinhamento"
         }
     },
     "en": {
@@ -62,7 +71,6 @@ export const Translations = {
             image: "Image",
             album: "Album",
             papers: "Papers",
-            canvasPlaceholder: "Your canvas will be here",
             panelTitle: "Tool",
             emptyPanel: "Options for this tool coming soon...",
             zoomOut: "Zoom Out",
@@ -93,6 +101,16 @@ export const Translations = {
             screenDesc: "I want to edit photos",
             socialMedia: "Social Media",
             socialMediaDesc: "I want to create social media arts"
+        },
+        textTool: {
+            addTitle: "Add Title",
+            addSubtitle: "Add Subtitle",
+            addText: "Add Text",
+            font: "Font",
+            color: "Color",
+            chooseColor: "Choose color",
+            size: "Size",
+            align: "Alignment"
         }
     }
 };

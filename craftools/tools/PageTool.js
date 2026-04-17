@@ -2,7 +2,57 @@ import { I18n } from "../settings/Translations.js";
 
 export class PageTool {
     static attachPageEvents(editor, pageEl) {
+        pageEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            pageEl.classList.add('drag-over');
+            // Optional: apply some visual feedback on the page if we want
+            // For now, we just allow the drop.
+        });
+
+        pageEl.addEventListener('dragleave', (e) => {
+            pageEl.classList.remove('drag-over');
+        });
+
+        pageEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            pageEl.classList.remove('drag-over');
+
+            const toolType = e.dataTransfer.getData('ToolType');
+            if (toolType === 'titulo' || toolType === 'paragrafo') {
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                // Calculate drop coordinates mapping viewport to page scope
+                let dropX = (e.clientX - rect.left) / scale;
+                let dropY = (e.clientY - rect.top) / scale;
+
+                // Dynamically import TextTool to avoid circular dependency
+                const { TextTool } = await import('./TextTool.js');
+                const el = TextTool.createElement(toolType, editor);
+                
+                // Keep inside bounds
+                dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
+                dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
+
+                el.setAttribute('x', dropX);
+                el.setAttribute('y', dropY);
+
+                if (!el.parentNode) {
+                    pageEl.appendChild(el);
+                } else if (el.parentNode !== pageEl) {
+                    el.parentNode.removeChild(el);
+                    pageEl.appendChild(el);
+                }
+
+                // Remove placeholder text
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
+            }
+        });
+
         pageEl.addEventListener('click', (e) => {
+            // Prevent deselecting element if clicking on an element handle
+            if (e.target.closest('craftools-element')) return;
+
             if (e.target === pageEl || e.target.closest('div[style*="canvas"]')) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                 
