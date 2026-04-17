@@ -1,0 +1,57 @@
+import { Craftools_Setup } from "./components/Setup.js";
+import {Craftools_Settings} from "./settings/Settings.js";
+
+export class Craftools{
+    // Constructor
+    constructor(wrapper){
+        // Case the wrapper is a valid HTML element
+        if( !this.setWrapper(wrapper) )
+            return false;
+        
+        // Defines the components of the application
+        this.components = [Craftools_Setup];
+        this.screen = Craftools_Setup; // setup, module_MODULENAME
+        this.initComponents();
+        this.renderComponent();
+    }
+
+    // Sets the wrapper and checks if it's valid
+    setWrapper(wrapper){
+        try {
+            wrapper = wrapper instanceof HTMLElement ? wrapper : document.querySelector(wrapper);
+            if(wrapper) this.wrapper = wrapper;
+            return this.wrapper;
+        } catch (error) {
+            this.wrapper = false;
+            console.error(`The term "${wrapper}" is not a valid HTML Element or selector.`)
+            console.error(error);
+        }
+    }
+
+    // Sets the wrapper content - or clears it
+    setWrapperContent(content){
+        this.wrapper.innerHTML = ""; 
+
+        if (content instanceof HTMLElement) {
+            this.wrapper.appendChild(content);
+        } else {
+            this.wrapper.innerHTML = content;
+        }
+    }
+
+    // Initializes the components
+    initComponents(){
+        this.components.forEach(component => {
+            component.init();
+        });
+    }
+
+    // Run the this.action component
+    renderComponent(){
+        console.log(this.screen.name)
+        let component_name = this.screen.name.toLowerCase().replace('_', '-');
+        let component = document.createElement(component_name);
+
+        this.setWrapperContent(component);
+    }
+}
