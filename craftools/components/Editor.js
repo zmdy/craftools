@@ -1,4 +1,5 @@
 import { Craftools_Settings } from "../settings/Settings.js";
+import { PageTool } from "../tools/PageTool.js";
 
 export class Craftools_Editor extends HTMLElement {
     constructor() { super(); }
@@ -40,6 +41,18 @@ export class Craftools_Editor extends HTMLElement {
             </header>
             <div class="craftools-body">
                 <aside class="craftools-sidebar">
+                    <span class="craftools-sec-label">Página</span>
+                    
+                    <button class="craftools-tool-btn" id="new-page-btn" title="Nova Página">
+                        <span class="material-symbols-outlined">post_add</span>
+                        <span class="craftools-tool-label">Nova Pág</span>
+                    </button>
+                    
+                    <button class="craftools-tool-btn" data-tool="gerador" title="Gerador">
+                        <span class="material-symbols-outlined">auto_awesome_mosaic</span>
+                        <span class="craftools-tool-label">Gerador</span>
+                    </button>
+
                     <span class="craftools-sec-label">Ferramentas</span>
                     
                     <button class="craftools-tool-btn" data-tool="texto" title="Texto">
@@ -81,8 +94,8 @@ export class Craftools_Editor extends HTMLElement {
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
-                    <div class="craftools-panel-body" style="padding: 14px;">
-                        <p style="font-size: 12px; color: var(--text-secondary)">Opções em breve...</p>
+                    <div class="craftools-panel-body" id="panel-body" style="padding: 0;">
+                        <!-- Conteúdo dinâmico -->
                     </div>
                 </aside>
             </div>
@@ -98,39 +111,46 @@ export class Craftools_Editor extends HTMLElement {
         });
 
         // Sidebar Tools -> Open Right panel
-        const toolBtns = this.querySelectorAll('.craftools-tool-btn');
+        const toolBtns = this.querySelectorAll('.craftools-tool-btn[data-tool]');
         const rightPanel = this.querySelector('#right-panel');
         const panelTitle = this.querySelector('#panel-title');
         const closePanel = this.querySelector('#close-panel');
+        const panelBody = this.querySelector('#panel-body');
+
+        const emptyPanelHtml = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">Opções para esta ferramenta em breve...</p></div>`;
 
         toolBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                toolBtns.forEach(b => b.classList.remove('active'));
+                this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
                 panelTitle.textContent = btn.title;
+                panelBody.innerHTML = emptyPanelHtml;
                 rightPanel.classList.remove('hidden');
+                activePage = null;
             });
         });
 
         closePanel.addEventListener('click', () => {
             rightPanel.classList.add('hidden');
-            toolBtns.forEach(b => b.classList.remove('active'));
+            this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
+            this.activePage = null;
         });
 
-        // Page Click Event
-        const mainPage = this.querySelector('#main-page');
-        mainPage.addEventListener('click', (e) => {
-            if (e.target === mainPage || e.target.closest('div[style*="canvas"]')) {
-                toolBtns.forEach(b => b.classList.remove('active'));
-                panelTitle.textContent = 'Página';
-                rightPanel.classList.remove('hidden');
-            }
+        // Nova Página Logic importada da Classe PageTool
+        const newPageBtn = this.querySelector('#new-page-btn');
+        this.activePage = null;
+
+        newPageBtn.addEventListener('click', () => {
+            PageTool.addNewPage(this);
         });
+
+        // Initialize first page event
+        const mainPage = this.querySelector('#main-page');
+        PageTool.attachPageEvents(this, mainPage);
 
         // Zoom Logic
         let zoomLevel = 1.0;
-        const pagesWrapper = this.querySelector('#pages-wrapper');
         const zoomLevelLabel = this.querySelector('#zoom-level');
         
         const updateZoom = () => {
