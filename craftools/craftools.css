@@ -1,0 +1,334 @@
+/* imgme.css - v0.1 - Complete with Mobile Improvements */
+*, *::before, *::after { box-sizing: border-box; }
+[contenteditable]:focus { outline: none; }
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+:root {
+    --bg-app:      #f4f4f5;
+    --bg-shell:    #ffffff;
+    --bg-sidebar:  #fafafa;
+    --bg-panel:    #ffffff;
+    --bg-input:    #f4f4f5;
+    --bg-hover:    #f0f9ff;
+    --bg-active:   #f97316;
+    --border:      #e4e4e7;
+    --border-focus:#f97316;
+    --text-primary:#18181b;
+    --text-secondary:#71717a;
+    --text-muted:  #a1a1aa;
+    --text-active: #ffffff;
+    --accent:      #f97316;
+    --accent-hover:#ea6c0a;
+    --accent-subtle:#fff7ed;
+    --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-lg:   0 4px 24px rgba(0,0,0,.12);
+    --shadow-xl:   0 8px 48px rgba(0,0,0,.16);
+    --canvas-bg:   #e4e4e7;
+    --page-shadow: 0 4px 32px rgba(0,0,0,.14);
+}
+
+[data-theme="dark"] {
+    --bg-app:      #09090b;
+    --bg-shell:    #18181b;
+    --bg-sidebar:  #18181b;
+    --bg-panel:    #18181b;
+    --bg-input:    #27272a;
+    --bg-hover:    #27272a;
+    --bg-active:   #f97316;
+    --border:      #3f3f46;
+    --border-focus:#f97316;
+    --text-primary:#f4f4f5;
+    --text-secondary:#a1a1aa;
+    --text-muted:  #71717a;
+    --text-active: #ffffff;
+    --accent:      #f97316;
+    --accent-hover:#ea6c0a;
+    --accent-subtle:rgba(249,115,22,.12);
+    --shadow:      0 1px 3px rgba(0,0,0,.3);
+    --shadow-lg:   0 4px 24px rgba(0,0,0,.4);
+    --shadow-xl:   0 8px 48px rgba(0,0,0,.5);
+    --canvas-bg:   #27272a;
+    --page-shadow: 0 4px 32px rgba(0,0,0,.5);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+html, body { 
+    height: 100%; 
+    overflow: hidden; 
+    font-family: 'DM Sans', sans-serif; 
+    background: var(--bg-app); 
+}
+
+#myToolbar { height: 100vh; }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes pageIn  { from { opacity:0; transform:scale(.97) translateY(10px); } to { opacity:1; transform:none; } }
+@keyframes elIn    { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:none; } }
+@keyframes panelIn { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
+@keyframes ctxIn   { from { opacity:0; transform:translateY(5px) scale(.96); } to { opacity:1; transform:none; } }
+
+.imgMePage    { animation: pageIn  .25s cubic-bezier(.22,1,.36,1); }
+.imgMeElement { animation: elIn    .15s cubic-bezier(.22,1,.36,1); }
+.ime-panel    { animation: panelIn .18s cubic-bezier(.22,1,.36,1); }
+.ime-ctxbar   { animation: ctxIn   .12s cubic-bezier(.22,1,.36,1); }
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+.ime-app    { display:flex; flex-direction:column; height:100vh; background:var(--bg-app); }
+.ime-topbar { display:flex; align-items:center; justify-content:space-between; height:48px; padding:0 16px; background:var(--bg-shell); border-bottom:1px solid var(--border); flex-shrink:0; gap:8px; }
+.ime-body   { display:flex; flex:1; overflow:hidden; }
+.ime-canvas { flex:1; overflow:auto; background:var(--canvas-bg); background-image: radial-gradient(circle, rgba(0,0,0,.08) 1px, transparent 1px); background-size:20px 20px; }
+.ime-pages  { display:flex; flex-direction:column; align-items:center; gap:40px; padding:40px; min-height:100%; min-width:100%; transition: transform 0.2s ease; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.ime-sidebar { 
+    width:64px; 
+    background:var(--bg-sidebar); 
+    border-right:1px solid var(--border); 
+    display:flex; 
+    flex-direction:column; 
+    align-items:center; 
+    padding:8px 0; 
+    gap:2px; 
+    overflow-y:auto; 
+    flex-shrink:0; 
+}
+
+.ime-sidebar::-webkit-scrollbar { width:0; }
+.ime-sec-label { font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; padding:8px 0 2px; width:100%; text-align:center; }
+.ime-tool-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; width:48px; height:48px; border-radius:10px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background .12s, color .12s; touch-action:none; }
+.ime-tool-btn:hover, .ime-tool-btn.hover { background:var(--accent-subtle); color:var(--accent); }
+.ime-tool-btn.active  { background:var(--accent); color:var(--text-active); }
+.ime-tool-btn .material-symbols-outlined { font-size:20px; line-height:1; }
+.ime-tool-label { font-size:9px; margin-top:2px; line-height:1; }
+
+/* ── Right Panel ─────────────────────────────────────────────────────────── */
+.ime-panel { width:272px; background:var(--bg-panel); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
+.ime-panel.hidden { display:none; }
+.ime-panel-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-panel); z-index:1; flex-shrink:0; }
+.ime-panel-title { font-size:12px; font-weight:600; color:var(--text-primary); }
+.ime-panel-body  { flex:1; overflow-y:auto; }
+.ime-panel-body::-webkit-scrollbar { width:4px; }
+.ime-panel-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+.ime-field  { padding:10px 14px; border-bottom:1px solid var(--border); }
+.ime-field:last-child { border-bottom:none; }
+.ime-label  { display:block; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+.ime-input  { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color .15s; }
+.ime-input:focus { border-color:var(--border-focus); }
+.ime-select { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%2371717a' d='M5 6L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 9px center; }
+.ime-select:focus { border-color:var(--border-focus); }
+.ime-color-swatch { width:32px; height:32px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px; background:var(--bg-input); flex-shrink:0; }
+
+/* Pill buttons */
+.ime-pill { padding:3px 8px; border-radius:99px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .12s; white-space:nowrap; }
+.ime-pill:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-subtle); }
+.ime-pill.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* Topbar buttons */
+.ime-topbtn { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .12s; white-space:nowrap; }
+.ime-topbtn:hover { background:var(--bg-input); color:var(--text-primary); }
+.ime-topbtn .material-symbols-outlined { font-size:15px; line-height:1; }
+.ime-topbtn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.ime-topbtn.primary:hover { background:var(--accent-hover); }
+
+/* Close/icon buttons */
+.ime-icon-btn { display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; transition:background .12s, color .12s; }
+.ime-icon-btn:hover { background:var(--bg-input); color:var(--text-primary); }
+.ime-icon-btn .material-symbols-outlined { font-size:17px; line-height:1; }
+
+/* ── Range inputs ─────────────────────────────────────────────────────────── */
+input[type="range"] { -webkit-appearance:none; appearance:none; height:3px; background:var(--border); border-radius:4px; outline:none; cursor:pointer; width:100%; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--accent); border:2px solid var(--bg-panel); box-shadow:0 0 0 1px var(--accent); cursor:pointer; transition:transform .1s; }
+input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+input[type="range"]::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--accent); border:2px solid var(--bg-panel); cursor:pointer; }
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; }
+input[type="number"] { -moz-appearance:textfield; }
+
+/* ── Context bar ──────────────────────────────────────────────────────────── */
+.ime-ctxbar { position:fixed; z-index:500; display:flex; align-items:center; gap:1px; padding:4px 6px; border-radius:12px; background:var(--bg-shell); border:1px solid var(--border); box-shadow:var(--shadow-lg); }
+.ime-ctxbar.hidden { display:none; }
+.ime-ctx-btn { display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background .1s, color .1s; }
+.ime-ctx-btn:hover { background:var(--bg-input); color:var(--text-primary); }
+.ime-ctx-btn.danger:hover { background:rgba(239,68,68,.1); color:#ef4444; }
+.ime-ctx-btn .material-symbols-outlined { font-size:17px; line-height:1; }
+.ime-ctx-sep { width:1px; height:18px; background:var(--border); margin:0 2px; flex-shrink:0; }
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.imgMePage { position:relative; background:#ffffff; box-shadow:var(--page-shadow); border-radius:2px; overflow:hidden; flex-shrink:0; }
+.imgMePage.drag-over { box-shadow: inset 0 0 0 2px var(--accent), var(--page-shadow) !important; }
+
+/* ── Element ──────────────────────────────────────────────────────────────── */
+.imgMeElement { position:absolute; cursor:move; padding:2px; border:1.5px solid transparent; border-radius:3px; transition:border-color .12s; touch-action:none; }
+.imgMeElement:hover { border-color:rgba(249,115,22,.3); }
+.imgMeElement.ime-selected { border-color:var(--accent) !important; box-shadow:0 0 0 3px rgba(249,115,22,.15) !important; }
+
+/* Resize handle */
+.ime-resize { position:absolute; bottom:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border:2px solid var(--bg-panel); border-radius:2px; cursor:se-resize; z-index:10; opacity:0; transition:opacity .15s; touch-action:none; }
+.imgMeElement.ime-selected .ime-resize { opacity:1; }
+
+/* ── Delete button in panel ───────────────────────────────────────────────── */
+.ime-danger-btn { width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:all .12s; }
+.ime-danger-btn:hover { background:rgba(239,68,68,.1); border-color:#ef4444; }
+
+/* ── Mobile Styles ────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .ime-topbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 8px 12px;
+    }
+    
+    .ime-topbar > div:first-child {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .ime-topbar > div:last-child {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .ime-topbtn {
+        font-size: 10px;
+        padding: 6px 10px;
+        min-height: 36px;
+    }
+    
+    .ime-topbtn .material-symbols-outlined {
+        font-size: 14px;
+    }
+    
+    /* Sidebar mobile - escondida por padrão */
+    .ime-sidebar {
+        position: fixed;
+        left: -100%;
+        top: 0;
+        height: 100vh;
+        width: 240px;
+        z-index: 700;
+        transition: left .3s cubic-bezier(.22,1,.36,1);
+        box-shadow: 2px 0 12px rgba(0,0,0,.3);
+    }
+    
+    .ime-sidebar.mobile-open {
+        left: 0;
+    }
+    
+    /* Overlay quando sidebar aberta */
+    .ime-mobile .ime-sidebar.mobile-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.5);
+        z-index: -1;
+    }
+    
+    /* Canvas ocupa toda tela no mobile */
+    .ime-canvas {
+        width: 100% !important;
+    }
+    
+    .ime-pages {
+        padding: 20px;
+        gap: 20px;
+    }
+    
+    /* Panel mobile - com handle para arrastar */
+    .ime-panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: 0;
+        width: 100%;
+        max-height: 70vh;
+        border-radius: 16px 16px 0 0;
+        border-left: none;
+        border-bottom: none;
+        transform: translateY(0);
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    
+    .ime-panel.hidden {
+        transform: translateY(100%);
+    }
+    
+    /* Handle visual para arrastar */
+    .ime-panel::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+    }
+    
+    .ime-panel-body {
+        padding-top: 8px;
+    }
+    
+    /* Context bar mobile - melhor posicionamento */
+    .ime-ctxbar {
+        bottom: 20px !important;
+        left: 50% !important;
+        top: auto !important;
+        transform: translateX(-50%);
+        max-width: 90vw;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    /* Elementos maiores para touch (44px mínimo Apple HIG) */
+    .ime-resize {
+        width: 20px !important;
+        height: 20px !important;
+        bottom: -10px !important;
+        right: -10px !important;
+    }
+    
+    /* Botões maiores para touch */
+    .ime-topbtn, .ime-pill, .ime-icon-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .ime-ctx-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .ime-tool-btn {
+        width: 56px;
+        height: 56px;
+    }
+}
+
+/* Mobile floating tools button */
+.ime-mobile-tools-btn {
+    touch-action: none;
+}
+
+@media (min-width: 769px) {
+    .ime-mobile-tools-btn {
+        display: none !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+/* ── Print Styles (Ctrl+P) ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════ */
+@media print {
+    /* Nota: O CSS de impressão principal é injetado dinamicamente via JS */
+    /* Este CSS serve apenas como fallback básico */
+    
+    /* Força impressão colorida */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+}

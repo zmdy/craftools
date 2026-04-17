@@ -1,5 +1,6 @@
 import { Craftools_Setup } from "./components/Setup.js";
-import {Craftools_Settings} from "./settings/Settings.js";
+import { Craftools_Editor } from "./components/Editor.js";
+import { Craftools_Settings } from "./settings/Settings.js";
 
 export class Craftools{
     // Constructor
@@ -9,10 +10,19 @@ export class Craftools{
             return false;
         
         // Defines the components of the application
-        this.components = [Craftools_Setup];
+        this.components = [Craftools_Setup, Craftools_Editor];
         this.screen = Craftools_Setup; // setup, module_MODULENAME
+        
         this.initComponents();
         this.renderComponent();
+
+        // Listen to navigation events
+        this.wrapper.addEventListener('craftools-start', (e) => {
+            this.activeMedia = e.detail.media;
+            this.activeSize = e.detail.size;
+            this.screen = Craftools_Editor;
+            this.renderComponent();
+        });
     }
 
     // Sets the wrapper and checks if it's valid
