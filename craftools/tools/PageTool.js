@@ -1,3 +1,5 @@
+import { I18n } from "../settings/Translations.js";
+
 export class PageTool {
     static attachPageEvents(editor, pageEl) {
         pageEl.addEventListener('click', (e) => {
@@ -8,7 +10,7 @@ export class PageTool {
                 const panelTitle = editor.querySelector('#panel-title');
                 const panelBody = editor.querySelector('#panel-body');
                 
-                panelTitle.textContent = 'Configurações da Página';
+                panelTitle.textContent = I18n.t('pageTool.title');
                 editor.activePage = pageEl;
                 
                 // Parse current dimensions
@@ -22,21 +24,20 @@ export class PageTool {
                 // Determine active media sizes from global state
                 const presetsHtml = (window.craftoolsApp && window.craftoolsApp.activeMedia && window.craftoolsApp.activeMedia.sizes) 
                     ? window.craftoolsApp.activeMedia.sizes.map((s, i) => `<button class="craftools-pill preset-btn" data-index="${i}">${s.name}</button>`).join('')
-                    : '<span style="font-size:11px;color:var(--text-muted)">Sem predefinições</span>';
+                    : `<span style="font-size:11px;color:var(--text-muted)">${I18n.t('pageTool.noPresets')}</span>`;
 
                 const currentColor = pageEl.style.backgroundColor || '#ffffff';
-                const currentBg = pageEl.style.background || '';
 
                 panelBody.innerHTML = `
                     <div class="craftools-field">
-                        <span class="craftools-label">Predefinição</span>
+                        <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
                         <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
                             ${presetsHtml}
                         </div>
                     </div>
 
                     <div class="craftools-field">
-                        <span class="craftools-label">Dimensões</span>
+                        <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
                         <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
                             ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
                         </div>
@@ -49,17 +50,17 @@ export class PageTool {
                     </div>
 
                     <div class="craftools-field">
-                        <span class="craftools-label">Fundo</span>
+                        <span class="craftools-label">${I18n.t('pageTool.background')}</span>
                         <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
-                            <button class="craftools-pill bg-type-btn active" data-type="color">Cor</button>
-                            <button class="craftools-pill bg-type-btn" data-type="gradient">Gradiente</button>
-                            <button class="craftools-pill bg-type-btn" data-type="image">Imagem</button>
+                            <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
+                            <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
+                            <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
                         </div>
                         
                         <div id="bg-color-section">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
-                                <span style="font-size: 12px; color: var(--text-secondary)">Escolha a cor</span>
+                                <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
                             </div>
                         </div>
                         
@@ -69,14 +70,14 @@ export class PageTool {
                         </div>
 
                         <div id="bg-image-section" style="display: none;">
-                            <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="URL da imagem">
+                            <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
                             <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
                         </div>
                     </div>
 
                     <div class="craftools-field">
                         <button class="craftools-danger-btn" id="delete-page-btn">
-                            <span class="material-symbols-outlined">delete</span> Apagar Página
+                            <span class="material-symbols-outlined">delete</span> ${I18n.t('pageTool.deletePage')}
                         </button>
                     </div>
                 `;
@@ -185,14 +186,14 @@ export class PageTool {
 
                 // Delete Page
                 panelBody.querySelector('#delete-page-btn').addEventListener('click', () => {
-                    if (confirm("Tem certeza que deseja excluir esta página? Essa ação não pode ser desfeita.")) {
+                    if (confirm(I18n.t('pageTool.confirmDelete'))) {
                         const pagesWrapper = editor.querySelector('#pages-wrapper');
                         if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
                             editor.activePage.remove();
                             rightPanel.classList.add('hidden');
                             editor.activePage = null;
                         } else {
-                            alert("Você não pode apagar a única página restante.");
+                            alert(I18n.t('pageTool.alertLastPage'));
                         }
                     }
                 });
@@ -211,7 +212,7 @@ export class PageTool {
         clone.id = 'page-' + Date.now();
         
         // Remove os componentes filhos da página inteiramente mas mantém a sua forma
-        clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">Nova Página</div>`;
+        clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
         
         // Acoplar os eventos para poder clicar na nova página localmente
         this.attachPageEvents(editor, clone);

@@ -1,13 +1,17 @@
 import { Craftools_Setup } from "./components/Setup.js";
 import { Craftools_Editor } from "./components/Editor.js";
 import { Craftools_Settings } from "./settings/Settings.js";
+import { I18n } from "./settings/Translations.js";
 
 export class Craftools{
     // Constructor
     constructor(wrapper){
+        I18n.init();
         // Case the wrapper is a valid HTML element
         if( !this.setWrapper(wrapper) )
             return false;
+
+        window.craftoolsApp = this;
         
         // Defines the components of the application
         this.components = [Craftools_Setup, Craftools_Editor];

@@ -1,10 +1,15 @@
 import { Craftools_Settings } from "../settings/Settings.js";
 import { PageTool } from "../tools/PageTool.js";
+import { I18n } from "../settings/Translations.js";
 
 export class Craftools_Editor extends HTMLElement {
     constructor() { super(); }
     
     connectedCallback() {
+        this.render();
+    }
+
+    render() {
         const activeSizeConfig = window.craftoolsSize;
         let dimWidth = '100%';
         let dimHeight = '100%';
@@ -21,58 +26,62 @@ export class Craftools_Editor extends HTMLElement {
                     <span style="font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 700; color: var(--text-primary);">CrafTools</span>
                     <span style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
                     <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-input); border-radius: 6px; padding: 2px;">
-                        <button class="craftools-icon-btn" title="Zoom Out" id="zoom-out-btn">
+                        <button class="craftools-icon-btn" title="${I18n.t('editor.zoomOut')}" id="zoom-out-btn">
                             <span class="material-symbols-outlined">zoom_out</span>
                         </button>
                         <span id="zoom-level" style="font-size: 11px; color: var(--text-secondary); min-width: 45px; text-align: center; font-weight: 500;">100%</span>
-                        <button class="craftools-icon-btn" title="Zoom In" id="zoom-in-btn">
+                        <button class="craftools-icon-btn" title="${I18n.t('editor.zoomIn')}" id="zoom-in-btn">
                             <span class="material-symbols-outlined">zoom_in</span>
                         </button>
-                        <button class="craftools-icon-btn" title="Reset Zoom" id="zoom-reset-btn">
+                        <button class="craftools-icon-btn" title="${I18n.t('editor.zoomReset')}" id="zoom-reset-btn">
                             <span class="material-symbols-outlined">fit_screen</span>
                         </button>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <button class="craftools-icon-btn" title="Alternar tema" id="theme-btn">
+                    <select id="lang-select" style="padding: 4px 8px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 11px; margin-right: 4px;">
+                        <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
+                        <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                    </select>
+                    <button class="craftools-icon-btn" title="${I18n.t('editor.themeToggle')}" id="theme-btn">
                         <span class="material-symbols-outlined">dark_mode</span>
                     </button>
                 </div>
             </header>
             <div class="craftools-body">
                 <aside class="craftools-sidebar">
-                    <span class="craftools-sec-label">Página</span>
+                    <span class="craftools-sec-label">${I18n.t('editor.page')}</span>
                     
-                    <button class="craftools-tool-btn" id="new-page-btn" title="Nova Página">
+                    <button class="craftools-tool-btn" id="new-page-btn" title="${I18n.t('editor.newPage')}">
                         <span class="material-symbols-outlined">post_add</span>
-                        <span class="craftools-tool-label">Nova Pág</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.newPage')}</span>
                     </button>
                     
-                    <button class="craftools-tool-btn" data-tool="gerador" title="Gerador">
+                    <button class="craftools-tool-btn" data-tool="gerador" title="${I18n.t('editor.generator')}">
                         <span class="material-symbols-outlined">auto_awesome_mosaic</span>
-                        <span class="craftools-tool-label">Gerador</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.generator')}</span>
                     </button>
 
-                    <span class="craftools-sec-label">Ferramentas</span>
+                    <span class="craftools-sec-label">${I18n.t('editor.tools')}</span>
                     
-                    <button class="craftools-tool-btn" data-tool="texto" title="Texto">
+                    <button class="craftools-tool-btn" data-tool="texto" title="${I18n.t('editor.text')}">
                         <span class="material-symbols-outlined">title</span>
-                        <span class="craftools-tool-label">Texto</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.text')}</span>
                     </button>
                     
-                    <button class="craftools-tool-btn" data-tool="imagem" title="Imagem">
+                    <button class="craftools-tool-btn" data-tool="imagem" title="${I18n.t('editor.image')}">
                         <span class="material-symbols-outlined">image</span>
-                        <span class="craftools-tool-label">Imagem</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.image')}</span>
                     </button>
 
-                    <button class="craftools-tool-btn" data-tool="album" title="Álbum">
+                    <button class="craftools-tool-btn" data-tool="album" title="${I18n.t('editor.album')}">
                         <span class="material-symbols-outlined">photo_library</span>
-                        <span class="craftools-tool-label">Álbum</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.album')}</span>
                     </button>
                     
-                    <button class="craftools-tool-btn" data-tool="papeis" title="Papéis">
+                    <button class="craftools-tool-btn" data-tool="papeis" title="${I18n.t('editor.papers')}">
                         <span class="material-symbols-outlined">note_stack</span>
-                        <span class="craftools-tool-label">Papéis</span>
+                        <span class="craftools-tool-label">${I18n.t('editor.papers')}</span>
                     </button>
                 </aside>
                 
@@ -81,7 +90,7 @@ export class Craftools_Editor extends HTMLElement {
                         <section class="craftools-page" style="width: ${dimWidth}; min-height: ${dimHeight}; background: white;" id="main-page">
                              <!-- Página Vazia -->
                              <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">
-                                O seu canvas estará aqui
+                                ${I18n.t('editor.canvasPlaceholder')}
                              </div>
                         </section>
                     </div>
@@ -89,7 +98,7 @@ export class Craftools_Editor extends HTMLElement {
                 
                 <aside class="craftools-panel hidden" id="right-panel">
                     <div class="craftools-panel-head">
-                        <span class="craftools-panel-title" id="panel-title">Ferramenta</span>
+                        <span class="craftools-panel-title" id="panel-title">${I18n.t('editor.panelTitle')}</span>
                         <button class="craftools-icon-btn" id="close-panel">
                             <span class="material-symbols-outlined">close</span>
                         </button>
@@ -101,6 +110,16 @@ export class Craftools_Editor extends HTMLElement {
             </div>
         </div>
         `;
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        // Language Select
+        this.querySelector('#lang-select').addEventListener('change', (e) => {
+            I18n.lang = e.target.value;
+            this.render();
+        });
 
         // Theme toggle
         const themeBtn = this.querySelector('#theme-btn');
@@ -127,7 +146,7 @@ export class Craftools_Editor extends HTMLElement {
                 panelTitle.textContent = btn.title;
                 panelBody.innerHTML = emptyPanelHtml;
                 rightPanel.classList.remove('hidden');
-                activePage = null;
+                this.activePage = null;
             });
         });
 
@@ -152,10 +171,13 @@ export class Craftools_Editor extends HTMLElement {
         // Zoom Logic
         let zoomLevel = 1.0;
         const zoomLevelLabel = this.querySelector('#zoom-level');
+        const pagesWrapper = this.querySelector('#pages-wrapper');
         
         const updateZoom = () => {
-            pagesWrapper.style.transform = `scale(${zoomLevel})`;
-            zoomLevelLabel.textContent = Math.round(zoomLevel * 100) + '%';
+            if (pagesWrapper) {
+                pagesWrapper.style.transform = `scale(${zoomLevel})`;
+                zoomLevelLabel.textContent = Math.round(zoomLevel * 100) + '%';
+            }
         };
 
         this.querySelector('#zoom-in-btn').addEventListener('click', () => {
