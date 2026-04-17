@@ -21,7 +21,7 @@ export class Craftools_Setup extends HTMLElement{
         mediaTypes += "</div>";
 
         this.innerHTML = `
-        <div class="ime-app" style="align-items: center; justify-content: center;">
+        <div class="craftools-app" style="align-items: center; justify-content: center; height: 100vh;">
             <div style="background: var(--bg-shell); padding: 40px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center;">
                 <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-family: 'DM Serif Display', serif;">O que você quer criar?</h2>
                 <p style="color: var(--text-secondary); font-size: 14px;">Selecione uma categoria abaixo para começar</p>
@@ -47,19 +47,20 @@ export class Craftools_Setup extends HTMLElement{
         
         let sizesHtml = "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;'>";
         media.sizes.forEach((size, index) => {
+            let descSize = size.size !== "*" ? ` - ${size.size.replace(',', 'x')}` : "";
             sizesHtml += `
             <a href="#" data-size="${index}" class="media-btn" style="background: var(--bg-panel); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow);">
                 <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent);">${size.icon}</span>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${size.name} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit})</span></h3>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${size.name} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit}${descSize})</span></h3>
                 <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${size.description}</p>
             </a>`;
         });
         sizesHtml += "</div>";
 
         this.innerHTML = `
-        <div class="ime-app" style="align-items: center; justify-content: center;">
+        <div class="craftools-app" style="align-items: center; justify-content: center; height: 100vh;">
             <div style="background: var(--bg-shell); padding: 40px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; position: relative;">
-                <button id="back-btn" class="ime-topbtn" style="position: absolute; top: 20px; left: 20px;">
+                <button id="back-btn" class="craftools-topbtn" style="position: absolute; top: 20px; left: 20px;">
                     <span class="material-symbols-outlined">arrow_back</span> Voltar
                 </button>
                 <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-family: 'DM Serif Display', serif;">Escolha o tamanho</h2>

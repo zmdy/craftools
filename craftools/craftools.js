@@ -20,6 +20,7 @@ export class Craftools{
         this.wrapper.addEventListener('craftools-start', (e) => {
             this.activeMedia = e.detail.media;
             this.activeSize = e.detail.size;
+            window.craftoolsSize = e.detail.size;
             this.screen = Craftools_Editor;
             this.renderComponent();
         });
