@@ -1,6 +1,5 @@
-import { PageTool } from "../tools/PageTool.js";
-
-export class Craftools_Grid {
+// Grid utility - decoupled from specific tools
+export class Craftools_LayoutGrid {
     constructor(editor, startPage, pageSize, template) {
         this.editor = editor;
         this.startPage = startPage;
@@ -52,6 +51,7 @@ export class Craftools_Grid {
         for (let i = 0; i < items.length; i += perPage) {
             // Criação de nova página se for a partir do segundo lote
             if (i > 0) {
+                const { PageTool } = await import('../tools/page/PageTool.js');
                 PageTool.addNewPage(this.editor);
                 currentPage = pagesWrapper.querySelector('.craftools-page:last-child');
             }

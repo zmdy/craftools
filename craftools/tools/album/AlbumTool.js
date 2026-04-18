@@ -1,5 +1,5 @@
 import { I18n } from "../../settings/Translations.js";
-import { Craftools_Grid } from "../../utils/Grid.js";
+import { Craftools_LayoutGrid } from "../../utils/LayoutGrid.js";
 import { GridSizes } from "../../utils/GridSizes.js";
 import { PageTool } from "../page/PageTool.js";
 import "./AlbumTool_Translations.js";
@@ -129,7 +129,7 @@ export class AlbumTool {
         })));
 
         // Instancia a grid enviando os dados
-        const gridSystem = new Craftools_Grid(editor, startPage, pageSize, template);
+        const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
 
         // Renderiza passando os "images" (itens) e uma callback que desenha o DOM de cada célula na grade final
         await gridSystem.render(images, (cellContainer, src, index) => {

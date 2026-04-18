@@ -23,21 +23,26 @@ export class PageTool {
             if (toolType === 'album') {
                 const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
-            } else if (toolType === 'titulo' || toolType === 'paragrafo') {
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem') {
                 const rect = pageEl.getBoundingClientRect();
                 const scale = window.craftoolsZoomLevel || 1;
                 // Calculate drop coordinates mapping viewport to page scope
                 let dropX = (e.clientX - rect.left) / scale;
                 let dropY = (e.clientY - rect.top) / scale;
 
-                // Dynamically import TextTool to avoid circular dependency
-                const { TextTool } = await import('../text/TextTool.js');
-                const el = TextTool.createElement(toolType, editor);
+                let el;
+                if (toolType === 'imagem') {
+                    const { ImageTool } = await import('../image/ImageTool.js');
+                    el = ImageTool.createElement(toolType, editor);
+                    dropX = Math.max(10, Math.min(dropX - 100, (rect.width / scale) - 200));
+                    dropY = Math.max(10, Math.min(dropY - 75, (rect.height / scale) - 150));
+                } else {
+                    const { TextTool } = await import('../text/TextTool.js');
+                    el = TextTool.createElement(toolType, editor);
+                    dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
+                    dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
+                }
                 
-                // Keep inside bounds
-                dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
-                dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
-
                 el.setAttribute('x', dropX);
                 el.setAttribute('y', dropY);
 

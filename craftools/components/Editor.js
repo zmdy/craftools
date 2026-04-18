@@ -1,6 +1,7 @@
 import { Craftools_Settings } from "../settings/Settings.js";
 import { PageTool } from "../tools/page/PageTool.js";
 import { TextTool } from "../tools/text/TextTool.js";
+import { ImageTool } from "../tools/image/ImageTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 
@@ -130,13 +131,23 @@ export class Craftools_Editor extends HTMLElement {
             if (toolType === 'titulo' || toolType === 'paragrafo') {
                 this.ctxBar.show(el, TextTool.getCtxOptions(el));
                 
-                // Open panel with properties for the selected element
                 const rightPanel = this.querySelector('#right-panel');
                 const panelTitle = this.querySelector('#panel-title');
                 const panelBody = this.querySelector('#panel-body');
                 
                 panelTitle.textContent = toolType === 'titulo' ? (I18n.t('textTool.propsTitle') || 'Propriedades do Título') : (I18n.t('textTool.propsParagraph') || 'Propriedades do Parágrafo');
                 TextTool.renderPropertiesPanel(panelBody, el);
+                rightPanel.classList.remove('hidden');
+                this.activePage = null;
+            } else if (toolType === 'imagem') {
+                this.ctxBar.show(el, ImageTool.getCtxOptions(el));
+                
+                const rightPanel = this.querySelector('#right-panel');
+                const panelTitle = this.querySelector('#panel-title');
+                const panelBody = this.querySelector('#panel-body');
+                
+                panelTitle.textContent = I18n.t('imageTool.panelTitle') || 'Propriedades da Imagem';
+                ImageTool.renderPropertiesPanel(panelBody, el);
                 rightPanel.classList.remove('hidden');
                 this.activePage = null;
             } else {
