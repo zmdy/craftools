@@ -81,7 +81,7 @@ export class Craftools_Editor extends HTMLElement {
                         <span class="craftools-tool-label">${I18n.t('editor.image')}</span>
                     </button>
 
-                    <button class="craftools-tool-btn" data-tool="album" title="${I18n.t('editor.album')}">
+                    <button class="craftools-tool-btn" data-tool="album" draggable="true" title="${I18n.t('editor.album')}">
                         <span class="material-symbols-outlined">photo_library</span>
                         <span class="craftools-tool-label">${I18n.t('editor.album')}</span>
                     </button>
@@ -181,7 +181,7 @@ export class Craftools_Editor extends HTMLElement {
 
         // Some buttons like "gerador" still trigger click actions
         toolBtns.forEach(btn => {
-            if(btn.dataset.tool === 'gerador' || btn.dataset.tool === 'album' || btn.dataset.tool === 'papeis') {
+            if(btn.dataset.tool === 'gerador' || btn.dataset.tool === 'papeis') {
                 btn.addEventListener('click', () => {
                     this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');

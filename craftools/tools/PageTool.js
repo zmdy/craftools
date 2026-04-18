@@ -18,7 +18,11 @@ export class PageTool {
             pageEl.classList.remove('drag-over');
 
             const toolType = e.dataTransfer.getData('ToolType');
-            if (toolType === 'titulo' || toolType === 'paragrafo') {
+            
+            if (toolType === 'album') {
+                const { AlbumTool } = await import('./AlbumTool.js');
+                AlbumTool.setup(editor, pageEl);
+            } else if (toolType === 'titulo' || toolType === 'paragrafo') {
                 const rect = pageEl.getBoundingClientRect();
                 const scale = window.craftoolsZoomLevel || 1;
                 // Calculate drop coordinates mapping viewport to page scope
