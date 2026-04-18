@@ -1,6 +1,6 @@
 import { Craftools_Settings } from "../settings/Settings.js";
-import { PageTool } from "../tools/PageTool.js";
-import { TextTool } from "../tools/TextTool.js";
+import { PageTool } from "../tools/page/PageTool.js";
+import { TextTool } from "../tools/text/TextTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 
@@ -135,7 +135,7 @@ export class Craftools_Editor extends HTMLElement {
                 const panelTitle = this.querySelector('#panel-title');
                 const panelBody = this.querySelector('#panel-body');
                 
-                panelTitle.textContent = toolType === 'titulo' ? 'Propriedades do Título' : 'Propriedades do Parágrafo';
+                panelTitle.textContent = toolType === 'titulo' ? (I18n.t('textTool.propsTitle') || 'Propriedades do Título') : (I18n.t('textTool.propsParagraph') || 'Propriedades do Parágrafo');
                 TextTool.renderPropertiesPanel(panelBody, el);
                 rightPanel.classList.remove('hidden');
                 this.activePage = null;

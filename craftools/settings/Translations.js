@@ -23,20 +23,6 @@ export const Translations = {
             page: "Página",
             tools: "Ferramentas"
         },
-        pageTool: {
-            title: "Configurações da Página",
-            presets: "Predefinição",
-            noPresets: "Sem predefinições",
-            dimensions: "Dimensões",
-            background: "Fundo",
-            color: "Cor",
-            gradient: "Gradiente",
-            imageUrl: "URL da imagem",
-            deletePage: "Apagar Página",
-            confirmDelete: "Tem certeza que deseja excluir esta página? Essa ação não pode ser desfeita.",
-            alertLastPage: "Você não pode apagar a única página restante.",
-            newPageLabel: "Nova Página"
-        },
         mediaTypes: {
             paper: "Artes impressas",
             paperDesc: "Quero criar artes impressas",
@@ -44,16 +30,6 @@ export const Translations = {
             screenDesc: "Quero editar fotos",
             socialMedia: "Redes Sociais",
             socialMediaDesc: "Quero criar artes para redes sociais"
-        },
-        textTool: {
-            addTitle: "Adicionar Título",
-            addSubtitle: "Adicionar Subtítulo",
-            addText: "Adicionar Texto",
-            font: "Fonte",
-            color: "Cor",
-            chooseColor: "Escolha a cor",
-            size: "Tamanho",
-            align: "Alinhamento"
         }
     },
     "en": {
@@ -80,20 +56,6 @@ export const Translations = {
             page: "Page",
             tools: "Tools"
         },
-        pageTool: {
-            title: "Page Settings",
-            presets: "Presets",
-            noPresets: "No presets",
-            dimensions: "Dimensions",
-            background: "Background",
-            color: "Color",
-            gradient: "Gradient",
-            imageUrl: "Image URL",
-            deletePage: "Delete Page",
-            confirmDelete: "Are you sure you want to delete this page? This action cannot be undone.",
-            alertLastPage: "You cannot delete the only remaining page.",
-            newPageLabel: "New Page"
-        },
         mediaTypes: {
             paper: "Printed Arts",
             paperDesc: "I want to create printed arts",
@@ -101,16 +63,6 @@ export const Translations = {
             screenDesc: "I want to edit photos",
             socialMedia: "Social Media",
             socialMediaDesc: "I want to create social media arts"
-        },
-        textTool: {
-            addTitle: "Add Title",
-            addSubtitle: "Add Subtitle",
-            addText: "Add Text",
-            font: "Font",
-            color: "Color",
-            chooseColor: "Choose color",
-            size: "Size",
-            align: "Alignment"
         }
     }
 };
@@ -123,6 +75,13 @@ export class I18n {
     static set lang(val) {
         window.craftoolsLang = val;
         localStorage.setItem('craftools-lang', val);
+    }
+
+    static addTranslations(path, dict) {
+        for (const lang in dict) {
+            if (!Translations[lang]) Translations[lang] = {};
+            Translations[lang][path] = dict[lang];
+        }
     }
 
     static t(path) {

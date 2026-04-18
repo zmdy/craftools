@@ -1,7 +1,8 @@
-import { I18n } from "../settings/Translations.js";
-import { Craftools_Grid } from "../utils/Grid.js";
-import { GridSizes } from "../utils/GridSizes.js";
-import { PageTool } from "./PageTool.js";
+import { I18n } from "../../settings/Translations.js";
+import { Craftools_Grid } from "../../utils/Grid.js";
+import { GridSizes } from "../../utils/GridSizes.js";
+import { PageTool } from "../page/PageTool.js";
+import "./AlbumTool_Translations.js";
 
 export class AlbumTool {
     static setup(editor, pageEl) {
@@ -9,7 +10,7 @@ export class AlbumTool {
         const panelTitle = editor.querySelector('#panel-title');
         const panelBody = editor.querySelector('#panel-body');
 
-        panelTitle.textContent = I18n.t('editor.album') || 'Gerador de Álbum';
+        panelTitle.textContent = I18n.t('albumTool.panelTitle');
         editor.activePage = pageEl;
 
         let selectedSize = null;
@@ -43,34 +44,34 @@ export class AlbumTool {
                         <span style="font-size: 10px; color: var(--text-secondary)">Cell: ${t.cellWidth}x${t.cellHeight} | Gap: ${t.cellGap}</span>
                     </button>
                   `).join('')
-                : `<div style="font-size: 12px; color: var(--text-muted)">Nenhum template cadastrado para este tamanho.</div>`;
+                : `<div style="font-size: 12px; color: var(--text-muted)">${I18n.t('albumTool.noTemplate')}</div>`;
 
             panelBody.innerHTML = `
                 <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
                     <div class="craftools-field">
-                        <span class="craftools-label">1. Escolher Tamanho</span>
+                        <span class="craftools-label">${I18n.t('albumTool.step1')}</span>
                         <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                             ${sizeHtml}
                         </div>
                     </div>
 
                     <div class="craftools-field">
-                        <span class="craftools-label">2. Template Grid</span>
+                        <span class="craftools-label">${I18n.t('albumTool.step2')}</span>
                         <div style="display: flex; flex-direction: column; gap: 0;">
                             ${templateHtml}
                         </div>
                     </div>
 
                     <div class="craftools-field">
-                        <span class="craftools-label">3. Opções</span>
+                        <span class="craftools-label">${I18n.t('albumTool.step3')}</span>
                         <input type="file" id="album-file-input" multiple accept="image/*" style="display: none;">
                         <button class="craftools-topbtn" id="album-select-btn" style="width: 100%; justify-content: center;">
-                            <span class="material-symbols-outlined">imagesmode</span> ${photos.length > 0 ? `${photos.length} Fotos Selecionadas` : 'Selecionar Fotos'}
+                            <span class="material-symbols-outlined">imagesmode</span> ${photos.length > 0 ? `${photos.length} ${I18n.t('albumTool.photosSelected')}` : I18n.t('albumTool.selectPhotos')}
                         </button>
                     </div>
 
                     <button class="craftools-topbtn" id="album-generate-btn" style="width: 100%; justify-content: center; background: var(--accent); color: white; border: none; margin-top: 10px;" ${(!selectedTemplate || photos.length === 0) ? 'disabled' : ''}>
-                        <span class="material-symbols-outlined">dynamic_feed</span> Gerar Páginas
+                        <span class="material-symbols-outlined">dynamic_feed</span> ${I18n.t('albumTool.generate')}
                     </button>
                 </div>
             `;

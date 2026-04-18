@@ -101,7 +101,8 @@ export class CtxBar {
         if(!this.activeElement || this.activeElement !== element) return;
         
         const rect = element.getBoundingClientRect();
-        let top = rect.top - this.el.offsetHeight - 12;
+        // Push it up enough to avoid the rotation handle which sits at -38px (top -38)
+        let top = rect.top - this.el.offsetHeight - 56;
         let left = rect.left;
 
         if (top < 10) {

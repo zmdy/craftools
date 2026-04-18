@@ -1,4 +1,5 @@
-import { I18n } from "../settings/Translations.js";
+import { I18n } from "../../settings/Translations.js";
+import "./TextTool_Translations.js";
 
 const FONTS = [
     'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster', 
@@ -108,7 +109,7 @@ export class TextTool {
         return [
             {
                 icon: 'format_bold',
-                label: 'Negrito',
+                label: I18n.t('textTool.bold'),
                 command: (element) => {
                     const text = element.contentArea.querySelector('[contenteditable]');
                     if (text) {
@@ -119,7 +120,7 @@ export class TextTool {
             },
             {
                 icon: 'format_italic',
-                label: 'Itálico',
+                label: I18n.t('textTool.italic'),
                 command: (element) => {
                     const text = element.contentArea.querySelector('[contenteditable]');
                     if (text) {
@@ -130,7 +131,7 @@ export class TextTool {
             },
             {
                 icon: 'format_underlined',
-                label: 'Sublinhado',
+                label: I18n.t('textTool.underline'),
                 command: (element) => {
                     const text = element.contentArea.querySelector('[contenteditable]');
                     if (text) {

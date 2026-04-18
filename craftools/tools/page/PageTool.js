@@ -1,4 +1,5 @@
-import { I18n } from "../settings/Translations.js";
+import { I18n } from "../../settings/Translations.js";
+import "./PageTool_Translations.js";
 
 export class PageTool {
     static attachPageEvents(editor, pageEl) {
@@ -20,7 +21,7 @@ export class PageTool {
             const toolType = e.dataTransfer.getData('ToolType');
             
             if (toolType === 'album') {
-                const { AlbumTool } = await import('./AlbumTool.js');
+                const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
             } else if (toolType === 'titulo' || toolType === 'paragrafo') {
                 const rect = pageEl.getBoundingClientRect();
@@ -30,7 +31,7 @@ export class PageTool {
                 let dropY = (e.clientY - rect.top) / scale;
 
                 // Dynamically import TextTool to avoid circular dependency
-                const { TextTool } = await import('./TextTool.js');
+                const { TextTool } = await import('../text/TextTool.js');
                 const el = TextTool.createElement(toolType, editor);
                 
                 // Keep inside bounds
