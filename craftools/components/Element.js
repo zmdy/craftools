@@ -205,6 +205,10 @@ export class Craftools_Element extends HTMLElement {
         this._ctrlbar.style.display = 'none';
         this.style.zIndex = '2';
         
+        // Salva guarda global: Restaura a camada protetora interativa ao clicar fora
+        this._overlay.style.pointerEvents = '';
+        this._content.style.pointerEvents = 'none';
+        
         const event = new CustomEvent('craftools-element-deselect', { bubbles: true, detail: { element: this } });
         this.dispatchEvent(event);
 
