@@ -1,4 +1,5 @@
 import { I18n } from "../../settings/Translations.js";
+import { BaseTool } from "../BaseTool.js";
 import "./TextTool_Translations.js";
 
 const FONTS = [
@@ -6,7 +7,7 @@ const FONTS = [
     'Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Impact'
 ];
 
-export class TextTool {
+export class TextTool extends BaseTool {
     static renderPropertiesPanel(editorPanel, element) {
         const textElement = element.contentArea.querySelector('[contenteditable]');
         if(!textElement) return;
@@ -53,6 +54,14 @@ export class TextTool {
         `;
         
         editorPanel.innerHTML = html;
+
+        // Render Common Properties (Inherited)
+        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+            border: '[contenteditable]',
+            radius: '[contenteditable]',
+            padding: '[contenteditable]',
+            zindex: true
+        });
         
         // Font dropdown
         const fontSelect = editorPanel.querySelector('#text-prop-font');

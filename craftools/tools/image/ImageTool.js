@@ -1,9 +1,10 @@
 import { I18n } from "../../settings/Translations.js";
 import { FILTERS_CONFIG, ImageFilters } from "./ImageFilters.js";
 import { ImageTransform } from "./ImageTransform.js";
+import { BaseTool } from "../BaseTool.js";
 import "./ImageTool_Translations.js";
 
-export class ImageTool {
+export class ImageTool extends BaseTool {
 
     static renderPropertiesPanel(editorPanel, element) {
         const meta = element._craftoolsMeta || this.getDefaultMeta();
@@ -91,6 +92,25 @@ export class ImageTool {
             </div>
         `;
 
+        editorPanel.innerHTML = html;
+        
+        // Render Common Properties (Inherited)
+        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+            border: 'img',
+            radius: 'img',
+            zindex: true,
+            onChange: () => {
+                const img = element.contentArea.querySelector('img');
+                if (img) {
+                    meta.borderWidth = parseFloat(img.style.borderWidth) || 0;
+                    meta.borderStyle = img.style.borderStyle || 'none';
+                    meta.borderColor = img.style.borderColor || '#000000';
+                    meta.borderRadius = img.style.borderRadius || '0px';
+                }
+                if (element._syncSidebar) element._syncSidebar();
+            }
+        });
+
         // Interaction Bindings
         const syncSliders = () => {
              const zoomSlider = editorPanel.querySelector('#zoom-slider');
@@ -109,6 +129,14 @@ export class ImageTool {
                      if (sibling !== element) {
                          ImageTransform.applyTransform(sibling);
                          ImageFilters.applyFilters(sibling);
+                         // Apply borders and radius to siblings
+                         const siblingImg = sibling.contentArea.querySelector('img');
+                         if (siblingImg) {
+                             siblingImg.style.borderWidth = meta.borderWidth + 'px';
+                             siblingImg.style.borderStyle = meta.borderStyle;
+                             siblingImg.style.borderColor = meta.borderColor;
+                             siblingImg.style.borderRadius = meta.borderRadius + 'px';
+                         }
                      }
                  });
              }
@@ -198,6 +226,8 @@ export class ImageTool {
                 if (element._syncSidebar) element._syncSidebar();
             };
         });
+
+
     }
 
     static getCtxOptions() {
@@ -236,6 +266,10 @@ export class ImageTool {
             posX: 0,
             posY: 0,
             rotation: 0,
+            borderWidth: 0,
+            borderStyle: 'none',
+            borderColor: '#000000',
+            borderRadius: 0,
             filters: {}
         };
         FILTERS_CONFIG.forEach(f => meta.filters[f.key] = f.def);

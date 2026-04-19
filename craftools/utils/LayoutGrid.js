@@ -66,6 +66,9 @@ export class Craftools_LayoutGrid {
             // Container CSS Grid
             let grid = document.createElement('div');
             grid.className = "craftools-grid-container";
+            grid.dataset.borderWidth = '1';
+            grid.dataset.borderStyle = 'dashed';
+            grid.dataset.borderColor = '#cccccc';
             grid.style.cssText = `
                 position: absolute;
                 top: ${mT}px;
@@ -137,5 +140,23 @@ export class Craftools_LayoutGrid {
                 }
             });
         }
+    }
+
+    static updateBorders(editor, width, style, color) {
+        if (!editor) return;
+        
+        // Update all cells in the editor
+        editor.querySelectorAll('.craftools-grid-cell').forEach(cell => {
+            cell.style.borderWidth = `${width}px`;
+            cell.style.borderStyle = style;
+            cell.style.borderColor = color;
+        });
+        
+        // Store configuration in all grid containers for state persistence
+        editor.querySelectorAll('.craftools-grid-container').forEach(grid => {
+            grid.dataset.borderWidth = width;
+            grid.dataset.borderStyle = style;
+            grid.dataset.borderColor = color;
+        });
     }
 }

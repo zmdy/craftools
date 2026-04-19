@@ -59,12 +59,21 @@ export class PageTool {
             }
         });
 
-        pageEl.addEventListener('click', (e) => {
+        pageEl.addEventListener('click', async (e) => {
             // Prevent deselecting element if clicking on an element handle
             if (e.target.closest('craftools-element')) return;
 
-            if (e.target === pageEl || e.target.closest('div[style*="canvas"]')) {
+            const isPageClick = e.target === pageEl || e.target.closest('.craftools-grid-container') || e.target.id === 'canvas-area';
+
+            if (isPageClick) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
+                
+                // Check if page has an album
+                if (pageEl.querySelector('.craftools-grid-container')) {
+                    const { AlbumTool } = await import('../album/AlbumTool.js');
+                    AlbumTool.setup(editor, pageEl);
+                    return;
+                }
                 
                 const rightPanel = editor.querySelector('#right-panel');
                 const panelTitle = editor.querySelector('#panel-title');

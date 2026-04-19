@@ -4,10 +4,12 @@ import { ImageFilters } from "../image/ImageFilters.js";
 import { I18n } from "../../settings/Translations.js";
 import { Craftools_LayoutGrid } from "../../utils/LayoutGrid.js";
 import { GridSizes } from "../../utils/GridSizes.js";
+import { CommonProperties } from "../../utils/CommonProperties.js";
 import { PageTool } from "../page/PageTool.js";
+import { BaseTool } from "../BaseTool.js";
 import "./AlbumTool_Translations.js";
 
-export class AlbumTool {
+export class AlbumTool extends BaseTool {
     static setup(editor, pageEl) {
         const rightPanel = editor.querySelector('#right-panel');
         const panelTitle = editor.querySelector('#panel-title');
@@ -114,6 +116,10 @@ export class AlbumTool {
                 }
             }
 
+            // Detect existing grid configuration on page
+            const existingGrid = pageEl.querySelector('.craftools-grid-container');
+
+
             // Generate button — validation per mode
             const canGenerate = selectedTemplate &&
                 (selectedMode === 'album' ? photos.length > 0 : cardPhoto !== null);
@@ -152,7 +158,7 @@ export class AlbumTool {
                     <button class="craftools-topbtn" id="album-generate-btn"
                         style="width: 100%; justify-content: center; background: var(--accent); color: white; border: none; margin-top: 4px;"
                         ${!canGenerate ? 'disabled' : ''}>
-                        <span class="material-symbols-outlined">dynamic_feed</span> Gerar
+                        <span class="material-symbols-outlined">dynamic_feed</span> ${existingGrid ? 'Gerar Novamente' : 'Gerar Álbum'}
                     </button>
                 </div>
             `;
@@ -241,6 +247,23 @@ export class AlbumTool {
                     rightPanel.classList.add('hidden');
                 });
             }
+
+            // ── Bind: Borders ──────────────────────────────────────────────
+            if (existingGrid) {
+                // Mock an element structure for CommonProperties
+                const mockElement = {
+                    contentArea: pageEl,
+                    style: existingGrid.style,
+                    dispatchEvent: () => {}
+                };
+
+                CommonProperties.renderBorder(panelBody.firstElementChild, mockElement, '.craftools-grid-cell', () => {
+                     const bWidth = panelBody.querySelector('#prop-border-width').value;
+                     const bStyle = panelBody.querySelector('#prop-border-style').value;
+                     const bColor = panelBody.querySelector('#prop-border-color').value;
+                     Craftools_LayoutGrid.updateBorders(editor, bWidth, bStyle, bColor);
+                });
+            }
         };
 
         renderPanel();
@@ -290,7 +313,9 @@ export class AlbumTool {
 
         await gridSystem.render(images, (cellContainer, src) => {
             cellContainer.style.background = "#fff";
-            cellContainer.style.border = "1px dashed #ccc";
+            cellContainer.style.borderWidth = "1px";
+            cellContainer.style.borderStyle = "dashed";
+            cellContainer.style.borderColor = "#cccccc";
             cellContainer.appendChild(this._buildCellElement(editor, src, pl, pt, cw, ch));
         });
     }
@@ -315,7 +340,9 @@ export class AlbumTool {
 
         await gridSystem.render(items, (cellContainer) => {
             cellContainer.style.background = "#fff";
-            cellContainer.style.border = "1px dashed #ccc";
+            cellContainer.style.borderWidth = "1px";
+            cellContainer.style.borderStyle = "dashed";
+            cellContainer.style.borderColor = "#cccccc";
 
             const imgEl = ImageTool.createElement('imagem', editor);
             imgEl.setAttribute('x', pl);
