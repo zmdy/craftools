@@ -50,8 +50,11 @@ export class ImageTool {
                     </div>
                 </div>
 
-                <div style="padding: 10px 0 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border); margin-top: 5px; letter-spacing: 0.5px;">
-                    Ajustes de Transformação
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 4px; border-top: 1px solid var(--border); margin-top: 5px;">
+                    <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${I18n.t('imageTool.transform') || 'Ajustes de Transformação'}</span>
+                    <button id="img-reset-btn" style="font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 3px; font-family: 'DM Sans', sans-serif; padding: 2px 4px; border-radius: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> Reset
+                    </button>
                 </div>
 
                 <div class="craftools-field">
@@ -91,7 +94,7 @@ export class ImageTool {
         // Interaction Bindings
         const syncSliders = () => {
              const zoomSlider = editorPanel.querySelector('#zoom-slider');
-             if (!zoomSlider) return; // FIX: Prevents "Cannot set properties of null" when element is active but panel was closed/changed
+             if (!zoomSlider) return;
 
              zoomSlider.value = meta.zoom;
              editorPanel.querySelector('#zoom-val-display').textContent = Math.round(meta.zoom * 100) + '%';
@@ -99,8 +102,33 @@ export class ImageTool {
              editorPanel.querySelector('#rotate-val-display').textContent = meta.rotation + '°';
              editorPanel.querySelector('#pos-x-input').value = Math.round(meta.posX);
              editorPanel.querySelector('#pos-y-input').value = Math.round(meta.posY);
+
+             // Propagate to linked elements (Business Card mode)
+             if (element._linkedElements) {
+                 element._linkedElements.forEach(sibling => {
+                     if (sibling !== element) {
+                         ImageTransform.applyTransform(sibling);
+                         ImageFilters.applyFilters(sibling);
+                     }
+                 });
+             }
         };
-        element._syncSidebar = syncSliders; 
+        element._syncSidebar = syncSliders;
+
+        // Bind Reset
+        editorPanel.querySelector('#img-reset-btn').onclick = () => {
+            const defaults = this.getDefaultMeta();
+            meta.zoom = defaults.zoom;
+            meta.posX = defaults.posX;
+            meta.posY = defaults.posY;
+            meta.rotation = defaults.rotation;
+            meta.objectFit = defaults.objectFit;
+            FILTERS_CONFIG.forEach(f => meta.filters[f.key] = f.def);
+            ImageTransform.applyTransform(element);
+            ImageFilters.applyFilters(element);
+            // Re-render the whole panel to reflect reset state (sliders, fit buttons)
+            this.renderPropertiesPanel(editorPanel, element);
+        };
 
         // Bind Switch
         const fileInput = editorPanel.querySelector('#img-file-hidden');
@@ -125,6 +153,7 @@ export class ImageTool {
                 btn.classList.add('active');
                 meta.objectFit = btn.dataset.fit;
                 ImageFilters.applyFilters(element);
+                if (element._syncSidebar) element._syncSidebar();
             };
         });
 
@@ -134,6 +163,7 @@ export class ImageTool {
             meta.zoom = parseFloat(e.target.value);
             editorPanel.querySelector('#zoom-val-display').textContent = Math.round(meta.zoom * 100) + '%';
             ImageTransform.applyTransform(element);
+            if (element._syncSidebar) element._syncSidebar();
         };
 
         // Bind Rotate Slider
@@ -142,6 +172,7 @@ export class ImageTool {
             meta.rotation = parseFloat(e.target.value);
             editorPanel.querySelector('#rotate-val-display').textContent = meta.rotation + '°';
             ImageTransform.applyTransform(element);
+            if (element._syncSidebar) element._syncSidebar();
         };
 
         // Bind Position Inputs
@@ -151,6 +182,7 @@ export class ImageTool {
             meta.posX = parseFloat(posXInput.value) || 0;
             meta.posY = parseFloat(posYInput.value) || 0;
             ImageTransform.applyTransform(element);
+            if (element._syncSidebar) element._syncSidebar();
         };
         posXInput.oninput = updatePos;
         posYInput.oninput = updatePos;
@@ -163,6 +195,7 @@ export class ImageTool {
                 meta.filters[key] = val;
                 slider.nextElementSibling.textContent = val;
                 ImageFilters.applyFilters(element);
+                if (element._syncSidebar) element._syncSidebar();
             };
         });
     }
