@@ -171,150 +171,172 @@ input[type="number"] { -moz-appearance:textfield; }
 .craftools-danger-btn { width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:all .12s; }
 .craftools-danger-btn:hover { background:rgba(239,68,68,.1); border-color:#ef4444; }
 
+/* ── Panel drag indicator (mobile bottom sheet handle) ───────────────────── */
+.craftools-panel-drag-indicator {
+    display: none;
+}
+
+/* ── Sidebar overlay (mobile) ─────────────────────────────────────────────── */
+.craftools-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 690;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.craftools-sidebar-overlay.visible {
+    opacity: 1;
+}
+
+/* Mobile floating tools button */
+.craftools-mobile-tools-btn { touch-action: none; }
+
+@media (min-width: 769px) {
+    .craftools-mobile-tools-btn { display: none !important; }
+}
+
 /* ── Mobile Styles ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+
+    /* Topbar compacta */
     .craftools-topbar {
-        flex-wrap: wrap;
-        height: auto;
-        padding: 8px 12px;
+        height: 52px;
+        padding: 0 12px;
+        gap: 8px;
     }
-    
-    .craftools-topbar > div:first-child {
-        flex: 1;
-        min-width: 200px;
-    }
-    
-    .craftools-topbar > div:last-child {
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-    
-    .craftools-topbtn {
-        font-size: 10px;
-        padding: 6px 10px;
-        min-height: 36px;
-    }
-    
-    .craftools-topbtn .material-symbols-outlined {
-        font-size: 14px;
-    }
-    
-    /* Sidebar mobile - escondida por padrão */
+
+    /* Esconde o separador no mobile pra ganhar espaço */
+    .craftools-topbar .topbar-sep { display: none; }
+
+    /* Sidebar: drawer lateral oculta por padrão */
     .craftools-sidebar {
         position: fixed;
-        left: -100%;
+        left: -260px;
         top: 0;
-        height: 100vh;
-        width: 240px;
+        height: 100dvh;
+        width: 220px;
         z-index: 700;
-        transition: left .3s cubic-bezier(.22,1,.36,1);
-        box-shadow: 2px 0 12px rgba(0,0,0,.3);
+        transition: left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
+        padding-top: 56px; /* espaço para a topbar */
     }
-    
+
     .craftools-sidebar.mobile-open {
         left: 0;
     }
-    
-    /* Overlay quando sidebar aberta */
-    .craftools-mobile .craftools-sidebar.mobile-open::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.5);
-        z-index: -1;
+
+    /* Overlay ativa no mobile */
+    .craftools-sidebar-overlay {
+        display: block;
+        pointer-events: none;
     }
-    
-    /* Canvas ocupa toda tela no mobile */
+    .craftools-sidebar-overlay.visible {
+        pointer-events: auto;
+    }
+
+    /* Ferramentas maiores para toque */
+    .craftools-tool-btn {
+        width: 100%;
+        height: 52px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 0 16px;
+        border-radius: 8px;
+    }
+    .craftools-tool-label {
+        font-size: 13px;
+        margin-top: 0;
+    }
+    .craftools-sec-label {
+        width: 100%;
+        padding: 12px 16px 4px;
+        text-align: left;
+    }
+
+    /* Canvas ocupa toda tela */
     .craftools-canvas {
         width: 100% !important;
     }
-    
     .craftools-pages {
-        padding: 20px;
+        padding: 20px 12px;
         gap: 20px;
     }
-    
-    /* Panel mobile - com handle para arrastar */
+
+    /* Panel: bottom sheet no mobile */
     .craftools-panel {
         position: fixed;
         left: 0;
         right: 0;
-        top: auto;
         bottom: 0;
+        top: auto;
         width: 100%;
-        max-height: 70vh;
-        border-radius: 16px 16px 0 0;
+        max-height: 75dvh;
+        border-radius: 20px 20px 0 0;
         border-left: none;
-        border-bottom: none;
-        transform: translateY(0);
-        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    
-    .craftools-panel.hidden {
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+        z-index: 600;
+        /* Transição via transform ao invés de display:none */
+        display: flex !important;
         transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        pointer-events: none;
     }
-    
-    /* Handle visual para arrastar */
-    .craftools-panel::before {
-        content: '';
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
+
+    .craftools-panel:not(.hidden) {
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    /* Handle visual do bottom sheet */
+    .craftools-panel-drag-indicator {
+        display: block;
         width: 40px;
         height: 4px;
         background: var(--border);
         border-radius: 2px;
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        flex-shrink: 0;
     }
-    
-    .craftools-panel-body {
-        padding-top: 8px;
+
+    .craftools-panel-head {
+        padding-top: 24px; /* espaço para o indicator */
     }
-    
-    /* Context bar mobile - melhor posicionamento */
+
+    /* Context bar: fixa no bottom center, acima do panel */
     .craftools-ctxbar {
-        bottom: 20px !important;
+        bottom: 16px !important;
         left: 50% !important;
         top: auto !important;
-        transform: translateX(-50%);
-        max-width: 90vw;
-        flex-wrap: wrap;
-        justify-content: center;
+        transform: translateX(-50%) !important;
+        max-width: calc(100vw - 32px);
     }
-    
-    /* Elementos maiores para touch (44px mínimo Apple HIG) */
-    .craftools-resize {
-        width: 20px !important;
-        height: 20px !important;
-        bottom: -10px !important;
-        right: -10px !important;
+
+    /* Alvos de toque maiores (Apple HIG mínimo 44px) */
+    .craftools-icon-btn {
+        width: 40px;
+        height: 40px;
     }
-    
-    /* Botões maiores para touch */
-    .craftools-topbtn, .craftools-pill, .craftools-icon-btn {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    
     .craftools-ctx-btn {
         width: 44px;
         height: 44px;
     }
-    
-    .craftools-tool-btn {
-        width: 56px;
-        height: 56px;
+    .craftools-pill {
+        padding: 8px 12px;
+        font-size: 13px;
     }
-}
-
-/* Mobile floating tools button */
-.craftools-mobile-tools-btn {
-    touch-action: none;
-}
-
-@media (min-width: 769px) {
-    .craftools-mobile-tools-btn {
-        display: none !important;
+    input[type="range"] {
+        height: 6px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        width: 22px;
+        height: 22px;
     }
 }
 

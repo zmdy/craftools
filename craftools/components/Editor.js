@@ -26,8 +26,11 @@ export class Craftools_Editor extends HTMLElement {
         <div class="craftools-app">
             <header class="craftools-topbar">
                 <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="craftools-icon-btn" id="mobile-menu-btn" aria-label="Menu" style="display:none;">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
                     <span style="font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 700; color: var(--text-primary);">CrafTools</span>
-                    <span style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
+                    <span class="topbar-sep" style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
                     <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-input); border-radius: 6px; padding: 2px;">
                         <button class="craftools-icon-btn" title="${I18n.t('editor.zoomOut')}" id="zoom-out-btn">
                             <span class="material-symbols-outlined">zoom_out</span>
@@ -52,7 +55,10 @@ export class Craftools_Editor extends HTMLElement {
                 </div>
             </header>
             <div class="craftools-body">
-                <aside class="craftools-sidebar">
+                <!-- Overlay para fechar a sidebar no mobile -->
+                <div class="craftools-sidebar-overlay" id="sidebar-overlay"></div>
+
+                <aside class="craftools-sidebar" id="main-sidebar">
                     <span class="craftools-sec-label">${I18n.t('editor.page')}</span>
                     
                     <button class="craftools-tool-btn" id="new-page-btn" title="${I18n.t('editor.newPage')}">
@@ -104,6 +110,7 @@ export class Craftools_Editor extends HTMLElement {
                 </main>
                 
                 <aside class="craftools-panel hidden" id="right-panel">
+                    <div class="craftools-panel-drag-indicator"></div>
                     <div class="craftools-panel-head">
                         <span class="craftools-panel-title" id="panel-title">${I18n.t('editor.panelTitle')}</span>
                         <button class="craftools-icon-btn" id="close-panel">
@@ -123,7 +130,33 @@ export class Craftools_Editor extends HTMLElement {
     }
 
     bindEvents() {
-        // Element selection integration
+        const isMobile = () => window.innerWidth <= 768;
+
+        // ── Mobile menu toggle ─────────────────────────────────────────────
+        const mobileMenuBtn = this.querySelector('#mobile-menu-btn');
+        const sidebar = this.querySelector('#main-sidebar');
+        const overlay = this.querySelector('#sidebar-overlay');
+
+        if (window.innerWidth <= 768) {
+            mobileMenuBtn.style.display = 'flex';
+        }
+        window.addEventListener('resize', () => {
+            mobileMenuBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+        });
+
+        const openSidebar = () => {
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('visible');
+        };
+        const closeSidebar = () => {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('visible');
+        };
+
+        mobileMenuBtn.addEventListener('click', openSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        // ── Element selection ──────────────────────────────────────────────
         this.addEventListener('craftools-element-select', (e) => {
             const el = e.detail.element;
             const toolType = el.getAttribute('data-craftool');
@@ -159,13 +192,13 @@ export class Craftools_Editor extends HTMLElement {
             this.ctxBar.hide();
         });
 
-        // Language Select
+        // ── Language Select ────────────────────────────────────────────────
         this.querySelector('#lang-select').addEventListener('change', (e) => {
             I18n.lang = e.target.value;
             this.render();
         });
 
-        // Theme toggle
+        // ── Theme toggle ───────────────────────────────────────────────────
         const themeBtn = this.querySelector('#theme-btn');
         themeBtn.addEventListener('click', () => {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -173,16 +206,16 @@ export class Craftools_Editor extends HTMLElement {
             themeBtn.innerHTML = `<span class="material-symbols-outlined">${isDark ? 'dark_mode' : 'light_mode'}</span>`;
         });
 
-        // Sidebar Tools -> Open Right panel
+        // ── Sidebar Tools ──────────────────────────────────────────────────
         const toolBtns = this.querySelectorAll('.craftools-tool-btn[data-tool]');
         const rightPanel = this.querySelector('#right-panel');
         const panelTitle = this.querySelector('#panel-title');
         const closePanel = this.querySelector('#close-panel');
         const panelBody = this.querySelector('#panel-body');
 
-        // Setup Drag & Drop starting from sidebar buttons
+        // Desktop: drag & drop
         toolBtns.forEach(btn => {
-            if(btn.getAttribute('draggable') === 'true') {
+            if (btn.getAttribute('draggable') === 'true') {
                 btn.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('ToolType', btn.dataset.tool);
                     e.dataTransfer.effectAllowed = 'copy';
@@ -190,9 +223,50 @@ export class Craftools_Editor extends HTMLElement {
             }
         });
 
-        // Some buttons like "gerador" still trigger click actions
+        // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
-            if(btn.dataset.tool === 'gerador' || btn.dataset.tool === 'papeis') {
+            const tool = btn.dataset.tool;
+            if (!['titulo', 'paragrafo', 'imagem', 'album'].includes(tool)) return;
+
+            btn.addEventListener('click', async () => {
+                if (!isMobile()) return; // Desktop usa drag, não clique
+
+                closeSidebar();
+
+                const mainPage = this.querySelector('.craftools-page');
+                if (!mainPage) return;
+
+                const rect = mainPage.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const cx = rect.width / scale / 2;
+                const cy = rect.height / scale / 2;
+
+                if (tool === 'album') {
+                    const { AlbumTool } = await import('../tools/album/AlbumTool.js');
+                    AlbumTool.setup(this, mainPage);
+                } else if (tool === 'imagem') {
+                    const { ImageTool } = await import('../tools/image/ImageTool.js');
+                    const el = ImageTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 100);
+                    el.setAttribute('y', cy - 100);
+                    mainPage.appendChild(el);
+                } else {
+                    const { TextTool } = await import('../tools/text/TextTool.js');
+                    const el = TextTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 100);
+                    el.setAttribute('y', cy - 30);
+                    mainPage.appendChild(el);
+                }
+
+                // Remove placeholder se existir
+                const placeholder = mainPage.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
+            });
+        });
+
+        // Gerador e Papeis — clique direto
+        toolBtns.forEach(btn => {
+            if (btn.dataset.tool === 'gerador' || btn.dataset.tool === 'papeis') {
                 btn.addEventListener('click', () => {
                     this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -201,6 +275,7 @@ export class Craftools_Editor extends HTMLElement {
                     panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
                     rightPanel.classList.remove('hidden');
                     this.activePage = null;
+                    closeSidebar();
                 });
             }
         });
@@ -211,19 +286,19 @@ export class Craftools_Editor extends HTMLElement {
             this.activePage = null;
         });
 
-        // Nova Página Logic importada da Classe PageTool
+        // ── Nova Página ────────────────────────────────────────────────────
         const newPageBtn = this.querySelector('#new-page-btn');
         this.activePage = null;
-
         newPageBtn.addEventListener('click', () => {
             PageTool.addNewPage(this);
+            closeSidebar();
         });
 
         // Initialize first page event
         const mainPage = this.querySelector('#main-page');
         PageTool.attachPageEvents(this, mainPage);
 
-        // Zoom Logic
+        // ── Zoom ───────────────────────────────────────────────────────────
         let zoomLevel = 1.0;
         window.craftoolsZoomLevel = 1.0;
         const zoomLevelLabel = this.querySelector('#zoom-level');
@@ -251,6 +326,35 @@ export class Craftools_Editor extends HTMLElement {
             zoomLevel = 1.0;
             updateZoom();
         });
+
+        // ── Pinch-to-zoom (mobile) ─────────────────────────────────────────
+        const canvas = this.querySelector('#canvas-area');
+        let pinchStartDist = null;
+        let pinchStartZoom = 1.0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                pinchStartDist = Math.hypot(dx, dy);
+                pinchStartZoom = zoomLevel;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && pinchStartDist) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.hypot(dx, dy);
+                const scale = dist / pinchStartDist;
+                zoomLevel = Math.min(3.0, Math.max(0.2, pinchStartZoom * scale));
+                updateZoom();
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+            if (pinchStartDist) pinchStartDist = null;
+        }, { passive: true });
     }
 
     static init() { customElements.define("craftools-editor", Craftools_Editor) }
