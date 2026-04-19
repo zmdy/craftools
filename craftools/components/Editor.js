@@ -4,6 +4,7 @@ import { TextTool } from "../tools/text/TextTool.js";
 import { ImageTool } from "../tools/image/ImageTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
+import { PdfExport } from "../utils/PdfExport.js";
 
 export class Craftools_Editor extends HTMLElement {
     constructor() { super(); }
@@ -96,6 +97,13 @@ export class Craftools_Editor extends HTMLElement {
                     <button class="craftools-tool-btn" data-tool="papeis" title="${I18n.t('editor.papers')}">
                         <span class="material-symbols-outlined">note_stack</span>
                         <span class="craftools-tool-label">${I18n.t('editor.papers')}</span>
+                    </button>
+
+                    <span class="craftools-sec-label">Salvar</span>
+
+                    <button class="craftools-tool-btn" id="pdf-btn" title="Exportar PDF">
+                        <span class="material-symbols-outlined">picture_as_pdf</span>
+                        <span class="craftools-tool-label">PDF</span>
                     </button>
                 </aside>
                 
@@ -292,6 +300,12 @@ export class Craftools_Editor extends HTMLElement {
         newPageBtn.addEventListener('click', () => {
             PageTool.addNewPage(this);
             closeSidebar();
+        });
+
+        // ── PDF Export ────────────────────────────────────────────────────
+        this.querySelector('#pdf-btn').addEventListener('click', () => {
+            closeSidebar();
+            PdfExport.print(this);
         });
 
         // Initialize first page event
