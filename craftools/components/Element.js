@@ -102,12 +102,16 @@ export class Craftools_Element extends HTMLElement {
         this._overlay.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
             this.select();
-            this.isDragging = true;
-            this.startX = e.clientX;
-            this.startY = e.clientY;
-            this._overlay.setPointerCapture(e.pointerId);
-            document.addEventListener('pointermove', this._onMove, { passive: false });
-            document.addEventListener('pointerup', this._onUp, { once: true });
+            
+            const isLocked = this.getAttribute('data-locked') === 'true';
+            if (!isLocked) {
+                this.isDragging = true;
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+                this._overlay.setPointerCapture(e.pointerId);
+                document.addEventListener('pointermove', this._onMove, { passive: false });
+                document.addEventListener('pointerup', this._onUp, { once: true });
+            }
         });
 
         this._overlay.addEventListener('dblclick', (e) => {
@@ -185,6 +189,12 @@ export class Craftools_Element extends HTMLElement {
             });
         }
         this._ctrlbar.style.display = 'block';
+        
+        if (this.getAttribute('data-locked') === 'true') {
+            const handles = this._ctrlbar.querySelectorAll('.rsz-handle, .rot-handle, .del-handle');
+            handles.forEach(h => h.style.display = 'none');
+        }
+
         this.style.zIndex = '100';
 
         const event = new CustomEvent('craftools-element-select', { bubbles: true, detail: { element: this } });

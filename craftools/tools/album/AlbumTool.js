@@ -1,3 +1,4 @@
+import { ImageTool } from "../image/ImageTool.js";
 import { I18n } from "../../settings/Translations.js";
 import { Craftools_LayoutGrid } from "../../utils/LayoutGrid.js";
 import { GridSizes } from "../../utils/GridSizes.js";
@@ -139,21 +140,30 @@ export class AlbumTool {
             cellContainer.style.background = "#fff";
             cellContainer.style.border = "1px dashed #ccc";
 
-            let imgEl = document.createElement('div');
             const p = template.cellPadding.split(" ");
+            const pt = parseFloat(p[0]) * u;
+            const pr = parseFloat(p[1]) * u;
+            const pb = parseFloat(p[2]) * u;
+            const pl = parseFloat(p[3]) * u;
+
+            const cw = template.cellWidth * u - pl - pr;
+            const ch = template.cellHeight * u - pt - pb;
+
+            // Renderiza e integra a tool 'Image' nativa do CrafTools via ImageTool.createElement
+            let imgEl = ImageTool.createElement('imagem', editor);
             
-            imgEl.style.cssText = `
-                position: absolute;
-                top: ${parseFloat(p[0]) * u}px;
-                right: ${parseFloat(p[1]) * u}px;
-                bottom: ${parseFloat(p[2]) * u}px;
-                left: ${parseFloat(p[3]) * u}px;
-                background-image: url(${src});
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                pointer-events: none;
-            `;
+            imgEl.setAttribute('x', pl);
+            imgEl.setAttribute('y', pt);
+            imgEl.setAttribute('w', cw);
+            imgEl.setAttribute('h', ch);
+            imgEl.setAttribute('data-locked', 'true');
+
+            imgEl._craftoolsMeta.src = src;
+
+            const imgTarget = imgEl.querySelector('img');
+            if (imgTarget) {
+                imgTarget.src = src;
+            }
 
             cellContainer.appendChild(imgEl);
         });

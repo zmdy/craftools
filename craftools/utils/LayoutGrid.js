@@ -94,9 +94,29 @@ export class Craftools_LayoutGrid {
                     background: transparent;
                     position: relative;
                     overflow: visible;
-                    cursor: grab;
                 `;
                 
+                // Adiciona a alça de arrasto da célula (Drag Handle)
+                let dragHandle = document.createElement('div');
+                dragHandle.className = "album-drag-handle";
+                dragHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-secondary);">drag_indicator</span>';
+                dragHandle.style.cssText = `
+                    position: absolute;
+                    top: 4px;
+                    left: 4px;
+                    z-index: 50;
+                    background: var(--bg-input, #fff);
+                    border: 1px solid var(--border, #e5e7eb);
+                    border-radius: 4px;
+                    padding: 2px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: grab;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                `;
+                cellWrap.appendChild(dragHandle);
+
                 // O próprio container base já é fornecido para a callback desenhar os items
                 grid.appendChild(cellWrap);
                 if(renderCellContentCallback) {
@@ -104,15 +124,16 @@ export class Craftools_LayoutGrid {
                 }
             });
 
-            // Ativa Drag and Drop interativo p/ repor células
+            // Ativa Drag and Drop interativo p/ repor células APENAS CLICANDO NA ALÇA
             new Sortable(grid, { 
                 animation: 200,
-                ghostClass: "sortable-ghost", // Classe que pode ser estilizada se desejar
+                handle: '.album-drag-handle', // <--- Resolve totalmente conflitos de clique
+                ghostClass: "sortable-ghost",
                 onStart: (evt) => {
-                    evt.item.style.cursor = 'grabbing';
+                    evt.item.querySelector('.album-drag-handle').style.cursor = 'grabbing';
                 },
                 onEnd: (evt) => {
-                    evt.item.style.cursor = 'grab';
+                    evt.item.querySelector('.album-drag-handle').style.cursor = 'grab';
                 }
             });
         }
