@@ -34,6 +34,15 @@ export class Craftools_Element extends HTMLElement {
     }
 
     _build() {
+        const existingCtrlbar = this.querySelector('.craftools-ctrlbar');
+        if (existingCtrlbar) {
+            // It's a clone! Just map the references.
+            this._content = this.children[0];
+            this._overlay = this.children[1];
+            this._ctrlbar = this.children[2];
+            return;
+        }
+
         // Collect children
         const children = [];
         while (this.firstChild) children.push(this.removeChild(this.firstChild));

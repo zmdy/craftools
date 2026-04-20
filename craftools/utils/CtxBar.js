@@ -78,6 +78,48 @@ export class CtxBar {
         this.el.appendChild(this.createButton('arrow_upward', 'Subir', () => zAdjust('up')));
         this.el.appendChild(this.createButton('arrow_downward', 'Descer', () => zAdjust('down')));
 
+        this.el.appendChild(this.createSeparator());
+        
+        // Duplicate Action
+        this.el.appendChild(this.createButton('content_copy', 'Duplicar elemento', async () => {
+            const clone = element.cloneNode(true);
+            
+            // Offset slightly
+            const currX = parseFloat(element.getAttribute('x')) || 0;
+            const currY = parseFloat(element.getAttribute('y')) || 0;
+            clone.setAttribute('x', currX + 15);
+            clone.setAttribute('y', currY + 15);
+            
+            // Re-apply style position
+            clone.style.transform = `translate(${currX + 15}px, ${currY + 15}px) rotate(${element.getAttribute('r') || 0}deg)`;
+
+            // Deep copy meta if exists
+            if (element._craftoolsMeta) {
+                clone._craftoolsMeta = JSON.parse(JSON.stringify(element._craftoolsMeta));
+            }
+
+            const page = element.closest('.craftools-page');
+            if (page) {
+                page.appendChild(clone);
+                
+                // If it's an image, re-bind interactions
+                if (clone.getAttribute('data-craftool') === 'imagem') {
+                    const { ImageTransform } = await import('../tools/image/ImageTransform.js');
+                    const { ImageFilters } = await import('../tools/image/ImageFilters.js');
+                    ImageTransform.setupInteractions(clone);
+                    ImageTransform.applyTransform(clone);
+                    ImageFilters.applyFilters(clone);
+                }
+
+                // Deselect current and select clone
+                setTimeout(() => {
+                    const rect = clone.getBoundingClientRect();
+                    clone.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.x + 10, clientY: rect.y + 10 }));
+                    clone.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+                }, 100);
+            }
+        }));
+
         // Custom tools commands
         if (options && options.length > 0) {
             this.el.appendChild(this.createSeparator());
