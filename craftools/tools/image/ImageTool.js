@@ -33,7 +33,7 @@ export class ImageTool extends BaseTool {
             </div>
         `).join('');
 
-        editorPanel.innerHTML = `
+        const html = `
             <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
                 <div class="craftools-panel-section">
                     <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">

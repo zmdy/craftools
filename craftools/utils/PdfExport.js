@@ -224,7 +224,7 @@ ${body}
     // Dispara o print assim que as fontes e imagens carregarem
     window.addEventListener('load', () => {
         // Ajusta o título do documento
-        document.title = "Craftools - " + window.location.href.split('/').reverse()[0];
+        document.title =  "${this.createTitle()}" +  window.location.href.split('/').reverse()[0];
 
         // Pequeno delay para garantir renderização completa
         setTimeout(() => window.print(), 600);
@@ -259,5 +259,11 @@ ${body}
             hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
         }
         return hash.toString(36); // base36 para ficar curto
+    }
+
+    static createTitle() {
+        const n = new Date();
+        const pad = (v) => String(v).padStart(2, '0');
+        return `Craftools - ${String(n.getFullYear()).slice(-2)}${pad(n.getMonth()+1)}${pad(n.getDate())}${pad(n.getHours())}${pad(n.getMinutes())} - `;
     }
 }
