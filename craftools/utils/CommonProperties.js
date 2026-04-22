@@ -42,7 +42,8 @@ export class CommonProperties {
         const bColor = section.querySelector('#prop-border-color');
 
         const update = () => {
-            target.style.borderWidth = bWidth.value + 'px';
+            const unit = this._getUnit(target.style.borderWidth);
+            target.style.borderWidth = bWidth.value + unit;
             target.style.borderStyle = bStyle.value;
             target.style.borderColor = bColor.value;
             if (onChange) onChange();
@@ -95,13 +96,14 @@ export class CommonProperties {
         section.innerHTML = html;
         container.appendChild(section);
 
+        const unit = this._getUnit(target.style.borderRadius);
         const inputs = section.querySelectorAll('input');
         inputs.forEach(input => {
             input.addEventListener('input', () => {
-                const v_tl = section.querySelector('#prop-radius-tl').value + 'px';
-                const v_tr = section.querySelector('#prop-radius-tr').value + 'px';
-                const v_br = section.querySelector('#prop-radius-br').value + 'px';
-                const v_bl = section.querySelector('#prop-radius-bl').value + 'px';
+                const v_tl = section.querySelector('#prop-radius-tl').value + unit;
+                const v_tr = section.querySelector('#prop-radius-tr').value + unit;
+                const v_br = section.querySelector('#prop-radius-br').value + unit;
+                const v_bl = section.querySelector('#prop-radius-bl').value + unit;
                 target.style.borderRadius = `${v_tl} ${v_tr} ${v_br} ${v_bl}`;
                 if (onChange) onChange();
                 this._triggerChange(element);
@@ -138,12 +140,13 @@ export class CommonProperties {
         section.innerHTML = html;
         container.appendChild(section);
 
+        const unit = this._getUnit(target.style.padding);
         section.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', () => {
-                const v_t = section.querySelector('#prop-pad-t').value + 'px';
-                const v_r = section.querySelector('#prop-pad-r').value + 'px';
-                const v_b = section.querySelector('#prop-pad-b').value + 'px';
-                const v_l = section.querySelector('#prop-pad-l').value + 'px';
+                const v_t = section.querySelector('#prop-pad-t').value + unit;
+                const v_r = section.querySelector('#prop-pad-r').value + unit;
+                const v_b = section.querySelector('#prop-pad-b').value + unit;
+                const v_l = section.querySelector('#prop-pad-l').value + unit;
                 target.style.padding = `${v_t} ${v_r} ${v_b} ${v_l}`;
                 if (onChange) onChange();
                 this._triggerChange(element);
@@ -194,6 +197,12 @@ export class CommonProperties {
     static _triggerChange(element) {
         const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
         element.dispatchEvent(event);
+    }
+
+    static _getUnit(val) {
+        if (!val) return 'px';
+        const unit = val.toString().replace(/[0-9.-]/g, '').trim();
+        return unit || 'px';
     }
 
     static _rgbToHex(rgb) {

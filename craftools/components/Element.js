@@ -22,10 +22,20 @@ export class Craftools_Element extends HTMLElement {
         if (this._built) return;
         this._built = true;
 
-        this.px = parseFloat(this.getAttribute('x')) || 50;
-        this.py = parseFloat(this.getAttribute('y')) || 50;
-        this.pw = parseFloat(this.getAttribute('w')) || 200;
-        this.ph = parseFloat(this.getAttribute('h')) || 80;
+        const rawX = this.getAttribute('x') || '50';
+        const rawY = this.getAttribute('y') || '50';
+        const rawW = this.getAttribute('w') || '200';
+        const rawH = this.getAttribute('h') || '80';
+
+        this.unitX = rawX.toString().replace(/[0-9.-]/g, '') || 'px';
+        this.unitY = rawY.toString().replace(/[0-9.-]/g, '') || 'px';
+        this.unitW = rawW.toString().replace(/[0-9.-]/g, '') || 'px';
+        this.unitH = rawH.toString().replace(/[0-9.-]/g, '') || 'px';
+
+        this.px = parseFloat(rawX);
+        this.py = parseFloat(rawY);
+        this.pw = parseFloat(rawW);
+        this.ph = parseFloat(rawH);
         this.pr = parseFloat(this.getAttribute('r')) || 0;
 
         this._build();
@@ -92,9 +102,9 @@ export class Craftools_Element extends HTMLElement {
     }
 
     _applyTransform() {
-        this.style.transform = `translate(${this.px}px, ${this.py}px) rotate(${this.pr}deg)`;
-        this.style.width  = `${this.pw}px`;
-        this.style.height = `${this.ph}px`;
+        this.style.transform = `translate(${this.px}${this.unitX}, ${this.py}${this.unitY}) rotate(${this.pr}deg)`;
+        this.style.width  = `${this.pw}${this.unitW}`;
+        this.style.height = `${this.ph}${this.unitH}`;
     }
 
     _getScale() {
@@ -244,25 +254,38 @@ export class Craftools_Element extends HTMLElement {
         const sc = this._getScale();
 
         if (this.isDragging) {
-            this.px += (e.clientX - this.startX) / sc;
-            this.py += (e.clientY - this.startY) / sc;
+            const scX = this.unitX === 'mm' ? sc * 3.7795275591 : sc;
+            const scY = this.unitY === 'mm' ? sc * 3.7795275591 : sc;
+            this.px += (e.clientX - this.startX) / scX;
+            this.py += (e.clientY - this.startY) / scY;
             this.startX = e.clientX;
             this.startY = e.clientY;
         }
         else if (this.isResizing) {
-            const dx = (e.clientX - this.startX) / sc;
-            const dy = (e.clientY - this.startY) / sc;
+            const scX = this.unitW === 'mm' ? sc * 3.7795275591 : sc;
+            const scY = this.unitH === 'mm' ? sc * 3.7795275591 : sc;
+            const scPX = this.unitX === 'mm' ? sc * 3.7795275591 : sc;
+            const scPY = this.unitY === 'mm' ? sc * 3.7795275591 : sc;
+
+            const dx = (e.clientX - this.startX) / scX;
+            const dy = (e.clientY - this.startY) / scY;
             const d  = this.resizeDir;
 
-            if (d === 'r' || d === 'tr' || d === 'br') this.pw = Math.max(20, this.origW + dx);
-            if (d === 'b' || d === 'bl' || d === 'br') this.ph = Math.max(20, this.origH + dy);
+            if (d === 'r' || d === 'tr' || d === 'br') this.pw = Math.max(2, this.origW + dx);
+            if (d === 'b' || d === 'bl' || d === 'br') this.ph = Math.max(2, this.origH + dy);
             if (d === 'l' || d === 'tl' || d === 'bl') {
-                const nw = Math.max(20, this.origW - dx);
+                const nw = Math.max(2, this.origW - dx);
+                const dpx = (e.clientX - this.startX) / scPX;
                 this.pw = nw;
-                this.px = this.origX + (this.origW - nw);
+                this.px = this.origX + dpx; // simplified for single-step delta? wait.
+                // Orig logic: this.px = this.origX + (this.origW - nw)
+                // Let's stick to consistent logic
+                const nw_orig_unit = Math.max(2, this.origW - dx);
+                this.pw = nw_orig_unit;
+                this.px = this.origX + (this.origW - nw_orig_unit);
             }
             if (d === 't' || d === 'tl' || d === 'tr') {
-                const nh = Math.max(20, this.origH - dy);
+                const nh = Math.max(2, this.origH - dy);
                 this.ph = nh;
                 this.py = this.origY + (this.origH - nh);
             }

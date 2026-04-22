@@ -18,22 +18,18 @@ export class Craftools_LayoutGrid {
             });
         }
 
-        const unit = this.pageSize.sizeUnit;
-        let u = 1;
-        if (unit === 'mm') {
-            u = 3.7795275591; // Pixels por MM (aproximado 96dpi)
-        }
+        const unit = this.pageSize.sizeUnit || 'px';
 
         const pageSizeParts = this.pageSize.size.split(',').map(Number);
-        const docW = pageSizeParts[0] * u;
-        const docH = pageSizeParts[1] * u;
+        const docW = pageSizeParts[0];
+        const docH = pageSizeParts[1];
         
-        const margins = this.template.pageMargin.split(" ").map(v => parseFloat(v) * u);
+        const margins = this.template.pageMargin.split(" ").map(v => parseFloat(v));
         const [mT, mR, mB, mL] = margins;
         
-        const cellW = this.template.cellWidth * u;
-        const cellH = this.template.cellHeight * u;
-        const gap = this.template.cellGap * u;
+        const cellW = this.template.cellWidth;
+        const cellH = this.template.cellHeight;
+        const gap = this.template.cellGap;
 
         const availableW = docW - mL - mR;
         const availableH = docH - mT - mB;
@@ -58,8 +54,8 @@ export class Craftools_LayoutGrid {
 
             // Preparar folha fisicamente para a Grid
             currentPage.innerHTML = '';
-            currentPage.style.width = docW + 'px';
-            currentPage.style.minHeight = docH + 'px';
+            currentPage.style.width = docW + unit;
+            currentPage.style.minHeight = docH + unit;
             currentPage.style.background = '#ffffff'; 
             currentPage.style.position = 'relative';
 
@@ -71,14 +67,14 @@ export class Craftools_LayoutGrid {
             grid.dataset.borderColor = '#cccccc';
             grid.style.cssText = `
                 position: absolute;
-                top: ${mT}px;
-                right: ${mR}px;
-                bottom: ${mB}px;
-                left: ${mL}px;
+                top: ${mT}${unit};
+                right: ${mR}${unit};
+                bottom: ${mB}${unit};
+                left: ${mL}${unit};
                 display: grid;
-                grid-template-columns: repeat(${cols}, ${cellW}px);
-                grid-auto-rows: ${cellH}px;
-                gap: ${gap}px;
+                grid-template-columns: repeat(${cols}, ${cellW}${unit});
+                grid-auto-rows: ${cellH}${unit};
+                gap: ${gap}${unit};
                 align-content: start;
                 box-sizing: border-box;
             `;
@@ -90,9 +86,9 @@ export class Craftools_LayoutGrid {
                 let cellWrap = document.createElement('div');
                 cellWrap.className = "craftools-grid-cell";
                 cellWrap.style.cssText = `
-                    width: ${cellW}px;
-                    height: ${cellH}px;
-                    padding: ${this.template.cellPadding.split(" ").map(p => (parseFloat(p) * u) + "px").join(" ")};
+                    width: ${cellW}${unit};
+                    height: ${cellH}${unit};
+                    padding: ${this.template.cellPadding.split(" ").map(p => parseFloat(p) + unit).join(" ")};
                     box-sizing: border-box;
                     background: transparent;
                     position: relative;

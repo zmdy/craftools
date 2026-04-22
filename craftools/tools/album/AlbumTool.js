@@ -42,15 +42,14 @@ export class AlbumTool extends BaseTool {
 
         // ── Helpers ────────────────────────────────────────────────────────
         const calcPerPage = (template, size) => {
-            const u = size.sizeUnit === 'mm' ? 3.7795275591 : 1;
             const parts = size.size.split(',').map(Number);
-            const docW = parts[0] * u;
-            const docH = parts[1] * u;
-            const margins = template.pageMargin.split(" ").map(v => parseFloat(v) * u);
+            const docW = parts[0];
+            const docH = parts[1];
+            const margins = template.pageMargin.split(" ").map(v => parseFloat(v));
             const [mT, mR, mB, mL] = margins;
-            const cellW = template.cellWidth * u;
-            const cellH = template.cellHeight * u;
-            const gap = template.cellGap * u;
+            const cellW = template.cellWidth;
+            const cellH = template.cellHeight;
+            const gap = template.cellGap;
             const cols = Math.floor((docW - mL - mR + gap) / (cellW + gap)) || 1;
             const rows = Math.floor((docH - mT - mB + gap) / (cellH + gap)) || 1;
             return cols * rows;
@@ -271,12 +270,12 @@ export class AlbumTool extends BaseTool {
     }
 
     // ── Helpers: build a locked ImageTool element for a grid cell ────────────
-    static _buildCellElement(editor, src, pl, pt, cw, ch) {
+    static _buildCellElement(editor, src, pl, pt, cw, ch, unit = 'px') {
         const imgEl = ImageTool.createElement('imagem', editor);
-        imgEl.setAttribute('x', pl);
-        imgEl.setAttribute('y', pt);
-        imgEl.setAttribute('w', cw);
-        imgEl.setAttribute('h', ch);
+        imgEl.setAttribute('x', pl + unit);
+        imgEl.setAttribute('y', pt + unit);
+        imgEl.setAttribute('w', cw + unit);
+        imgEl.setAttribute('h', ch + unit);
         imgEl.setAttribute('data-locked', 'true');
 
         imgEl._craftoolsMeta.src = src;
@@ -287,16 +286,14 @@ export class AlbumTool extends BaseTool {
     }
 
     static _cellDimensions(template, pageSize) {
-        const u = pageSize.sizeUnit === 'mm' ? 3.7795275591 : 1;
         const p = template.cellPadding.split(" ");
         return {
-            u,
-            pt: parseFloat(p[0]) * u,
-            pr: parseFloat(p[1]) * u,
-            pb: parseFloat(p[2]) * u,
-            pl: parseFloat(p[3]) * u,
-            cw: template.cellWidth  * u - parseFloat(p[3]) * u - parseFloat(p[1]) * u,
-            ch: template.cellHeight * u - parseFloat(p[0]) * u - parseFloat(p[2]) * u,
+            pt: parseFloat(p[0]),
+            pr: parseFloat(p[1]),
+            pb: parseFloat(p[2]),
+            pl: parseFloat(p[3]),
+            cw: template.cellWidth  - parseFloat(p[3]) - parseFloat(p[1]),
+            ch: template.cellHeight - parseFloat(p[0]) - parseFloat(p[2]),
         };
     }
 
@@ -310,13 +307,14 @@ export class AlbumTool extends BaseTool {
 
         const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
         const { pt, pr, pb, pl, cw, ch } = this._cellDimensions(template, pageSize);
+        const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(images, (cellContainer, src) => {
             cellContainer.style.background = "#fff";
             cellContainer.style.borderWidth = "1px";
             cellContainer.style.borderStyle = "dashed";
             cellContainer.style.borderColor = "#cccccc";
-            cellContainer.appendChild(this._buildCellElement(editor, src, pl, pt, cw, ch));
+            cellContainer.appendChild(this._buildCellElement(editor, src, pl, pt, cw, ch, unit));
         });
     }
 
@@ -337,6 +335,7 @@ export class AlbumTool extends BaseTool {
 
         const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
         const { pt, pl, cw, ch } = this._cellDimensions(template, pageSize);
+        const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(items, (cellContainer) => {
             cellContainer.style.background = "#fff";
@@ -345,10 +344,10 @@ export class AlbumTool extends BaseTool {
             cellContainer.style.borderColor = "#cccccc";
 
             const imgEl = ImageTool.createElement('imagem', editor);
-            imgEl.setAttribute('x', pl);
-            imgEl.setAttribute('y', pt);
-            imgEl.setAttribute('w', cw);
-            imgEl.setAttribute('h', ch);
+            imgEl.setAttribute('x', pl + unit);
+            imgEl.setAttribute('y', pt + unit);
+            imgEl.setAttribute('w', cw + unit);
+            imgEl.setAttribute('h', ch + unit);
             imgEl.setAttribute('data-locked', 'true');
 
             // Compartilha o mesmo meta — zoom/pan/filtros ficam sincronizados
