@@ -13,6 +13,13 @@ export var Craftools_Settings =
                     size: "210,297",
                     sizeUnit: "mm"
                 },
+                {
+                    name: "A4 Horizontal",
+                    icon: "stock_media",
+                    description: "Indicado para Papel timbrado, agendas, certificados",
+                    size: "297,210",
+                    sizeUnit: "mm"
+                },
 
 
                 {
