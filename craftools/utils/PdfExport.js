@@ -123,6 +123,15 @@ html, body {
     position: relative;
     overflow: hidden;
 }
+.craftools-element-blur-bg {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: -1;
+}
 
 /* ─── Imagem interna (zoom/pan via transform) ────────────────────────── */
 img {
@@ -181,25 +190,43 @@ ${pageRules}
 
     // ── Achata um <craftools-element> em divs regulares ──────────────────────
     static _flattenElement(elNode) {
-        // A estrutura interna de craftools-element é sempre:
-        //   children[0] = _content (o conteúdo real: img, p, h1, etc.)
-        //   children[1] = _overlay  (apenas UI, remover)
-        //   children[2] = _ctrlbar  (apenas UI, já removido acima, mas garantimos)
         const transform = elNode.style.transform || '';
         const width     = elNode.style.width     || 'auto';
         const height    = elNode.style.height    || 'auto';
         const zIndex    = elNode.style.zIndex    || '2';
+        const overflow  = elNode.style.overflow  || 'visible';
 
         const replacement = document.createElement('div');
         replacement.className = 'ct-el';
-        replacement.style.cssText = `transform:${transform}; width:${width}; height:${height}; z-index:${zIndex};`;
+        replacement.style.cssText = `transform:${transform}; width:${width}; height:${height}; z-index:${zIndex}; overflow:${overflow};`;
 
-        const contentDiv = elNode.children[0]; // sempre _content
+        // 1. Check for Background Blur Layer
+        const blurLayer = elNode.querySelector('.craftools-element-blur-bg');
+        if (blurLayer) {
+            replacement.appendChild(blurLayer.cloneNode(true));
+        }
+
+        // 2. Identify _content div (it's the one that is NOT a UI layer)
+        // Usually it's the first child that isn't the blur layer or ctrlbar
+        let contentDiv = null;
+        for (const child of elNode.children) {
+            if (!child.classList.contains('craftools-element-blur-bg') && 
+                !child.classList.contains('craftools-ctrlbar') &&
+                !child.classList.contains('craftools-sidebar-overlay')) {
+                contentDiv = child;
+                break;
+            }
+        }
+
         if (contentDiv) {
             const inner = document.createElement('div');
             inner.className = 'ct-el-inner';
-            // Copia filhos reais (sem overlay e ctrlbar que estão em children[1] e [2])
-            [...contentDiv.childNodes].forEach(child => inner.appendChild(child.cloneNode(true)));
+            // Copia filhos reais
+            [...contentDiv.childNodes].forEach(child => {
+                if (child.nodeType === 1 || child.nodeType === 3) {
+                    inner.appendChild(child.cloneNode(true));
+                }
+            });
             replacement.appendChild(inner);
         }
 

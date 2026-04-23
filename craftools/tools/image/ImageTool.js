@@ -286,7 +286,7 @@ export class ImageTool extends BaseTool {
         }
 
         blurBg.style.backgroundImage = `url(${meta.src})`;
-        blurBg.style.filter = `blur(${meta.bgBlur}px) saturate(1.2)`;
+        blurBg.style.filter = `blur(${meta.bgBlur}px)`;
     }
 
     static getCtxOptions() {
