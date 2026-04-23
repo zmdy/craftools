@@ -74,6 +74,14 @@ export class ImageTool extends BaseTool {
                     <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="${meta.rotation || 0}" style="width:100%;">
                 </div>
 
+                <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span class="craftools-label" style="margin:0;">Preenchimento de Fundo (Blur)</span>
+                        <span id="bgblur-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.bgBlur || 0}px</span>
+                    </div>
+                    <input type="range" id="bgblur-slider" min="1" max="100" step="1" value="${meta.bgBlur || 20}" style="width:100%;">
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="craftools-field">
                         <span class="craftools-label">${I18n.t('imageTool.posX')}</span>
@@ -123,6 +131,14 @@ export class ImageTool extends BaseTool {
              editorPanel.querySelector('#pos-x-input').value = Math.round(meta.posX);
              editorPanel.querySelector('#pos-y-input').value = Math.round(meta.posY);
 
+             const bgBlurSlider = editorPanel.querySelector('#bgblur-slider');
+             if (bgBlurSlider) {
+                 bgBlurSlider.value = meta.bgBlur || 0;
+                 editorPanel.querySelector('#bgblur-val-display').textContent = (meta.bgBlur || 0) + 'px';
+             }
+
+             this._applyBgBlur(element);
+
              // Propagate to linked elements (Business Card mode)
              if (element._linkedElements) {
                  element._linkedElements.forEach(sibling => {
@@ -150,6 +166,7 @@ export class ImageTool extends BaseTool {
             meta.posX = defaults.posX;
             meta.posY = defaults.posY;
             meta.rotation = defaults.rotation;
+            meta.bgBlur = defaults.bgBlur;
             meta.objectFit = defaults.objectFit;
             FILTERS_CONFIG.forEach(f => meta.filters[f.key] = f.def);
             ImageTransform.applyTransform(element);
@@ -227,7 +244,49 @@ export class ImageTool extends BaseTool {
             };
         });
 
+        // Bind Background Blur
+        const bgBlurSlider = editorPanel.querySelector('#bgblur-slider');
+        if (bgBlurSlider) {
+            bgBlurSlider.oninput = (e) => {
+                meta.bgBlur = parseInt(e.target.value);
+                editorPanel.querySelector('#bgblur-val-display').textContent = meta.bgBlur + 'px';
+                this._applyBgBlur(element);
+                if (element._syncSidebar) element._syncSidebar();
+            };
+        }
 
+    }
+
+    static _applyBgBlur(element) {
+        const meta = element._craftoolsMeta;
+        if (!meta) return;
+
+        let blurBg = element.querySelector('.craftools-element-blur-bg');
+        
+        if (meta.bgBlur <= 0) {
+            if (blurBg) blurBg.remove();
+            element.style.overflow = "";
+            return;
+        }
+
+        if (!blurBg) {
+            element.style.overflow = "hidden";
+            blurBg = document.createElement('div');
+            blurBg.className = "craftools-element-blur-bg";
+            blurBg.style.cssText = `
+                position: absolute;
+                inset: -20px;
+                background-size: cover;
+                background-position: center;
+                opacity: 0.6;
+                pointer-events: none;
+                z-index: -1;
+            `;
+            element.insertBefore(blurBg, element.firstChild);
+        }
+
+        blurBg.style.backgroundImage = `url(${meta.src})`;
+        blurBg.style.filter = `blur(${meta.bgBlur}px) saturate(1.2)`;
     }
 
     static getCtxOptions() {
@@ -248,6 +307,10 @@ export class ImageTool extends BaseTool {
                                 element._craftoolsMeta.src = e.target.result;
                                 const img = element.contentArea.querySelector('img');
                                 if (img) img.src = e.target.result;
+
+                                 // Atualiza fundo desfocado se existir
+                                 const blurBg = element.querySelector('.craftools-element-blur-bg');
+                                 if (blurBg) blurBg.style.backgroundImage = `url(${e.target.result})`;
                             };
                             reader.readAsDataURL(file);
                         }
@@ -266,6 +329,7 @@ export class ImageTool extends BaseTool {
             posX: 0,
             posY: 0,
             rotation: 0,
+            bgBlur: 0, // Default 0 (off)
             borderWidth: 0,
             borderStyle: 'none',
             borderColor: '#000000',
@@ -301,6 +365,7 @@ export class ImageTool extends BaseTool {
                 ImageTransform.setupInteractions(el);
                 ImageTransform.applyTransform(el);
                 ImageFilters.applyFilters(el);
+                this._applyBgBlur(el);
             } else {
                 requestAnimationFrame(initElement);
             }

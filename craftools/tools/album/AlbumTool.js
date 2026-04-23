@@ -278,6 +278,7 @@ export class AlbumTool extends BaseTool {
         imgEl.setAttribute('h', ch + unit);
         imgEl.setAttribute('data-locked', 'true');
 
+        imgEl._craftoolsMeta.bgBlur = 30; // Ativa por padrão no álbum
         imgEl._craftoolsMeta.src = src;
         const imgTag = imgEl.querySelector('img');
         if (imgTag) imgTag.src = src;
@@ -310,11 +311,13 @@ export class AlbumTool extends BaseTool {
         const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(images, (cellContainer, src) => {
-            cellContainer.style.background = "#fff";
+            cellContainer.style.background = "white";
             cellContainer.style.borderWidth = "1px";
             cellContainer.style.borderStyle = "dashed";
             cellContainer.style.borderColor = "#cccccc";
-            cellContainer.appendChild(this._buildCellElement(editor, src, pl, pt, cw, ch, unit));
+            
+            const imgEl = this._buildCellElement(editor, src, pl, pt, cw, ch, unit);
+            cellContainer.appendChild(imgEl);
         });
     }
 
@@ -338,7 +341,7 @@ export class AlbumTool extends BaseTool {
         const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(items, (cellContainer) => {
-            cellContainer.style.background = "#fff";
+            cellContainer.style.background = "#f8f9fa";
             cellContainer.style.borderWidth = "1px";
             cellContainer.style.borderStyle = "dashed";
             cellContainer.style.borderColor = "#cccccc";
@@ -349,6 +352,9 @@ export class AlbumTool extends BaseTool {
             imgEl.setAttribute('w', cw + unit);
             imgEl.setAttribute('h', ch + unit);
             imgEl.setAttribute('data-locked', 'true');
+
+            // Camada de fundo desfocada interna
+            sharedMeta.bgBlur = 30;
 
             // Compartilha o mesmo meta — zoom/pan/filtros ficam sincronizados
             imgEl._craftoolsMeta = sharedMeta;
