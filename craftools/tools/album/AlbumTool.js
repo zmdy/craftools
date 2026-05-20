@@ -26,6 +26,7 @@ export class AlbumTool extends BaseTool {
         let cardPhoto = null;            // Card mode – single file
         let cardQuantityMode = 'auto';   // 'auto' | 'manual'
         let cardManualQty = 1;
+        let smartFit = false;            // Auto rotate mismatched aspect ratios
 
         // Load sizes from global settings
         let availableSizes = [];
@@ -154,6 +155,17 @@ export class AlbumTool extends BaseTool {
 
                     ${step4Html}
 
+                    <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="craftools-label" style="margin:0;">Ajuste Inteligente (Auto-rotação)</span>
+                            <button class="craftools-pill smart-fit-btn ${smartFit ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+                                <span class="material-symbols-outlined" style="font-size:14px;">auto_fix_high</span>
+                                ${smartFit ? 'Ativado' : 'Desativado'}
+                            </button>
+                        </div>
+                        <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px;">Rotaciona a foto automaticamente se a proporção (retrato/paisagem) for diferente do slot da grade.</span>
+                    </div>
+
                     <button class="craftools-topbtn" id="album-generate-btn"
                         style="width: 100%; justify-content: center; background: var(--accent); color: white; border: none; margin-top: 4px;"
                         ${!canGenerate ? 'disabled' : ''}>
@@ -231,17 +243,26 @@ export class AlbumTool extends BaseTool {
                 });
             }
 
+            // ── Bind: Smart Fit Toggle ─────────────────────────────────────
+            const smartFitBtn = panelBody.querySelector('.smart-fit-btn');
+            if (smartFitBtn) {
+                smartFitBtn.addEventListener('click', () => {
+                    smartFit = !smartFit;
+                    renderPanel();
+                });
+            }
+
             // ── Bind: Generate ─────────────────────────────────────────────
             const generateBtn = panelBody.querySelector('#album-generate-btn');
             if (generateBtn) {
                 generateBtn.addEventListener('click', () => {
                     if (selectedMode === 'album') {
-                        this.processAlbum(editor, pageEl, selectedSize, selectedTemplate, photos);
+                        this.processAlbum(editor, pageEl, selectedSize, selectedTemplate, photos, smartFit);
                     } else {
                         const qty = cardQuantityMode === 'auto'
                             ? calcPerPage(selectedTemplate, selectedSize)
                             : cardManualQty;
-                        this.processBusinessCard(editor, pageEl, selectedSize, selectedTemplate, cardPhoto, qty);
+                        this.processBusinessCard(editor, pageEl, selectedSize, selectedTemplate, cardPhoto, qty, smartFit);
                     }
                     rightPanel.classList.add('hidden');
                 });
@@ -299,10 +320,14 @@ export class AlbumTool extends BaseTool {
     }
 
     // ── Mode 1: Álbum de fotos ────────────────────────────────────────────────
-    static async processAlbum(editor, startPage, pageSize, template, files) {
+    static async processAlbum(editor, startPage, pageSize, template, files, smartFit = false) {
         const images = await Promise.all(files.map(f => new Promise(resolve => {
             const fr = new FileReader();
-            fr.onload = e => resolve(e.target.result);
+            fr.onload = e => {
+                const img = new Image();
+                img.onload = () => resolve({ src: e.target.result, w: img.width, h: img.height });
+                img.src = e.target.result;
+            };
             fr.readAsDataURL(f);
         })));
 
@@ -310,31 +335,57 @@ export class AlbumTool extends BaseTool {
         const { pt, pr, pb, pl, cw, ch } = this._cellDimensions(template, pageSize);
         const unit = pageSize.sizeUnit || 'px';
 
-        await gridSystem.render(images, (cellContainer, src) => {
+        await gridSystem.render(images, (cellContainer, imgData) => {
             cellContainer.style.background = "white";
             cellContainer.style.borderWidth = "1px";
             cellContainer.style.borderStyle = "dashed";
             cellContainer.style.borderColor = "#cccccc";
             
-            const imgEl = this._buildCellElement(editor, src, pl, pt, cw, ch, unit);
+            const imgEl = this._buildCellElement(editor, imgData.src, pl, pt, cw, ch, unit);
+
+            if (smartFit) {
+                const slotAspect = cw / ch;
+                const imgAspect = imgData.w / imgData.h;
+                
+                // Rotaciona se o slot for retrato (<1) e a foto for paisagem (>1), ou vice-versa
+                if ((slotAspect > 1 && imgAspect < 1) || (slotAspect < 1 && imgAspect > 1)) {
+                    imgEl._craftoolsMeta.rotation = 90;
+                    imgEl._craftoolsMeta.objectFit = 'contain';
+                    
+                    const sContain = Math.min(cw / imgData.w, ch / imgData.h);
+                    const rW = imgData.w * sContain;
+                    const rH = imgData.h * sContain;
+                    const zoom = Math.max(cw / rH, ch / rW);
+                    
+                    imgEl._craftoolsMeta.zoom = parseFloat(zoom.toFixed(2));
+                    
+                    const imgTag = imgEl.querySelector('img');
+                    if (imgTag) imgTag.style.objectFit = 'contain';
+                }
+            }
+
             cellContainer.appendChild(imgEl);
         });
     }
 
     // ── Mode 2: Cartão de visita ──────────────────────────────────────────────
-    static async processBusinessCard(editor, startPage, pageSize, template, file, quantity) {
-        const src = await new Promise(resolve => {
+    static async processBusinessCard(editor, startPage, pageSize, template, file, quantity, smartFit = false) {
+        const imgData = await new Promise(resolve => {
             const fr = new FileReader();
-            fr.onload = e => resolve(e.target.result);
+            fr.onload = e => {
+                const img = new Image();
+                img.onload = () => resolve({ src: e.target.result, w: img.width, h: img.height });
+                img.src = e.target.result;
+            };
             fr.readAsDataURL(file);
         });
 
         // Único objeto meta compartilhado entre todos os cartões
         const sharedMeta = ImageTool.getDefaultMeta();
-        sharedMeta.src = src;
+        sharedMeta.src = imgData.src;
 
         const allElements = [];
-        const items = Array(quantity).fill(src);
+        const items = Array(quantity).fill(imgData);
 
         const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
         const { pt, pl, cw, ch } = this._cellDimensions(template, pageSize);
@@ -356,11 +407,33 @@ export class AlbumTool extends BaseTool {
             // Camada de fundo desfocada interna
             sharedMeta.bgBlur = 30;
 
+            if (smartFit) {
+                const slotAspect = cw / ch;
+                const imgAspect = imgData.w / imgData.h;
+                
+                if ((slotAspect > 1 && imgAspect < 1) || (slotAspect < 1 && imgAspect > 1)) {
+                    sharedMeta.rotation = 90;
+                    sharedMeta.objectFit = 'contain';
+                    
+                    const sContain = Math.min(cw / imgData.w, ch / imgData.h);
+                    const rW = imgData.w * sContain;
+                    const rH = imgData.h * sContain;
+                    const zoom = Math.max(cw / rH, ch / rW);
+                    
+                    sharedMeta.zoom = parseFloat(zoom.toFixed(2));
+                }
+            }
+
             // Compartilha o mesmo meta — zoom/pan/filtros ficam sincronizados
             imgEl._craftoolsMeta = sharedMeta;
 
             const imgTag = imgEl.querySelector('img');
-            if (imgTag) imgTag.src = src;
+            if (imgTag) {
+                imgTag.src = imgData.src;
+                if (smartFit && sharedMeta.objectFit === 'contain') {
+                    imgTag.style.objectFit = 'contain';
+                }
+            }
 
             allElements.push(imgEl);
             cellContainer.appendChild(imgEl);
