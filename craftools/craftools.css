@@ -163,6 +163,35 @@ input[type="number"] { -moz-appearance:textfield; }
 .craftools-element:hover { border-color:rgba(249,115,22,.3); }
 .craftools-element.craftools-selected { border-color:var(--accent) !important; box-shadow:0 0 0 3px rgba(249,115,22,.15) !important; }
 
+/* Grid Cell Border Rendering */
+.craftools-grid-cell {
+    border: none !important;
+}
+.craftools-grid-cell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3; /* Render on top of image elements (z-index: 2), but below controls */
+    box-sizing: border-box;
+    border-width: var(--cell-border-width, 1px);
+    border-style: var(--cell-border-style, dashed);
+    border-color: var(--cell-border-color, #cccccc);
+}
+
+/* Active Grid Cell (Album/Card) */
+.craftools-cell-active {
+    z-index: 10 !important;
+}
+.craftools-cell-active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999 !important;
+    box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 2px var(--accent) !important;
+}
+
 /* Resize handle */
 .craftools-resize { position:absolute; bottom:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border:2px solid var(--bg-panel); border-radius:2px; cursor:se-resize; z-index:10; opacity:0; transition:opacity .15s; touch-action:none; }
 .craftools-element.craftools-selected .craftools-resize { opacity:1; }

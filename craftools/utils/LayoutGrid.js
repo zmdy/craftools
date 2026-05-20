@@ -146,6 +146,9 @@ export class Craftools_LayoutGrid {
             cell.style.borderWidth = `${width}px`;
             cell.style.borderStyle = style;
             cell.style.borderColor = color;
+            cell.style.setProperty('--cell-border-width', `${width}px`);
+            cell.style.setProperty('--cell-border-style', style);
+            cell.style.setProperty('--cell-border-color', color);
         });
         
         // Store configuration in all grid containers for state persistence

@@ -207,6 +207,10 @@ export class Craftools_Element extends HTMLElement {
                 if (d !== this) d.deselect();
             });
         }
+        
+        const cell = this.closest('.craftools-grid-cell');
+        if (cell) cell.classList.add('craftools-cell-active');
+
         this._ctrlbar.style.display = 'block';
         
         if (this.getAttribute('data-locked') === 'true') {
@@ -233,6 +237,9 @@ export class Craftools_Element extends HTMLElement {
     deselect() {
         this._ctrlbar.style.display = 'none';
         this.style.zIndex = '2';
+        
+        const cell = this.closest('.craftools-grid-cell');
+        if (cell) cell.classList.remove('craftools-cell-active');
         
         // Salva guarda global: Restaura a camada protetora interativa ao clicar fora
         this._overlay.style.pointerEvents = '';
