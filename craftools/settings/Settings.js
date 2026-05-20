@@ -20,21 +20,25 @@ export var Craftools_Settings =
                     size: "297,210",
                     sizeUnit: "mm"
                 },
-
-
                 {
-                    name: "A3",
+                    name: "A6",
                     icon: "stock_media",
-                    description: "Cartazes, convites grandes, materiais dobrados",
-                    size: "297,420",
+                    description: "Indicado para impressão de fotos",
+                    size: "105,148",
                     sizeUnit: "mm"
                 },
-
                 {
                     name: "A5",
                     icon: "stock_media",
                     description: "Cartazes, convites grandes, materiais dobrados",
                     size: "148,210",
+                    sizeUnit: "mm"
+                },
+                {
+                    name: "A3",
+                    icon: "stock_media",
+                    description: "Cartazes, convites grandes, materiais dobrados",
+                    size: "297,420",
                     sizeUnit: "mm"
                 },
             ]

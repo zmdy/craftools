@@ -15,7 +15,7 @@ export const GridSizes = [
         cellPadding: "3 3 3 3", 
         pageMargin: "20 5 15 5", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
     {
         name: "Fotos 5x5 sem borda",
@@ -24,7 +24,7 @@ export const GridSizes = [
         cellPadding: "0 0 0 0", 
         pageMargin: "20 5 15 5", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
     {
         name: "Fotos 7x5 com borda",
@@ -33,7 +33,7 @@ export const GridSizes = [
         cellPadding: "3 3 3 3", 
         pageMargin: "10 5 5 5", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
     {
         name: "Fotos 7x5 sem borda",
@@ -42,7 +42,7 @@ export const GridSizes = [
         cellPadding: "0 0 0 0", 
         pageMargin: "10 5 5 5", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
     {
         name: "Fotos 7x5 mini polaroid",
@@ -51,7 +51,7 @@ export const GridSizes = [
         cellPadding: "3 3 18 3", 
         pageMargin: "10 5 5 5", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
    {
         name: "Fotos 9x7 Polaroid",
@@ -60,7 +60,7 @@ export const GridSizes = [
         cellPadding: "3 3 23 3", 
         pageMargin: "10 5 5 10", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["297,210", , "297,420", ] 
     }, 
     {
         name: "Fotos 9x7 Polaroid Horizontal",
@@ -69,7 +69,7 @@ export const GridSizes = [
         cellPadding: "3 3 18 3", 
         pageMargin: "10 5 5 10", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["297,210", , "297,420", ] 
     },
     {
         name: "Fotos 9x7 Polaroid Revelada",
@@ -78,7 +78,7 @@ export const GridSizes = [
         cellPadding: "3 3 3 3", 
         pageMargin: "10 5 5 10", 
         cellGap: 0,
-        sizes: ["148,210", "210,297", "297,210", , "297,420", ] 
+        sizes: ["297,210", , "297,420", ] 
     },
     {
         name: "Instagram Grid (Quadrado)",

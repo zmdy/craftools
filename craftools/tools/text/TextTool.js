@@ -5,7 +5,7 @@ import "./TextTool_Translations.js";
 const FONTS = [
     'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster', 
     'Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Impact',
-    'Parisienne', 'Dancing Script', 'Quicksand'
+    'Parisienne', 'Dancing Script', 'Quicksand', 'Quintessential', 'Grenze Gotisch'
 ];
 
 export class TextTool extends BaseTool {

@@ -341,7 +341,7 @@ export class AlbumTool extends BaseTool {
         const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(items, (cellContainer) => {
-            cellContainer.style.background = "#f8f9fa";
+            cellContainer.style.background = "white";
             cellContainer.style.borderWidth = "1px";
             cellContainer.style.borderStyle = "dashed";
             cellContainer.style.borderColor = "#cccccc";
