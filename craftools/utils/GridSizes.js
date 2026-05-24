@@ -72,10 +72,19 @@ export const GridSizes = [
         sizes: ["297,210", , "297,420", ] 
     },
     {
-        name: "Fotos 9x7 Polaroid Revelada",
+        name: "Fotos 9x7 Com Borda",
         cellWidth: 70,
         cellHeight: 90,
         cellPadding: "3 3 3 3", 
+        pageMargin: "10 5 5 10", 
+        cellGap: 0,
+        sizes: ["297,210", , "297,420", ] 
+    },
+    {
+        name: "Fotos 9x7 Sem Borda",
+        cellWidth: 70,
+        cellHeight: 90,
+        cellPadding: "0 0 0 0", 
         pageMargin: "10 5 5 10", 
         cellGap: 0,
         sizes: ["297,210", , "297,420", ] 
