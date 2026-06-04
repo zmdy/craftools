@@ -1,70 +1,75 @@
-# CrafTools 🎨
-### Suíte Profissional de Edição e Personalização para Papelaria
+<div align="center">
+  <img src="assets/logo-craftools.svg" alt="CrafTools Logo" width="150" />
+  <br/><br/>
+  <img src="assets/logo-craftools-text.svg" alt="CrafTools" width="200" />
+  
+  <p><strong>Professional Editing & Customization Suite for Stationery</strong></p>
 
-O **CrafTools** é um motor de edição gráfica baseado em web, desenvolvido especificamente para atender às demandas de papelarias personalizadas, estúdios de design e produtores de álbuns. O sistema oferece uma interface rica, manipulando elementos visuais com precisão milimétrica e exportação otimizada para impressão profissional.
-
----
-
-## 🚀 Funcionalidades Principais
-
-### 📸 Manipulação Avançada de Imagens
-*   **Transformações Livres**: Ajuste de zoom, posição (pan) e rotação de imagens dentro de containers dinâmicos.
-*   **Filtros CSS Nativos**: Ajuste de brilho, contraste, saturação e tons de cinza em tempo real.
-*   **Background Blur (Preenchimento Inteligente)**: Gera automaticamente um fundo desfocado a partir da imagem principal para preencher espaços vazios ou criar profundidade visual.
-*   **Recorte e Enquadramento**: Suporte a diferentes modos de `object-fit` (Cover, Contain).
-
-### ✍️ Ferramentas de Texto e Tipografia
-*   **Edição In-Place**: Edição direta no canvas com suporte a fontes personalizadas do Google Fonts.
-*   **Estilização Completa**: Controle de cores, alinhamentos, tamanhos e camadas (z-index).
-
-### 🖼️ Gerador de Álbuns e Grades (AlbumTool)
-*   **Automação de Layout**: Motor inteligente que calcula automaticamente o número de fotos por página baseado no tamanho do papel (A4, A5, etc).
-*   **Modo Cartão de Visita**: Criação de grades sincronizadas onde a edição de um cartão reflete instantaneamente em todos os outros na página.
-*   **Grid Interativo**: Reordenação de slots via Drag-and-Drop.
+  <!-- Badges -->
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
+  <img src="https://img.shields.io/badge/License-GPL_v3-blue?style=for-the-badge" alt="License" />
+</div>
 
 ---
 
-## 🛠️ Arquitetura Técnica
+**CrafTools** is a web-based graphic editing engine built specifically to meet the demands of custom stationery, design studios, and album producers. The system offers a rich interface, allowing the manipulation of visual elements with millimeter precision, and optimized export for professional printing.
 
-O CrafTools foi construído seguindo princípios de **Orientação a Objetos** e **Componentização Moderna**, garantindo extensibilidade e performance.
+## 🚀 Key Features
+
+### 📸 Advanced Image Manipulation
+*   **Free Transformations**: Zoom, pan, and rotate images within dynamic containers.
+*   **Native CSS Filters**: Real-time adjustment of brightness, contrast, saturation, and grayscale.
+*   **Background Blur (Smart Fill)**: Automatically generates a blurred background from the main image to fill empty spaces or create visual depth.
+*   **Cropping & Framing**: Support for different `object-fit` modes (Cover, Contain).
+
+### ✍️ Text and Typography Tools
+*   **In-Place Editing**: Direct editing on the canvas with support for custom Google Fonts.
+*   **Complete Styling**: Control over colors, alignments, sizes, and layers (z-index).
+
+### 🖼️ Album and Grid Generator (AlbumTool)
+*   **Layout Automation**: Intelligent engine that automatically calculates the number of photos per page based on paper size (A4, A5, etc.).
+*   **Business Card Mode**: Creation of synchronized grids where editing one card instantly reflects on all others on the page.
+*   **Interactive Grid**: Reordering of slots via Drag-and-Drop.
+
+## 🛠️ Technical Architecture
+
+CrafTools was built following **Object-Oriented** principles and **Modern Componentization**, ensuring extensibility and performance.
 
 ### 🏗️ Web Components Core
-O coração do sistema é o `<craftools-element>`, um Custom Element que encapsula:
-*   **Interatividade**: Sistemas nativos de drag, resize e rotate.
-*   **Isolamento**: Estrutura interna protegida que separa o conteúdo real dos controles de UI.
-*   **Precisão**: Suporte a unidades nativas do CSS (`mm`, `px`, `cm`), garantindo que o que você vê na tela é exatamente o que sairá no papel.
+The heart of the system is the `<craftools-element>`, a Custom Element that encapsulates:
+*   **Interactivity**: Native drag, resize, and rotate systems.
+*   **Isolation**: Protected internal structure that separates the actual content from the UI controls.
+*   **Precision**: Support for native CSS units (`mm`, `px`, `cm`), ensuring that what you see on the screen is exactly what will be printed.
 
-### 🧬 Sistema de Herança (BaseTool)
-Todas as ferramentas (Imagem, Texto, Álbum) herdam de uma `BaseTool` comum. Isso permite:
-*   **Interface Padronizada**: Seções de bordas, arredondamento, padding e z-index são compartilhadas e consistentes.
-*   **Copy/Paste de Estilos**: Um sistema global que permite copiar propriedades complexas de um elemento e colá-las em outro de tipo compatível.
+### 🧬 Inheritance System (BaseTool)
+All tools (Image, Text, Album) inherit from a common `BaseTool`. This allows:
+*   **Standardized Interface**: Border, rounding, padding, and z-index sections are shared and consistent.
+*   **Style Copy/Paste**: A global system that allows copying complex properties from one element and pasting them onto another compatible type.
 
-### 📐 Motor de Grid (LayoutGrid)
-Uma utilidade desacoplada que utiliza **CSS Grid** para renderizar layouts complexos com precisão absoluta, respeitando margens, sangrias e espaçamentos definidos em templates.
+### 📐 Grid Engine (LayoutGrid)
+A decoupled utility that uses **CSS Grid** to render complex layouts with absolute precision, respecting margins, bleeds, and spacing defined in templates.
 
----
+## 📄 Export & Printing (PdfExport)
 
-## 📄 Exportação e Impressão (PdfExport)
+The CrafTools export engine is not just a screen "print". It features a **Flattening System**:
+1.  **Serialization**: Converts dynamic Web Components into clean, static HTML/CSS.
+2.  **Media Optimization**: Ensures images maintain their resolution and applied filters.
+3.  **Page Precision**: Applies dynamic `@page` directives so the browser understands the exact paper size of each project page.
 
-O motor de exportação do CrafTools não é apenas um "print" da tela. Ele possui um sistema de **Flattening (Achatamento)**:
-1.  **Serialização**: Converte Web Components dinâmicos em HTML/CSS estático e limpo.
-2.  **Otimização de Mídia**: Garante que imagens mantenham sua resolução e filtros aplicados.
-3.  **Precisão de Página**: Aplica diretivas `@page` dinâmicas para que o navegador entenda o tamanho exato do papel de cada página do projeto.
+## 🧰 Development Guide
 
----
+*   **Language**: Vanilla JavaScript (ES6+).
+*   **Styling**: Modern CSS (Variables, Grid, Flexbox).
+*   **UI Assets**: Material Symbols for icons and DM Sans typography.
+*   **Interactions**: PointerEvents for hybrid mouse and touch support.
 
-## 🧰 Guia de Desenvolvimento
+## 📜 License
 
-*   **Linguagem**: JavaScript Vanila (ES6+).
-*   **Estilização**: CSS Moderno (Variáveis, Grid, Flexbox).
-*   **Interface**: Material Symbols para ícones e tipografia DM Sans.
-*   **Interações**: PointerEvents para suporte híbrido a mouse e touch.
-
----
-
-## 📜 Licença
-
-Este programa é um software livre distribuído sob os termos da **GNU General Public License v3**. Consulte o arquivo de licença para mais detalhes.
+This program is free software distributed under the terms of the **GNU General Public License v3**. See the license file for more details.
 
 ---
-*CrafTools - Tecnologia para Criatividade.*
+<div align="center">
+  <i>CrafTools - Technology for Creativity.</i>
+</div>
