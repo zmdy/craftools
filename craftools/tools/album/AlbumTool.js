@@ -7,6 +7,7 @@ import { GridSizes } from "../../utils/GridSizes.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
 import { PageTool } from "../page/PageTool.js";
 import { BaseTool } from "../BaseTool.js";
+import { CellPanel } from "./CellPanel.js";
 import "./AlbumTool_Translations.js";
 
 export class AlbumTool extends BaseTool {
@@ -369,6 +370,9 @@ export class AlbumTool extends BaseTool {
 
             cellContainer.appendChild(imgEl);
         });
+
+        // Wire os botões de editar cell
+        AlbumTool._bindCellEditButtons(editor);
     }
 
     // ── Mode 2: Cartão de visita ──────────────────────────────────────────────
@@ -445,8 +449,27 @@ export class AlbumTool extends BaseTool {
             cellContainer.appendChild(imgEl);
         });
 
-        // Liga todos os elementos entre si — o ImageTool.renderPropertiesPanel
-        // lê _linkedElements no syncSliders e propaga automaticamente
+        // Liga todos os elementos entre si
         allElements.forEach(el => { el._linkedElements = allElements; });
+
+        // Wire os botões de editar cell
+        AlbumTool._bindCellEditButtons(editor);
+    }
+
+    /**
+     * Conecta os botões .cell-edit-btn ao CellPanel.
+     * Chamado após qualquer geração de grid.
+     */
+    static _bindCellEditButtons(editor) {
+        editor.querySelectorAll('.cell-edit-btn').forEach(btn => {
+            // Remove listener antigo se houver (re-geração)
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cellEl = newBtn.closest('.craftools-grid-cell');
+                if (cellEl) CellPanel.open(editor, cellEl);
+            });
+        });
     }
 }

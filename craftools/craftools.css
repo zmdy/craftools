@@ -192,6 +192,26 @@ input[type="number"] { -moz-appearance:textfield; }
     box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 2px var(--accent) !important;
 }
 
+/* Cell selecionada pelo CellPanel */
+.craftools-grid-cell.cell-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Botão de editar cell — hover */
+.cell-edit-btn:hover {
+    background: var(--accent-subtle, #fff7ed) !important;
+    color: var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+/* Camadas da cell: garante empilhamento correto */
+.craftools-grid-cell .cell-bg-layer    { z-index: 0; }
+.craftools-grid-cell .cell-content-layer { z-index: 1; }
+.craftools-grid-cell .cell-overlay-layer { z-index: 4; }
+.craftools-grid-cell .album-drag-handle  { z-index: 50; }
+.craftools-grid-cell .cell-edit-btn      { z-index: 50; }
+
 /* Resize handle */
 .craftools-resize { position:absolute; bottom:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border:2px solid var(--bg-panel); border-radius:2px; cursor:se-resize; z-index:10; opacity:0; transition:opacity .15s; touch-action:none; }
 .craftools-element.craftools-selected .craftools-resize { opacity:1; }

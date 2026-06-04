@@ -85,17 +85,53 @@ export class Craftools_LayoutGrid {
             items.slice(i, i + perPage).forEach((itemData, indexOffset) => {
                 let cellWrap = document.createElement('div');
                 cellWrap.className = "craftools-grid-cell";
+                cellWrap.dataset.cellId = `cell-${Date.now()}-${i + indexOffset}`;
                 cellWrap.style.cssText = `
                     width: ${cellW}${unit};
                     height: ${cellH}${unit};
-                    padding: ${this.template.cellPadding.split(" ").map(p => parseFloat(p) + unit).join(" ")};
+                    padding: 0;
                     box-sizing: border-box;
                     background: transparent;
                     position: relative;
-                    overflow: visible;
+                    overflow: hidden;
                 `;
-                
-                // Adiciona a alça de arrasto da célula (Drag Handle)
+
+                // ── Camada de fundo (background image/color/gradient) ──────
+                let bgLayer = document.createElement('div');
+                bgLayer.className = "cell-bg-layer";
+                bgLayer.style.cssText = `
+                    position: absolute; inset: 0; z-index: 0;
+                    pointer-events: none;
+                    background-size: cover;
+                    background-position: center center;
+                    background-repeat: no-repeat;
+                `;
+                cellWrap.appendChild(bgLayer);
+
+                // ── Camada de conteúdo (fotos do álbum) ───────────────────
+                let contentLayer = document.createElement('div');
+                contentLayer.className = "cell-content-layer";
+                contentLayer.style.cssText = `
+                    position: absolute; inset: 0; z-index: 1;
+                    padding: ${this.template.cellPadding.split(" ").map(p => parseFloat(p) + unit).join(" ")};
+                    box-sizing: border-box;
+                `;
+                cellWrap.appendChild(contentLayer);
+
+                // ── Camada de overlay (imagem sobre tudo) ─────────────────
+                let overlayLayer = document.createElement('div');
+                overlayLayer.className = "cell-overlay-layer";
+                overlayLayer.style.cssText = `
+                    position: absolute; inset: 0; z-index: 4;
+                    pointer-events: none;
+                    background-size: cover;
+                    background-position: center center;
+                    background-repeat: no-repeat;
+                    opacity: 1;
+                `;
+                cellWrap.appendChild(overlayLayer);
+
+                // ── Alça de arrasto (Drag Handle) — acima de tudo ─────────
                 let dragHandle = document.createElement('div');
                 dragHandle.className = "album-drag-handle";
                 dragHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-secondary);">drag_indicator</span>';
@@ -116,10 +152,33 @@ export class Craftools_LayoutGrid {
                 `;
                 cellWrap.appendChild(dragHandle);
 
-                // O próprio container base já é fornecido para a callback desenhar os items
+                // ── Botão de editar cell ───────────────────────────────────
+                let editBtn = document.createElement('button');
+                editBtn.className = "cell-edit-btn";
+                editBtn.title = "Editar célula";
+                editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">tune</span>';
+                editBtn.style.cssText = `
+                    position: absolute;
+                    top: 4px;
+                    right: 4px;
+                    z-index: 50;
+                    background: var(--bg-input, #fff);
+                    border: 1px solid var(--border, #e5e7eb);
+                    border-radius: 4px;
+                    padding: 2px 4px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    color: var(--text-secondary);
+                `;
+                cellWrap.appendChild(editBtn);
+
+                // ── Adiciona ao grid e executa callback ───────────────────
                 grid.appendChild(cellWrap);
                 if(renderCellContentCallback) {
-                    renderCellContentCallback(cellWrap, itemData, i + indexOffset);
+                    renderCellContentCallback(contentLayer, itemData, i + indexOffset);
                 }
             });
 

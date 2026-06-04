@@ -6,6 +6,7 @@
 - [X] Export to PDF using blob
 - [X] Mobile-first interface
 - [ ] Translations: general overview and refinments
+- [ ] Make the tool as a PWA
 
 # v0.2
 - [ ] Improve the PropertiesPanel (add icons make it more organized)
@@ -18,4 +19,3 @@
 - [ ] Implement the concept of “text variables”
 - [ ] Create calendars
 - [ ] Create diaries
-- [ ] Make the tool as a PWA
