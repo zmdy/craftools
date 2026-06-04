@@ -218,7 +218,7 @@
         }
 
         /* Setup Mode */
-        body.is-setup-mode .footer-nav-btn {
+        body.is-setup-mode .footer-nav ul li:not(.center-menu-item):not(.pwa-welcome-msg) {
             display: none !important;
         }
         body.is-setup-mode .footer-nav ul {
@@ -408,17 +408,16 @@
                     setInterval(syncLang, 1000);
                 }
 
-                // Mutation Observer to detect Setup vs Canvas mode reliably
+                // Check setup mode periodically for bulletproof detection
                 const checkSetupMode = () => {
-                    const canvasExists = document.querySelector('.craftools-canvas');
-                    if (canvasExists) {
-                        document.body.classList.remove('is-setup-mode');
-                    } else {
+                    const isSetup = document.querySelector('craftools-setup');
+                    if (isSetup) {
                         document.body.classList.add('is-setup-mode');
+                    } else {
+                        document.body.classList.remove('is-setup-mode');
                     }
                 };
-                const appObserver = new MutationObserver(checkSetupMode);
-                appObserver.observe(document.getElementById('wrapper'), { childList: true, subtree: true });
+                setInterval(checkSetupMode, 500);
                 checkSetupMode();
 
             }, 500); // tempo de segurança para renderização
