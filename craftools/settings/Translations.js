@@ -5,11 +5,13 @@ export const Translations = {
             subtitle: "Selecione uma categoria abaixo para começar",
             chooseSize: "Escolha o tamanho",
             availableSizes: "Tamanhos disponíveis para",
-            back: "Voltar"
+            back: "Voltar",
+            welcome: "Bem-vindo ao CrafTools!"
         },
         editor: {
             newPage: "Nova Pág",
             generator: "Gerador",
+            toolTitle: "Título",
             text: "Texto",
             image: "Imagem",
             album: "Álbum",
@@ -21,7 +23,10 @@ export const Translations = {
             zoomReset: "Resetar Zoom",
             themeToggle: "Alternar tema",
             page: "Página",
-            tools: "Ferramentas"
+            tools: "Ferramentas",
+            exportPdf: "Exportar PDF",
+            newPageSidebar: "Nova Página",
+            papers2: "Papéis / Temas"
         },
         mediaTypes: {
             paper: "Artes impressas",
@@ -38,11 +43,13 @@ export const Translations = {
             subtitle: "Select a category below to start",
             chooseSize: "Choose size",
             availableSizes: "Available sizes for",
-            back: "Back"
+            back: "Back",
+            welcome: "Welcome to CrafTools!"
         },
         editor: {
             newPage: "New Page",
             generator: "Generator",
+            toolTitle: "Title",
             text: "Text",
             image: "Image",
             album: "Album",
@@ -54,7 +61,10 @@ export const Translations = {
             zoomReset: "Reset Zoom",
             themeToggle: "Toggle theme",
             page: "Page",
-            tools: "Tools"
+            tools: "Tools",
+            exportPdf: "Export PDF",
+            newPageSidebar: "New Page",
+            papers2: "Papers / Themes"
         },
         mediaTypes: {
             paper: "Printed Arts",

@@ -97,18 +97,68 @@
             width: 100% !important;
         }
 
-        /* Painel direito / propriedades - estilo default para Desktop */
+        /* Logo com hover */
+        .logo-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .logo-wrapper img {
+            height: 3vh;
+            width: auto;
+            transition: opacity 0.25s ease;
+        }
+        .logo-default { opacity: 1; }
+        .logo-hover   { opacity: 0; position: absolute; top: 50%; left: 0; transform: translateY(-50%); }
+        .logo-wrapper:hover .logo-default { opacity: 0; }
+        .logo-wrapper:hover .logo-hover   { opacity: 1; }
+
+        /* Painel direito: mesmo visual do sidenav-wrapper */
         .craftools-panel {
+            width: 272px;
+            background: var(--primary-500, #ffffff);
+            border-left: 1px solid var(--border);
+            z-index: 10;
             border-radius: 0;
             box-shadow: none;
-            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-
+        /* Header do painel: igual ao sidenav-profile */
+        .craftools-panel-head {
+            background: var(--accent, #f97316) !important;
+            background-image: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+            color: #ffffff !important;
+            padding: 16px 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            border-bottom: none !important;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+        .craftools-panel-title {
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+        }
+        /* Botão fechar no painel: estilo consistente com branco */
+        .craftools-panel #close-panel {
+            color: rgba(255,255,255,0.85) !important;
+            background: rgba(255,255,255,0.15) !important;
+            border-radius: 6px !important;
+        }
+        .craftools-panel #close-panel:hover {
+            background: rgba(255,255,255,0.3) !important;
+            color: #ffffff !important;
+        }
         /* Esconde o painel se estiver escondido via classe original */
         .craftools-panel.hidden {
             display: none !important;
         }
-
         /* Painel como Bottom Sheet apenas no Mobile */
         @media (max-width: 768px) {
             .craftools-panel {
@@ -123,6 +173,9 @@
                 border-left: none !important;
                 border-top: 1px solid var(--border) !important;
                 box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+            }
+            .craftools-panel-head {
+                border-radius: 20px 20px 0 0 !important;
             }
         }
 
@@ -428,6 +481,46 @@
                 setInterval(checkSetupMode, 500);
                 checkSetupMode();
 
+                // ── Remover offcanvas-backdrop para não bloquear drag ──────
+                // O backdrop do Bootstrap impede arrastar ferramentas para o canvas
+                const removeBackdrop = () => {
+                    const backdrop = document.querySelector('.offcanvas-backdrop');
+                    if (backdrop) backdrop.remove();
+                };
+                // Intercepta o evento de show do offcanvas
+                document.getElementById('affanOffcanvas')?.addEventListener('show.bs.offcanvas', () => {
+                    // Aguarda o Bootstrap criar o backdrop e remove imediatamente
+                    requestAnimationFrame(() => removeBackdrop());
+                    setTimeout(() => removeBackdrop(), 50);
+                });
+                // Observer para remover o backdrop assim que for adicionado ao DOM
+                const backdropObserver = new MutationObserver(() => {
+                    const backdrop = document.querySelector('.offcanvas-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                });
+                backdropObserver.observe(document.body, { childList: true, subtree: false });
+
+                // ── i18n nos elementos do footer ─────────────────────────
+                const applyPwaI18n = () => {
+                    if (!window.craftoolsLang) return;
+                    document.querySelectorAll('[data-i18n]').forEach(el => {
+                        const key = el.getAttribute('data-i18n');
+                        if (window.craftoolsApp && window.craftoolsApp.constructor) {
+                            // Usa o mesmo sistema de tradução do craftools
+                            import('./craftools/settings/Translations.js').then(({ I18n }) => {
+                                const text = I18n.t(key);
+                                if (text && text !== key) el.textContent = text;
+                            });
+                        }
+                    });
+                };
+                // Aplica quando o idioma mudar
+                const langSelect = document.getElementById('pwa-lang-select');
+                if (langSelect) langSelect.addEventListener('change', applyPwaI18n);
+                setInterval(applyPwaI18n, 1500);
+
             }, 500); // tempo de segurança para renderização
         };
     </script>
@@ -441,7 +534,8 @@
                 <!-- Brand & Sidenav Toggler -->
                 <div class="d-flex align-items-center gap-3">
                     <div class="logo-wrapper">
-                        <img src="./assets/logo-craftools.svg" alt="CrafTools Logo" style="height: 35px; width: auto;">
+                        <img src="./assets/logo-craftools.svg" alt="CrafTools Logo" class="logo-default">
+                        <img src="./assets/logo-craftools-hover.svg" alt="CrafTools Logo Hover" class="logo-hover">
                     </div>
                 </div>
 
@@ -469,18 +563,19 @@
     <div class="offcanvas offcanvas-start" id="affanOffcanvas" data-bs-scroll="true" tabindex="-1" aria-labelledby="affanOffcanvsLabel">
         <div class="offcanvas-body p-0">
             <div class="sidenav-wrapper">
-                <div class="sidenav-profile bg-gradient d-flex justify-content-between align-items-center px-3 py-4">
-                    <h5 class="user-name mb-0 text-white">Opções</h5>
+                <div class="sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4">
+                    <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 36px; width: auto; filter: brightness(0); margin-bottom: 8px;">
+                    <p class="mb-0" style="font-size: 11px; color: rgba(0,0,0,0.55); font-weight: 500; letter-spacing: 0.4px;">Technology for Creativity &mdash; v0.1</p>
                 </div>
                 <ul class="sidenav-nav ps-0 mt-3">
-                    <li><a href="#" id="pwa-sidebar-titulo"><span class="material-symbols-outlined">title</span> Título</a></li>
-                    <li><a href="#" id="pwa-sidebar-paragrafo"><span class="material-symbols-outlined">notes</span> Texto</a></li>
-                    <li><a href="#" id="pwa-sidebar-imagem"><span class="material-symbols-outlined">image</span> Imagem</a></li>
-                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> Álbum</a></li>
+                    <li><a href="#" id="pwa-sidebar-titulo"><span class="material-symbols-outlined">title</span> <span data-i18n="editor.toolTitle">Título</span></a></li>
+                    <li><a href="#" id="pwa-sidebar-paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
+                    <li><a href="#" id="pwa-sidebar-imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
+                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> <span data-i18n="editor.album">Álbum</span></a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> Papéis / Temas</a></li>
-                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> Nova Página</a></li>
-                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar PDF</a></li>
+                    <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> <span data-i18n="editor.papers2">Papéis / Temas</span></a></li>
+                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
+                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> <span data-i18n="editor.exportPdf">Exportar PDF</span></a></li>
                 </ul>
             </div>
         </div>
@@ -497,15 +592,15 @@
             <div class="footer-nav position-relative">
                 <ul class="h-100 d-flex align-items-center justify-content-between ps-0">
                     <li>
-                        <button id="pwa-btn-titulo" draggable="true" class="footer-nav-btn">
+                        <button id="pwa-btn-titulo" draggable="true" class="footer-nav-btn" data-i18n-title="editor.toolTitle">
                             <span class="material-symbols-outlined">title</span>
-                            <span>Título</span>
+                            <span data-i18n="editor.toolTitle">Título</span>
                         </button>
                     </li>
                     <li>
-                        <button id="pwa-btn-paragrafo" draggable="true" class="footer-nav-btn">
+                        <button id="pwa-btn-paragrafo" draggable="true" class="footer-nav-btn" data-i18n-title="editor.text">
                             <span class="material-symbols-outlined">notes</span>
-                            <span>Texto</span>
+                            <span data-i18n="editor.text">Texto</span>
                         </button>
                     </li>
                     
@@ -517,19 +612,19 @@
                     </li>
 
                     <li>
-                        <button id="pwa-btn-imagem" draggable="true" class="footer-nav-btn">
+                        <button id="pwa-btn-imagem" draggable="true" class="footer-nav-btn" data-i18n-title="editor.image">
                             <span class="material-symbols-outlined">image</span>
-                            <span>Imagem</span>
+                            <span data-i18n="editor.image">Imagem</span>
                         </button>
                     </li>
                     <li>
-                        <button id="pwa-btn-album" draggable="true" class="footer-nav-btn">
+                        <button id="pwa-btn-album" draggable="true" class="footer-nav-btn" data-i18n-title="editor.album">
                             <span class="material-symbols-outlined">photo_library</span>
-                            <span>Álbum</span>
+                            <span data-i18n="editor.album">Álbum</span>
                         </button>
                     </li>
                     <li class="pwa-welcome-msg">
-                        <span>Bem-vindo ao CrafTools!</span>
+                        <span data-i18n="setup.welcome">Bem-vindo ao CrafTools!</span>
                     </li>
                 </ul>
             </div>
