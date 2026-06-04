@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CrafTools PWA</title>
     
-    <meta name="theme-color" content="#2869FE">
+    <meta name="theme-color" content="#f97316">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
@@ -25,10 +25,54 @@
         /* ==============================================================
            CSS INLINE DE ADAPTAÇÃO PWA vs CRAFTOOLS
            ============================================================== */
+        
+        /* Sobrescrita dos tokens de cor do PWA template para usar a paleta original do CrafTools */
+        :root {
+            --primary-50: #f4f4f5;   /* Fundo do app/canvas */
+            --primary-100: #ffffff;  /* Fundo de cards/sidebar */
+            --primary-200: #e4e4e7;  /* Hover/input */
+            --primary-300: #d4d4d8;  /* Bordas */
+            --primary-400: #a1a1aa;
+            --primary-500: #ffffff;  /* Para cabeçalhos e menus offcanvas */
+            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
+            --primary-700: #ea580c;  /* Hover da cor principal */
+            --primary-800: #c2410c;
+            --primary-900: #9a3412;
+            --primary-950: #18181b;  /* Texto principal */
+            --accent: #f97316;
+            --text: #71717a;
+            --border: #e4e4e7;
+        }
+
+        [data-theme="dark"] {
+            --primary-50: #09090b;   /* Fundo do app/canvas */
+            --primary-100: #18181b;  /* Fundo de cards/sidebar */
+            --primary-200: #27272a;  /* Hover/input */
+            --primary-300: #3f3f46;  /* Bordas */
+            --primary-400: #52525b;
+            --primary-500: #18181b;  /* Para cabeçalhos e menus offcanvas */
+            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
+            --primary-700: #ea580c;  /* Hover da cor principal */
+            --primary-800: #c2410c;
+            --primary-900: #9a3412;
+            --primary-950: #f4f4f5;  /* Texto principal */
+            --accent: #f97316;
+            --text: #a1a1aa;
+            --border: #3f3f46;
+            --warning-500: #f97316;  /* Inverte amarelos do warning para laranja */
+            --warning-700: #ea580c;
+        }
+
         /* Força as fontes do CrafTools no PWA */
         body, .header-area, .offcanvas, .footer-nav-area {
             font-family: 'DM Sans', sans-serif !important;
         }
+        
+        /* Tema laranja do CrafTools em substituição ao azul do PWA template */
+        .text-primary, .text-info, .text-warning { color: var(--accent) !important; }
+        .bg-primary, .bg-gradient, .bg-info, .bg-warning { background-color: var(--accent) !important; background-image: none !important; }
+        .border-primary { border-color: var(--accent) !important; }
+        .footer-nav ul li.active a, .footer-nav ul li.active button { color: var(--accent) !important; }
 
         /* Esconde a interface original gerada pelo Editor.js */
         .craftools-topbar, 
@@ -38,8 +82,8 @@
 
         /* O canvas precisa ocupar todo o espaço do app-content */
         .page-content-wrapper {
-            height: calc(100vh - 120px);
-            margin-top: 60px;
+            height: calc(100vh - 112px) !important;
+            margin-top: 50px !important;
             overflow: hidden;
             position: relative;
         }
@@ -49,17 +93,11 @@
             width: 100% !important;
         }
 
-        /* O painel direito (propriedades) pode virar um offcanvas ou modal
-           Por enquanto, deixamos ele absoluto na direita ou solto no PWA */
+        /* Painel direito / propriedades - estilo default para Desktop */
         .craftools-panel {
-            position: fixed;
-            bottom: 60px;
-            left: 0;
-            width: 100%;
-            max-height: 50vh;
-            z-index: 1000;
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            border-radius: 0;
+            box-shadow: none;
+            z-index: 10;
         }
 
         /* Esconde o painel se estiver escondido via classe original */
@@ -67,14 +105,166 @@
             display: none !important;
         }
 
+        /* Painel como Bottom Sheet apenas no Mobile */
+        @media (max-width: 768px) {
+            .craftools-panel {
+                position: fixed !important;
+                bottom: 62px !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-height: 50vh !important;
+                z-index: 1000 !important;
+                border-radius: 20px 20px 0 0 !important;
+                border-left: none !important;
+                border-top: 1px solid var(--border) !important;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+            }
+        }
+
         /* Garante que o Header e Footer do PWA sobreponham o canvas */
         .header-area { z-index: 1050; }
         .footer-nav-area { z-index: 1050; }
 
-        /* Substituindo ícones de SVG do template pelos Material Symbols para simplificar */
         .footer-nav-area i.material-symbols-outlined {
             font-size: 24px;
             margin-bottom: 2px;
+        }
+        
+        /* Ajuste do botão de idioma no PWA */
+        .pwa-lang-select {
+            background: var(--bg-input, #f4f4f5);
+            border: 1px solid var(--border, #e4e4e7);
+            color: var(--text-primary, #18181b);
+            padding: 4px 8px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+        }
+        .pwa-lang-select option {
+            background: var(--bg-shell, #ffffff);
+            color: var(--text-primary, #18181b);
+        }
+
+        /* Estilo dos botões do footer (drag no PC) */
+        .footer-nav-btn {
+            background: none;
+            border: none;
+            color: #7773a6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            cursor: grab;
+            user-select: none;
+        }
+        .footer-nav-btn:hover,
+        .footer-nav-btn:focus {
+            color: var(--accent, #f97316) !important;
+            outline: none;
+        }
+        .footer-nav-btn span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .footer-nav-btn .material-symbols-outlined {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        /* Garantindo centralização perfeita e simetria no footer */
+        .footer-nav ul li {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        .footer-nav li.center-menu-item {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        /* Botão Menu Central Premium */
+        .footer-nav li.center-menu-item a {
+            background-color: var(--primary-600, #f97316);
+            color: #fff !important;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -15px auto 0 auto !important;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+            border: 3px solid #fff;
+            transition: transform 0.2s;
+        }
+        .footer-nav li.center-menu-item a:hover,
+        .footer-nav li.center-menu-item a:focus {
+            transform: scale(1.05);
+            background-color: var(--primary-700, #ea580c) !important;
+            color: #fff !important;
+        }
+        [data-theme="dark"] .footer-nav li.center-menu-item a {
+            border-color: #18181b;
+        }
+
+        /* Estilização Premium para botões de ação e select no Header */
+        .header-content .box-icon {
+            color: var(--text-primary, #18181b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--bg-input, #f4f4f5);
+            transition: background 0.2s, color 0.2s;
+        }
+        .header-content .box-icon:hover {
+            background: var(--bg-hover, #e4e4e7);
+            color: var(--accent, #f97316);
+        }
+        .header-content .box-icon span {
+            font-size: 20px;
+        }
+
+        /* Overrides específicos de Dark Mode para garantir consistência perfeita com CrafTools */
+        [data-theme="dark"] .header-area,
+        [data-theme="dark"] .sidenav-wrapper,
+        [data-theme="dark"] .offcanvas {
+            background-color: #18181b !important;
+            background-image: none !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a {
+            color: #f4f4f5 !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a:hover,
+        [data-theme="dark"] .sidenav-nav li a:focus {
+            color: var(--accent) !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+        [data-theme="dark"] .footer-nav-btn {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        [data-theme="dark"] .footer-nav-btn span {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        [data-theme="dark"] .footer-nav-btn:hover,
+        [data-theme="dark"] .footer-nav-btn:focus {
+            color: var(--accent) !important;
+        }
+        [data-theme="dark"] .footer-nav-btn:hover span,
+        [data-theme="dark"] .footer-nav-btn:focus span {
+            color: var(--accent) !important;
         }
     </style>
 
@@ -85,44 +275,106 @@
             // Inicializa o sistema original
             new Craftools('#wrapper');
 
-            // --- PROXY DE CLIQUES (PWA -> CRAFTOOLS) ---
-            // Aguardamos um pouco para que o DOM do CrafTools seja gerado
+            // --- PROXY DE CLIQUES E EVENTOS (PWA -> CRAFTOOLS) ---
             setTimeout(() => {
-                // Mapeamento de ID do PWA para o data-tool do CrafTools
                 const toolsMap = {
-                    'pwa-btn-titulo': '[data-tool="titulo"]',
-                    'pwa-btn-paragrafo': '[data-tool="paragrafo"]',
-                    'pwa-btn-imagem': '[data-tool="imagem"]',
-                    'pwa-btn-album': '[data-tool="album"]',
-                    'pwa-btn-papeis': '[data-tool="papeis"]',
-                    'pwa-btn-export': '#export-btn',
-                    'pwa-btn-newpage': '#new-page-btn'
+                    'pwa-btn-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
+                    'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
+                    'pwa-btn-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
+                    'pwa-btn-album': { selector: '[data-tool="album"]', type: 'album' },
+                    'pwa-sidebar-album': { selector: '[data-tool="album"]', type: 'album' },
+                    'pwa-sidebar-papeis': { selector: '[data-tool="papeis"]', type: 'papeis' },
+                    'pwa-sidebar-export': { selector: '#pdf-btn', type: null },
+                    'pwa-sidebar-newpage': { selector: '#new-page-btn', type: null }
                 };
 
-                for (const [pwaId, selector] of Object.entries(toolsMap)) {
+                for (const [pwaId, info] of Object.entries(toolsMap)) {
                     const pwaBtn = document.getElementById(pwaId);
                     if (pwaBtn) {
+                        // Proxy Click (Mobile / Generic)
                         pwaBtn.addEventListener('click', (e) => {
                             e.preventDefault();
-                            const target = document.querySelector(selector);
+                            const target = document.querySelector(info.selector);
                             if (target) {
                                 target.click();
                             }
                         });
+                        
+                        // Proxy Drag (PC Desktop)
+                        if (info.type) {
+                            pwaBtn.addEventListener('dragstart', (e) => {
+                                e.dataTransfer.setData('ToolType', info.type);
+                                e.dataTransfer.setData('text/plain', info.type);
+                                e.dataTransfer.effectAllowed = 'copy';
+                            });
+                        }
                     }
                 }
 
                 // Proxy do Zoom
                 document.getElementById('pwa-zoom-in')?.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.getElementById('zoom-in')?.click();
+                    document.getElementById('zoom-in-btn')?.click();
                 });
                 document.getElementById('pwa-zoom-out')?.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.getElementById('zoom-out')?.click();
+                    document.getElementById('zoom-out-btn')?.click();
                 });
 
-            }, 500); // tempo de segurança para renderização do Web Component
+                // Proxy Theme (Modo Escuro/Claro)
+                document.getElementById('pwa-theme-btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('theme-btn')?.click();
+                });
+
+                // Mutation Observer to keep theme UI in sync
+                const updateThemeUI = () => {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const themeIcon = document.querySelector('#pwa-theme-btn .material-symbols-outlined');
+                    if (themeIcon) {
+                        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+                    }
+                    const darkSwitch = document.getElementById('darkSwitch');
+                    if (darkSwitch) {
+                        darkSwitch.checked = isDark;
+                    }
+                };
+
+                const themeObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'data-theme') {
+                            updateThemeUI();
+                        }
+                    });
+                });
+                themeObserver.observe(document.documentElement, { attributes: true });
+                updateThemeUI();
+
+                // Proxy Lang (Idioma)
+                const pwaLangSelect = document.getElementById('pwa-lang-select');
+                if (pwaLangSelect) {
+                    const syncLang = () => {
+                        const originalLang = document.getElementById('lang-select');
+                        if (originalLang) {
+                            pwaLangSelect.value = originalLang.value;
+                        }
+                    };
+                    
+                    syncLang();
+                    
+                    pwaLangSelect.addEventListener('change', (e) => {
+                        const originalLang = document.getElementById('lang-select');
+                        if (originalLang) {
+                            originalLang.value = e.target.value;
+                            originalLang.dispatchEvent(new Event('change'));
+                        }
+                    });
+
+                    // Check for lang-select periodically since it gets re-created on render
+                    setInterval(syncLang, 1000);
+                }
+
+            }, 500); // tempo de segurança para renderização
         };
     </script>
 </head>
@@ -130,27 +382,35 @@
     <!-- HEADER PWA -->
     <div class="header-area" id="headerArea">
         <div class="container">
-            <div class="header-content header-style-five position-relative d-flex align-items-center justify-content-between" style="height: 60px;">
-                <!-- Menu / Sidebar Toggler -->
-                <div class="navbar-toggler" id="affanNavbarToggler" data-bs-toggle="offcanvas" data-bs-target="#affanOffcanvas" aria-controls="affanOffcanvas" style="cursor:pointer;">
-                    <span class="d-block"></span>
-                    <span class="d-block"></span>
-                    <span class="d-block"></span>
+            <div class="header-content header-style-five position-relative d-flex align-items-center justify-content-between">
+                
+                <!-- Brand & Sidenav Toggler -->
+                <div class="d-flex align-items-center gap-3">
+                    <div class="navbar-toggler" id="affanNavbarToggler" data-bs-toggle="offcanvas" data-bs-target="#affanOffcanvas" aria-controls="affanOffcanvas" style="cursor:pointer;">
+                        <span class="d-block"></span>
+                        <span class="d-block"></span>
+                        <span class="d-block"></span>
+                    </div>
+                    <div class="logo-wrapper" style="font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent, #f97316); font-weight: 700;">
+                        CrafTools
+                    </div>
                 </div>
 
-                <!-- Logo / Titulo Central -->
-                <div class="logo-wrapper" style="font-family: 'DM Serif Display', serif; font-size: 20px; color: #2869FE;">
-                    CrafTools
-                </div>
-
-                <!-- Ações da direita (Zoom) -->
-                <div class="right d-flex gap-2">
-                    <a href="#" id="pwa-zoom-out" class="box-icon" style="text-decoration:none;">
+                <!-- Right Actions: Zoom, Dark Mode, Language -->
+                <div class="right d-flex align-items-center gap-2">
+                    <a href="#" id="pwa-zoom-out" class="box-icon" style="text-decoration:none;" title="Zoom Out">
                         <span class="material-symbols-outlined">zoom_out</span>
                     </a>
-                    <a href="#" id="pwa-zoom-in" class="box-icon" style="text-decoration:none;">
+                    <a href="#" id="pwa-zoom-in" class="box-icon" style="text-decoration:none;" title="Zoom In">
                         <span class="material-symbols-outlined">zoom_in</span>
                     </a>
+                    <a href="#" id="pwa-theme-btn" class="box-icon" style="text-decoration:none;" title="Alternar Tema">
+                        <span class="material-symbols-outlined">dark_mode</span>
+                    </a>
+                    <select id="pwa-lang-select" class="pwa-lang-select" title="Selecionar Idioma">
+                        <option value="pt-br">PT-BR</option>
+                        <option value="en">EN-US</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -160,15 +420,14 @@
     <div class="offcanvas offcanvas-start" id="affanOffcanvas" data-bs-scroll="true" tabindex="-1" aria-labelledby="affanOffcanvsLabel">
         <div class="offcanvas-body p-0">
             <div class="sidenav-wrapper">
-                <div class="sidenav-profile bg-gradient">
-                    <div class="user-info mt-3">
-                        <h6 class="user-name mb-0 text-white">Menu CrafTools</h6>
-                    </div>
+                <div class="sidenav-profile bg-gradient d-flex justify-content-between align-items-center px-3 py-4">
+                    <h5 class="user-name mb-0 text-white">Opções</h5>
                 </div>
                 <ul class="sidenav-nav ps-0 mt-3">
-                    <li><a href="#" id="pwa-btn-export"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar PDF</a></li>
-                    <li><a href="#" id="pwa-btn-papeis"><span class="material-symbols-outlined">layers</span> Papéis / Temas</a></li>
-                    <li><a href="#" id="pwa-btn-album"><span class="material-symbols-outlined">photo_album</span> Álbum Completo</a></li>
+                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar PDF</a></li>
+                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> Nova Página</a></li>
+                    <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> Papéis / Temas</a></li>
+                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> Álbum Completo</a></li>
                 </ul>
             </div>
         </div>
@@ -176,7 +435,6 @@
 
     <!-- CONTENT WRAPPER -->
     <div class="page-content-wrapper">
-        <!-- Aqui o JS do CrafTools vai injetar a aplicação -->
         <main id="wrapper"></main>
     </div>
 
@@ -186,46 +444,42 @@
             <div class="footer-nav position-relative">
                 <ul class="h-100 d-flex align-items-center justify-content-between ps-0">
                     <li>
-                        <a href="#" id="pwa-btn-titulo">
+                        <button id="pwa-btn-titulo" draggable="true" class="footer-nav-btn">
                             <span class="material-symbols-outlined">title</span>
                             <span>Título</span>
-                        </a>
+                        </button>
                     </li>
                     <li>
-                        <a href="#" id="pwa-btn-paragrafo">
+                        <button id="pwa-btn-paragrafo" draggable="true" class="footer-nav-btn">
                             <span class="material-symbols-outlined">notes</span>
                             <span>Texto</span>
-                        </a>
+                        </button>
                     </li>
                     
-                    <!-- Botão Central Adicionar (Nova Página) -->
-                    <li class="action-add">
-                        <a href="#" id="pwa-btn-newpage">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6 12H18" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                                <path d="M12 18V6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
+                    <!-- Botão Menu Circular no Centro -->
+                    <li class="center-menu-item">
+                        <a href="#affanOffcanvas" data-bs-toggle="offcanvas">
+                            <span class="material-symbols-outlined">menu</span>
                         </a>
                     </li>
 
                     <li>
-                        <a href="#" id="pwa-btn-imagem">
+                        <button id="pwa-btn-imagem" draggable="true" class="footer-nav-btn">
                             <span class="material-symbols-outlined">image</span>
                             <span>Imagem</span>
-                        </a>
+                        </button>
                     </li>
                     <li>
-                        <a href="#affanOffcanvas" data-bs-toggle="offcanvas">
-                            <span class="material-symbols-outlined">menu</span>
-                            <span>Mais</span>
-                        </a>
+                        <button id="pwa-btn-album" draggable="true" class="footer-nav-btn">
+                            <span class="material-symbols-outlined">photo_library</span>
+                            <span>Álbum</span>
+                        </button>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 
-    <!-- Scripts do PWA Template -->
     <script src="./html/dist/assets/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
