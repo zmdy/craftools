@@ -125,6 +125,7 @@
         /* Garante que o Header e Footer do PWA sobreponham o canvas */
         .header-area { z-index: 1050; }
         .footer-nav-area { z-index: 1050; }
+        .offcanvas { z-index: 1060 !important; } /* Acima do header */
 
         .footer-nav-area i.material-symbols-outlined {
             font-size: 24px;
@@ -217,22 +218,26 @@
         }
 
         /* Setup Mode */
-        body:has(.craftools-setup) .footer-nav-btn {
+        body.is-setup-mode .footer-nav-btn {
             display: none !important;
         }
-        body:has(.craftools-setup) .center-menu-item {
+        body.is-setup-mode .footer-nav ul {
+            justify-content: flex-start !important;
+        }
+        body.is-setup-mode .center-menu-item {
             margin: 0 !important;
             order: -1;
+            padding-left: 10px;
         }
-        body:has(.craftools-setup) .center-menu-item a {
+        body.is-setup-mode .center-menu-item a {
             margin: 0 !important;
             border: none;
         }
-        body:has(.craftools-setup) .pwa-welcome-msg {
+        body.is-setup-mode .pwa-welcome-msg {
             display: flex !important;
             align-items: center;
-            padding-right: 20px;
-            margin-left: auto;
+            flex: 1;
+            padding-left: 15px;
             color: var(--accent);
             font-weight: 500;
         }
@@ -399,6 +404,19 @@
                     // Check for lang-select periodically since it gets re-created on render
                     setInterval(syncLang, 1000);
                 }
+
+                // Mutation Observer to detect Setup vs Canvas mode reliably
+                const checkSetupMode = () => {
+                    const canvasExists = document.querySelector('.craftools-canvas');
+                    if (canvasExists) {
+                        document.body.classList.remove('is-setup-mode');
+                    } else {
+                        document.body.classList.add('is-setup-mode');
+                    }
+                };
+                const appObserver = new MutationObserver(checkSetupMode);
+                appObserver.observe(document.getElementById('wrapper'), { childList: true, subtree: true });
+                checkSetupMode();
 
             }, 500); // tempo de segurança para renderização
         };
