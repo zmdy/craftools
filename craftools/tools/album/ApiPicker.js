@@ -13,10 +13,12 @@ const API_ENDPOINT = `${API_BASE}/api/?token=${API_TOKEN}`;
 export class ApiPicker {
     /**
      * Abre o modal da API e resolve com a URL da imagem escolhida.
+     * @param {string} [route='all'] - Rota da API ('all' | 'backgrounds' | 'overlays')
      * @returns {Promise<string|null>} URL absoluta da imagem ou null se cancelado
      */
-    static open() {
+    static open(route = 'all') {
         return new Promise((resolve) => {
+            const apiEndpoint = `${API_BASE}/api/?token=${API_TOKEN}&route=${route}`;
             // Cria overlay de fundo
             const backdrop = document.createElement('div');
             backdrop.id = 'api-picker-backdrop';
@@ -146,8 +148,8 @@ export class ApiPicker {
                 <div style="padding: 10px 16px; border-bottom:1px solid var(--border); flex-shrink:0;">
                     <input id="api-search" type="text" placeholder="Filtrar por nome de coleção..."
                         style="width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--border);
-                               background:var(--bg-input); color:var(--text-primary); font-size:13px;
-                               outline:none; font-family:'DM Sans',sans-serif; box-sizing:border-box;">
+                                background:var(--bg-input); color:var(--text-primary); font-size:13px;
+                                outline:none; font-family:'DM Sans',sans-serif; box-sizing:border-box;">
                 </div>
 
                 <!-- Corpo rolável -->
@@ -194,8 +196,7 @@ export class ApiPicker {
             let allCollections = [];
             const body = modal.querySelector('#api-picker-body');
 
-            // ── Fetch da API ──────────────────────────────────────────────
-            fetch(API_ENDPOINT)
+            fetch(apiEndpoint)
                 .then(r => r.json())
                 .then(json => {
                     if (json.status !== 'success') throw new Error(json.message || 'Erro na API');

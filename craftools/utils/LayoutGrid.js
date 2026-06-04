@@ -96,33 +96,35 @@ export class Craftools_LayoutGrid {
                     overflow: hidden;
                 `;
 
-                // ── Camada de fundo (background image/color/gradient) ──────
-                let bgLayer = document.createElement('div');
-                bgLayer.className = "cell-bg-layer";
-                bgLayer.style.cssText = `
-                    position: absolute; inset: 0; z-index: 0;
-                    pointer-events: none;
-                    background-size: cover;
-                    background-position: center center;
-                    background-repeat: no-repeat;
-                `;
-                cellWrap.appendChild(bgLayer);
+                // Parse padding values safely
+                const paddings = this.template.cellPadding.split(" ").map(p => parseFloat(p));
+                const pT = isNaN(paddings[0]) ? 0 : paddings[0];
+                const pR = isNaN(paddings[1]) ? pT : paddings[1];
+                const pB = isNaN(paddings[2]) ? pT : paddings[2];
+                const pL = isNaN(paddings[3]) ? pR : paddings[3];
 
                 // ── Camada de conteúdo (fotos do álbum) ───────────────────
+                // O fundo da célula (cor, gradiente ou imagem) será aplicado diretamente aqui
                 let contentLayer = document.createElement('div');
                 contentLayer.className = "cell-content-layer";
                 contentLayer.style.cssText = `
                     position: absolute; inset: 0; z-index: 1;
-                    padding: ${this.template.cellPadding.split(" ").map(p => parseFloat(p) + unit).join(" ")};
+                    padding: ${pT}${unit} ${pR}${unit} ${pB}${unit} ${pL}${unit};
                     box-sizing: border-box;
                 `;
                 cellWrap.appendChild(contentLayer);
 
                 // ── Camada de overlay (imagem sobre tudo) ─────────────────
+                // Alinha o overlay com o padding da camada de conteúdo
                 let overlayLayer = document.createElement('div');
                 overlayLayer.className = "cell-overlay-layer";
                 overlayLayer.style.cssText = `
-                    position: absolute; inset: 0; z-index: 4;
+                    position: absolute;
+                    top: ${pT}${unit};
+                    right: ${pR}${unit};
+                    bottom: ${pB}${unit};
+                    left: ${pL}${unit};
+                    z-index: 4;
                     pointer-events: none;
                     background-size: cover;
                     background-position: center center;

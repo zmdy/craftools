@@ -22,7 +22,7 @@ const POSITIONS = [
 
 export class CellPanel {
     /**
-     * Abre o painel direito para editar uma grid cell.
+     * Abre o painel direito para editar uma grid cell (método legado/compatibilidade).
      * @param {HTMLElement} editor  - .craftools-editor (ou o custom element pai)
      * @param {HTMLElement} cellEl  - .craftools-grid-cell clicada
      */
@@ -40,41 +40,71 @@ export class CellPanel {
               .forEach(c => c.classList.remove('cell-selected'));
         cellEl.classList.add('cell-selected');
 
+        // Renderiza as propriedades da célula diretamente no panelBody
+        this.renderInto(panelBody, cellEl, null);
+    }
+
+    /**
+     * Renderiza os controles de célula diretamente dentro de um container do painel.
+     * @param {HTMLElement} container - onde renderizar os controles
+     * @param {HTMLElement} cellEl - a grid cell sendo editada
+     * @param {Function} [onChange] - callback opcional quando propriedades mudarem
+     */
+    static renderInto(container, cellEl, onChange) {
         // Estado atual
         const state = CellBackground.getState(cellEl);
 
-        // Tab ativa
+        // Tab ativa persistida localmente no closure
         let activeTab = 'bg';
 
         const render = () => {
-            panelBody.innerHTML = '';
+            container.innerHTML = '';
 
-            // ── Tabs ──────────────────────────────────────────────────────
+            // Section Header
+            const header = document.createElement('div');
+            header.style.cssText = 'padding: 10px 0 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border); margin-top: 5px; letter-spacing: 0.5px;';
+            header.textContent = 'Fundo & Overlay da Célula';
+            container.appendChild(header);
+
+            // Tabs
             const tabs = document.createElement('div');
-            tabs.style.cssText = 'display:flex; border-bottom:1px solid var(--border); flex-shrink:0;';
+            tabs.style.cssText = 'display:flex; border-bottom:1px solid var(--border); margin-bottom: 12px;';
             [['bg','Fundo','background_2'], ['overlay','Overlay','layers'], ['border','Borda','border_style']]
                 .forEach(([id, label, icon]) => {
                     const btn = document.createElement('button');
                     btn.style.cssText = `
-                        flex:1; padding:10px 4px; border:none; border-bottom:2px solid ${activeTab===id?'var(--accent)':'transparent'};
+                        flex:1; padding:8px 2px; border:none; border-bottom:2px solid ${activeTab===id?'var(--accent)':'transparent'};
                         background:none; cursor:pointer; font-size:11px; color:${activeTab===id?'var(--accent)':'var(--text-secondary)'};
-                        display:flex; flex-direction:column; align-items:center; gap:3px;
+                        display:flex; flex-direction:column; align-items:center; gap:2px;
                         font-family:'DM Sans',sans-serif; font-weight:${activeTab===id?'600':'400'};
                         transition: all .15s;
                     `;
                     btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;">${icon}</span>${label}`;
-                    btn.addEventListener('click', () => { activeTab = id; render(); });
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        activeTab = id;
+                        render();
+                    });
                     tabs.appendChild(btn);
                 });
-            panelBody.appendChild(tabs);
+            container.appendChild(tabs);
 
             const content = document.createElement('div');
-            content.style.cssText = 'padding: 12px; overflow-y: auto; flex: 1;';
-            panelBody.appendChild(content);
+            content.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
+            container.appendChild(content);
 
-            if (activeTab === 'bg')      renderBgTab(content, cellEl, state, render);
-            else if (activeTab === 'overlay') renderOverlayTab(content, cellEl, state, render);
-            else if (activeTab === 'border')  renderBorderTab(content, cellEl);
+            const triggerChange = () => {
+                if (onChange) onChange();
+            };
+
+            if (activeTab === 'bg') {
+                renderBgTab(content, cellEl, state, () => { triggerChange(); render(); });
+            } else if (activeTab === 'overlay') {
+                renderOverlayTab(content, cellEl, state, () => { triggerChange(); render(); });
+            } else if (activeTab === 'border') {
+                renderBorderTab(content, cellEl);
+            }
         };
 
         render();
@@ -100,7 +130,12 @@ function renderBgTab(container, cellEl, state, rerender) {
                 font-weight:${bgMode===id?'600':'400'};
             `;
             btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">${icon}</span>${label}`;
-            btn.addEventListener('click', () => { bgMode = id; renderBgSubMode(); });
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                bgMode = id;
+                renderBgSubMode();
+            });
             subTabs.appendChild(btn);
         });
     container.appendChild(subTabs);
@@ -120,19 +155,25 @@ function renderBgTab(container, cellEl, state, rerender) {
     const clearBtn = document.createElement('button');
     clearBtn.style.cssText = 'margin-top:14px; width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:"DM Sans",sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;';
     clearBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">delete</span> Remover Fundo';
-    clearBtn.addEventListener('click', () => { CellBackground.clearBackground(cellEl); });
+    clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        CellBackground.clearBackground(cellEl);
+        rerender();
+    });
     container.appendChild(clearBtn);
 }
 
 function renderColorMode(container, cellEl) {
+    const bgVal = cellEl.dataset.bgType === 'color' ? (cellEl.dataset.bgValue || '#ffffff') : '#ffffff';
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
     wrap.innerHTML = `
         <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Cor Sólida</label>
         <div style="display:flex; gap:8px; align-items:center;">
-            <input type="color" id="bg-color-pick" value="${cellEl.dataset.bgValue || '#ffffff'}"
+            <input type="color" id="bg-color-pick" value="${bgVal}"
                 style="width:44px; height:44px; border:1px solid var(--border); border-radius:8px; cursor:pointer; padding:2px;">
-            <input type="text" id="bg-color-hex" value="${cellEl.dataset.bgValue || '#ffffff'}"
+            <input type="text" id="bg-color-hex" value="${bgVal}"
                 style="flex:1; padding:7px 9px; border-radius:6px; border:1px solid var(--border);
                        background:var(--bg-input); color:var(--text-primary); font-size:12px;
                        font-family:'DM Mono',monospace; outline:none;">
@@ -158,7 +199,11 @@ function renderColorMode(container, cellEl) {
         if (/^#[0-9a-f]{3,6}$/i.test(colorHex.value)) apply(colorHex.value);
     });
     wrap.querySelectorAll('[data-color]').forEach(sw => {
-        sw.addEventListener('click', () => apply(sw.dataset.color));
+        sw.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            apply(sw.dataset.color);
+        });
         sw.addEventListener('mouseenter', () => sw.style.transform = 'scale(1.2)');
         sw.addEventListener('mouseleave', () => sw.style.transform = 'scale(1)');
     });
@@ -167,7 +212,8 @@ function renderColorMode(container, cellEl) {
 }
 
 function renderGradientMode(container, cellEl) {
-    const currentGrad = cellEl.dataset.bgValue || 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+    const isGradient = cellEl.dataset.bgType === 'gradient';
+    const currentGrad = isGradient ? (cellEl.dataset.bgValue || 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)') : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
 
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
@@ -243,7 +289,9 @@ function renderGradientMode(container, cellEl) {
     });
 
     wrap.querySelectorAll('[data-grad]').forEach(sw => {
-        sw.addEventListener('click', () => {
+        sw.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             rawEl.value = sw.dataset.grad;
             preview.style.background = sw.dataset.grad;
             CellBackground.applyBackground(cellEl, { type: 'gradient', value: sw.dataset.grad });
@@ -257,7 +305,11 @@ function renderGradientMode(container, cellEl) {
 
 function renderImageMode(container, cellEl, state, role) {
     // role = 'bg' | 'overlay'
-    const currentUrl = role === 'bg' ? (cellEl.dataset.bgValue || '') : (cellEl.dataset.overlayUrl || '');
+    // Correção crítica: se o tipo de background atual não for 'image', não preencher currentUrl com gradientes/cores
+    const currentUrl = role === 'bg'
+        ? (cellEl.dataset.bgType === 'image' ? (cellEl.dataset.bgValue || '') : '')
+        : (cellEl.dataset.overlayUrl || '');
+        
     const currentPos = role === 'bg' ? (cellEl.dataset.bgPosition || 'center center') : (cellEl.dataset.overlayPosition || 'center center');
     const currentSize = role === 'bg' ? (cellEl.dataset.bgSize || 'cover') : (cellEl.dataset.overlaySize || 'cover');
     const currentOpacity = parseFloat(role === 'overlay' ? (cellEl.dataset.overlayOpacity ?? '1') : '1');
@@ -309,7 +361,11 @@ function renderImageMode(container, cellEl, state, role) {
     sourceBtns.appendChild(fileInput);
     wrap.appendChild(sourceBtns);
 
-    sourceBtns.querySelector('#src-upload').addEventListener('click', () => fileInput.click());
+    sourceBtns.querySelector('#src-upload').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -325,8 +381,12 @@ function renderImageMode(container, cellEl, state, role) {
         reader.readAsDataURL(file);
     });
 
-    sourceBtns.querySelector('#src-api').addEventListener('click', async () => {
-        const url = await ApiPicker.open();
+    sourceBtns.querySelector('#src-api').addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Filtra imagens da API por tipo
+        const route = role === 'bg' ? 'backgrounds' : 'overlays';
+        const url = await ApiPicker.open(route);
         if (!url) return;
         selectedUrl = url;
         preview.style.backgroundImage = `url('${selectedUrl}')`;
@@ -354,7 +414,9 @@ function renderImageMode(container, cellEl, state, role) {
         `;
         btn.title = pos.value;
         btn.textContent = pos.label;
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             selectedPos = pos.value;
             posGrid.querySelectorAll('button').forEach(b => {
                 b.style.borderColor = 'var(--border)';
@@ -381,7 +443,9 @@ function renderImageMode(container, cellEl, state, role) {
             color:${selectedSize===fit?'var(--accent)':'var(--text-secondary)'};
             font-family:'DM Sans',sans-serif;`;
         btn.textContent = fit.charAt(0).toUpperCase() + fit.slice(1);
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             selectedSize = fit;
             fitWrap.querySelectorAll('button').forEach(b => {
                 b.style.borderColor = 'var(--border)';
@@ -425,7 +489,12 @@ function renderOverlayTab(container, cellEl, state, rerender) {
     const clearBtn = document.createElement('button');
     clearBtn.style.cssText = 'margin-top:14px; width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:"DM Sans",sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;';
     clearBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">delete</span> Remover Overlay';
-    clearBtn.addEventListener('click', () => { CellBackground.clearOverlay(cellEl); });
+    clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        CellBackground.clearOverlay(cellEl);
+        rerender();
+    });
     container.appendChild(clearBtn);
 }
 
@@ -469,6 +538,23 @@ function renderBorderTab(container, cellEl) {
         cellEl.style.setProperty('--cell-border-width',  w + 'px');
         cellEl.style.setProperty('--cell-border-style',  s);
         cellEl.style.setProperty('--cell-border-color',  c);
+        
+        // Propaga se houver _linkedElements (Business Card mode)
+        const element = cellEl.querySelector('craftools-element');
+        if (element && element._linkedElements) {
+            element._linkedElements.forEach(sibling => {
+                const siblingCell = sibling.closest('.craftools-grid-cell');
+                if (siblingCell && siblingCell !== cellEl) {
+                    siblingCell.style.borderWidth = w + 'px';
+                    siblingCell.style.borderStyle = s;
+                    siblingCell.style.borderColor = c;
+                    siblingCell.style.borderRadius = r + 'px';
+                    siblingCell.style.setProperty('--cell-border-width', w + 'px');
+                    siblingCell.style.setProperty('--cell-border-style', s);
+                    siblingCell.style.setProperty('--cell-border-color', c);
+                }
+            });
+        }
     };
 
     ['#cell-bw','#cell-bs','#cell-bc','#cell-br'].forEach(sel => {

@@ -255,6 +255,22 @@ export class ImageTool extends BaseTool {
             };
         }
 
+        // ── Grid Cell background & overlay integration ─────────────────────
+        const cellEl = element.closest('.craftools-grid-cell');
+        if (cellEl) {
+            const cellContainer = document.createElement('div');
+            cellContainer.className = 'craftools-cell-props-container';
+            cellContainer.style.cssText = 'border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; display: flex; flex-direction: column; gap: 10px;';
+            editorPanel.firstElementChild.appendChild(cellContainer);
+            
+            // Import dinâmico para evitar dependências circulares
+            import('../album/CellPanel.js').then(({ CellPanel }) => {
+                CellPanel.renderInto(cellContainer, cellEl, () => {
+                    // Callback quando propriedades do fundo mudarem
+                });
+            });
+        }
+
     }
 
     static _applyBgBlur(element) {

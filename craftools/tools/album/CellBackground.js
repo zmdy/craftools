@@ -4,17 +4,17 @@
  */
 export class CellBackground {
     /**
-     * Aplica fundo (cor, gradiente ou imagem) na camada bg-layer da célula.
+     * Aplica fundo (cor, gradiente ou imagem) na camada cell-content-layer da célula.
      * @param {HTMLElement} cellEl - .craftools-grid-cell
      * @param {Object} opts
      * @param {string} opts.type       - 'color' | 'gradient' | 'image'
      * @param {string} opts.value      - Cor hex / CSS gradient / URL da imagem
      * @param {string} [opts.position] - 'center center', 'top left', etc.
      * @param {string} [opts.size]     - 'cover' | 'contain' | 'auto'
-     * @param {number} [opts.opacity]  - 0-1 (para futuros usos)
+     * @param {boolean} [opts._silent]  - se true, evita propagar para irmãos
      */
     static applyBackground(cellEl, opts = {}) {
-        const bgLayer = cellEl.querySelector('.cell-bg-layer');
+        const bgLayer = cellEl.querySelector('.cell-content-layer');
         if (!bgLayer) return;
 
         const { type, value, position = 'center center', size = 'cover' } = opts;
@@ -44,21 +44,47 @@ export class CellBackground {
         cellEl.dataset.bgValue = value || '';
         cellEl.dataset.bgPosition = position;
         cellEl.dataset.bgSize = size;
+
+        // Propaga se houver _linkedElements (Business Card mode)
+        if (!opts._silent) {
+            const element = cellEl.querySelector('craftools-element');
+            if (element && element._linkedElements) {
+                element._linkedElements.forEach(sibling => {
+                    const siblingCell = sibling.closest('.craftools-grid-cell');
+                    if (siblingCell && siblingCell !== cellEl) {
+                        CellBackground.applyBackground(siblingCell, { ...opts, _silent: true });
+                    }
+                });
+            }
+        }
     }
 
     /** Remove o fundo da célula */
-    static clearBackground(cellEl) {
-        const bgLayer = cellEl.querySelector('.cell-bg-layer');
+    static clearBackground(cellEl, silent = false) {
+        const bgLayer = cellEl.querySelector('.cell-content-layer');
         if (!bgLayer) return;
-        bgLayer.style.cssText = `
-            position: absolute; inset: 0; z-index: 0;
-            pointer-events: none;
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-        `;
+        
+        bgLayer.style.background = 'white';
+        bgLayer.style.backgroundImage = '';
+        bgLayer.style.backgroundSize = '';
+        bgLayer.style.backgroundPosition = '';
+        bgLayer.style.backgroundColor = 'white';
+
         delete cellEl.dataset.bgType;
         delete cellEl.dataset.bgValue;
+
+        // Propaga se houver _linkedElements (Business Card mode)
+        if (!silent) {
+            const element = cellEl.querySelector('craftools-element');
+            if (element && element._linkedElements) {
+                element._linkedElements.forEach(sibling => {
+                    const siblingCell = sibling.closest('.craftools-grid-cell');
+                    if (siblingCell && siblingCell !== cellEl) {
+                        CellBackground.clearBackground(siblingCell, true);
+                    }
+                });
+            }
+        }
     }
 
     /**
@@ -69,6 +95,7 @@ export class CellBackground {
      * @param {string} [opts.position] - posição CSS background-position
      * @param {string} [opts.size]     - 'cover' | 'contain' | 'auto'
      * @param {number} [opts.opacity]  - 0-1
+     * @param {boolean} [opts._silent]
      */
     static applyOverlay(cellEl, opts = {}) {
         const overlayLayer = cellEl.querySelector('.cell-overlay-layer');
@@ -86,15 +113,43 @@ export class CellBackground {
         cellEl.dataset.overlayPosition = position;
         cellEl.dataset.overlaySize = size;
         cellEl.dataset.overlayOpacity = opacity;
+
+        // Propaga se houver _linkedElements (Business Card mode)
+        if (!opts._silent) {
+            const element = cellEl.querySelector('craftools-element');
+            if (element && element._linkedElements) {
+                element._linkedElements.forEach(sibling => {
+                    const siblingCell = sibling.closest('.craftools-grid-cell');
+                    if (siblingCell && siblingCell !== cellEl) {
+                        CellBackground.applyOverlay(siblingCell, { ...opts, _silent: true });
+                    }
+                });
+            }
+        }
     }
 
     /** Remove o overlay da célula */
-    static clearOverlay(cellEl) {
+    static clearOverlay(cellEl, silent = false) {
         const overlayLayer = cellEl.querySelector('.cell-overlay-layer');
         if (!overlayLayer) return;
+        
         overlayLayer.style.backgroundImage = 'none';
         overlayLayer.style.opacity = '1';
+        
         delete cellEl.dataset.overlayUrl;
+
+        // Propaga se houver _linkedElements (Business Card mode)
+        if (!silent) {
+            const element = cellEl.querySelector('craftools-element');
+            if (element && element._linkedElements) {
+                element._linkedElements.forEach(sibling => {
+                    const siblingCell = sibling.closest('.craftools-grid-cell');
+                    if (siblingCell && siblingCell !== cellEl) {
+                        CellBackground.clearOverlay(siblingCell, true);
+                    }
+                });
+            }
+        }
     }
 
     /** Ler estado atual do background de uma cell */

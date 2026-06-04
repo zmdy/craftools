@@ -457,8 +457,8 @@ export class AlbumTool extends BaseTool {
     }
 
     /**
-     * Conecta os botões .cell-edit-btn ao CellPanel.
-     * Chamado após qualquer geração de grid.
+     * Conecta os botões .cell-edit-btn à seleção do elemento de imagem da célula.
+     * Isso faz com que as propriedades da célula abram na barra lateral de propriedades da imagem.
      */
     static _bindCellEditButtons(editor) {
         editor.querySelectorAll('.cell-edit-btn').forEach(btn => {
@@ -468,7 +468,15 @@ export class AlbumTool extends BaseTool {
             newBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const cellEl = newBtn.closest('.craftools-grid-cell');
-                if (cellEl) CellPanel.open(editor, cellEl);
+                if (cellEl) {
+                    const imgEl = cellEl.querySelector('craftools-element[data-craftool="imagem"]');
+                    if (imgEl) {
+                        imgEl.select();
+                    } else {
+                        // Caso a célula não tenha imagem por algum motivo, abre as propriedades da célula legada
+                        CellPanel.open(editor, cellEl);
+                    }
+                }
             });
         });
     }
