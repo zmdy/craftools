@@ -1,7 +1,5 @@
 <div align="center">
   <img src="assets/logo-craftools.svg" alt="CrafTools Logo" width="150" />
-  <br/><br/>
-  <img src="assets/logo-craftools-text.svg" alt="CrafTools" width="200" />
   
   <p><strong>Professional Editing & Customization Suite for Stationery</strong></p>
 
