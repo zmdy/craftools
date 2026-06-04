@@ -223,11 +223,13 @@
         }
         body.is-setup-mode .footer-nav ul {
             justify-content: flex-start !important;
+            width: 100% !important;
         }
         body.is-setup-mode .center-menu-item {
             margin: 0 !important;
             order: -1;
             padding-left: 10px;
+            flex-shrink: 0;
         }
         body.is-setup-mode .center-menu-item a {
             margin: 0 !important;
@@ -236,6 +238,7 @@
         body.is-setup-mode .pwa-welcome-msg {
             display: flex !important;
             align-items: center;
+            justify-content: flex-start;
             flex: 1;
             padding-left: 15px;
             color: var(--accent);
