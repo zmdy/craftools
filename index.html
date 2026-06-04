@@ -410,8 +410,8 @@
 
                 // Check setup mode periodically for bulletproof detection
                 const checkSetupMode = () => {
-                    const appExists = document.querySelector('.craftools-app') || document.querySelector('#canvas-area');
-                    if (appExists) {
+                    const canvasExists = document.querySelector('#canvas-area');
+                    if (canvasExists) {
                         document.body.classList.remove('is-setup-mode');
                         const welcomeMsg = document.querySelector('.pwa-welcome-msg');
                         if (welcomeMsg) {
