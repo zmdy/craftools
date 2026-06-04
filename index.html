@@ -245,7 +245,7 @@
             font-weight: 500;
         }
         .pwa-welcome-msg {
-            display: none;
+            display: none !important;
         }
 
         /* Estilização Premium para botões de ação e select no Header */
@@ -410,11 +410,13 @@
 
                 // Check setup mode periodically for bulletproof detection
                 const checkSetupMode = () => {
-                    const canvasExists = document.querySelector('.craftools-canvas');
-                    if (canvasExists) {
+                    const appExists = document.querySelector('.craftools-app') || document.querySelector('#canvas-area');
+                    if (appExists) {
                         document.body.classList.remove('is-setup-mode');
                         const welcomeMsg = document.querySelector('.pwa-welcome-msg');
-                        if (welcomeMsg) welcomeMsg.style.display = 'none'; // Força remoção com JS
+                        if (welcomeMsg) {
+                            welcomeMsg.remove(); // Remoção definitiva do DOM
+                        }
                     } else {
                         document.body.classList.add('is-setup-mode');
                     }
