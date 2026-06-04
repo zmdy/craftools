@@ -154,28 +154,6 @@ export class Craftools_LayoutGrid {
                 `;
                 cellWrap.appendChild(dragHandle);
 
-                // ── Botão de editar cell ───────────────────────────────────
-                let editBtn = document.createElement('button');
-                editBtn.className = "cell-edit-btn";
-                editBtn.title = "Editar célula";
-                editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">tune</span>';
-                editBtn.style.cssText = `
-                    position: absolute;
-                    top: 4px;
-                    right: 4px;
-                    z-index: 50;
-                    background: var(--bg-input, #fff);
-                    border: 1px solid var(--border, #e5e7eb);
-                    border-radius: 4px;
-                    padding: 2px 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    color: var(--text-secondary);
-                `;
-                cellWrap.appendChild(editBtn);
 
                 // ── Adiciona ao grid e executa callback ───────────────────
                 grid.appendChild(cellWrap);

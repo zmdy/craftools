@@ -172,6 +172,7 @@ ${pageRules}
             '.craftools-ctrlbar',
             '.album-drag-handle',
             '.craftools-sidebar-overlay',
+            '.cell-edit-btn',
         ].join(',')).forEach(el => el.remove());
 
         // Achata todos os <craftools-element> (Web Components) em divs regulares
