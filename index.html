@@ -325,7 +325,17 @@
             font-size: 20px;
         }
 
-        /* Overrides específicos de Dark Mode para garantir consistência perfeita com CrafTools */
+        /* Hover do sidenav igual ao footer (laranja, transição suave) */
+        .sidenav-nav li a {
+            color: var(--text-primary, #18181b);
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+        .sidenav-nav li a:hover,
+        .sidenav-nav li a:focus {
+            color: var(--accent, #f97316) !important;
+            background-color: rgba(249, 115, 22, 0.06) !important;
+        }
+        /* Dark mode */
         [data-theme="dark"] .header-area,
         [data-theme="dark"] .sidenav-wrapper,
         [data-theme="dark"] .offcanvas {
@@ -338,7 +348,7 @@
         [data-theme="dark"] .sidenav-nav li a:hover,
         [data-theme="dark"] .sidenav-nav li a:focus {
             color: var(--accent) !important;
-            background-color: rgba(255, 255, 255, 0.05) !important;
+            background-color: rgba(249, 115, 22, 0.12) !important;
         }
         [data-theme="dark"] .footer-nav-btn {
             color: rgba(255, 255, 255, 0.6);
@@ -521,6 +531,44 @@
                 if (langSelect) langSelect.addEventListener('change', applyPwaI18n);
                 setInterval(applyPwaI18n, 1500);
 
+                // ── Ícone do botão de menu: menu ↔ close ────────────────
+                const offcanvas = document.getElementById('affanOffcanvas');
+                const menuIcon  = document.getElementById('pwa-menu-icon');
+                if (offcanvas && menuIcon) {
+                    offcanvas.addEventListener('show.bs.offcanvas', () => {
+                        menuIcon.style.transition = 'transform 0.25s ease, opacity 0.2s ease';
+                        menuIcon.style.opacity = '0';
+                        menuIcon.style.transform = 'rotate(90deg) scale(0.7)';
+                        setTimeout(() => {
+                            menuIcon.textContent = 'close';
+                            menuIcon.style.opacity = '1';
+                            menuIcon.style.transform = 'rotate(0deg) scale(1)';
+                        }, 150);
+                    });
+                    offcanvas.addEventListener('hide.bs.offcanvas', () => {
+                        menuIcon.style.opacity = '0';
+                        menuIcon.style.transform = 'rotate(-90deg) scale(0.7)';
+                        setTimeout(() => {
+                            menuIcon.textContent = 'menu';
+                            menuIcon.style.opacity = '1';
+                            menuIcon.style.transform = 'rotate(0deg) scale(1)';
+                        }, 150);
+                    });
+                }
+
+                // ── Ctrl+Scroll = Zoom (sobrescreve o zoom nativo do browser) ──
+                window.addEventListener('wheel', (e) => {
+                    if (!e.ctrlKey) return;
+                    e.preventDefault(); // bloqueia o zoom nativo do browser
+                    if (e.deltaY < 0) {
+                        // Scroll para cima = zoom in
+                        document.getElementById('pwa-zoom-in')?.click();
+                    } else {
+                        // Scroll para baixo = zoom out
+                        document.getElementById('pwa-zoom-out')?.click();
+                    }
+                }, { passive: false });
+
             }, 500); // tempo de segurança para renderização
         };
     </script>
@@ -564,7 +612,7 @@
         <div class="offcanvas-body p-0">
             <div class="sidenav-wrapper">
                 <div class="sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4">
-                    <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 36px; width: auto; filter: brightness(0); margin-bottom: 8px;">
+                    <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 3vh; width: auto; filter: brightness(0); margin-bottom: 8px;">
                     <p class="mb-0" style="font-size: 11px; color: rgba(0,0,0,0.55); font-weight: 500; letter-spacing: 0.4px;">Technology for Creativity &mdash; v0.1</p>
                 </div>
                 <ul class="sidenav-nav ps-0 mt-3">
@@ -606,8 +654,8 @@
                     
                     <!-- Botão Menu Circular no Centro -->
                     <li class="center-menu-item">
-                        <a href="#affanOffcanvas" data-bs-toggle="offcanvas">
-                            <span class="material-symbols-outlined">menu</span>
+                        <a href="#affanOffcanvas" data-bs-toggle="offcanvas" id="pwa-menu-toggle">
+                            <span class="material-symbols-outlined" id="pwa-menu-icon">menu</span>
                         </a>
                     </li>
 
