@@ -192,10 +192,10 @@
             align-items: center !important;
         }
 
-        /* Botão Menu Central Premium */
+        /* Botão Menu Central */
         .footer-nav li.center-menu-item a {
-            background-color: var(--primary-600, #f97316);
-            color: #fff !important;
+            background-color: rgba(249, 115, 22, 0.1);
+            color: var(--primary-600, #f97316) !important;
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -203,18 +203,41 @@
             align-items: center;
             justify-content: center;
             margin: -15px auto 0 auto !important;
-            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
-            border: 3px solid #fff;
-            transition: transform 0.2s;
+            box-shadow: none;
+            border: 2px solid var(--primary-100, #ffffff);
+            transition: all 0.2s;
         }
         .footer-nav li.center-menu-item a:hover,
         .footer-nav li.center-menu-item a:focus {
             transform: scale(1.05);
-            background-color: var(--primary-700, #ea580c) !important;
-            color: #fff !important;
+            background-color: rgba(249, 115, 22, 0.2) !important;
         }
         [data-theme="dark"] .footer-nav li.center-menu-item a {
             border-color: #18181b;
+        }
+
+        /* Setup Mode */
+        body:has(.craftools-setup) .footer-nav-btn {
+            display: none !important;
+        }
+        body:has(.craftools-setup) .center-menu-item {
+            margin: 0 !important;
+            order: -1;
+        }
+        body:has(.craftools-setup) .center-menu-item a {
+            margin: 0 !important;
+            border: none;
+        }
+        body:has(.craftools-setup) .pwa-welcome-msg {
+            display: flex !important;
+            align-items: center;
+            padding-right: 20px;
+            margin-left: auto;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .pwa-welcome-msg {
+            display: none;
         }
 
         /* Estilização Premium para botões de ação e select no Header */
@@ -282,6 +305,9 @@
                     'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
                     'pwa-btn-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
                     'pwa-btn-album': { selector: '[data-tool="album"]', type: 'album' },
+                    'pwa-sidebar-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
+                    'pwa-sidebar-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
+                    'pwa-sidebar-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
                     'pwa-sidebar-album': { selector: '[data-tool="album"]', type: 'album' },
                     'pwa-sidebar-papeis': { selector: '[data-tool="papeis"]', type: 'papeis' },
                     'pwa-sidebar-export': { selector: '#pdf-btn', type: null },
@@ -386,11 +412,6 @@
                 
                 <!-- Brand & Sidenav Toggler -->
                 <div class="d-flex align-items-center gap-3">
-                    <div class="navbar-toggler" id="affanNavbarToggler" data-bs-toggle="offcanvas" data-bs-target="#affanOffcanvas" aria-controls="affanOffcanvas" style="cursor:pointer;">
-                        <span class="d-block"></span>
-                        <span class="d-block"></span>
-                        <span class="d-block"></span>
-                    </div>
                     <div class="logo-wrapper" style="font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent, #f97316); font-weight: 700;">
                         CrafTools
                     </div>
@@ -424,10 +445,14 @@
                     <h5 class="user-name mb-0 text-white">Opções</h5>
                 </div>
                 <ul class="sidenav-nav ps-0 mt-3">
-                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar PDF</a></li>
-                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> Nova Página</a></li>
+                    <li><a href="#" id="pwa-sidebar-titulo"><span class="material-symbols-outlined">title</span> Título</a></li>
+                    <li><a href="#" id="pwa-sidebar-paragrafo"><span class="material-symbols-outlined">notes</span> Texto</a></li>
+                    <li><a href="#" id="pwa-sidebar-imagem"><span class="material-symbols-outlined">image</span> Imagem</a></li>
+                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> Álbum</a></li>
+                    <li><hr class="dropdown-divider"></li>
                     <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> Papéis / Temas</a></li>
-                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> Álbum Completo</a></li>
+                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> Nova Página</a></li>
+                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar PDF</a></li>
                 </ul>
             </div>
         </div>
@@ -474,6 +499,9 @@
                             <span class="material-symbols-outlined">photo_library</span>
                             <span>Álbum</span>
                         </button>
+                    </li>
+                    <li class="pwa-welcome-msg">
+                        <span>Bem-vindo ao CrafTools!</span>
                     </li>
                 </ul>
             </div>
