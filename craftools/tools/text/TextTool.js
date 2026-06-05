@@ -8,6 +8,28 @@ const FONTS = [
     'Parisienne', 'Dancing Script', 'Quicksand', 'Quintessential', 'Grenze Gotisch'
 ];
 
+/**
+ * Carrega fontes do Google Fonts dinamicamente para exibição no editor.
+ */
+const loadGoogleFonts = (fonts) => {
+    const googleFonts = fonts.filter(f => ![
+        'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Impact'
+    ].includes(f));
+    
+    if (googleFonts.length > 0) {
+        const linkId = 'craftools-dynamic-fonts';
+        let link = document.getElementById(linkId);
+        if (!link) {
+            link = document.createElement('link');
+            link.id = linkId;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
+        const fontQuery = googleFonts.map(f => f.replace(/\s+/g, '+')).join('|');
+        link.href = `https://fonts.googleapis.com/css?family=${fontQuery}&display=swap`;
+    }
+};
+
 export class TextTool extends BaseTool {
     static renderPropertiesPanel(editorPanel, element) {
         const textElement = element.contentArea.querySelector('[contenteditable]');
@@ -21,9 +43,18 @@ export class TextTool extends BaseTool {
 
         let html = `
             <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div class="craftools-field" style="padding: 0 0 10px 0;">
+                <div class="craftools-field" style="padding: 0 0 10px 0; display: flex; flex-direction: column; gap: 6px;">
                     <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
-                    <select id="text-prop-font" class="craftools-select"></select>
+                    <select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></select>
+                    
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <input type="text" id="text-prop-custom-font" class="craftools-input" 
+                            placeholder="Digitar fonte local (ex: Comic Sans)..." 
+                            style="flex: 1; padding: 6px 9px; font-size: 11px;">
+                        <button class="craftools-pill" id="text-prop-load-local" title="Listar fontes instaladas no PC" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="craftools-field" style="padding: 10px 0;">
@@ -66,20 +97,110 @@ export class TextTool extends BaseTool {
         
         // Font dropdown
         const fontSelect = editorPanel.querySelector('#text-prop-font');
+        const customFontInput = editorPanel.querySelector('#text-prop-custom-font');
+        
+        // Carrega as fontes do Google Fonts para a página
+        loadGoogleFonts(FONTS);
+        
         FONTS.forEach(font => {
             const option = document.createElement('option');
             option.value = font;
             option.textContent = font;
+            option.style.fontFamily = `'${font}', sans-serif`;
             if(font === currentFont) option.selected = true;
             fontSelect.appendChild(option);
         });
 
+        // Adiciona a fonte atual se for externa e não estiver na lista padrão
+        if (currentFont && !FONTS.includes(currentFont)) {
+            const option = document.createElement('option');
+            option.value = currentFont;
+            option.textContent = currentFont;
+            option.style.fontFamily = `'${currentFont}', sans-serif`;
+            option.selected = true;
+            fontSelect.appendChild(option);
+            customFontInput.value = currentFont;
+        }
+
         // BIND EVENTS
         fontSelect.addEventListener('change', (e) => {
             textElement.style.fontFamily = `'${e.target.value}', sans-serif`;
+            customFontInput.value = FONTS.includes(e.target.value) ? '' : e.target.value;
             // Trigger an element update (bounding box might change)
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
+        });
+
+        // Eventos para busca de fonte customizada
+        const applyCustomFont = () => {
+            const fontName = customFontInput.value.trim();
+            if (fontName) {
+                textElement.style.fontFamily = `'${fontName}', sans-serif`;
+                
+                // Adiciona ao select se não existir
+                if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === fontName.toLowerCase())) {
+                    const option = document.createElement('option');
+                    option.value = fontName;
+                    option.textContent = fontName;
+                    option.style.fontFamily = `'${fontName}', sans-serif`;
+                    fontSelect.appendChild(option);
+                    option.selected = true;
+                } else {
+                    fontSelect.value = [...fontSelect.options].find(opt => opt.value.toLowerCase() === fontName.toLowerCase()).value;
+                }
+
+                const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
+                element.dispatchEvent(event);
+            }
+        };
+
+        customFontInput.addEventListener('change', applyCustomFont);
+        customFontInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                applyCustomFont();
+            }
+        });
+
+        // Botão para carregar fontes locais do PC
+        const localBtn = editorPanel.querySelector('#text-prop-load-local');
+        localBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const fontAccessApi = navigator.queryLocalFonts || window.queryLocalFonts;
+            if (!fontAccessApi) {
+                alert("Acesso a fontes locais não é suportado pelo seu navegador atual. Use o campo ao lado para digitar o nome da fonte instalada.");
+                return;
+            }
+            
+            try {
+                localBtn.disabled = true;
+                localBtn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size: 14px;">progress_activity</span>';
+                
+                const localFonts = await fontAccessApi();
+                
+                // Extrai famílias únicas
+                const families = [...new Set(localFonts.map(f => f.family))].sort();
+                
+                // Adiciona famílias ao select
+                families.forEach(font => {
+                    if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === font.toLowerCase())) {
+                        const option = document.createElement('option');
+                        option.value = font;
+                        option.textContent = font;
+                        option.style.fontFamily = `'${font}', sans-serif`;
+                        fontSelect.appendChild(option);
+                    }
+                });
+                
+                alert(`${families.length} fontes locais carregadas com sucesso na lista!`);
+                localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> PC';
+            } catch (err) {
+                console.error(err);
+                alert("Permissão para listar fontes locais negada ou erro ao acessar: " + err.message);
+                localBtn.disabled = false;
+                localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC';
+            }
         });
 
         const colorInput = editorPanel.querySelector('#text-prop-color');
