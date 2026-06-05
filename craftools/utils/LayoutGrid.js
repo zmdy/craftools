@@ -96,6 +96,18 @@ export class Craftools_LayoutGrid {
                     overflow: hidden;
                 `;
 
+                // Set default borders from grid configuration
+                const defaultBWidth = grid.dataset.borderWidth || '1';
+                const defaultBStyle = grid.dataset.borderStyle || 'dashed';
+                const defaultBColor = grid.dataset.borderColor || '#cccccc';
+
+                cellWrap.style.borderWidth = `${defaultBWidth}px`;
+                cellWrap.style.borderStyle = defaultBStyle;
+                cellWrap.style.borderColor = defaultBColor;
+                cellWrap.style.setProperty('--cell-border-width', `${defaultBWidth}px`);
+                cellWrap.style.setProperty('--cell-border-style', defaultBStyle);
+                cellWrap.style.setProperty('--cell-border-color', defaultBColor);
+
                 // Parse padding values safely
                 const paddings = this.template.cellPadding.split(" ").map(p => parseFloat(p));
                 const pT = isNaN(paddings[0]) ? 0 : paddings[0];

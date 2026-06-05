@@ -338,12 +338,6 @@ export class AlbumTool extends BaseTool {
 
         await gridSystem.render(images, (cellContainer, imgData) => {
             cellContainer.style.background = "white";
-            cellContainer.style.borderWidth = "1px";
-            cellContainer.style.borderStyle = "dashed";
-            cellContainer.style.borderColor = "#cccccc";
-            cellContainer.style.setProperty('--cell-border-width', '1px');
-            cellContainer.style.setProperty('--cell-border-style', 'dashed');
-            cellContainer.style.setProperty('--cell-border-color', '#cccccc');
             
             const imgEl = this._buildCellElement(editor, imgData.src, pl, pt, cw, ch, unit);
 
@@ -400,12 +394,6 @@ export class AlbumTool extends BaseTool {
 
         await gridSystem.render(items, (cellContainer) => {
             cellContainer.style.background = "white";
-            cellContainer.style.borderWidth = "1px";
-            cellContainer.style.borderStyle = "dashed";
-            cellContainer.style.borderColor = "#cccccc";
-            cellContainer.style.setProperty('--cell-border-width', '1px');
-            cellContainer.style.setProperty('--cell-border-style', 'dashed');
-            cellContainer.style.setProperty('--cell-border-color', '#cccccc');
 
             const imgEl = ImageTool.createElement('imagem', editor);
             imgEl.setAttribute('x', pl + unit);
