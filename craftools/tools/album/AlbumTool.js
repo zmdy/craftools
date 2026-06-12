@@ -12,11 +12,14 @@ import "./AlbumTool_Translations.js";
 
 export class AlbumTool extends BaseTool {
     static setup(editor, pageEl) {
-        const rightPanel = editor.querySelector('#right-panel');
-        const panelTitle = editor.querySelector('#panel-title');
-        const panelBody = editor.querySelector('#panel-body');
+        const rightPanel = document.getElementById('right-panel');
+        const panelTitle = document.getElementById('panel-title');
+        const panelBody = document.getElementById('panel-body');
+        const defaultMenu = document.getElementById('panel-default-menu');
+        const closePanel = document.getElementById('close-panel');
+        const panelLogo = document.getElementById('panel-logo');
 
-        panelTitle.textContent = I18n.t('albumTool.panelTitle');
+        if (panelTitle) panelTitle.textContent = I18n.t('albumTool.panelTitle');
         editor.activePage = pageEl;
 
         // ── State ──────────────────────────────────────────────────────────
@@ -265,7 +268,12 @@ export class AlbumTool extends BaseTool {
                             : cardManualQty;
                         this.processBusinessCard(editor, pageEl, selectedSize, selectedTemplate, cardPhoto, qty, smartFit);
                     }
-                    rightPanel.classList.add('hidden');
+                    if(defaultMenu) defaultMenu.classList.remove('d-none');
+                    if(panelBody) panelBody.classList.add('d-none');
+                    if(closePanel) closePanel.classList.add('d-none');
+                    if(panelLogo) panelLogo.classList.remove('d-none');
+                    if(panelTitle) panelTitle.textContent = "Technology for Creativity";
+                    if(rightPanel) rightPanel.classList.remove('panel-open');
                 });
             }
 
@@ -288,7 +296,16 @@ export class AlbumTool extends BaseTool {
         };
 
         renderPanel();
-        rightPanel.classList.remove('hidden');
+        
+        if(defaultMenu) defaultMenu.classList.add('d-none');
+        if(panelBody) panelBody.classList.remove('d-none');
+        if(closePanel) closePanel.classList.remove('d-none');
+        if(panelLogo) panelLogo.classList.add('d-none');
+        if(rightPanel) rightPanel.classList.add('panel-open');
+        const menuIcon = document.getElementById('pwa-menu-icon');
+        if(menuIcon && menuIcon.textContent !== 'close') {
+            menuIcon.textContent = 'close';
+        }
     }
 
     // ── Helpers: build a locked ImageTool element for a grid cell ────────────
