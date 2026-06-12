@@ -68,13 +68,151 @@ export class AlbumTool extends BaseTool {
                 `<button class="craftools-pill size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${idx}">${s.name}</button>`
             ).join('');
 
+            // ── Helper: single slot preview (Polaroid style) ────────────
+            const buildSlotPreview = (t) => {
+                const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
+                const [padT, padR, padB, padL] = padParts;
+                const photoW = Math.max(0, t.cellWidth  - padL - padR);
+                const photoH = Math.max(0, t.cellHeight - padT - padB);
+
+                // Scale so the outer cell fits in 72×68px max
+                const SLOT_MAX_W = 72;
+                const SLOT_MAX_H = 68;
+                const scale = Math.min(SLOT_MAX_W / t.cellWidth, SLOT_MAX_H / t.cellHeight, 1);
+                const outerW = Math.round(t.cellWidth  * scale);
+                const outerH = Math.round(t.cellHeight * scale);
+                const innerW = Math.max(2, Math.round(photoW * scale));
+                const innerH = Math.max(2, Math.round(photoH * scale));
+                // Scaled padding offsets (for positioning the photo inside)
+                const sPadT = Math.round(padT * scale);
+                const sPadL = Math.round(padL * scale);
+
+                return `<div style="
+                    width:${outerW}px; height:${outerH}px;
+                    background:#ffffff;
+                    border:1px solid #d1d5db;
+                    border-radius:3px;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+                    flex-shrink:0;
+                    position:relative;
+                    overflow:hidden;
+                ">
+                    <div style="
+                        position:absolute;
+                        left:${sPadL}px; top:${sPadT}px;
+                        width:${innerW}px; height:${innerH}px;
+                        background:#9ca3af;
+                    "></div>
+                </div>`;
+            };
+
+            // ── Helper: full page preview (with margin & gap) ──────────────
+            const buildPagePreview = (t) => {
+                if (!selectedSize) return '';
+                const parts = selectedSize.size.split(',').map(Number);
+                const docW = parts[0];
+                const docH = parts[1];
+                const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
+                const [mT, mR, mB, mL] = margins;
+                const cols = Math.max(1, Math.floor((docW - mL - mR + t.cellGap) / (t.cellWidth + t.cellGap)));
+                const rows = Math.max(1, Math.floor((docH - mT - mB + t.cellGap) / (t.cellHeight + t.cellGap)));
+
+                // Scale full page to fit in preview box
+                const PAGE_MAX_W = 180;
+                const PAGE_MAX_H = 140;
+                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH, 1);
+
+                const pDocW  = Math.round(docW  * scale);
+                const pDocH  = Math.round(docH  * scale);
+                const pMT    = Math.round(mT    * scale);
+                const pMR    = Math.round(mR    * scale);
+                const pMB    = Math.round(mB    * scale);
+                const pML    = Math.round(mL    * scale);
+                const pCellW = Math.round(t.cellWidth  * scale);
+                const pCellH = Math.round(t.cellHeight * scale);
+                const pGap   = t.cellGap > 0 ? Math.max(1, Math.round(t.cellGap * scale)) : 0;
+
+                // Build cell grid inside margins
+                const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
+                const [padT, padR, padB, padL] = padParts;
+                const pPhotoW = Math.max(1, Math.round((t.cellWidth  - padL - padR) * scale));
+                const pPhotoH = Math.max(1, Math.round((t.cellHeight - padT - padB) * scale));
+
+                let cellsHtml = '';
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const left = pML + c * (pCellW + pGap);
+                        const top  = pMT + r * (pCellH + pGap);
+                        cellsHtml += `<div style="
+                            position:absolute;
+                            left:${left}px; top:${top}px;
+                            width:${pCellW}px; height:${pCellH}px;
+                            background:#ffffff;
+                            border:1px solid #d1d5db;
+                            overflow:hidden;
+                        ">
+                            <div style="
+                                position:absolute;
+                                left:${Math.round(padL*scale)}px;
+                                top:${Math.round(padT*scale)}px;
+                                width:${pPhotoW}px; height:${pPhotoH}px;
+                                background:#9ca3af;
+                            "></div>
+                        </div>`;
+                    }
+                }
+
+                return `<div style="
+                    position:relative; flex-shrink:0;
+                    width:${pDocW}px; height:${pDocH}px;
+                    background:#ffffff;
+                    border:1px solid #d1d5db;
+                    border-radius:3px;
+                    box-shadow:0 1px 4px rgba(0,0,0,0.12);
+                    margin: 6px auto 0;
+                ">${cellsHtml}</div>`;
+            };
+
             const templateHtml = matchingTemplates.length > 0
-                ? matchingTemplates.map((t, idx) => `
-                    <button class="craftools-pill template-btn ${selectedTemplate === t ? 'active' : ''}" data-idx="${idx}" style="width: 100%; text-align: left; padding: 10px; margin-bottom: 5px;">
-                        ${t.name}<br>
-                        <span style="font-size: 10px; color: var(--text-secondary)">Cell: ${t.cellWidth}x${t.cellHeight} | Gap: ${t.cellGap}</span>
-                    </button>
-                  `).join('')
+                ? matchingTemplates.map((t, idx) => {
+                    const slotPreview = buildSlotPreview(t);
+                    const isActive = selectedTemplate === t;
+                    const rowStyle = isActive
+                        ? `background:var(--accent); border-color:var(--accent);`
+                        : `background:var(--bg-input,#1e1e2e); border-color:var(--border,#374151);`;
+                    const textColor = isActive ? 'color:#fff;' : '';
+                    const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
+                    const secColor  = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
+                    return `
+                    <div class="template-row" data-idx="${idx}" style="margin-bottom:6px;">
+                        <div class="template-btn" data-idx="${idx}" style="
+                            width:100%; padding:10px 12px; box-sizing:border-box;
+                            display:flex; align-items:center; gap:12px;
+                            border-radius:8px; cursor:pointer;
+                            border:1px solid; transition:all .12s;
+                            ${rowStyle}
+                        ">
+                            ${slotPreview}
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}</div>
+                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${t.cellWidth} × ${t.cellHeight} mm</div>
+                                <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">Gap: ${t.cellGap} mm</div>
+                                <button class="page-preview-btn" data-tidx="${idx}" style="
+                                    font-size:9px; padding:2px 7px; border-radius:4px;
+                                    background:transparent; border:1px solid ${isActive ? 'rgba(255,255,255,0.5)' : 'var(--border,#374151)'};
+                                    color:${isActive ? '#fff' : 'var(--text-secondary)'}; cursor:pointer;
+                                    display:inline-flex; align-items:center; gap:3px;
+                                ">
+                                    <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
+                                    Ver Página
+                                </button>
+                            </div>
+                        </div>
+                        <div class="page-preview-panel" data-tidx="${idx}" style="display:none; padding:6px; border-radius:6px; background:var(--bg-input,#1e1e2e); border:1px solid var(--border,#374151); margin-top:3px; text-align:center;">
+                            ${buildPagePreview(t)}
+                        </div>
+                    </div>`;
+                }).join('')
                 : `<div style="font-size: 12px; color: var(--text-muted)">${I18n.t('albumTool.noTemplate')}</div>`;
 
             // Step 4 — specific to each mode
@@ -218,11 +356,28 @@ export class AlbumTool extends BaseTool {
                 });
             });
 
-            // ── Bind: Step 2 — Template ────────────────────────────────────
+            // ── Bind: Step 2 — Template (now div, not button) ────────────────
             panelBody.querySelectorAll('.template-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    // Ignore clicks that originated from the page-preview-btn
+                    if (e.target.closest('.page-preview-btn')) return;
                     selectedTemplate = matchingTemplates[btn.getAttribute('data-idx')];
                     renderPanel();
+                });
+            });
+
+            // ── Bind: Page preview toggle ──────────────────────────────────
+            panelBody.querySelectorAll('.page-preview-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // don't trigger template-btn
+                    const tidx = btn.getAttribute('data-tidx');
+                    const panel = panelBody.querySelector(`.page-preview-panel[data-tidx="${tidx}"]`);
+                    if (!panel) return;
+                    const isOpen = panel.style.display !== 'none';
+                    panel.style.display = isOpen ? 'none' : 'block';
+                    btn.style.background = isOpen ? 'transparent' : 'var(--accent-dim, #1e3a5f)';
+                    btn.style.color = isOpen ? 'var(--text-secondary)' : 'var(--accent, #3b82f6)';
+                    btn.style.borderColor = isOpen ? 'var(--border,#374151)' : 'var(--accent, #3b82f6)';
                 });
             });
 
