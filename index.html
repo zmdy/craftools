@@ -305,6 +305,45 @@
             display: none !important;
         }
 
+        /* Sidenav Panel - Sliding Panel for Desktop, Bottom Sheet for Mobile */
+        .sidenav-panel {
+            width: 272px;
+            margin-left: -272px; /* Closed by default */
+            background: var(--primary-500, #ffffff);
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .sidenav-panel.panel-open {
+            margin-left: 0; /* Open on desktop */
+        }
+        @media (max-width: 768px) {
+            .sidenav-panel {
+                margin-left: 0; /* Clear desktop margin */
+                position: fixed !important;
+                left: 0;
+                bottom: 62px;
+                top: auto !important;
+                width: 100%;
+                height: 60vh;
+                max-height: 60vh;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                border-radius: 20px 20px 0 0;
+                transform: translateY(100%); /* Closed by default on mobile */
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            }
+            .sidenav-panel.panel-open {
+                transform: translateY(0); /* Open on mobile */
+            }
+            .sidenav-panel .sidenav-profile {
+                border-radius: 20px 20px 0 0;
+            }
+        }
+
         /* Estilização Premium para botões de ação e select no Header */
         .header-content .box-icon {
             color: var(--text-primary, #18181b);
@@ -499,10 +538,34 @@
                     if (backdrop) backdrop.remove();
                 };
                 // Intercepta o evento de show do offcanvas
-                document.getElementById('affanOffcanvas')?.addEventListener('show.bs.offcanvas', () => {
-                    // Aguarda o Bootstrap criar o backdrop e remove imediatamente
-                    requestAnimationFrame(() => removeBackdrop());
-                    setTimeout(() => removeBackdrop(), 50);
+                // Intercepta o evento do menu toggle e anima ícone
+                const menuIcon  = document.getElementById('pwa-menu-icon');
+                const toggleMenuIcon = (isOpen) => {
+                    if (!menuIcon) return;
+                    menuIcon.style.transition = 'transform 0.25s ease, opacity 0.2s ease';
+                    menuIcon.style.opacity = '0';
+                    menuIcon.style.transform = isOpen ? 'rotate(90deg) scale(0.7)' : 'rotate(-90deg) scale(0.7)';
+                    setTimeout(() => {
+                        menuIcon.textContent = isOpen ? 'close' : 'menu';
+                        menuIcon.style.opacity = '1';
+                        menuIcon.style.transform = 'rotate(0deg) scale(1)';
+                    }, 150);
+                };
+
+                document.getElementById('pwa-menu-toggle')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const panel = document.getElementById('right-panel');
+                    if (panel) {
+                        const isNowOpen = panel.classList.toggle('panel-open');
+                        toggleMenuIcon(isNowOpen);
+                        
+                        // Atualiza overlay se estiver no mobile
+                        const overlay = document.getElementById('sidebar-overlay');
+                        if (overlay && window.innerWidth <= 768) {
+                            if (isNowOpen) overlay.classList.add('visible');
+                            else overlay.classList.remove('visible');
+                        }
+                    }
                 });
                 // Observer para remover o backdrop assim que for adicionado ao DOM
                 const backdropObserver = new MutationObserver(() => {
@@ -532,30 +595,7 @@
                 if (langSelect) langSelect.addEventListener('change', applyPwaI18n);
                 setInterval(applyPwaI18n, 1500);
 
-                // ── Ícone do botão de menu: menu ↔ close ────────────────
-                const offcanvas = document.getElementById('affanOffcanvas');
-                const menuIcon  = document.getElementById('pwa-menu-icon');
-                if (offcanvas && menuIcon) {
-                    offcanvas.addEventListener('show.bs.offcanvas', () => {
-                        menuIcon.style.transition = 'transform 0.25s ease, opacity 0.2s ease';
-                        menuIcon.style.opacity = '0';
-                        menuIcon.style.transform = 'rotate(90deg) scale(0.7)';
-                        setTimeout(() => {
-                            menuIcon.textContent = 'close';
-                            menuIcon.style.opacity = '1';
-                            menuIcon.style.transform = 'rotate(0deg) scale(1)';
-                        }, 150);
-                    });
-                    offcanvas.addEventListener('hide.bs.offcanvas', () => {
-                        menuIcon.style.opacity = '0';
-                        menuIcon.style.transform = 'rotate(-90deg) scale(0.7)';
-                        setTimeout(() => {
-                            menuIcon.textContent = 'menu';
-                            menuIcon.style.opacity = '1';
-                            menuIcon.style.transform = 'rotate(0deg) scale(1)';
-                        }, 150);
-                    });
-                }
+
 
                 // ── Ctrl+Scroll = Zoom (sobrescreve o zoom nativo do browser) ──
                 window.addEventListener('wheel', (e) => {
@@ -608,31 +648,43 @@
         </div>
     </div>
 
-    <!-- OFFCANVAS LEFT (Menu Lateral PWA) -->
-    <div class="offcanvas offcanvas-start" id="affanOffcanvas" data-bs-scroll="true" tabindex="-1" aria-labelledby="affanOffcanvsLabel">
-        <div class="offcanvas-body p-0">
-            <div class="sidenav-wrapper">
-                <div class="sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4">
-                    <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 3vh; width: auto; filter: brightness(0); margin-bottom: 8px;">
-                    <p class="mb-0" style="font-size: 11px; color: rgba(0,0,0,0.55); font-weight: 500; letter-spacing: 0.4px;">Technology for Creativity &mdash; v0.1</p>
+    <!-- MAIN LAYOUT WRAPPER (PANEL + CANVAS) -->
+    <div class="main-layout-wrapper d-flex" style="height: calc(100vh - 112px); margin-top: 50px; overflow: hidden; position: relative; width: 100%;">
+        
+        <!-- LEFT PANEL (Menu & Properties) -->
+        <div class="craftools-panel sidenav-panel" id="right-panel">
+            
+            <div class="craftools-panel-drag-indicator"></div>
+            
+            <div class="craftools-panel-head sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4" style="position: relative;">
+                <button class="craftools-icon-btn d-none" id="close-panel" style="position: absolute; right: 10px; top: 10px; color: rgba(255,255,255,0.8) !important; background: rgba(255,255,255,0.2) !important;">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 3vh; width: auto; filter: brightness(0); margin-bottom: 8px;" id="panel-logo">
+                <p class="mb-0 panel-subtitle" style="font-size: 11px; color: rgba(0,0,0,0.55); font-weight: 500; letter-spacing: 0.4px;" id="panel-title">Technology for Creativity</p>
+            </div>
+            
+            <div class="craftools-panel-body-container" style="flex: 1; overflow-y: auto;">
+                
+                <!-- DEFAULT MENU -->
+                <div id="panel-default-menu">
+                    <ul class="sidenav-nav ps-0 mt-3">
+                        <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> <span data-i18n="editor.papers2">Papéis / Temas</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> <span data-i18n="editor.exportPdf">Exportar PDF</span></a></li>
+                    </ul>
                 </div>
-                <ul class="sidenav-nav ps-0 mt-3">
-                    <li><a href="#" id="pwa-sidebar-titulo"><span class="material-symbols-outlined">title</span> <span data-i18n="editor.toolTitle">Título</span></a></li>
-                    <li><a href="#" id="pwa-sidebar-paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
-                    <li><a href="#" id="pwa-sidebar-imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
-                    <li><a href="#" id="pwa-sidebar-album"><span class="material-symbols-outlined">photo_album</span> <span data-i18n="editor.album">Álbum</span></a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a href="#" id="pwa-sidebar-papeis"><span class="material-symbols-outlined">layers</span> <span data-i18n="editor.papers2">Papéis / Temas</span></a></li>
-                    <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
-                    <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> <span data-i18n="editor.exportPdf">Exportar PDF</span></a></li>
-                </ul>
+                
+                <!-- DYNAMIC PROPERTIES BODY -->
+                <div class="craftools-panel-body d-none" id="panel-body" style="padding: 0;">
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- CONTENT WRAPPER -->
-    <div class="page-content-wrapper">
-        <main id="wrapper"></main>
+        <!-- CONTENT WRAPPER -->
+        <div class="page-content-wrapper flex-grow-1" style="height: 100% !important; margin-top: 0 !important; overflow: hidden; position: relative;">
+            <main id="wrapper"></main>
+        </div>
     </div>
 
     <!-- FOOTER NAV PWA -->
@@ -655,7 +707,7 @@
                     
                     <!-- Botão Menu Circular no Centro -->
                     <li class="center-menu-item">
-                        <a href="#affanOffcanvas" data-bs-toggle="offcanvas" id="pwa-menu-toggle">
+                        <a href="#" id="pwa-menu-toggle">
                             <span class="material-symbols-outlined" id="pwa-menu-icon">menu</span>
                         </a>
                     </li>

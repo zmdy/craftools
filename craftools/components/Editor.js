@@ -59,54 +59,6 @@ export class Craftools_Editor extends HTMLElement {
                 <!-- Overlay para fechar a sidebar no mobile -->
                 <div class="craftools-sidebar-overlay" id="sidebar-overlay"></div>
 
-                <aside class="craftools-sidebar" id="main-sidebar">
-                    <span class="craftools-sec-label">${I18n.t('editor.page')}</span>
-                    
-                    <button class="craftools-tool-btn" id="new-page-btn" title="${I18n.t('editor.newPage')}">
-                        <span class="material-symbols-outlined">post_add</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.newPage')}</span>
-                    </button>
-                    
-                    <button class="craftools-tool-btn" data-tool="gerador" title="${I18n.t('editor.generator')}">
-                        <span class="material-symbols-outlined">auto_awesome_mosaic</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.generator')}</span>
-                    </button>
-
-                    <span class="craftools-sec-label">${I18n.t('editor.tools')}</span>
-                    
-                    <button class="craftools-tool-btn" data-tool="titulo" draggable="true" title="Título">
-                        <span class="material-symbols-outlined">title</span>
-                        <span class="craftools-tool-label">Título</span>
-                    </button>
-                    
-                    <button class="craftools-tool-btn" data-tool="paragrafo" draggable="true" title="Parágrafo">
-                        <span class="material-symbols-outlined">notes</span>
-                        <span class="craftools-tool-label">Parágrafo</span>
-                    </button>
-                    
-                    <button class="craftools-tool-btn" data-tool="imagem" draggable="true" title="${I18n.t('editor.image')}">
-                        <span class="material-symbols-outlined">image</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.image')}</span>
-                    </button>
-
-                    <button class="craftools-tool-btn" data-tool="album" draggable="true" title="${I18n.t('editor.album')}">
-                        <span class="material-symbols-outlined">photo_library</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.album')}</span>
-                    </button>
-                    
-                    <button class="craftools-tool-btn" data-tool="papeis" title="${I18n.t('editor.papers')}">
-                        <span class="material-symbols-outlined">note_stack</span>
-                        <span class="craftools-tool-label">${I18n.t('editor.papers')}</span>
-                    </button>
-
-                    <span class="craftools-sec-label">Salvar</span>
-
-                    <button class="craftools-tool-btn" id="pdf-btn" title="Exportar PDF">
-                        <span class="material-symbols-outlined">picture_as_pdf</span>
-                        <span class="craftools-tool-label">PDF</span>
-                    </button>
-                </aside>
-                
                 <main class="craftools-canvas" id="canvas-area">
                     <div class="craftools-pages" id="pages-wrapper">
                         <section class="craftools-page" style="width: ${dimWidth}; min-height: ${dimHeight}; background: white;" id="main-page">
@@ -116,19 +68,6 @@ export class Craftools_Editor extends HTMLElement {
                         </section>
                     </div>
                 </main>
-                
-                <aside class="craftools-panel hidden" id="right-panel">
-                    <div class="craftools-panel-drag-indicator"></div>
-                    <div class="craftools-panel-head">
-                        <span class="craftools-panel-title" id="panel-title">${I18n.t('editor.panelTitle')}</span>
-                        <button class="craftools-icon-btn" id="close-panel">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
-                    </div>
-                    <div class="craftools-panel-body" id="panel-body" style="padding: 0;">
-                        <!-- Conteúdo dinâmico -->
-                    </div>
-                </aside>
             </div>
         </div>
         `;
@@ -142,7 +81,7 @@ export class Craftools_Editor extends HTMLElement {
 
         // ── Mobile menu toggle ─────────────────────────────────────────────
         const mobileMenuBtn = this.querySelector('#mobile-menu-btn');
-        const sidebar = this.querySelector('#main-sidebar');
+        const sidebar = document.getElementById('right-panel');
         const overlay = this.querySelector('#sidebar-overlay');
 
         if (window.innerWidth <= 768) {
@@ -153,12 +92,20 @@ export class Craftools_Editor extends HTMLElement {
         });
 
         const openSidebar = () => {
-            sidebar.classList.add('mobile-open');
+            if(sidebar) sidebar.classList.add('panel-open');
             overlay.classList.add('visible');
+            const menuIcon = document.getElementById('pwa-menu-icon');
+            if(menuIcon && menuIcon.textContent !== 'close') {
+                menuIcon.textContent = 'close';
+            }
         };
         const closeSidebar = () => {
-            sidebar.classList.remove('mobile-open');
+            if(sidebar) sidebar.classList.remove('panel-open');
             overlay.classList.remove('visible');
+            const menuIcon = document.getElementById('pwa-menu-icon');
+            if(menuIcon && menuIcon.textContent !== 'menu') {
+                menuIcon.textContent = 'menu';
+            }
         };
 
         mobileMenuBtn.addEventListener('click', openSidebar);
@@ -169,27 +116,38 @@ export class Craftools_Editor extends HTMLElement {
             const el = e.detail.element;
             const toolType = el.getAttribute('data-craftool');
             
+            const rightPanel = document.getElementById('right-panel');
+            const panelTitle = document.getElementById('panel-title');
+            const panelBody = document.getElementById('panel-body');
+            const defaultMenu = document.getElementById('panel-default-menu');
+            const closePanel = document.getElementById('close-panel');
+            const panelLogo = document.getElementById('panel-logo');
+            
+            const openPanelMenu = () => {
+                if(defaultMenu) defaultMenu.classList.add('d-none');
+                if(panelBody) panelBody.classList.remove('d-none');
+                if(closePanel) closePanel.classList.remove('d-none');
+                if(panelLogo) panelLogo.classList.add('d-none');
+                if(rightPanel) rightPanel.classList.add('panel-open');
+                const menuIcon = document.getElementById('pwa-menu-icon');
+                if(menuIcon && menuIcon.textContent !== 'close') {
+                    menuIcon.textContent = 'close';
+                }
+            };
+
             if (toolType === 'titulo' || toolType === 'paragrafo') {
                 this.ctxBar.show(el, TextTool.getCtxOptions(el));
                 
-                const rightPanel = this.querySelector('#right-panel');
-                const panelTitle = this.querySelector('#panel-title');
-                const panelBody = this.querySelector('#panel-body');
-                
-                panelTitle.textContent = toolType === 'titulo' ? (I18n.t('textTool.propsTitle') || 'Propriedades do Título') : (I18n.t('textTool.propsParagraph') || 'Propriedades do Parágrafo');
-                TextTool.renderPropertiesPanel(panelBody, el);
-                rightPanel.classList.remove('hidden');
+                if (panelTitle) panelTitle.textContent = toolType === 'titulo' ? (I18n.t('textTool.propsTitle') || 'Propriedades do Título') : (I18n.t('textTool.propsParagraph') || 'Propriedades do Parágrafo');
+                if (panelBody) TextTool.renderPropertiesPanel(panelBody, el);
+                openPanelMenu();
                 this.activePage = null;
             } else if (toolType === 'imagem') {
                 this.ctxBar.show(el, ImageTool.getCtxOptions(el));
                 
-                const rightPanel = this.querySelector('#right-panel');
-                const panelTitle = this.querySelector('#panel-title');
-                const panelBody = this.querySelector('#panel-body');
-                
-                panelTitle.textContent = I18n.t('imageTool.panelTitle') || 'Propriedades da Imagem';
-                ImageTool.renderPropertiesPanel(panelBody, el);
-                rightPanel.classList.remove('hidden');
+                if (panelTitle) panelTitle.textContent = I18n.t('imageTool.panelTitle') || 'Propriedades da Imagem';
+                if (panelBody) ImageTool.renderPropertiesPanel(panelBody, el);
+                openPanelMenu();
                 this.activePage = null;
             } else {
                 this.ctxBar.show(el, []);
@@ -215,17 +173,42 @@ export class Craftools_Editor extends HTMLElement {
         });
 
         // ── Sidebar Tools ──────────────────────────────────────────────────
-        const toolBtns = this.querySelectorAll('.craftools-tool-btn[data-tool]');
-        const rightPanel = this.querySelector('#right-panel');
-        const panelTitle = this.querySelector('#panel-title');
-        const closePanel = this.querySelector('#close-panel');
-        const panelBody = this.querySelector('#panel-body');
+        const toolBtns = document.querySelectorAll('.craftools-tool-btn[data-tool], .footer-nav-btn, .sidenav-nav a');
+        const rightPanel = document.getElementById('right-panel');
+        const panelTitle = document.getElementById('panel-title');
+        const closePanel = document.getElementById('close-panel');
+        const panelBody = document.getElementById('panel-body');
+        const defaultMenu = document.getElementById('panel-default-menu');
+        const panelLogo = document.getElementById('panel-logo');
+        
+        const openPanelMenu = () => {
+            if(defaultMenu) defaultMenu.classList.add('d-none');
+            if(panelBody) panelBody.classList.remove('d-none');
+            if(closePanel) closePanel.classList.remove('d-none');
+            if(panelLogo) panelLogo.classList.add('d-none');
+            if(rightPanel) rightPanel.classList.add('panel-open');
+            const menuIcon = document.getElementById('pwa-menu-icon');
+            if(menuIcon && menuIcon.textContent !== 'close') {
+                menuIcon.textContent = 'close';
+            }
+        };
+
+        const closePanelMenu = () => {
+            if(defaultMenu) defaultMenu.classList.remove('d-none');
+            if(panelBody) panelBody.classList.add('d-none');
+            if(closePanel) closePanel.classList.add('d-none');
+            if(panelLogo) panelLogo.classList.remove('d-none');
+            if(panelTitle) panelTitle.textContent = "Technology for Creativity";
+            document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+            this.activePage = null;
+        };
 
         // Desktop: drag & drop
         toolBtns.forEach(btn => {
             if (btn.getAttribute('draggable') === 'true') {
                 btn.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('ToolType', btn.dataset.tool);
+                    const tool = btn.dataset.tool || btn.id.replace('pwa-btn-', '').replace('pwa-sidebar-', '');
+                    e.dataTransfer.setData('ToolType', tool);
                     e.dataTransfer.effectAllowed = 'copy';
                 });
             }
@@ -274,39 +257,43 @@ export class Craftools_Editor extends HTMLElement {
 
         // Gerador e Papeis — clique direto
         toolBtns.forEach(btn => {
-            if (btn.dataset.tool === 'gerador' || btn.dataset.tool === 'papeis') {
-                btn.addEventListener('click', () => {
-                    this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
+            const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '');
+            if (tool === 'gerador' || tool === 'papeis') {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     
-                    panelTitle.textContent = btn.title;
-                    panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
-                    rightPanel.classList.remove('hidden');
+                    if(panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
+                    if(panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
+                    openPanelMenu();
                     this.activePage = null;
                     closeSidebar();
                 });
             }
         });
 
-        closePanel.addEventListener('click', () => {
-            rightPanel.classList.add('hidden');
-            this.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
-            this.activePage = null;
-        });
+        if (closePanel) {
+            closePanel.addEventListener('click', () => {
+                closePanelMenu();
+            });
+        }
 
         // ── Nova Página ────────────────────────────────────────────────────
-        const newPageBtn = this.querySelector('#new-page-btn');
+        const newPageBtns = document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage');
         this.activePage = null;
-        newPageBtn.addEventListener('click', () => {
+        newPageBtns.forEach(btn => btn.addEventListener('click', (e) => {
+            e.preventDefault();
             PageTool.addNewPage(this);
             closeSidebar();
-        });
+        }));
 
         // ── PDF Export ────────────────────────────────────────────────────
-        this.querySelector('#pdf-btn').addEventListener('click', () => {
+        document.querySelectorAll('#pdf-btn, #pwa-sidebar-export').forEach(btn => btn.addEventListener('click', (e) => {
+            e.preventDefault();
             closeSidebar();
             PdfExport.print(this);
-        });
+        }));
 
         // Initialize first page event
         const mainPage = this.querySelector('#main-page');

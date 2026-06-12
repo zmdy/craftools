@@ -25,32 +25,52 @@ export class PageTool {
                 AlbumTool.setup(editor, pageEl);
             } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem') {
                 const rect = pageEl.getBoundingClientRect();
-                const scale = window.craftoolsZoomLevel || 1;
-                // Calculate drop coordinates mapping viewport to page scope
-                let dropX = (e.clientX - rect.left) / scale;
-                let dropY = (e.clientY - rect.top) / scale;
+                let scale = window.craftoolsZoomLevel || 1;
+                
+                let dropX, dropY;
+                let targetContainer = pageEl;
+                let isSlot = false;
+                
+                const cellTarget = e.target.closest('.craftools-grid-cell');
+                if (cellTarget) {
+                    targetContainer = cellTarget.querySelector('.cell-content-layer') || cellTarget;
+                    isSlot = true;
+                    const cRect = targetContainer.getBoundingClientRect();
+                    
+                    let elW = toolType === 'imagem' ? 200 : 120;
+                    let elH = toolType === 'imagem' ? 150 : 40;
+                    
+                    dropX = (cRect.width / scale / 2) - (elW / 2);
+                    dropY = (cRect.height / scale / 2) - (elH / 2);
+                } else {
+                    dropX = (e.clientX - rect.left) / scale;
+                    dropY = (e.clientY - rect.top) / scale;
+                    if (toolType === 'imagem') {
+                        dropX = Math.max(10, Math.min(dropX - 100, (rect.width / scale) - 200));
+                        dropY = Math.max(10, Math.min(dropY - 75, (rect.height / scale) - 150));
+                    } else {
+                        dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
+                        dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
+                    }
+                }
 
                 let el;
                 if (toolType === 'imagem') {
                     const { ImageTool } = await import('../image/ImageTool.js');
                     el = ImageTool.createElement(toolType, editor);
-                    dropX = Math.max(10, Math.min(dropX - 100, (rect.width / scale) - 200));
-                    dropY = Math.max(10, Math.min(dropY - 75, (rect.height / scale) - 150));
                 } else {
                     const { TextTool } = await import('../text/TextTool.js');
                     el = TextTool.createElement(toolType, editor);
-                    dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
-                    dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
                 }
                 
                 el.setAttribute('x', dropX);
                 el.setAttribute('y', dropY);
 
                 if (!el.parentNode) {
-                    pageEl.appendChild(el);
-                } else if (el.parentNode !== pageEl) {
+                    targetContainer.appendChild(el);
+                } else if (el.parentNode !== targetContainer) {
                     el.parentNode.removeChild(el);
-                    pageEl.appendChild(el);
+                    targetContainer.appendChild(el);
                 }
 
                 // Remove placeholder text
@@ -75,11 +95,14 @@ export class PageTool {
                     return;
                 }
                 
-                const rightPanel = editor.querySelector('#right-panel');
-                const panelTitle = editor.querySelector('#panel-title');
-                const panelBody = editor.querySelector('#panel-body');
+                const rightPanel = document.getElementById('right-panel');
+                const panelTitle = document.getElementById('panel-title');
+                const panelBody = document.getElementById('panel-body');
+                const defaultMenu = document.getElementById('panel-default-menu');
+                const closePanel = document.getElementById('close-panel');
+                const panelLogo = document.getElementById('panel-logo');
                 
-                panelTitle.textContent = I18n.t('pageTool.title');
+                if (panelTitle) panelTitle.textContent = I18n.t('pageTool.title');
                 editor.activePage = pageEl;
                 
                 // Parse current dimensions
@@ -97,59 +120,61 @@ export class PageTool {
 
                 const currentColor = pageEl.style.backgroundColor || '#ffffff';
 
-                panelBody.innerHTML = `
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
-                            ${presetsHtml}
-                        </div>
-                    </div>
-
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
-                        <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
-                            ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" class="craftools-input" id="dim-w" style="width: 70px;" value="${currentW}">
-                            <span style="color: var(--text-muted); font-size: 13px;">×</span>
-                            <input type="number" class="craftools-input" id="dim-h" style="width: 70px;" value="${currentH}">
-                            <span style="color: var(--text-muted); font-size: 11px;" id="dim-unit-label">${currentUnit}</span>
-                        </div>
-                    </div>
-
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.background')}</span>
-                        <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
-                            <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
-                            <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
-                            <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
-                        </div>
-                        
-                        <div id="bg-color-section">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
-                                <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
+                if (panelBody) {
+                    panelBody.innerHTML = `
+                        <div class="craftools-field">
+                            <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
+                                ${presetsHtml}
                             </div>
                         </div>
-                        
-                        <div id="bg-gradient-section" style="display: none;">
-                            <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
+
+                        <div class="craftools-field">
+                            <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
+                            <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
+                                ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <input type="number" class="craftools-input" id="dim-w" style="width: 70px;" value="${currentW}">
+                                <span style="color: var(--text-muted); font-size: 13px;">×</span>
+                                <input type="number" class="craftools-input" id="dim-h" style="width: 70px;" value="${currentH}">
+                                <span style="color: var(--text-muted); font-size: 11px;" id="dim-unit-label">${currentUnit}</span>
+                            </div>
                         </div>
 
-                        <div id="bg-image-section" style="display: none;">
-                            <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
-                            <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
-                        </div>
-                    </div>
+                        <div class="craftools-field">
+                            <span class="craftools-label">${I18n.t('pageTool.background')}</span>
+                            <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
+                                <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
+                                <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
+                                <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
+                            </div>
+                            
+                            <div id="bg-color-section">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
+                                    <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
+                                </div>
+                            </div>
+                            
+                            <div id="bg-gradient-section" style="display: none;">
+                                <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
+                            </div>
 
-                    <div class="craftools-field">
-                        <button class="craftools-danger-btn" id="delete-page-btn">
-                            <span class="material-symbols-outlined">delete</span> ${I18n.t('pageTool.deletePage')}
-                        </button>
-                    </div>
-                `;
+                            <div id="bg-image-section" style="display: none;">
+                                <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
+                                <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="craftools-field">
+                            <button class="craftools-danger-btn" id="delete-page-btn">
+                                <span class="material-symbols-outlined">delete</span> ${I18n.t('pageTool.deletePage')}
+                            </button>
+                        </div>
+                    `;
+                }
 
                 let activeUnit = currentUnit;
 
@@ -254,20 +279,32 @@ export class PageTool {
                 });
 
                 // Delete Page
-                panelBody.querySelector('#delete-page-btn').addEventListener('click', () => {
-                    if (confirm(I18n.t('pageTool.confirmDelete'))) {
-                        const pagesWrapper = editor.querySelector('#pages-wrapper');
-                        if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
-                            editor.activePage.remove();
-                            rightPanel.classList.add('hidden');
-                            editor.activePage = null;
-                        } else {
-                            alert(I18n.t('pageTool.alertLastPage'));
+                if (panelBody) {
+                    panelBody.querySelector('#delete-page-btn').addEventListener('click', () => {
+                        if (confirm(I18n.t('pageTool.confirmDelete'))) {
+                            const pagesWrapper = editor.querySelector('#pages-wrapper');
+                            if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
+                                editor.activePage.remove();
+                                
+                                if(defaultMenu) defaultMenu.classList.remove('d-none');
+                                if(panelBody) panelBody.classList.add('d-none');
+                                if(closePanel) closePanel.classList.add('d-none');
+                                if(panelLogo) panelLogo.classList.remove('d-none');
+                                if(panelTitle) panelTitle.textContent = "Technology for Creativity";
+                                
+                                editor.activePage = null;
+                            } else {
+                                alert(I18n.t('pageTool.alertLastPage'));
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
-                rightPanel.classList.remove('hidden');
+                if(defaultMenu) defaultMenu.classList.add('d-none');
+                if(panelBody) panelBody.classList.remove('d-none');
+                if(closePanel) closePanel.classList.remove('d-none');
+                if(panelLogo) panelLogo.classList.add('d-none');
+                if(rightPanel) rightPanel.classList.add('mobile-open');
             }
         });
     }
