@@ -183,17 +183,26 @@ export class AlbumTool extends BaseTool {
                     const textColor = isActive ? 'color:#fff;' : '';
                     const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
                     const secColor  = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
+
+                    // Calculate slot preview dimensions for the wrapper
+                    const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
+                    const scale = Math.min(72 / t.cellWidth, 68 / t.cellHeight, 1);
+                    const wrapW = Math.round(t.cellWidth * scale);
+                    const wrapH = Math.round(t.cellHeight * scale);
+
                     return `
                     <div class="template-row" data-idx="${idx}" style="margin-bottom:6px;">
                         <div class="template-btn" data-idx="${idx}" style="
                             width:100%; padding:10px 12px; box-sizing:border-box;
                             display:flex; align-items:center; gap:12px;
-                            border-radius:8px; cursor:pointer;
+                            border-radius:8px; cursor:pointer; overflow:hidden;
                             border:1px solid; transition:all .12s;
                             ${rowStyle}
                         ">
-                            ${slotPreview}
-                            <div style="flex:1; min-width:0;">
+                            <div style="flex:0 0 ${wrapW}px; width:${wrapW}px; height:${wrapH}px; display:flex; align-items:center; justify-content:center;">
+                                ${slotPreview}
+                            </div>
+                            <div style="flex:1; min-width:0; overflow:hidden;">
                                 <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}</div>
                                 <div style="font-size:10px; margin-bottom:2px; ${secColor}">${t.cellWidth} × ${t.cellHeight} mm</div>
                                 <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">Gap: ${t.cellGap} mm</div>
