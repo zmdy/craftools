@@ -160,6 +160,14 @@ export class AlbumTool extends BaseTool {
                     ${step4Html}
 
                     <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span class="craftools-label" style="margin:0;">Alinhamento Automático</span>
+                            <button class="craftools-pill auto-snap-btn ${window.craftoolsAutoSnap !== false ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+                                <span class="material-symbols-outlined" style="font-size:14px;">center_focus_strong</span>
+                                ${window.craftoolsAutoSnap !== false ? 'Ativado' : 'Desativado'}
+                            </button>
+                        </div>
+                        
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span class="craftools-label" style="margin:0;">Ajuste Inteligente (Auto-rotação)</span>
                             <button class="craftools-pill smart-fit-btn ${smartFit ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
@@ -247,11 +255,19 @@ export class AlbumTool extends BaseTool {
                 });
             }
 
-            // ── Bind: Smart Fit Toggle ─────────────────────────────────────
+            // ── Bind: Smart Fit & Snap Toggle ──────────────────────────────
             const smartFitBtn = panelBody.querySelector('.smart-fit-btn');
             if (smartFitBtn) {
                 smartFitBtn.addEventListener('click', () => {
                     smartFit = !smartFit;
+                    renderPanel();
+                });
+            }
+            
+            const autoSnapBtn = panelBody.querySelector('.auto-snap-btn');
+            if (autoSnapBtn) {
+                autoSnapBtn.addEventListener('click', () => {
+                    window.craftoolsAutoSnap = window.craftoolsAutoSnap === false ? true : false;
                     renderPanel();
                 });
             }

@@ -310,7 +310,34 @@ export class Craftools_Element extends HTMLElement {
         this.dispatchEvent(event);
     }
 
-    _handleUp() {
+    _handleUp(e) {
+        if (this.isDragging && window.craftoolsAutoSnap !== false && this.getAttribute('data-locked') !== 'true') {
+            // Temporarily hide to find the element underneath
+            this.style.visibility = 'hidden';
+            const els = document.elementsFromPoint(e.clientX, e.clientY);
+            this.style.visibility = '';
+            
+            const cell = els.find(el => el.classList.contains('craftools-grid-cell'));
+            if (cell) {
+                const page = this.closest('.craftools-page');
+                if (page) {
+                    const cRect = cell.getBoundingClientRect();
+                    const pRect = page.getBoundingClientRect();
+                    const scale = this._getScale();
+                    
+                    const cCenterX = (cRect.left - pRect.left + cRect.width / 2) / scale;
+                    const cCenterY = (cRect.top - pRect.top + cRect.height / 2) / scale;
+                    
+                    this.px = cCenterX - (this.pw / 2);
+                    this.py = cCenterY - (this.ph / 2);
+                    this._applyTransform();
+                    
+                    const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });
+                    this.dispatchEvent(event);
+                }
+            }
+        }
+        
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;

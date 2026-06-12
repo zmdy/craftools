@@ -29,28 +29,29 @@ export class PageTool {
                 
                 let dropX, dropY;
                 let targetContainer = pageEl;
-                let isSlot = false;
                 
                 const cellTarget = e.target.closest('.craftools-grid-cell');
-                if (cellTarget) {
-                    targetContainer = cellTarget.querySelector('.cell-content-layer') || cellTarget;
-                    isSlot = true;
-                    const cRect = targetContainer.getBoundingClientRect();
+                const pRect = pageEl.getBoundingClientRect();
+
+                let elW = toolType === 'imagem' ? 200 : 120;
+                let elH = toolType === 'imagem' ? 150 : 40;
+
+                if (cellTarget && window.craftoolsAutoSnap !== false) {
+                    const cRect = cellTarget.getBoundingClientRect();
+                    const cCenterX = (cRect.left - pRect.left + cRect.width / 2) / scale;
+                    const cCenterY = (cRect.top - pRect.top + cRect.height / 2) / scale;
                     
-                    let elW = toolType === 'imagem' ? 200 : 120;
-                    let elH = toolType === 'imagem' ? 150 : 40;
-                    
-                    dropX = (cRect.width / scale / 2) - (elW / 2);
-                    dropY = (cRect.height / scale / 2) - (elH / 2);
+                    dropX = cCenterX - (elW / 2);
+                    dropY = cCenterY - (elH / 2);
                 } else {
-                    dropX = (e.clientX - rect.left) / scale;
-                    dropY = (e.clientY - rect.top) / scale;
+                    dropX = (e.clientX - pRect.left) / scale;
+                    dropY = (e.clientY - pRect.top) / scale;
                     if (toolType === 'imagem') {
-                        dropX = Math.max(10, Math.min(dropX - 100, (rect.width / scale) - 200));
-                        dropY = Math.max(10, Math.min(dropY - 75, (rect.height / scale) - 150));
+                        dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200));
+                        dropY = Math.max(10, Math.min(dropY - 75, (pRect.height / scale) - 150));
                     } else {
-                        dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
-                        dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
+                        dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
+                        dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
                     }
                 }
 
