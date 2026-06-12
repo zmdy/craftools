@@ -181,6 +181,22 @@ export class Craftools_Element extends HTMLElement {
         if (editable) {
             editable.style.pointerEvents = 'auto';
             editable.focus();
+            
+            const syncText = () => {
+                const lid = this.getAttribute('data-linked-id');
+                if (lid) {
+                    const html = editable.innerHTML;
+                    document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                        if (clone !== this) {
+                            const cEdit = clone.contentArea?.querySelector('[contenteditable]');
+                            if (cEdit && cEdit.innerHTML !== html) cEdit.innerHTML = html;
+                        }
+                    });
+                }
+            };
+            editable.addEventListener('input', syncText);
+            editable.addEventListener('blur', () => editable.removeEventListener('input', syncText), { once: true });
+
             try {
                 const range = document.createRange();
                 range.selectNodeContents(editable);

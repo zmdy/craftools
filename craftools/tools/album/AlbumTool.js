@@ -450,6 +450,9 @@ export class AlbumTool extends BaseTool {
         const unit = pageSize.sizeUnit || 'px';
 
         await gridSystem.render(items, (cellContainer) => {
+            const grid = cellContainer.closest('.craftools-grid-container');
+            if (grid) grid.dataset.gridMode = 'card';
+            
             cellContainer.style.background = "white";
 
             const imgEl = ImageTool.createElement('imagem', editor);

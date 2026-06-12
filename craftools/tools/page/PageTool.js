@@ -82,6 +82,40 @@ export class PageTool {
                     el.parentNode.removeChild(el);
                     targetContainer.appendChild(el);
                 }
+                
+                // --- Business Card Cloning Logic ---
+                if (cellTarget) {
+                    const grid = cellTarget.closest('.craftools-grid-container');
+                    if (grid && grid.dataset.gridMode === 'card') {
+                        const allCells = Array.from(grid.querySelectorAll('.craftools-grid-cell'));
+                        const myIndex = allCells.indexOf(cellTarget);
+                        
+                        const cRect = cellTarget.getBoundingClientRect();
+                        const cX = (cRect.left - pRect.left) / scale;
+                        const cY = (cRect.top - pRect.top) / scale;
+                        
+                        // Relative coordinates inside the original cell
+                        const relX = dropX - cX;
+                        const relY = dropY - cY;
+                        
+                        // Link clones for future potential syncing
+                        const linkedId = 'link-' + Date.now();
+                        el.dataset.linkedId = linkedId;
+                        
+                        allCells.forEach((cell, idx) => {
+                            if (idx === myIndex) return; // Skip original
+                            const cellRect = cell.getBoundingClientRect();
+                            const ciX = (cellRect.left - pRect.left) / scale;
+                            const ciY = (cellRect.top - pRect.top) / scale;
+                            
+                            const clone = el.cloneNode(true);
+                            clone.setAttribute('x', ciX + relX);
+                            clone.setAttribute('y', ciY + relY);
+                            clone.dataset.linkedId = linkedId;
+                            targetContainer.appendChild(clone);
+                        });
+                    }
+                }
 
                 // Remove placeholder text
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');

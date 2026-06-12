@@ -35,6 +35,19 @@ export class TextTool extends BaseTool {
         const textElement = element.contentArea.querySelector('[contenteditable]');
         if(!textElement) return;
 
+        const syncStyles = () => {
+            const lid = element.getAttribute('data-linked-id');
+            if (lid) {
+                const css = textElement.style.cssText;
+                document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                    if (clone !== element) {
+                        const cEdit = clone.contentArea?.querySelector('[contenteditable]');
+                        if (cEdit) cEdit.style.cssText = css;
+                    }
+                });
+            }
+        };
+
         // Current properties extracted from DOM style
         const currentColor = textElement.style.color || '#1a1a1a';
         let currentFont = textElement.style.fontFamily || 'DM Sans';
@@ -126,6 +139,7 @@ export class TextTool extends BaseTool {
         fontSelect.addEventListener('change', (e) => {
             textElement.style.fontFamily = `'${e.target.value}', sans-serif`;
             customFontInput.value = FONTS.includes(e.target.value) ? '' : e.target.value;
+            syncStyles();
             // Trigger an element update (bounding box might change)
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
@@ -148,6 +162,7 @@ export class TextTool extends BaseTool {
                 } else {
                     fontSelect.value = [...fontSelect.options].find(opt => opt.value.toLowerCase() === fontName.toLowerCase()).value;
                 }
+                syncStyles();
 
                 const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
                 element.dispatchEvent(event);
@@ -206,6 +221,7 @@ export class TextTool extends BaseTool {
         const colorInput = editorPanel.querySelector('#text-prop-color');
         colorInput.addEventListener('input', (e) => {
             textElement.style.color = e.target.value;
+            syncStyles();
         });
 
         const sizeRange = editorPanel.querySelector('#text-prop-size-range');
@@ -215,6 +231,7 @@ export class TextTool extends BaseTool {
             textElement.style.fontSize = val + 'px';
             sizeRange.value = val;
             sizeNum.value = val;
+            syncStyles();
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
         };
@@ -228,6 +245,7 @@ export class TextTool extends BaseTool {
                 alignBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 textElement.style.textAlign = btn.getAttribute('data-align');
+                syncStyles();
             });
         });
 
