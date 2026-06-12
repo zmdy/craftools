@@ -38,11 +38,20 @@ export class PageTool {
 
                 if (cellTarget && window.craftoolsAutoSnap !== false) {
                     const cRect = cellTarget.getBoundingClientRect();
-                    const cCenterX = (cRect.left - pRect.left + cRect.width / 2) / scale;
-                    const cCenterY = (cRect.top - pRect.top + cRect.height / 2) / scale;
-                    
-                    dropX = cCenterX - (elW / 2);
-                    dropY = cCenterY - (elH / 2);
+                    const align = window.craftoolsAutoSnapAlign || 'bottom-center';
+                    const offset = 5;
+                    const cLeft = (cRect.left - pRect.left) / scale;
+                    const cTop = (cRect.top - pRect.top) / scale;
+                    const cWidth = cRect.width / scale;
+                    const cHeight = cRect.height / scale;
+
+                    if (align.includes('left')) dropX = cLeft + offset;
+                    else if (align.includes('right')) dropX = cLeft + cWidth - elW - offset;
+                    else dropX = cLeft + (cWidth / 2) - (elW / 2);
+
+                    if (align.includes('top')) dropY = cTop + offset;
+                    else if (align.includes('bottom')) dropY = cTop + cHeight - elH - offset;
+                    else dropY = cTop + (cHeight / 2) - (elH / 2);
                 } else {
                     dropX = (e.clientX - pRect.left) / scale;
                     dropY = (e.clientY - pRect.top) / scale;

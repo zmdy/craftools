@@ -325,11 +325,20 @@ export class Craftools_Element extends HTMLElement {
                     const pRect = page.getBoundingClientRect();
                     const scale = this._getScale();
                     
-                    const cCenterX = (cRect.left - pRect.left + cRect.width / 2) / scale;
-                    const cCenterY = (cRect.top - pRect.top + cRect.height / 2) / scale;
-                    
-                    this.px = cCenterX - (this.pw / 2);
-                    this.py = cCenterY - (this.ph / 2);
+                    const align = window.craftoolsAutoSnapAlign || 'bottom-center';
+                    const offset = 5;
+                    const cLeft = (cRect.left - pRect.left) / scale;
+                    const cTop = (cRect.top - pRect.top) / scale;
+                    const cWidth = cRect.width / scale;
+                    const cHeight = cRect.height / scale;
+
+                    if (align.includes('left')) this.px = cLeft + offset;
+                    else if (align.includes('right')) this.px = cLeft + cWidth - this.pw - offset;
+                    else this.px = cLeft + (cWidth / 2) - (this.pw / 2);
+
+                    if (align.includes('top')) this.py = cTop + offset;
+                    else if (align.includes('bottom')) this.py = cTop + cHeight - this.ph - offset;
+                    else this.py = cTop + (cHeight / 2) - (this.ph / 2);
                     this._applyTransform();
                     
                     const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });

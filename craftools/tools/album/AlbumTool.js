@@ -168,6 +168,23 @@ export class AlbumTool extends BaseTool {
                             </button>
                         </div>
                         
+                        ${window.craftoolsAutoSnap !== false ? `
+                        <div style="margin-bottom: 10px;">
+                            <span class="craftools-label" style="margin:0 0 4px 0;">Posição do Snap</span>
+                            <select class="craftools-input snap-align-select" style="width: 100%; padding: 4px; font-size: 12px;">
+                                <option value="top-left" ${window.craftoolsAutoSnapAlign === 'top-left' ? 'selected' : ''}>Superior Esquerdo</option>
+                                <option value="top-center" ${window.craftoolsAutoSnapAlign === 'top-center' ? 'selected' : ''}>Superior Centro</option>
+                                <option value="top-right" ${window.craftoolsAutoSnapAlign === 'top-right' ? 'selected' : ''}>Superior Direito</option>
+                                <option value="center-left" ${window.craftoolsAutoSnapAlign === 'center-left' ? 'selected' : ''}>Centro Esquerdo</option>
+                                <option value="center-center" ${window.craftoolsAutoSnapAlign === 'center-center' ? 'selected' : ''}>Centro Centro</option>
+                                <option value="center-right" ${window.craftoolsAutoSnapAlign === 'center-right' ? 'selected' : ''}>Centro Direito</option>
+                                <option value="bottom-left" ${window.craftoolsAutoSnapAlign === 'bottom-left' ? 'selected' : ''}>Inferior Esquerdo</option>
+                                <option value="bottom-center" ${(window.craftoolsAutoSnapAlign || 'bottom-center') === 'bottom-center' ? 'selected' : ''}>Inferior Centro</option>
+                                <option value="bottom-right" ${window.craftoolsAutoSnapAlign === 'bottom-right' ? 'selected' : ''}>Inferior Direito</option>
+                            </select>
+                        </div>
+                        ` : ''}
+                        
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span class="craftools-label" style="margin:0;">Ajuste Inteligente (Auto-rotação)</span>
                             <button class="craftools-pill smart-fit-btn ${smartFit ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
@@ -269,6 +286,13 @@ export class AlbumTool extends BaseTool {
                 autoSnapBtn.addEventListener('click', () => {
                     window.craftoolsAutoSnap = window.craftoolsAutoSnap === false ? true : false;
                     renderPanel();
+                });
+            }
+            
+            const snapAlignSelect = panelBody.querySelector('.snap-align-select');
+            if (snapAlignSelect) {
+                snapAlignSelect.addEventListener('change', (e) => {
+                    window.craftoolsAutoSnapAlign = e.target.value;
                 });
             }
 
