@@ -275,6 +275,8 @@ export class Craftools_Element extends HTMLElement {
         e.preventDefault();
 
         const sc = this._getScale();
+        const oldPx = this.px;
+        const oldPy = this.py;
 
         if (this.isDragging) {
             const scX = this.unitX === 'mm' ? sc * 3.7795275591 : sc;
@@ -322,6 +324,28 @@ export class Craftools_Element extends HTMLElement {
 
         this._applyTransform();
         
+        const dx = this.px - oldPx;
+        const dy = this.py - oldPy;
+        const lid = this.getAttribute('data-linked-id');
+        if (lid && (dx !== 0 || dy !== 0 || this.isResizing || this.isRotating)) {
+            document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                if (clone !== this) {
+                    if (this.isDragging) {
+                        clone.px += dx;
+                        clone.py += dy;
+                    } else if (this.isResizing) {
+                        clone.px += dx;
+                        clone.py += dy;
+                        clone.pw = this.pw;
+                        clone.ph = this.ph;
+                    } else if (this.isRotating) {
+                        clone.pr = this.pr;
+                    }
+                    clone._applyTransform();
+                }
+            });
+        }
+        
         const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });
         this.dispatchEvent(event);
     }
@@ -348,6 +372,9 @@ export class Craftools_Element extends HTMLElement {
                     const cWidth = cRect.width / scale;
                     const cHeight = cRect.height / scale;
 
+                    const oldPx = this.px;
+                    const oldPy = this.py;
+
                     if (align.includes('left')) this.px = cLeft + offset;
                     else if (align.includes('right')) this.px = cLeft + cWidth - this.pw - offset;
                     else this.px = cLeft + (cWidth / 2) - (this.pw / 2);
@@ -355,7 +382,21 @@ export class Craftools_Element extends HTMLElement {
                     if (align.includes('top')) this.py = cTop + offset;
                     else if (align.includes('bottom')) this.py = cTop + cHeight - this.ph - offset;
                     else this.py = cTop + (cHeight / 2) - (this.ph / 2);
+                    
                     this._applyTransform();
+                    
+                    const dx = this.px - oldPx;
+                    const dy = this.py - oldPy;
+                    const lid = this.getAttribute('data-linked-id');
+                    if (lid && (dx !== 0 || dy !== 0)) {
+                        document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                            if (clone !== this) {
+                                clone.px += dx;
+                                clone.py += dy;
+                                clone._applyTransform();
+                            }
+                        });
+                    }
                     
                     const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });
                     this.dispatchEvent(event);
