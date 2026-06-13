@@ -68,12 +68,9 @@ export class AlbumTool extends BaseTool {
                 `<button class="craftools-pill size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${idx}">${s.name}</button>`
             ).join('');
 
-            // ── Helper: single slot preview (Polaroid style) ────────────
             const buildSlotPreview = (t) => {
                 const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
                 const [padT, padR, padB, padL] = padParts;
-                const photoW = Math.max(0, t.cellWidth  - padL - padR);
-                const photoH = Math.max(0, t.cellHeight - padT - padB);
 
                 // Scale so the outer cell fits in 72×68px max
                 const SLOT_MAX_W = 72;
@@ -81,26 +78,25 @@ export class AlbumTool extends BaseTool {
                 const scale = Math.min(SLOT_MAX_W / t.cellWidth, SLOT_MAX_H / t.cellHeight, 1);
                 const outerW = Math.round(t.cellWidth  * scale);
                 const outerH = Math.round(t.cellHeight * scale);
-                const innerW = Math.max(2, Math.round(photoW * scale));
-                const innerH = Math.max(2, Math.round(photoH * scale));
-                // Scaled padding offsets (for positioning the photo inside)
+                
                 const sPadT = Math.round(padT * scale);
+                const sPadR = Math.round(padR * scale);
+                const sPadB = Math.round(padB * scale);
                 const sPadL = Math.round(padL * scale);
 
-                return `<div style="
+                return `<div class="card_preview" style="
                     width:${outerW}px; height:${outerH}px;
+                    padding:${sPadT}px ${sPadR}px ${sPadB}px ${sPadL}px;
+                    box-sizing:border-box;
                     background:#ffffff;
                     border:1px solid #d1d5db;
                     border-radius:3px;
                     box-shadow: 0 1px 4px rgba(0,0,0,0.18);
                     flex-shrink:0;
-                    position:relative;
                     overflow:hidden;
                 ">
-                    <div style="
-                        position:absolute;
-                        left:${sPadL}px; top:${sPadT}px;
-                        width:${innerW}px; height:${innerH}px;
+                    <div class="img_preview" style="
+                        width:100%; height:100%;
                         background:#9ca3af;
                     "></div>
                 </div>`;

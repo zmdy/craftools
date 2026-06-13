@@ -6,7 +6,15 @@
 - [X] Export to PDF using blob
 - [X] Mobile-first interface
 - [ ] Translations: general overview and refinments
-- [ ] Make the tool as a PWA
+- [X] Make the right panel become the sidebar
+- [X] Auto-center text in albums
+- [X] Fix the footer bug showing buttons prematurely
+- [X] Make the tool as a PWA
+- [X] In album mode, show a preview of the photo size and the number of photos on the page
+- [ ] Implement comic strip mode
+- [ ] When loading fonts from the PC, they should be saved (via cache/cookies/storage)
+- [ ] In the album, allow users to choose a custom size (and change existing ones, saving to cache/cookies/storage), automatically calculating the best layout (landscape or portrait)
+- [ ] Remove landscape/portrait options from the size settings; the system will calculate automatically
 
 # v0.2
 - [ ] Improve the PropertiesPanel (add icons make it more organized)
