@@ -241,6 +241,8 @@ export class Craftools_LayoutGrid {
                 animation: 150,
                 handle: '.slot-drag-handle',
                 ghostClass: 'sortable-ghost',
+                fallbackOnBody: true,
+                swapThreshold: 0.65,
                 // Shared group enables dragging slots between stripes
                 group: photostripGroup,
                 onStart: (evt) => {

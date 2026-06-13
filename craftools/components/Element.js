@@ -224,8 +224,13 @@ export class Craftools_Element extends HTMLElement {
             });
         }
         
-        const cell = this.closest('.craftools-grid-cell');
-        if (cell) cell.classList.add('craftools-cell-active');
+        const slot = this.closest('.photostrip-slot');
+        if (slot) {
+            slot.classList.add('craftools-slot-active');
+        } else {
+            const cell = this.closest('.craftools-grid-cell');
+            if (cell) cell.classList.add('craftools-cell-active');
+        }
 
         this._ctrlbar.style.display = 'block';
         
@@ -254,8 +259,13 @@ export class Craftools_Element extends HTMLElement {
         this._ctrlbar.style.display = 'none';
         this.style.zIndex = '2';
         
-        const cell = this.closest('.craftools-grid-cell');
-        if (cell) cell.classList.remove('craftools-cell-active');
+        const slot = this.closest('.photostrip-slot');
+        if (slot) {
+            slot.classList.remove('craftools-slot-active');
+        } else {
+            const cell = this.closest('.craftools-grid-cell');
+            if (cell) cell.classList.remove('craftools-cell-active');
+        }
         
         // Salva guarda global: Restaura a camada protetora interativa ao clicar fora
         this._overlay.style.pointerEvents = '';
