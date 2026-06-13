@@ -32,16 +32,19 @@ export class CellPanel {
         const panelBody  = editor.querySelector('#panel-body');
         if (!rightPanel || !panelTitle || !panelBody) return;
 
-        panelTitle.textContent = 'Editar Célula';
+        // If the clicked element is a photostrip slot, resolve to the stripe container
+        const targetCell = cellEl.closest('.craftools-grid-cell') || cellEl;
+
+        panelTitle.textContent = targetCell.dataset.isPhotostrip ? 'Editar Tirinha' : 'Editar Célula';
         rightPanel.classList.remove('hidden');
 
         // Destacar célula selecionada
         editor.querySelectorAll('.craftools-grid-cell.cell-selected')
               .forEach(c => c.classList.remove('cell-selected'));
-        cellEl.classList.add('cell-selected');
+        targetCell.classList.add('cell-selected');
 
         // Renderiza as propriedades da célula diretamente no panelBody
-        this.renderInto(panelBody, cellEl, null);
+        this.renderInto(panelBody, targetCell, null);
     }
 
     /**

@@ -97,5 +97,30 @@ export const GridSizes = [
         pageMargin: "0 0 0 0",
         cellGap: 0,
         sizes: ["1080,1080"] // Social Media
+    },
+    // ── Photostrips ───────────────────────────────────────────────────────
+    {
+        name: "Tirinha 5x15 com borda",
+        cellWidth: 50,       // largura total da stripe
+        cellHeight: 150,     // altura total da stripe
+        cellPadding: "3 3 3 3",
+        pageMargin: "20 5 15 5",
+        cellGap: 0,
+        sizes: ["105,148", "148,210", "210,297", "297,210", "297,420"],
+        cellLines: 3,        // 3 fotos verticalmente dentro da stripe
+        cellColumns: 1 ,      // 1 coluna de fotos dentro da stripe,
+        cellSpacing: 3,
+    },
+    {
+        name: "Tirinha 10x15 com borda",
+        cellWidth: 100,      // largura total da stripe
+        cellHeight: 150,     // altura total da stripe
+        cellPadding: "3 3 3 3",
+        pageMargin: "20 5 15 5",
+        cellGap: 0,
+        sizes: ["148,210", "210,297", "297,210", "297,420"],
+        cellLines: 2,        // 2 fotos verticalmente dentro da stripe
+        cellColumns: 2,       // 2 fotos horizontalmente dentro da stripe
+        cellSpacing: 3
     }
 ];

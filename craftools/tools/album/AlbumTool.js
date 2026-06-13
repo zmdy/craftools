@@ -57,7 +57,10 @@ export class AlbumTool extends BaseTool {
             const gap = template.cellGap;
             const cols = Math.floor((docW - mL - mR + gap) / (cellW + gap)) || 1;
             const rows = Math.floor((docH - mT - mB + gap) / (cellH + gap)) || 1;
-            return cols * rows;
+            const stripesPerPage = cols * rows;
+            // For photostrips, multiply by number of slots per stripe
+            const itemsPerStripe = (template.cellLines || 1) * (template.cellColumns || 1);
+            return stripesPerPage * itemsPerStripe;
         };
 
         // ── Panel renderer ─────────────────────────────────────────────────
@@ -78,12 +81,46 @@ export class AlbumTool extends BaseTool {
                 const scale = Math.min(SLOT_MAX_W / t.cellWidth, SLOT_MAX_H / t.cellHeight, 1);
                 const outerW = Math.round(t.cellWidth  * scale);
                 const outerH = Math.round(t.cellHeight * scale);
-                
+
                 const sPadT = Math.round(padT * scale);
                 const sPadR = Math.round(padR * scale);
                 const sPadB = Math.round(padB * scale);
                 const sPadL = Math.round(padL * scale);
 
+                const isStripe = !!(t.cellLines || t.cellColumns);
+
+                if (isStripe) {
+                    // Photostrip preview: show the inner grid of slots
+                    const sLines = t.cellLines || 1;
+                    const sCols  = t.cellColumns || 1;
+                    const innerW = outerW - sPadL - sPadR;
+                    const innerH = outerH - sPadT - sPadB;
+                    const slotW  = Math.floor(innerW / sCols);
+                    const slotH  = Math.floor(innerH / sLines);
+                    let slotsHtml = '';
+                    for (let r = 0; r < sLines; r++) {
+                        for (let c = 0; c < sCols; c++) {
+                            slotsHtml += `<div style="width:${slotW}px;height:${slotH}px;background:#9ca3af;"></div>`;
+                        }
+                    }
+                    return `<div class="card_preview" style="
+                        width:${outerW}px; height:${outerH}px;
+                        padding:${sPadT}px ${sPadR}px ${sPadB}px ${sPadL}px;
+                        box-sizing:border-box;
+                        background:#ffffff;
+                        border:1px solid #d1d5db;
+                        border-radius:3px;
+                        box-shadow:0 1px 4px rgba(0,0,0,0.18);
+                        flex-shrink:0;
+                        overflow:hidden;
+                        display:grid;
+                        grid-template-columns:repeat(${sCols},1fr);
+                        grid-template-rows:repeat(${sLines},1fr);
+                        gap:1px;
+                    ">${slotsHtml}</div>`;
+                }
+
+                // Standard (non-photostrip) preview
                 return `<div class="card_preview" style="
                     width:${outerW}px; height:${outerH}px;
                     padding:${sPadT}px ${sPadR}px ${sPadB}px ${sPadL}px;
@@ -128,17 +165,51 @@ export class AlbumTool extends BaseTool {
                 const pCellH = Math.round(t.cellHeight * scale);
                 const pGap   = t.cellGap > 0 ? Math.max(1, Math.round(t.cellGap * scale)) : 0;
 
-                // Build cell grid inside margins
                 const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
                 const [padT, padR, padB, padL] = padParts;
-                const pPhotoW = Math.max(1, Math.round((t.cellWidth  - padL - padR) * scale));
-                const pPhotoH = Math.max(1, Math.round((t.cellHeight - padT - padB) * scale));
+
+                const isStripe = !!(t.cellLines || t.cellColumns);
+                const sLines   = t.cellLines   || 1;
+                const sCols    = t.cellColumns || 1;
 
                 let cellsHtml = '';
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
                         const left = pML + c * (pCellW + pGap);
                         const top  = pMT + r * (pCellH + pGap);
+
+                        let innerContent = '';
+                        if (isStripe) {
+                            // Draw the N×M internal grid of photo slots
+                            const iPadT = Math.round(padT * scale);
+                            const iPadR = Math.round(padR * scale);
+                            const iPadB = Math.round(padB * scale);
+                            const iPadL = Math.round(padL * scale);
+                            const innerW = pCellW - iPadL - iPadR;
+                            const innerH = pCellH - iPadT - iPadB;
+                            const slotW  = Math.max(1, Math.floor(innerW / sCols));
+                            const slotH  = Math.max(1, Math.floor(innerH / sLines));
+                            innerContent = `<div style="
+                                position:absolute;
+                                top:${iPadT}px; left:${iPadL}px;
+                                width:${innerW}px; height:${innerH}px;
+                                display:grid;
+                                grid-template-columns:repeat(${sCols},1fr);
+                                grid-template-rows:repeat(${sLines},1fr);
+                                gap:1px;
+                            ">${Array(sLines * sCols).fill(`<div style="background:#9ca3af;"></div>`).join('')}</div>`;
+                        } else {
+                            const pPhotoW = Math.max(1, Math.round((t.cellWidth  - padL - padR) * scale));
+                            const pPhotoH = Math.max(1, Math.round((t.cellHeight - padT - padB) * scale));
+                            innerContent = `<div style="
+                                position:absolute;
+                                left:${Math.round(padL*scale)}px;
+                                top:${Math.round(padT*scale)}px;
+                                width:${pPhotoW}px; height:${pPhotoH}px;
+                                background:#9ca3af;
+                            "></div>`;
+                        }
+
                         cellsHtml += `<div style="
                             position:absolute;
                             left:${left}px; top:${top}px;
@@ -146,15 +217,7 @@ export class AlbumTool extends BaseTool {
                             background:#ffffff;
                             border:1px solid #d1d5db;
                             overflow:hidden;
-                        ">
-                            <div style="
-                                position:absolute;
-                                left:${Math.round(padL*scale)}px;
-                                top:${Math.round(padT*scale)}px;
-                                width:${pPhotoW}px; height:${pPhotoH}px;
-                                background:#9ca3af;
-                            "></div>
-                        </div>`;
+                        ">${innerContent}</div>`;
                     }
                 }
 
@@ -527,13 +590,24 @@ export class AlbumTool extends BaseTool {
 
     static _cellDimensions(template, pageSize) {
         const p = template.cellPadding.split(" ");
+        const pt = parseFloat(p[0]);
+        const pr = parseFloat(p[1]);
+        const pb = parseFloat(p[2]);
+        const pl = parseFloat(p[3]);
+        const isStripe = !!(template.cellLines || template.cellColumns);
+        const sLines = template.cellLines   || 1;
+        const sCols  = template.cellColumns || 1;
+        // For photostrips, each slot is a subdivision of the stripe's inner area
+        const innerW = template.cellWidth  - pl - pr;
+        const innerH = template.cellHeight - pt - pb;
         return {
-            pt: parseFloat(p[0]),
-            pr: parseFloat(p[1]),
-            pb: parseFloat(p[2]),
-            pl: parseFloat(p[3]),
-            cw: template.cellWidth  - parseFloat(p[3]) - parseFloat(p[1]),
-            ch: template.cellHeight - parseFloat(p[0]) - parseFloat(p[2]),
+            pt: isStripe ? 0  : pt,
+            pr: isStripe ? 0  : pr,
+            pb: isStripe ? 0  : pb,
+            pl: isStripe ? 0  : pl,
+            cw: isStripe ? innerW / sCols  : innerW,
+            ch: isStripe ? innerH / sLines : innerH,
+            isStripe,
         };
     }
 
@@ -555,7 +629,9 @@ export class AlbumTool extends BaseTool {
 
         await gridSystem.render(images, (cellContainer, imgData) => {
             cellContainer.style.background = "white";
-            
+
+            // In photostrip mode, the slot fills the entire container (no padding offset)
+            // because the inner-grid already handles the stripe-level padding positioning.
             const imgEl = this._buildCellElement(editor, imgData.src, pl, pt, cw, ch, unit);
 
             if (smartFit) {
