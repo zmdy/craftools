@@ -3,7 +3,7 @@ export class CtxBar {
         this.container = container; // Should be document.body or the app wrapper
         this.el = document.createElement('div');
         this.el.className = 'craftools-ctxbar hidden';
-        this.el.style.cssText = 'position:fixed; z-index:500; display:flex; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
+        this.el.style.cssText = 'position:fixed; z-index:500; display:none; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
         this.container.appendChild(this.el);
         
         this.activeElement = null;

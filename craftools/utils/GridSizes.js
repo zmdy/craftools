@@ -1,14 +1,5 @@
 export const GridSizes = [
     {
-        name: "Etiquetas A4-90 (8 etiquetas)",
-        cellWidth: 99.1,
-        cellHeight: 67.8,
-        cellPadding: "2 2 2 3", // top right bottom left (in mm)
-        pageMargin: "12.9 5.9 12.9 5.9", // top right bottom left (in mm)
-        cellGap: 0,
-        sizes: ["210,297", "297,210", ] // Formato A4 vindo de Settings.js
-    },
-    {
         name: "Fotos 5x5 com borda",
         cellWidth: 50,
         cellHeight: 50,
@@ -58,6 +49,15 @@ export const GridSizes = [
         cellWidth: 70,
         cellHeight: 90,
         cellPadding: "3 3 23 3", 
+        pageMargin: "10 5 5 10", 
+        cellGap: 0,
+        sizes: ["297,210", , "297,420", ] 
+    }, 
+    {
+        name: "Fotos 9x7 Polaroid Instax",
+        cellWidth: 70,
+        cellHeight: 90,
+        cellPadding: "3 3 13 3", 
         pageMargin: "10 5 5 10", 
         cellGap: 0,
         sizes: ["297,210", , "297,420", ] 
