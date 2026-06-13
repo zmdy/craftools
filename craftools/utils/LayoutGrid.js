@@ -114,22 +114,22 @@ export class Craftools_LayoutGrid {
                 this._renderPhotostripes(grid, items, i, perPage, stripesPerPage, unit, photostripGroup, renderCellContentCallback);
             } else {
                 this._renderNormalCells(grid, items, i, perPage, unit, renderCellContentCallback);
-            }
 
-            // Outer drag-and-drop for normal cells and photostrips (whole-cell handle)
-            new Sortable(grid, { 
-                animation: 200,
-                handle: '.album-drag-handle',
-                ghostClass: "sortable-ghost",
-                onStart: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grabbing';
-                },
-                onEnd: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grab';
-                }
-            });
+                // Outer drag-and-drop for normal cells (whole-cell handle)
+                new Sortable(grid, { 
+                    animation: 200,
+                    handle: '.album-drag-handle',
+                    ghostClass: "sortable-ghost",
+                    onStart: (evt) => {
+                        const h = evt.item.querySelector('.album-drag-handle');
+                        if (h) h.style.cursor = 'grabbing';
+                    },
+                    onEnd: (evt) => {
+                        const h = evt.item.querySelector('.album-drag-handle');
+                        if (h) h.style.cursor = 'grab';
+                    }
+                });
+            }
         }
     }
 
@@ -162,8 +162,6 @@ export class Craftools_LayoutGrid {
         const pB = isNaN(paddings[2]) ? pT : paddings[2];
         const pL = isNaN(paddings[3]) ? pR : paddings[3];
 
-        const allInnerGrids = []; // collect for cross-stripe SortableJS
-
         for (let s = 0; s < stripesPerPage; s++) {
             const stripeItems = stripItems.slice(s * this.itemsPerStripe, (s + 1) * this.itemsPerStripe);
             if (stripeItems.length === 0) break;
@@ -187,7 +185,6 @@ export class Craftools_LayoutGrid {
 
             // Insert inner grid between content-layer (z:1) and overlay-layer (z:4)
             stripeEl.insertBefore(innerGrid, stripeEl.querySelector('.cell-overlay-layer'));
-            allInnerGrids.push(innerGrid);
 
             // Create individual photo slots
             stripeItems.forEach((itemData, slotIdx) => {
@@ -200,7 +197,10 @@ export class Craftools_LayoutGrid {
                     box-sizing: border-box;
                 `;
 
-                // Each slot gets a small drag handle for reordering
+                // Make the slot itself draggable (so dragging the photo or handle works)
+                slot.draggable = true;
+
+                // Each slot gets a small drag handle for visual indicator
                 const slotHandle = document.createElement('div');
                 slotHandle.className = 'slot-drag-handle';
                 slotHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;color:var(--text-secondary);">drag_indicator</span>';
@@ -218,7 +218,6 @@ export class Craftools_LayoutGrid {
                     justify-content: center;
                     cursor: grab;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
                     opacity: 0.8;
                     transition: opacity 0.15s;
                 `;
@@ -228,49 +227,69 @@ export class Craftools_LayoutGrid {
                 slotHandle.addEventListener('mouseenter', () => { slotHandle.style.opacity = '1'; });
                 slotHandle.addEventListener('mouseleave', () => { slotHandle.style.opacity = '0.8'; });
 
+                // Native Drag and Drop logic for content swapping on slot level
+                slot.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    // We don't really need to set data, but Firefox requires it for D&D to work
+                    e.dataTransfer.setData('text/plain', slotIdx);
+                    Craftools_LayoutGrid.draggedSlot = slot;
+                    setTimeout(() => slot.style.opacity = '0.5', 0);
+                });
+
+                slot.addEventListener('dragend', (e) => {
+                    slot.style.opacity = '1';
+                    Craftools_LayoutGrid.draggedSlot = null;
+                });
+
+                slot.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Necessary to allow dropping
+                    e.dataTransfer.dropEffect = 'move';
+                    slot.style.boxShadow = 'inset 0 0 0 2px var(--accent)';
+                });
+
+                slot.addEventListener('dragleave', (e) => {
+                    slot.style.boxShadow = '';
+                });
+
+                slot.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    slot.style.boxShadow = '';
+                    
+                    const draggedSlot = Craftools_LayoutGrid.draggedSlot;
+                    if (draggedSlot && draggedSlot !== slot) {
+                        // Swap the content elements (excluding the drag handle)
+                        const draggedContent = Array.from(draggedSlot.children).find(c => !c.classList.contains('slot-drag-handle'));
+                        const targetContent = Array.from(slot.children).find(c => !c.classList.contains('slot-drag-handle'));
+                        
+                        // Swap them by appending them to each other's parents
+                        if (draggedContent && targetContent) {
+                            draggedSlot.appendChild(targetContent);
+                            slot.appendChild(draggedContent);
+                        } else if (draggedContent) {
+                            slot.appendChild(draggedContent);
+                        } else if (targetContent) {
+                            draggedSlot.appendChild(targetContent);
+                        }
+                    }
+                });
+
                 innerGrid.appendChild(slot);
 
                 if (renderCellContentCallback) {
                     renderCellContentCallback(slot, itemData, startIdx + s * this.itemsPerStripe + slotIdx);
                 }
-            });
-        }
 
-        // Enable drag between ALL inner grids on this page (shared group)
-        allInnerGrids.forEach(innerGrid => {
-            new Sortable(innerGrid, {
-                animation: 150,
-                handle: '.slot-drag-handle',
-                ghostClass: 'sortable-ghost',
-                fallbackOnBody: true,
-                swapThreshold: 0.65,
-                swap: true, // Swaps elements to keep grid layouts intact
-                // Shared group enables dragging slots between stripes
-                group: photostripGroup,
-                onStart: (evt) => {
-                    const h = evt.item.querySelector('.slot-drag-handle');
-                    if (h) { h.style.cursor = 'grabbing'; }
-                },
-                onEnd: (evt) => {
-                    const h = evt.item.querySelector('.slot-drag-handle');
-                    if (h) { h.style.cursor = 'grab'; }
-                    
-                    // Fallback manual swap se o SortableJS não trocar e a estrutura de grid ficar desbalanceada
-                    if (evt.from !== evt.to || evt.oldIndex !== evt.newIndex) {
-                        const targetList = Array.from(evt.to.children).filter(c => c.classList.contains('photostrip-slot'));
-                        const sourceList = Array.from(evt.from.children).filter(c => c.classList.contains('photostrip-slot'));
-                        // Se houve desbalanceamento (ex: uma tira ficou com mais que o original)
-                        if (evt.from !== evt.to && sourceList.length < targetList.length - 1) {
-                            // Pega o elemento que foi "empurrado" e move de volta para a lista original
-                            const displaced = evt.to.children[evt.newIndex === 0 ? 1 : 0] || evt.to.querySelector('.photostrip-slot:not(.sortable-drag)');
-                            if (displaced) {
-                                evt.from.insertBefore(displaced, evt.from.children[evt.oldIndex] || null);
-                            }
-                        }
+                // Ensure the content inside slot doesn't interfere with dragging
+                const imgEl = slot.querySelector('craftools-element');
+                if (imgEl) {
+                    imgEl.setAttribute('draggable', 'false');
+                    const imgNode = imgEl.querySelector('img');
+                    if (imgNode) {
+                        imgNode.setAttribute('draggable', 'false');
                     }
                 }
             });
-        });
+        }
     }
 
     // ── Shared: build the outer stripe/cell container ─────────────────────
@@ -349,23 +368,47 @@ export class Craftools_LayoutGrid {
             border: 1px solid var(--border, #e5e7eb);
             border-radius: 4px;
             padding: 2px;
-            display: flex;
+            display: ${this.isPhotostrip ? 'none' : 'flex'};
             align-items: center;
             justify-content: center;
             cursor: grab;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         `;
         
-        // Em photostrip, movemos a alça principal da stripe para o canto superior direito para não sobrepor a alça do 1º slot
-        if (this.isPhotostrip) {
-            dragHandle.style.left = 'auto';
-            dragHandle.style.right = '4px';
-        }
         cellWrap.appendChild(dragHandle);
+
+        // ── Botão de edição da célula/stripe ─────────────────────────────
+        let editBtn = document.createElement('div');
+        editBtn.className = "cell-edit-btn";
+        editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">settings</span>';
+        editBtn.style.cssText = `
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            z-index: 55;
+            background: var(--bg-input, #fff);
+            border: 1px solid var(--border, #e5e7eb);
+            border-radius: 4px;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            color: var(--text-secondary, #4b5563);
+            transition: all 0.15s;
+        `;
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            import('../tools/album/CellPanel.js').then(({ CellPanel }) => {
+                CellPanel.open(this.editor, cellWrap);
+            });
+        });
+        cellWrap.appendChild(editBtn);
 
         // Permite selecionar a tira inteira ao clicar no espaço vazio (padding/gap)
         cellWrap.addEventListener('click', (e) => {
-            if (!e.target.closest('.photostrip-slot') && !e.target.closest('.album-drag-handle')) {
+            if (!e.target.closest('.photostrip-slot') && !e.target.closest('.album-drag-handle') && !e.target.closest('.cell-edit-btn')) {
                 import('../tools/album/CellPanel.js').then(({ CellPanel }) => {
                     CellPanel.open(this.editor, cellWrap);
                 });

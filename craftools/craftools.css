@@ -205,6 +205,13 @@ input[type="number"] { -moz-appearance:textfield; }
     box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 2px var(--accent) !important;
 }
 
+/* Prevent native browser drag behavior on slot children */
+.photostrip-slot craftools-element,
+.photostrip-slot img {
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+}
+
 /* Cell selecionada pelo CellPanel */
 .craftools-grid-cell.cell-selected {
     outline: 2px solid var(--accent);

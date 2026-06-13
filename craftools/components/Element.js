@@ -224,6 +224,7 @@ export class Craftools_Element extends HTMLElement {
             });
         }
         
+        this.classList.add('craftools-selected');
         const slot = this.closest('.photostrip-slot');
         if (slot) {
             slot.classList.add('craftools-slot-active');
@@ -256,6 +257,7 @@ export class Craftools_Element extends HTMLElement {
     }
 
     deselect() {
+        this.classList.remove('craftools-selected');
         this._ctrlbar.style.display = 'none';
         this.style.zIndex = '2';
         

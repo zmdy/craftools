@@ -200,6 +200,7 @@ export class Craftools_Editor extends HTMLElement {
             if(panelLogo) panelLogo.classList.remove('d-none');
             if(panelTitle) panelTitle.textContent = "Technology for Creativity";
             document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+            this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
             this.activePage = null;
         };
 
