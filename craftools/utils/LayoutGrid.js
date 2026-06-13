@@ -114,22 +114,22 @@ export class Craftools_LayoutGrid {
                 this._renderPhotostripes(grid, items, i, perPage, stripesPerPage, unit, photostripGroup, renderCellContentCallback);
             } else {
                 this._renderNormalCells(grid, items, i, perPage, unit, renderCellContentCallback);
-
-                // Outer drag-and-drop for normal cells (whole-cell handle)
-                new Sortable(grid, { 
-                    animation: 200,
-                    handle: '.album-drag-handle',
-                    ghostClass: "sortable-ghost",
-                    onStart: (evt) => {
-                        const h = evt.item.querySelector('.album-drag-handle');
-                        if (h) h.style.cursor = 'grabbing';
-                    },
-                    onEnd: (evt) => {
-                        const h = evt.item.querySelector('.album-drag-handle');
-                        if (h) h.style.cursor = 'grab';
-                    }
-                });
             }
+
+            // Outer drag-and-drop for normal cells and photostrips (whole-cell handle)
+            new Sortable(grid, { 
+                animation: 200,
+                handle: '.album-drag-handle',
+                ghostClass: "sortable-ghost",
+                onStart: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grabbing';
+                },
+                onEnd: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grab';
+                }
+            });
         }
     }
 
@@ -218,14 +218,15 @@ export class Craftools_LayoutGrid {
                     justify-content: center;
                     cursor: grab;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-                    opacity: 0;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+                    opacity: 0.8;
                     transition: opacity 0.15s;
                 `;
                 slot.appendChild(slotHandle);
 
-                // Show handle on hover
-                slot.addEventListener('mouseenter', () => { slotHandle.style.opacity = '1'; });
-                slot.addEventListener('mouseleave', () => { slotHandle.style.opacity = '0'; });
+                // Make handle fully opaque on hover
+                slotHandle.addEventListener('mouseenter', () => { slotHandle.style.opacity = '1'; });
+                slotHandle.addEventListener('mouseleave', () => { slotHandle.style.opacity = '0.8'; });
 
                 innerGrid.appendChild(slot);
 
@@ -243,15 +244,30 @@ export class Craftools_LayoutGrid {
                 ghostClass: 'sortable-ghost',
                 fallbackOnBody: true,
                 swapThreshold: 0.65,
+                swap: true, // Swaps elements to keep grid layouts intact
                 // Shared group enables dragging slots between stripes
                 group: photostripGroup,
                 onStart: (evt) => {
                     const h = evt.item.querySelector('.slot-drag-handle');
-                    if (h) { h.style.opacity = '1'; h.style.cursor = 'grabbing'; }
+                    if (h) { h.style.cursor = 'grabbing'; }
                 },
                 onEnd: (evt) => {
                     const h = evt.item.querySelector('.slot-drag-handle');
-                    if (h) { h.style.opacity = '0'; h.style.cursor = 'grab'; }
+                    if (h) { h.style.cursor = 'grab'; }
+                    
+                    // Fallback manual swap se o SortableJS não trocar e a estrutura de grid ficar desbalanceada
+                    if (evt.from !== evt.to || evt.oldIndex !== evt.newIndex) {
+                        const targetList = Array.from(evt.to.children).filter(c => c.classList.contains('photostrip-slot'));
+                        const sourceList = Array.from(evt.from.children).filter(c => c.classList.contains('photostrip-slot'));
+                        // Se houve desbalanceamento (ex: uma tira ficou com mais que o original)
+                        if (evt.from !== evt.to && sourceList.length < targetList.length - 1) {
+                            // Pega o elemento que foi "empurrado" e move de volta para a lista original
+                            const displaced = evt.to.children[evt.newIndex === 0 ? 1 : 0] || evt.to.querySelector('.photostrip-slot:not(.sortable-drag)');
+                            if (displaced) {
+                                evt.from.insertBefore(displaced, evt.from.children[evt.oldIndex] || null);
+                            }
+                        }
+                    }
                 }
             });
         });
@@ -333,13 +349,28 @@ export class Craftools_LayoutGrid {
             border: 1px solid var(--border, #e5e7eb);
             border-radius: 4px;
             padding: 2px;
-            display: ${this.isPhotostrip ? 'none' : 'flex'};
+            display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         `;
+        
+        // Em photostrip, movemos a alça principal da stripe para o canto superior direito para não sobrepor a alça do 1º slot
+        if (this.isPhotostrip) {
+            dragHandle.style.left = 'auto';
+            dragHandle.style.right = '4px';
+        }
         cellWrap.appendChild(dragHandle);
+
+        // Permite selecionar a tira inteira ao clicar no espaço vazio (padding/gap)
+        cellWrap.addEventListener('click', (e) => {
+            if (!e.target.closest('.photostrip-slot') && !e.target.closest('.album-drag-handle')) {
+                import('../tools/album/CellPanel.js').then(({ CellPanel }) => {
+                    CellPanel.open(this.editor, cellWrap);
+                });
+            }
+        });
 
         return cellWrap;
     }
