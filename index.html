@@ -363,6 +363,14 @@
         .header-content .box-icon span {
             font-size: 20px;
         }
+        .header-content .box-icon.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .header-content .box-icon.disabled:hover {
+            background: var(--bg-input, #f4f4f5) !important;
+            color: var(--text-primary, #18181b) !important;
+        }
 
         /* Hover do sidenav igual ao footer (laranja, transição suave) */
         .sidenav-nav li a {
@@ -451,6 +459,35 @@
                         }
                     }
                 }
+
+                // Proxy do Undo/Redo
+                const pwaUndo = document.getElementById('pwa-undo');
+                const pwaRedo = document.getElementById('pwa-redo');
+
+                pwaUndo?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (pwaUndo.classList.contains('disabled')) return;
+                    document.getElementById('undo-btn')?.click();
+                });
+                pwaRedo?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (pwaRedo.classList.contains('disabled')) return;
+                    document.getElementById('redo-btn')?.click();
+                });
+
+                const syncUndoRedoState = () => {
+                    const originalUndo = document.getElementById('undo-btn');
+                    const originalRedo = document.getElementById('redo-btn');
+                    if (originalUndo && pwaUndo) {
+                        pwaUndo.classList.toggle('disabled', originalUndo.disabled);
+                    }
+                    if (originalRedo && pwaRedo) {
+                        pwaRedo.classList.toggle('disabled', originalRedo.disabled);
+                    }
+                };
+
+                document.addEventListener('craftools-history-change', syncUndoRedoState);
+                setInterval(syncUndoRedoState, 200);
 
                 // Proxy do Zoom
                 document.getElementById('pwa-zoom-in')?.addEventListener('click', (e) => {
@@ -630,6 +667,12 @@
 
                 <!-- Right Actions: Zoom, Dark Mode, Language -->
                 <div class="right d-flex align-items-center gap-2">
+                    <a href="#" id="pwa-undo" class="box-icon disabled" style="text-decoration:none;" title="Desfazer (Ctrl+Z)">
+                        <span class="material-symbols-outlined">undo</span>
+                    </a>
+                    <a href="#" id="pwa-redo" class="box-icon disabled" style="text-decoration:none;" title="Refazer (Ctrl+Y)">
+                        <span class="material-symbols-outlined">redo</span>
+                    </a>
                     <a href="#" id="pwa-zoom-out" class="box-icon" style="text-decoration:none;" title="Zoom Out">
                         <span class="material-symbols-outlined">zoom_out</span>
                     </a>
