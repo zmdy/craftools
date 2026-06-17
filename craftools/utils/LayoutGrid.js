@@ -51,21 +51,25 @@ export class Craftools_LayoutGrid {
         
         const cellW = this.template.cellWidth;
         const cellH = this.template.cellHeight;
-        const gap = this.template.cellGap;
+        const gap = this.template.cellGap || 0;
 
         const availableW = docW - mL - mR;
         const availableH = docH - mT - mB;
         
-        const slotW = cellW + gap;
-        const slotH = cellH + gap;
-        
-        const cols = Math.floor((availableW + gap) / slotW) || 1;
-        const rows = Math.floor((availableH + gap) / slotH) || 1;
+        const isPromo = this.template.type === 'promo_kit';
+        let perPage = 0;
+        let cols = 1, rows = 1, stripesPerPage = 1;
 
-        // In photostrip mode, each "cell" in the outer grid is a stripe that holds
-        // itemsPerStripe photos. Adjust perPage accordingly.
-        const stripesPerPage = cols * rows;
-        const perPage = this.isPhotostrip ? stripesPerPage * this.itemsPerStripe : stripesPerPage;
+        if (isPromo) {
+            perPage = this.template.cellSlots.reduce((sum, slot) => sum + slot.cellCount, 0);
+        } else {
+            const slotW = cellW + gap;
+            const slotH = cellH + gap;
+            cols = Math.floor((availableW + gap) / slotW) || 1;
+            rows = Math.floor((availableH + gap) / slotH) || 1;
+            stripesPerPage = cols * rows;
+            perPage = this.isPhotostrip ? stripesPerPage * this.itemsPerStripe : stripesPerPage;
+        }
 
         let currentPage = this.startPage;
         let pagesWrapper = this.editor.querySelector('#pages-wrapper');
@@ -94,41 +98,54 @@ export class Craftools_LayoutGrid {
             grid.dataset.borderWidth = '1';
             grid.dataset.borderStyle = 'dashed';
             grid.dataset.borderColor = '#cccccc';
-            grid.style.cssText = `
-                position: absolute;
-                top: ${mT}${unit};
-                right: ${mR}${unit};
-                bottom: ${mB}${unit};
-                left: ${mL}${unit};
-                display: grid;
-                grid-template-columns: repeat(${cols}, ${cellW}${unit});
-                grid-auto-rows: ${cellH}${unit};
-                gap: ${gap}${unit};
-                align-content: start;
-                box-sizing: border-box;
-            `;
 
-            currentPage.appendChild(grid);
-
-            if (this.isPhotostrip) {
-                this._renderPhotostripes(grid, items, i, perPage, stripesPerPage, unit, photostripGroup, renderCellContentCallback);
+            if (isPromo) {
+                grid.style.cssText = `
+                    position: absolute;
+                    top: ${mT}${unit};
+                    right: ${mR}${unit};
+                    bottom: ${mB}${unit};
+                    left: ${mL}${unit};
+                    box-sizing: border-box;
+                `;
+                currentPage.appendChild(grid);
+                this._renderPromoKit(grid, items, i, perPage, unit, availableW, availableH, renderCellContentCallback);
             } else {
-                this._renderNormalCells(grid, items, i, perPage, unit, renderCellContentCallback);
+                grid.style.cssText = `
+                    position: absolute;
+                    top: ${mT}${unit};
+                    right: ${mR}${unit};
+                    bottom: ${mB}${unit};
+                    left: ${mL}${unit};
+                    display: grid;
+                    grid-template-columns: repeat(${cols}, ${cellW}${unit});
+                    grid-auto-rows: ${cellH}${unit};
+                    gap: ${gap}${unit};
+                    align-content: start;
+                    box-sizing: border-box;
+                `;
+                currentPage.appendChild(grid);
 
-                // Outer drag-and-drop for normal cells (whole-cell handle)
-                new Sortable(grid, { 
-                    animation: 200,
-                    handle: '.album-drag-handle',
-                    ghostClass: "sortable-ghost",
-                    onStart: (evt) => {
-                        const h = evt.item.querySelector('.album-drag-handle');
-                        if (h) h.style.cursor = 'grabbing';
-                    },
-                    onEnd: (evt) => {
-                        const h = evt.item.querySelector('.album-drag-handle');
-                        if (h) h.style.cursor = 'grab';
-                    }
-                });
+                if (this.isPhotostrip) {
+                    this._renderPhotostripes(grid, items, i, perPage, stripesPerPage, unit, photostripGroup, renderCellContentCallback);
+                } else {
+                    this._renderNormalCells(grid, items, i, perPage, unit, renderCellContentCallback);
+
+                    // Outer drag-and-drop for normal cells (whole-cell handle)
+                    new Sortable(grid, { 
+                        animation: 200,
+                        handle: '.album-drag-handle',
+                        ghostClass: "sortable-ghost",
+                        onStart: (evt) => {
+                            const h = evt.item.querySelector('.album-drag-handle');
+                            if (h) h.style.cursor = 'grabbing';
+                        },
+                        onEnd: (evt) => {
+                            const h = evt.item.querySelector('.album-drag-handle');
+                            if (h) h.style.cursor = 'grab';
+                        }
+                    });
+                }
             }
         }
     }
@@ -144,8 +161,89 @@ export class Craftools_LayoutGrid {
 
             if (renderCellContentCallback) {
                 const contentLayer = cellWrap.querySelector('.cell-content-layer');
-                renderCellContentCallback(contentLayer, itemData, startIdx + indexOffset);
+                renderCellContentCallback(contentLayer, itemData, startIdx + indexOffset, this.template);
             }
+        });
+    }
+
+    // ── Promo Kit rendering (Smart Bin Packing) ────────────────────────
+    _renderPromoKit(grid, items, startIdx, perPage, unit, availableW, availableH, renderCellContentCallback) {
+        const gap = this.template.cellGap || 0;
+        let currentX = 0;
+        let currentY = 0;
+        let shelfH = 0;
+
+        // 1. Generate blocks for each slot
+        const blocks = this.template.cellSlots.map((slot) => {
+            const Kmax = Math.floor((availableW + gap) / (slot.cellWidth + gap)) || 1;
+            const cols = Math.min(slot.cellCount, Kmax);
+            const rows = Math.ceil(slot.cellCount / cols);
+            const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * gap : 0);
+            const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * gap : 0);
+            return { slot, cols, rows, blockW, blockH };
+        });
+
+        // 2. Shelf pack blocks onto page
+        blocks.forEach(b => {
+            if (currentX + b.blockW > availableW && currentX > 0) {
+                // Wrap to next shelf
+                currentX = 0;
+                currentY += shelfH + gap;
+                shelfH = 0;
+            }
+            b.x = currentX;
+            b.y = currentY;
+            currentX += b.blockW + gap;
+            shelfH = Math.max(shelfH, b.blockH);
+        });
+
+        // 3. Render the blocks
+        let localItemIdx = 0;
+        const pageItems = items.slice(startIdx, startIdx + perPage);
+
+        blocks.forEach(b => {
+            let groupDiv = document.createElement('div');
+            groupDiv.className = 'promo-group';
+            groupDiv.style.cssText = `
+                position: absolute;
+                left: ${b.x}${unit};
+                top: ${b.y}${unit};
+                width: ${b.blockW}${unit};
+                height: ${b.blockH}${unit};
+                display: grid;
+                grid-template-columns: repeat(${b.cols}, ${b.slot.cellWidth}${unit});
+                grid-auto-rows: ${b.slot.cellHeight}${unit};
+                gap: ${gap}${unit};
+            `;
+            grid.appendChild(groupDiv);
+
+            for (let c = 0; c < b.slot.cellCount; c++) {
+                const itemData = pageItems[localItemIdx];
+                
+                const cellWrap = this._buildStripeContainer(b.slot.cellWidth, b.slot.cellHeight, unit, groupDiv, startIdx + localItemIdx, b.slot);
+                groupDiv.appendChild(cellWrap);
+
+                if (itemData && renderCellContentCallback) {
+                    const contentLayer = cellWrap.querySelector('.cell-content-layer');
+                    renderCellContentCallback(contentLayer, itemData, startIdx + localItemIdx, b.slot);
+                }
+                localItemIdx++;
+            }
+            
+            // Drag and drop within the group
+            new Sortable(groupDiv, { 
+                animation: 200,
+                handle: '.album-drag-handle',
+                ghostClass: "sortable-ghost",
+                onStart: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grabbing';
+                },
+                onEnd: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grab';
+                }
+            });
         });
     }
 
@@ -293,8 +391,9 @@ export class Craftools_LayoutGrid {
     }
 
     // ── Shared: build the outer stripe/cell container ─────────────────────
-    _buildStripeContainer(cellW, cellH, unit, grid, globalIndex) {
-        const paddings = this.template.cellPadding.split(" ").map(p => parseFloat(p));
+    _buildStripeContainer(cellW, cellH, unit, grid, globalIndex, activeSlot = null) {
+        const slot = activeSlot || this.template;
+        const paddings = slot.cellPadding.split(" ").map(p => parseFloat(p));
         const pT = isNaN(paddings[0]) ? 0 : paddings[0];
         const pR = isNaN(paddings[1]) ? pT : paddings[1];
         const pB = isNaN(paddings[2]) ? pT : paddings[2];

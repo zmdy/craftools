@@ -47,6 +47,9 @@ export class AlbumTool extends BaseTool {
 
         // ── Helpers ────────────────────────────────────────────────────────
         const calcPerPage = (template, size) => {
+            if (template.type === 'promo_kit') {
+                return template.cellSlots.reduce((sum, slot) => sum + slot.cellCount, 0);
+            }
             const parts = size.size.split(',').map(Number);
             const docW = parts[0];
             const docH = parts[1];
@@ -72,6 +75,16 @@ export class AlbumTool extends BaseTool {
             ).join('');
 
             const buildSlotPreview = (t) => {
+                if (t.type === 'promo_kit') {
+                    return `<div class="card_preview" style="width:72px; height:68px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.18); flex-shrink:0; display:flex; padding:4px; gap:4px; box-sizing:border-box;">
+                        <div style="flex:2; background:#9ca3af; height:100%; border-radius:1px;"></div>
+                        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                            <div style="flex:1; background:#9ca3af; border-radius:1px;"></div>
+                            <div style="flex:1; background:#9ca3af; border-radius:1px;"></div>
+                        </div>
+                    </div>`;
+                }
+
                 const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
                 const [padT, padR, padB, padL] = padParts;
 
@@ -145,18 +158,29 @@ export class AlbumTool extends BaseTool {
                 const parts = selectedSize.size.split(',').map(Number);
                 const docW = parts[0];
                 const docH = parts[1];
+                
+                // Scale full page to fit in preview box
+                const PAGE_MAX_W = 180;
+                const PAGE_MAX_H = 140;
+                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH, 1);
+                const pDocW  = Math.round(docW  * scale);
+                const pDocH  = Math.round(docH  * scale);
+
+                if (t.type === 'promo_kit') {
+                    return `<div style="position:relative; flex-shrink:0; width:${pDocW}px; height:${pDocH}px; background:#ffffff; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin: 6px auto 0; display:flex; align-items:center; justify-content:center;">
+                        <div style="font-size:10px; color:#9ca3af; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:24px;">dashboard_customize</span>
+                            <span>Layout Misto</span>
+                        </div>
+                    </div>`;
+                }
+
                 const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
                 const [mT, mR, mB, mL] = margins;
                 const cols = Math.max(1, Math.floor((docW - mL - mR + t.cellGap) / (t.cellWidth + t.cellGap)));
                 const rows = Math.max(1, Math.floor((docH - mT - mB + t.cellGap) / (t.cellHeight + t.cellGap)));
 
-                // Scale full page to fit in preview box
-                const PAGE_MAX_W = 180;
-                const PAGE_MAX_H = 140;
-                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH, 1);
-
-                const pDocW  = Math.round(docW  * scale);
-                const pDocH  = Math.round(docH  * scale);
+                // Scale full page to fit in preview box (already calculated above)
                 const pMT    = Math.round(mT    * scale);
                 const pMR    = Math.round(mR    * scale);
                 const pMB    = Math.round(mB    * scale);
@@ -243,11 +267,16 @@ export class AlbumTool extends BaseTool {
                     const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
                     const secColor  = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
 
+                    const isPromo = t.type === 'promo_kit';
+                    
                     // Calculate slot preview dimensions for the wrapper
-                    const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
-                    const scale = Math.min(72 / t.cellWidth, 68 / t.cellHeight, 1);
-                    const wrapW = Math.round(t.cellWidth * scale);
-                    const wrapH = Math.round(t.cellHeight * scale);
+                    let wrapW = 72;
+                    let wrapH = 68;
+                    if (!isPromo) {
+                        const scale = Math.min(72 / t.cellWidth, 68 / t.cellHeight, 1);
+                        wrapW = Math.round(t.cellWidth * scale);
+                        wrapH = Math.round(t.cellHeight * scale);
+                    }
 
                     return `
                     <div class="template-row" data-idx="${idx}" style="margin-bottom:6px;">
@@ -263,7 +292,7 @@ export class AlbumTool extends BaseTool {
                             </div>
                             <div style="flex:1; min-width:0; overflow:hidden;">
                                 <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}</div>
-                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${t.cellWidth} × ${t.cellHeight} mm</div>
+                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? 'Tamanhos Mistos' : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
                                 <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">Gap: ${t.cellGap} mm</div>
                                 <button class="page-preview-btn" data-tidx="${idx}" style="
                                     font-size:9px; padding:2px 7px; border-radius:4px;
@@ -624,11 +653,13 @@ export class AlbumTool extends BaseTool {
         })));
 
         const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
-        const { pt, pr, pb, pl, cw, ch } = this._cellDimensions(template, pageSize);
         const unit = pageSize.sizeUnit || 'px';
 
-        await gridSystem.render(images, (cellContainer, imgData) => {
+        await gridSystem.render(images, (cellContainer, imgData, idx, slotOverride) => {
             cellContainer.style.background = "white";
+
+            const activeSlot = slotOverride || template;
+            const { pt, pr, pb, pl, cw, ch } = this._cellDimensions(activeSlot, pageSize);
 
             // In photostrip mode, the slot fills the entire container (no padding offset)
             // because the inner-grid already handles the stripe-level padding positioning.
@@ -682,14 +713,16 @@ export class AlbumTool extends BaseTool {
         const items = Array(quantity).fill(imgData);
 
         const gridSystem = new Craftools_LayoutGrid(editor, startPage, pageSize, template);
-        const { pt, pl, cw, ch } = this._cellDimensions(template, pageSize);
         const unit = pageSize.sizeUnit || 'px';
 
-        await gridSystem.render(items, (cellContainer) => {
+        await gridSystem.render(items, (cellContainer, imgData, idx, slotOverride) => {
             const grid = cellContainer.closest('.craftools-grid-container');
             if (grid) grid.dataset.gridMode = 'card';
             
             cellContainer.style.background = "white";
+
+            const activeSlot = slotOverride || template;
+            const { pt, pl, cw, ch } = this._cellDimensions(activeSlot, pageSize);
 
             const imgEl = ImageTool.createElement('imagem', editor);
             imgEl.setAttribute('x', pl + unit);

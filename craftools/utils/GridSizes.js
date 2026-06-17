@@ -1,5 +1,17 @@
 export const GridSizes = [
     {
+        name: "Promo Kit (5x5, 5x7, 7x9)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 6 },
+            { id: "g2", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 3 3", cellCount: 2 },
+            { id: "g3", cellWidth: 70, cellHeight: 90, cellPadding: "3 3 3 3", cellCount: 2 }
+        ],
+        pageMargin: "20 15 15 15",
+        cellGap: 2,
+        sizes: ["210,297", "297,210", "297,420"] 
+    },
+    {
         name: "Fotos 5x5 com borda",
         cellWidth: 50,
         cellHeight: 50,
