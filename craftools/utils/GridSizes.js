@@ -3,9 +3,9 @@ export const GridSizes = [
         name: "Promo Kit (5x5, 5x7, 7x9)",
         type: "promo_kit",
         cellSlots: [
-            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 6 },
-            { id: "g2", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 3 3", cellCount: 2 },
-            { id: "g3", cellWidth: 70, cellHeight: 90, cellPadding: "3 3 3 3", cellCount: 2 }
+            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 6, cellGap: 0, },
+            { id: "g2", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 3 3", cellCount: 2, cellGap: 0, },
+            { id: "g3", cellWidth: 70, cellHeight: 90, cellPadding: "3 3 3 3", cellCount: 2, cellGap: 0, }
         ],
         pageMargin: "20 15 15 15",
         cellGap: 2,

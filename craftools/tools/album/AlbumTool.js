@@ -76,7 +76,7 @@ export class AlbumTool extends BaseTool {
 
             const buildSlotPreview = (t) => {
                 if (t.type === 'promo_kit') {
-                    return `<div class="card_preview" style="width:72px; height:68px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.18); flex-shrink:0; display:flex; padding:4px; gap:4px; box-sizing:border-box;">
+                    return `<div class="card_preview" style="width:72px; height:68px; background:#ffffff; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.18); flex-shrink:0; display:flex; padding:4px; gap:4px; box-sizing:border-box;">
                         <div style="flex:2; background:#9ca3af; height:100%; border-radius:1px;"></div>
                         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
                             <div style="flex:1; background:#9ca3af; border-radius:1px;"></div>
@@ -201,19 +201,30 @@ export class AlbumTool extends BaseTool {
                                 const cellLeft = mL + currentX + c * (b.slot.cellWidth + gap);
                                 const cellTop = mT + currentY + r * (b.slot.cellHeight + gap);
                                 
+                                const padParts = b.slot.cellPadding.split(' ').map(v => parseFloat(v));
+                                const [padT, padR, padB, padL] = padParts;
+                                
                                 const pLeft = Math.round(cellLeft * scale);
                                 const pTop = Math.round(cellTop * scale);
                                 const pCellW = Math.max(1, Math.round(b.slot.cellWidth * scale));
                                 const pCellH = Math.max(1, Math.round(b.slot.cellHeight * scale));
                                 
+                                const innerLeft = Math.round(padL * scale);
+                                const innerTop = Math.round(padT * scale);
+                                const innerW = Math.max(1, Math.round((b.slot.cellWidth - padL - padR) * scale));
+                                const innerH = Math.max(1, Math.round((b.slot.cellHeight - padT - padB) * scale));
+                                
                                 cellsHtml += `<div style="
                                     position:absolute;
                                     left:${pLeft}px; top:${pTop}px;
                                     width:${pCellW}px; height:${pCellH}px;
-                                    background:#e5e7eb;
-                                    border:1px solid #9ca3af;
+                                    background:#ffffff;
+                                    border:1px solid #d1d5db;
                                     box-sizing:border-box;
-                                "></div>`;
+                                    overflow:hidden;
+                                ">
+                                    <div style="position:absolute; left:${innerLeft}px; top:${innerTop}px; width:${innerW}px; height:${innerH}px; background:#9ca3af;"></div>
+                                </div>`;
                             }
                         }
 

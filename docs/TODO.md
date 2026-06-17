@@ -24,6 +24,7 @@
 - [ ] In the album, allow users to choose a custom size (and change existing ones, saving to cache/cookies/storage), automatically calculating the best layout (landscape or portrait)
 - [ ] Remove landscape/portrait options from the size settings; the system will calculate automatically
 - [ ] Create the option to repeat a text (or any tool) in album mode, making it repeat in the remaining cells
+- [ ] Add a snap toggle in each tool in album repeat modo to turn it on/off
 - [ ] Implement animations (fadein)
 
 # v0.3
