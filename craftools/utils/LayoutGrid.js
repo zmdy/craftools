@@ -223,27 +223,91 @@ export class Craftools_LayoutGrid {
                 const cellWrap = this._buildStripeContainer(b.slot.cellWidth, b.slot.cellHeight, unit, groupDiv, startIdx + localItemIdx, b.slot);
                 groupDiv.appendChild(cellWrap);
 
+                // --- Native Drag and Drop Logic ---
+                cellWrap.draggable = true;
+
+                cellWrap.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', startIdx + localItemIdx);
+                    Craftools_LayoutGrid.draggedPromoCell = cellWrap;
+                    setTimeout(() => cellWrap.style.opacity = '0.5', 0);
+                });
+
+                cellWrap.addEventListener('dragend', (e) => {
+                    cellWrap.style.opacity = '1';
+                    Craftools_LayoutGrid.draggedPromoCell = null;
+                });
+
+                cellWrap.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    cellWrap.style.boxShadow = 'inset 0 0 0 2px var(--accent)';
+                });
+
+                cellWrap.addEventListener('dragleave', (e) => {
+                    cellWrap.style.boxShadow = '';
+                });
+
+                cellWrap.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    cellWrap.style.boxShadow = '';
+                    
+                    const draggedCell = Craftools_LayoutGrid.draggedPromoCell;
+                    if (draggedCell && draggedCell !== cellWrap) {
+                        const draggedContentLayer = draggedCell.querySelector('.cell-content-layer');
+                        const targetContentLayer = cellWrap.querySelector('.cell-content-layer');
+                        
+                        // Grab the actual images/elements inside the content layers
+                        const draggedEls = Array.from(draggedContentLayer.children);
+                        const targetEls = Array.from(targetContentLayer.children);
+                        
+                        // Extract target cell dimensions
+                        const targetW = parseFloat(cellWrap.style.width);
+                        const targetH = parseFloat(cellWrap.style.height);
+                        
+                        // Extract dragged cell dimensions
+                        const draggedW = parseFloat(draggedCell.style.width);
+                        const draggedH = parseFloat(draggedCell.style.height);
+
+                        // Swap them
+                        draggedEls.forEach(el => {
+                            if (el.tagName.toLowerCase() === 'craftools-element') {
+                                el.setAttribute('w', targetW + unit);
+                                el.setAttribute('h', targetH + unit);
+                                // For promo kits we set padding offset (x, y) to 0 or adjust based on new slot.
+                                // We can just rely on AlbumTool setting x,y = pl, pt but since they are absolute
+                                // inside a relative container, we need to know the padding of the target.
+                                // Simple fix: use 0,0 and let the container's padding handle it (AlbumTool uses padding on contentLayer for normal).
+                                // Actually, AlbumTool places them at pl, pt. Let's just adjust width/height for now.
+                            }
+                            targetContentLayer.appendChild(el);
+                        });
+                        
+                        targetEls.forEach(el => {
+                            if (el.tagName.toLowerCase() === 'craftools-element') {
+                                el.setAttribute('w', draggedW + unit);
+                                el.setAttribute('h', draggedH + unit);
+                            }
+                            draggedContentLayer.appendChild(el);
+                        });
+                    }
+                });
+
                 if (itemData && renderCellContentCallback) {
                     const contentLayer = cellWrap.querySelector('.cell-content-layer');
                     renderCellContentCallback(contentLayer, itemData, startIdx + localItemIdx, b.slot);
                 }
+                
+                // Ensure elements inside don't interfere with dragging
+                const imgEl = cellWrap.querySelector('craftools-element');
+                if (imgEl) {
+                    imgEl.setAttribute('draggable', 'false');
+                    const imgNode = imgEl.querySelector('img');
+                    if (imgNode) imgNode.setAttribute('draggable', 'false');
+                }
+
                 localItemIdx++;
             }
-            
-            // Drag and drop within the group
-            new Sortable(groupDiv, { 
-                animation: 200,
-                handle: '.album-drag-handle',
-                ghostClass: "sortable-ghost",
-                onStart: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grabbing';
-                },
-                onEnd: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grab';
-                }
-            });
         });
     }
 

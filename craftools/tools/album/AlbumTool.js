@@ -167,12 +167,61 @@ export class AlbumTool extends BaseTool {
                 const pDocH  = Math.round(docH  * scale);
 
                 if (t.type === 'promo_kit') {
-                    return `<div style="position:relative; flex-shrink:0; width:${pDocW}px; height:${pDocH}px; background:#ffffff; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin: 6px auto 0; display:flex; align-items:center; justify-content:center;">
-                        <div style="font-size:10px; color:#9ca3af; display:flex; flex-direction:column; align-items:center; gap:4px;">
-                            <span class="material-symbols-outlined" style="font-size:24px;">dashboard_customize</span>
-                            <span>Layout Misto</span>
-                        </div>
-                    </div>`;
+                    const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
+                    const [mT, mR, mB, mL] = margins;
+                    const gap = t.cellGap || 0;
+                    
+                    const availableW = docW - mL - mR;
+                    let currentX = 0;
+                    let currentY = 0;
+                    let shelfH = 0;
+
+                    const blocks = t.cellSlots.map((slot) => {
+                        const Kmax = Math.floor((availableW + gap) / (slot.cellWidth + gap)) || 1;
+                        const cols = Math.min(slot.cellCount, Kmax);
+                        const rows = Math.ceil(slot.cellCount / cols);
+                        const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * gap : 0);
+                        const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * gap : 0);
+                        return { slot, cols, rows, blockW, blockH };
+                    });
+
+                    let cellsHtml = '';
+
+                    blocks.forEach(b => {
+                        if (currentX + b.blockW > availableW && currentX > 0) {
+                            currentX = 0;
+                            currentY += shelfH + gap;
+                            shelfH = 0;
+                        }
+
+                        for (let r = 0; r < b.rows; r++) {
+                            for (let c = 0; c < b.cols; c++) {
+                                if (r * b.cols + c >= b.slot.cellCount) break;
+                                
+                                const cellLeft = mL + currentX + c * (b.slot.cellWidth + gap);
+                                const cellTop = mT + currentY + r * (b.slot.cellHeight + gap);
+                                
+                                const pLeft = Math.round(cellLeft * scale);
+                                const pTop = Math.round(cellTop * scale);
+                                const pCellW = Math.max(1, Math.round(b.slot.cellWidth * scale));
+                                const pCellH = Math.max(1, Math.round(b.slot.cellHeight * scale));
+                                
+                                cellsHtml += `<div style="
+                                    position:absolute;
+                                    left:${pLeft}px; top:${pTop}px;
+                                    width:${pCellW}px; height:${pCellH}px;
+                                    background:#e5e7eb;
+                                    border:1px solid #9ca3af;
+                                    box-sizing:border-box;
+                                "></div>`;
+                            }
+                        }
+
+                        currentX += b.blockW + gap;
+                        shelfH = Math.max(shelfH, b.blockH);
+                    });
+
+                    return `<div style="position:relative; flex-shrink:0; width:${pDocW}px; height:${pDocH}px; background:#ffffff; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin: 6px auto 0;">${cellsHtml}</div>`;
                 }
 
                 const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
