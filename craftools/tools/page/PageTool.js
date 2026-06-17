@@ -368,6 +368,9 @@ export class PageTool {
         this.attachPageEvents(editor, clone);
         pagesWrapper.appendChild(clone);
         
+        // Notify history system
+        document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
+        
         // Scrollar automaticamente para a página nova de forma suave
         pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
     }

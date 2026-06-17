@@ -5,6 +5,8 @@ import { ImageTool } from "../tools/image/ImageTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 import { PdfExport } from "../utils/PdfExport.js";
+import { HistoryManager } from "../utils/HistoryManager.js";
+import { SessionManager } from "../utils/SessionManager.js";
 
 export class Craftools_Editor extends HTMLElement {
     constructor() { super(); }
@@ -31,6 +33,15 @@ export class Craftools_Editor extends HTMLElement {
                         <span class="material-symbols-outlined">menu</span>
                     </button>
                     <span style="font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 700; color: var(--text-primary);">CrafTools</span>
+                    <span class="topbar-sep" style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
+                    <div style="display: flex; align-items: center; gap: 2px; background: var(--bg-input); border-radius: 6px; padding: 2px;">
+                        <button class="craftools-icon-btn" title="Desfazer (Ctrl+Z)" id="undo-btn" disabled>
+                            <span class="material-symbols-outlined">undo</span>
+                        </button>
+                        <button class="craftools-icon-btn" title="Refazer (Ctrl+Y)" id="redo-btn" disabled>
+                            <span class="material-symbols-outlined">redo</span>
+                        </button>
+                    </div>
                     <span class="topbar-sep" style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
                     <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-input); border-radius: 6px; padding: 2px;">
                         <button class="craftools-icon-btn" title="${I18n.t('editor.zoomOut')}" id="zoom-out-btn">
@@ -74,6 +85,88 @@ export class Craftools_Editor extends HTMLElement {
 
         this.ctxBar = new CtxBar(this.querySelector('.craftools-app'));
         this.bindEvents();
+        this._initHistoryAndSession();
+    }
+
+    _initHistoryAndSession() {
+        const pagesWrapper = this.querySelector('#pages-wrapper');
+        const undoBtn = this.querySelector('#undo-btn');
+        const redoBtn = this.querySelector('#redo-btn');
+
+        // ── Undo / Redo buttons ────────────────────────────────────────────
+        const updateHistoryButtons = ({ canUndo, canRedo } = {}) => {
+            if (undoBtn) undoBtn.disabled = !HistoryManager.canUndo;
+            if (redoBtn) redoBtn.disabled = !HistoryManager.canRedo;
+        };
+
+        undoBtn?.addEventListener('click', () => {
+            HistoryManager.undo(pagesWrapper);
+            this._reattachAllPageEvents(pagesWrapper);
+        });
+
+        redoBtn?.addEventListener('click', () => {
+            HistoryManager.redo(pagesWrapper);
+            this._reattachAllPageEvents(pagesWrapper);
+        });
+
+        // Keep buttons in sync with history state
+        document.addEventListener('craftools-history-change', (e) => {
+            updateHistoryButtons(e.detail);
+        });
+
+        // ── Keyboard Shortcuts ─────────────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            const tag = document.activeElement?.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) return;
+
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                HistoryManager.undo(pagesWrapper);
+                this._reattachAllPageEvents(pagesWrapper);
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+                e.preventDefault();
+                HistoryManager.redo(pagesWrapper);
+                this._reattachAllPageEvents(pagesWrapper);
+            }
+        });
+
+        // ── Snapshot on element changes ────────────────────────────────────
+        const onAction = () => {
+            HistoryManager.snapshot(pagesWrapper);
+            SessionManager.markDirty();
+        };
+
+        // Listen for element changes (move, resize, rotate, style)
+        // Use a debounce to avoid flooding the history on drag operations
+        let actionDebounce = null;
+        this.addEventListener('craftools-element-change', () => {
+            clearTimeout(actionDebounce);
+            actionDebounce = setTimeout(onAction, 400);
+            SessionManager.markDirty();
+        });
+
+        // Immediate snapshot on delete and page add (discrete actions)
+        this.addEventListener('craftools-element-delete', () => onAction());
+        document.addEventListener('craftools-page-add', () => onAction());
+
+        // Take initial snapshot
+        setTimeout(() => HistoryManager.snapshot(pagesWrapper), 300);
+
+        // ── Start session ──────────────────────────────────────────────────
+        const mediaKey = window.craftoolsSize?.key || 'unknown';
+        SessionManager.startSession(mediaKey, window.craftoolsSize);
+    }
+
+    /** Re-attaches PageTool events to all pages after undo/redo restore */
+    _reattachAllPageEvents(pagesWrapper) {
+        if (!pagesWrapper) return;
+        pagesWrapper.querySelectorAll('.craftools-page').forEach(page => {
+            // Use a flag to avoid duplicate listeners on the same node
+            if (!page._craftoolsEventsAttached) {
+                PageTool.attachPageEvents(this, page);
+                page._craftoolsEventsAttached = true;
+            }
+        });
     }
 
     bindEvents() {
@@ -299,6 +392,17 @@ export class Craftools_Editor extends HTMLElement {
         // Initialize first page event
         const mainPage = this.querySelector('#main-page');
         PageTool.attachPageEvents(this, mainPage);
+
+        // Notify history of page add (from new page btn)
+        document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTimeout(() => {
+                    const pagesWrapper = this.querySelector('#pages-wrapper');
+                    if (pagesWrapper) HistoryManager.snapshot(pagesWrapper);
+                    SessionManager.markDirty();
+                }, 100);
+            });
+        });
 
         // ── Zoom ───────────────────────────────────────────────────────────
         let zoomLevel = 1.0;
