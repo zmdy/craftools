@@ -12,18 +12,26 @@
 - [X] Make the tool as a PWA
 - [X] In album mode, show a preview of the photo size and the number of photos on the page
 - [X] Implement comic strip mode
-- [ ] When loading fonts from the PC, they should be saved (via cache/cookies/storage)
-- [ ] In the album, allow users to choose a custom size (and change existing ones, saving to cache/cookies/storage), automatically calculating the best layout (landscape or portrait)
-- [ ] Remove landscape/portrait options from the size settings; the system will calculate automatically
+- [X] When loading fonts from the PC, they should be saved (via cache/cookies/storage)
+- [ ] Create a "clear pages" button especially for the album tool
 
 # v0.2
 - [ ] Improve the PropertiesPanel (add icons make it more organized)
 - [ ] Add borders and border radius to every element (images, titles, paragraphs)
 - [ ] Tools: Shapes, forms, papers, icons and emojis
 - [ ] Export to PNG (72, 96 and 300 dpi)
+- [ ] Allow albuns with different photo sizes in the same page
+- [ ] In the album, allow users to choose a custom size (and change existing ones, saving to cache/cookies/storage), automatically calculating the best layout (landscape or portrait)
+- [ ] Remove landscape/portrait options from the size settings; the system will calculate automatically
+- [ ] Create the option to repeat a text (or any tool) in album mode, making it repeat in the remaining cells
+- [ ] Implement animations (fadein)
 
 # v0.3
 - [ ] Export and import data as JSON
 - [ ] Implement the concept of “text variables”
 - [ ] Create calendars
 - [ ] Create diaries
+
+# v0.4
+- [ ] Create a tool for subscriptions, API
+- [ ] Create a tool for allowing users to send photos and editing them into styles (polaroid, minipolaroid, 7x5) and also including overlays and backgrounds; Integration via email to the main system

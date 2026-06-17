@@ -111,27 +111,62 @@ export class TextTool extends BaseTool {
         // Font dropdown
         const fontSelect = editorPanel.querySelector('#text-prop-font');
         const customFontInput = editorPanel.querySelector('#text-prop-custom-font');
-        
+
+        // Function to populate font select dropdown with standard and local fonts
+        const populateFontSelect = (selectedFont) => {
+            fontSelect.innerHTML = '';
+            
+            FONTS.forEach(font => {
+                const option = document.createElement('option');
+                option.value = font;
+                option.textContent = font;
+                option.style.fontFamily = `'${font}', sans-serif`;
+                if(font === selectedFont) option.selected = true;
+                fontSelect.appendChild(option);
+            });
+
+            // Load saved local fonts from localStorage
+            let savedLocalFonts = [];
+            try {
+                const stored = localStorage.getItem('craftools-local-fonts');
+                if (stored) {
+                    savedLocalFonts = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Erro ao carregar fontes salvas", e);
+            }
+
+            if (Array.isArray(savedLocalFonts)) {
+                savedLocalFonts.forEach(font => {
+                    if (!FONTS.includes(font) && ![...fontSelect.options].some(opt => opt.value === font)) {
+                        const option = document.createElement('option');
+                        option.value = font;
+                        option.textContent = font;
+                        option.style.fontFamily = `'${font}', sans-serif`;
+                        if(font === selectedFont) option.selected = true;
+                        fontSelect.appendChild(option);
+                    }
+                });
+            }
+
+            // Adiciona a fonte atual se for externa e não estiver na lista
+            if (selectedFont && !FONTS.includes(selectedFont) && !savedLocalFonts.includes(selectedFont)) {
+                const option = document.createElement('option');
+                option.value = selectedFont;
+                option.textContent = selectedFont;
+                option.style.fontFamily = `'${selectedFont}', sans-serif`;
+                option.selected = true;
+                fontSelect.appendChild(option);
+            }
+        };
+
         // Carrega as fontes do Google Fonts para a página
         loadGoogleFonts(FONTS);
         
-        FONTS.forEach(font => {
-            const option = document.createElement('option');
-            option.value = font;
-            option.textContent = font;
-            option.style.fontFamily = `'${font}', sans-serif`;
-            if(font === currentFont) option.selected = true;
-            fontSelect.appendChild(option);
-        });
+        // Inicializa o dropdown
+        populateFontSelect(currentFont);
 
-        // Adiciona a fonte atual se for externa e não estiver na lista padrão
         if (currentFont && !FONTS.includes(currentFont)) {
-            const option = document.createElement('option');
-            option.value = currentFont;
-            option.textContent = currentFont;
-            option.style.fontFamily = `'${currentFont}', sans-serif`;
-            option.selected = true;
-            fontSelect.appendChild(option);
             customFontInput.value = currentFont;
         }
 
@@ -197,16 +232,15 @@ export class TextTool extends BaseTool {
                 // Extrai famílias únicas
                 const families = [...new Set(localFonts.map(f => f.family))].sort();
                 
-                // Adiciona famílias ao select
-                families.forEach(font => {
-                    if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === font.toLowerCase())) {
-                        const option = document.createElement('option');
-                        option.value = font;
-                        option.textContent = font;
-                        option.style.fontFamily = `'${font}', sans-serif`;
-                        fontSelect.appendChild(option);
-                    }
-                });
+                // Salva no localStorage sobrescrevendo a lista anterior
+                try {
+                    localStorage.setItem('craftools-local-fonts', JSON.stringify(families));
+                } catch (storeErr) {
+                    console.error("Erro ao salvar fontes no localStorage", storeErr);
+                }
+
+                // Atualiza o select com as novas fontes mantendo a fonte atual selecionada
+                populateFontSelect(fontSelect.value);
                 
                 alert(`${families.length} fontes locais carregadas com sucesso na lista!`);
                 localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> PC';
