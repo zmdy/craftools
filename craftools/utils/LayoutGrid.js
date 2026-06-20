@@ -168,7 +168,7 @@ export class Craftools_LayoutGrid {
 
     // ── Promo Kit rendering (Smart Bin Packing) ────────────────────────
     _renderPromoKit(grid, items, startIdx, perPage, unit, availableW, availableH, renderCellContentCallback) {
-        const gap = this.template.cellGap || 0;
+        const gap = parseFloat(this.template.cellGap) || 0;
         let currentX = 0;
         let currentY = 0;
         let shelfH = 0;
@@ -272,21 +272,48 @@ export class Craftools_LayoutGrid {
                         // Swap them
                         draggedEls.forEach(el => {
                             if (el.tagName.toLowerCase() === 'craftools-element') {
-                                el.setAttribute('w', targetW + unit);
-                                el.setAttribute('h', targetH + unit);
-                                // For promo kits we set padding offset (x, y) to 0 or adjust based on new slot.
-                                // We can just rely on AlbumTool setting x,y = pl, pt but since they are absolute
-                                // inside a relative container, we need to know the padding of the target.
-                                // Simple fix: use 0,0 and let the container's padding handle it (AlbumTool uses padding on contentLayer for normal).
-                                // Actually, AlbumTool places them at pl, pt. Let's just adjust width/height for now.
+                                const targetPadT = parseFloat(targetContentLayer.style.paddingTop) || 0;
+                                const targetPadR = parseFloat(targetContentLayer.style.paddingRight) || 0;
+                                const targetPadB = parseFloat(targetContentLayer.style.paddingBottom) || 0;
+                                const targetPadL = parseFloat(targetContentLayer.style.paddingLeft) || 0;
+                                const innerTargetW = targetW - targetPadL - targetPadR;
+                                const innerTargetH = targetH - targetPadT - targetPadB;
+
+                                el.pw = innerTargetW;
+                                el.ph = innerTargetH;
+                                el.px = targetPadL;
+                                el.py = targetPadT;
+                                if (typeof el._applyTransform === 'function') el._applyTransform();
+
+                                el.setAttribute('w', innerTargetW + unit);
+                                el.setAttribute('h', innerTargetH + unit);
+                                el.setAttribute('x', targetPadL + unit);
+                                el.setAttribute('y', targetPadT + unit);
+                                el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
                             }
                             targetContentLayer.appendChild(el);
                         });
                         
                         targetEls.forEach(el => {
                             if (el.tagName.toLowerCase() === 'craftools-element') {
-                                el.setAttribute('w', draggedW + unit);
-                                el.setAttribute('h', draggedH + unit);
+                                const draggedPadT = parseFloat(draggedContentLayer.style.paddingTop) || 0;
+                                const draggedPadR = parseFloat(draggedContentLayer.style.paddingRight) || 0;
+                                const draggedPadB = parseFloat(draggedContentLayer.style.paddingBottom) || 0;
+                                const draggedPadL = parseFloat(draggedContentLayer.style.paddingLeft) || 0;
+                                const innerDraggedW = draggedW - draggedPadL - draggedPadR;
+                                const innerDraggedH = draggedH - draggedPadT - draggedPadB;
+
+                                el.pw = innerDraggedW;
+                                el.ph = innerDraggedH;
+                                el.px = draggedPadL;
+                                el.py = draggedPadT;
+                                if (typeof el._applyTransform === 'function') el._applyTransform();
+
+                                el.setAttribute('w', innerDraggedW + unit);
+                                el.setAttribute('h', innerDraggedH + unit);
+                                el.setAttribute('x', draggedPadL + unit);
+                                el.setAttribute('y', draggedPadT + unit);
+                                el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
                             }
                             draggedContentLayer.appendChild(el);
                         });
