@@ -1,0 +1,109 @@
+/**
+ * ApiDataLoader.js
+ *
+ * Carrega GridSizes e AlbumTemplates da craftools_api (/v1/).
+ * Usa os dados locais (GridSizes.js) como fallback se a API estiver
+ * indisponível ou se a URL base não estiver configurada.
+ *
+ * Configuração (definir no index.html, antes dos scripts):
+ *   window.CRAFTOOLS_CONFIG = { apiBase: 'http://127.0.0.1/craftools_api' };
+ *
+ * Sem token — o tier "free" é devolvido automaticamente pela API quando
+ * nenhum token é enviado. Tokens de usuários premium serão adicionados
+ * futuramente via autenticação no próprio app.
+ */
+
+import { GridSizes as GridSizesFallback } from './GridSizes.js';
+
+// Cache em memória para não re-bater a API a cada abertura do painel
+const _cache = {};
+
+/**
+ * Retorna a URL base da API configurada no index.html, ou null se ausente.
+ * @returns {string|null}
+ */
+function getApiBase() {
+    return (window.CRAFTOOLS_CONFIG && window.CRAFTOOLS_CONFIG.apiBase)
+        ? window.CRAFTOOLS_CONFIG.apiBase.replace(/\/$/, '')
+        : null;
+}
+
+/**
+ * Busca um recurso da /v1/ com timeout de 4 segundos.
+ * Retorna null em caso de qualquer falha.
+ * @param {string} resource - ex: 'grid-sizes', 'album-templates'
+ * @returns {Promise<any[]|null>}
+ */
+async function fetchResource(resource) {
+    const base = getApiBase();
+    if (!base) return null;
+
+    const url = `${base}/v1/?resource=${resource}`;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' },
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (json.status !== 'success' || !Array.isArray(json.data)) return null;
+        return json.data;
+    } catch (_) {
+        return null;
+    }
+}
+
+/**
+ * Carrega os tamanhos de grid.
+ * Tenta a API primeiro; se falhar, usa GridSizes.js local como fallback.
+ * @returns {Promise<object[]>}
+ */
+export async function loadGridSizes() {
+    if (_cache.gridSizes) return _cache.gridSizes;
+
+    const apiData = await fetchResource('grid-sizes');
+    if (apiData && apiData.length > 0) {
+        _cache.gridSizes = apiData;
+        console.info('[ApiDataLoader] GridSizes carregados da API (%d itens)', apiData.length);
+        return apiData;
+    }
+
+    console.info('[ApiDataLoader] API indisponível — usando GridSizes.js local como fallback.');
+    _cache.gridSizes = GridSizesFallback;
+    return GridSizesFallback;
+}
+
+/**
+ * Carrega os templates de álbum.
+ * Retorna array vazio se a API falhar (não há fallback local para templates).
+ * @returns {Promise<object[]>}
+ */
+export async function loadAlbumTemplates() {
+    if (_cache.albumTemplates) return _cache.albumTemplates;
+
+    const apiData = await fetchResource('album-templates');
+    if (apiData && apiData.length > 0) {
+        _cache.albumTemplates = apiData;
+        console.info('[ApiDataLoader] AlbumTemplates carregados da API (%d itens)', apiData.length);
+        return apiData;
+    }
+
+    console.info('[ApiDataLoader] AlbumTemplates: API indisponível, retornando vazio.');
+    _cache.albumTemplates = [];
+    return [];
+}
+
+/**
+ * Invalida o cache forçando nova busca na próxima chamada.
+ * Útil para forçar refresh após login/upgrade de plano.
+ */
+export function invalidateApiDataCache() {
+    delete _cache.gridSizes;
+    delete _cache.albumTemplates;
+}

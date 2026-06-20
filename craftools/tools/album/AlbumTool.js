@@ -4,6 +4,7 @@ import { ImageFilters } from "../image/ImageFilters.js";
 import { I18n } from "../../settings/Translations.js";
 import { Craftools_LayoutGrid } from "../../utils/LayoutGrid.js";
 import { GridSizes } from "../../utils/GridSizes.js";
+import { loadGridSizes } from "../../utils/ApiDataLoader.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
 import { PageTool } from "../page/PageTool.js";
 import { BaseTool } from "../BaseTool.js";
@@ -11,7 +12,7 @@ import { CellPanel } from "./CellPanel.js";
 import "./AlbumTool_Translations.js";
 
 export class AlbumTool extends BaseTool {
-    static setup(editor, pageEl) {
+    static async setup(editor, pageEl) {
         const rightPanel = document.getElementById('right-panel');
         const panelTitle = document.getElementById('panel-title');
         const panelBody = document.getElementById('panel-body');
@@ -67,8 +68,10 @@ export class AlbumTool extends BaseTool {
         };
 
         // ── Panel renderer ─────────────────────────────────────────────────
+        // GridSizes vêm da API (com fallback para o arquivo local GridSizes.js)
+        const gridSizes = await loadGridSizes();
         const renderPanel = () => {
-            const matchingTemplates = GridSizes.filter(t => selectedSize ? t.sizes.includes(selectedSize.size) : false);
+            const matchingTemplates = gridSizes.filter(t => selectedSize ? t.sizes.includes(selectedSize.size) : false);
 
             const sizeHtml = availableSizes.map((s, idx) =>
                 `<button class="craftools-pill size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${idx}">${s.name}</button>`

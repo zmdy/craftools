@@ -781,6 +781,17 @@
         </div>
     </div>
 
+    <script>
+        /**
+         * CRAFTOOLS_CONFIG — configuração global do app.
+         * Altere apiBase para apontar para o servidor de produção quando for publicar.
+         * O token NÃO é configurado aqui; o acesso sem token retorna conteúdo Free.
+         * Tokens de usuários premium serão adicionados futuramente via autenticação.
+         */
+        window.CRAFTOOLS_CONFIG = {
+            apiBase: 'http://127.0.0.1/craftools_api',
+        };
+    </script>
     <script src="./html/dist/assets/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

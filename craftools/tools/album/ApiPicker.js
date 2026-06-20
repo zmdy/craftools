@@ -1,24 +1,29 @@
 /**
  * ApiPicker.js
  * Modal para selecionar imagens vindas da API de assets do CrafTools.
- * 
- * API Base: http://127.0.0.1/craftools_api/api/
- * Token: passado no construtor
+ *
+ * URL base configurada via window.CRAFTOOLS_CONFIG.apiBase (definido no index.html).
+ * Nenhum token é enviado do cliente — o acesso sem token retorna conteúdo Free.
+ * Tokens de planos premium serão injetados futuramente via autenticação no app.
  */
 
-const API_BASE    = 'http://127.0.0.1/craftools_api';
-const API_TOKEN   = '8037e1202eca7f0bdd48bd4e8e5f24e711783eeabcf7e53af3be7b6da56570f8';
-const API_ENDPOINT = `${API_BASE}/api/?token=${API_TOKEN}`;
+/** @returns {string} URL base da API sem barra final */
+function getApiBase() {
+    return (window.CRAFTOOLS_CONFIG && window.CRAFTOOLS_CONFIG.apiBase)
+        ? window.CRAFTOOLS_CONFIG.apiBase.replace(/\/$/, '')
+        : '';
+}
 
 export class ApiPicker {
     /**
      * Abre o modal da API e resolve com a URL da imagem escolhida.
-     * @param {string} [route='all'] - Rota da API ('all' | 'backgrounds' | 'overlays')
+     * @param {string} [resource='assets'] - Recurso da /v1/: 'assets' | 'backgrounds' | 'overlays'
      * @returns {Promise<string|null>} URL absoluta da imagem ou null se cancelado
      */
-    static open(route = 'all') {
+    static open(resource = 'assets') {
         return new Promise((resolve) => {
-            const apiEndpoint = `${API_BASE}/api/?token=${API_TOKEN}&route=${route}`;
+            const base = getApiBase();
+            const apiEndpoint = base ? `${base}/v1/?resource=${resource}` : null;
             // Cria overlay de fundo
             const backdrop = document.createElement('div');
             backdrop.id = 'api-picker-backdrop';
@@ -196,19 +201,26 @@ export class ApiPicker {
             let allCollections = [];
             const body = modal.querySelector('#api-picker-body');
 
-            fetch(apiEndpoint)
-                .then(r => r.json())
-                .then(json => {
-                    if (json.status !== 'success') throw new Error(json.message || 'Erro na API');
-                    allCollections = json.data || [];
-                    renderCollections(allCollections);
-                })
-                .catch(err => {
-                    body.innerHTML = `<div class="api-error">
-                        <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:8px;">wifi_off</span>
-                        Erro ao conectar à API:<br><small>${err.message}</small>
-                    </div>`;
-                });
+            if (!apiEndpoint) {
+                body.innerHTML = `<div class="api-error">
+                    <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:8px;">settings</span>
+                    API não configurada.<br><small>Defina <code>window.CRAFTOOLS_CONFIG.apiBase</code> no index.html.</small>
+                </div>`;
+            } else {
+                fetch(apiEndpoint)
+                    .then(r => r.json())
+                    .then(json => {
+                        if (json.status !== 'success') throw new Error(json.message || 'Erro na API');
+                        allCollections = json.data || [];
+                        renderCollections(allCollections);
+                    })
+                    .catch(err => {
+                        body.innerHTML = `<div class="api-error">
+                            <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:8px;">wifi_off</span>
+                            Erro ao conectar à API:<br><small>${err.message}</small>
+                        </div>`;
+                    });
+            }
 
             // ── Renderizar coleções ───────────────────────────────────────
             const renderCollections = (collections) => {
@@ -250,15 +262,18 @@ export class ApiPicker {
                         </div>
                         <div class="api-collection-body">
                             <div class="api-img-grid" id="grid-${col.id}">
-                                ${col.images.map(img => `
-                                    <div class="api-img-thumb" data-url="${API_BASE}${img.api_url}" data-col-tier="${col.tier}" data-img-tier="${img.tier}" title="Clique para usar">
+                                ${col.images.map(img => {
+                                    // api_url pode ser relativa (v1/assets/...) ou absoluta (http://...)
+                                    const imgUrl = img.api_url.startsWith('http') ? img.api_url : `${base}/${img.api_url}`;
+                                    return `
+                                    <div class="api-img-thumb" data-url="${imgUrl}" data-col-tier="${col.tier}" data-img-tier="${img.tier}" title="Clique para usar">
                                         <div class="thumb-loading"><span class="material-symbols-outlined" style="font-size:18px;">image</span></div>
-                                        <img src="${API_BASE}${img.api_url}" loading="lazy" 
+                                        <img src="${imgUrl}" loading="lazy"
                                              onload="this.previousElementSibling.style.display='none'"
                                              onerror="this.parentElement.innerHTML='<div class=thumb-loading style=color:#ef4444>!</div>'">
                                         ${img.tier === 'premium' ? '<span class="api-premium-badge">PRO</span>' : ''}
-                                    </div>
-                                `).join('')}
+                                    </div>`;
+                                }).join('')}
                             </div>
                         </div>
                     `;
