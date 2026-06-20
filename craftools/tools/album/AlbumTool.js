@@ -177,12 +177,13 @@ export class AlbumTool extends BaseTool {
                     let shelfH = 0;
 
                     const blocks = t.cellSlots.map((slot) => {
-                        const Kmax = Math.floor((availableW + gap) / (slot.cellWidth + gap)) || 1;
+                        const slotGap = slot.cellGap !== undefined ? parseFloat(slot.cellGap) : gap;
+                        const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
                         const cols = Math.min(slot.cellCount, Kmax);
                         const rows = Math.ceil(slot.cellCount / cols);
-                        const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * gap : 0);
-                        const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * gap : 0);
-                        return { slot, cols, rows, blockW, blockH };
+                        const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * slotGap : 0);
+                        const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * slotGap : 0);
+                        return { slot, cols, rows, blockW, blockH, slotGap };
                     });
 
                     let cellsHtml = '';
@@ -198,8 +199,8 @@ export class AlbumTool extends BaseTool {
                             for (let c = 0; c < b.cols; c++) {
                                 if (r * b.cols + c >= b.slot.cellCount) break;
                                 
-                                const cellLeft = mL + currentX + c * (b.slot.cellWidth + gap);
-                                const cellTop = mT + currentY + r * (b.slot.cellHeight + gap);
+                                const cellLeft = mL + currentX + c * (b.slot.cellWidth + b.slotGap);
+                                const cellTop = mT + currentY + r * (b.slot.cellHeight + b.slotGap);
                                 
                                 const padParts = b.slot.cellPadding.split(' ').map(v => parseFloat(v));
                                 const [padT, padR, padB, padL] = padParts;

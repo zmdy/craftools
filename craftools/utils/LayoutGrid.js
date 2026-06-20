@@ -175,12 +175,13 @@ export class Craftools_LayoutGrid {
 
         // 1. Generate blocks for each slot
         const blocks = this.template.cellSlots.map((slot) => {
-            const Kmax = Math.floor((availableW + gap) / (slot.cellWidth + gap)) || 1;
+            const slotGap = slot.cellGap !== undefined ? parseFloat(slot.cellGap) : gap;
+            const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
             const cols = Math.min(slot.cellCount, Kmax);
             const rows = Math.ceil(slot.cellCount / cols);
-            const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * gap : 0);
-            const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * gap : 0);
-            return { slot, cols, rows, blockW, blockH };
+            const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * slotGap : 0);
+            const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * slotGap : 0);
+            return { slot, cols, rows, blockW, blockH, slotGap };
         });
 
         // 2. Shelf pack blocks onto page
@@ -213,7 +214,7 @@ export class Craftools_LayoutGrid {
                 display: grid;
                 grid-template-columns: repeat(${b.cols}, ${b.slot.cellWidth}${unit});
                 grid-auto-rows: ${b.slot.cellHeight}${unit};
-                gap: ${gap}${unit};
+                gap: ${b.slotGap}${unit};
             `;
             grid.appendChild(groupDiv);
 

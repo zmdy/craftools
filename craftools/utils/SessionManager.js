@@ -31,6 +31,7 @@ class _SessionManager {
         this._mediaKey = mediaKey;
         this._sizeConfig = sizeConfig;
         this._dirty = false;
+        this._sessionActive = true;
 
         // Inicia autosave
         this._startAutosave();
@@ -76,6 +77,7 @@ class _SessionManager {
     clearSaved() {
         localStorage.removeItem(SESSION_KEY);
         this._dirty = false;
+        this._sessionActive = false;
     }
 
     /**
@@ -138,7 +140,7 @@ class _SessionManager {
         }
 
         this._beforeunloadHandler = (e) => {
-            if (!this._dirty) return;
+            if (!this._sessionActive && !this._dirty) return;
             // Salva a sessão antes de fechar (para o caso de fechamento brusco)
             this.saveNow();
             // Exibe alerta nativo do navegador
@@ -163,6 +165,7 @@ class _SessionManager {
             this._beforeunloadHandler = null;
         }
         this._dirty = false;
+        this._sessionActive = false;
     }
 }
 
