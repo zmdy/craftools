@@ -630,6 +630,13 @@ export class AlbumTool extends BaseTool {
                     if(panelLogo) panelLogo.classList.remove('d-none');
                     if(panelTitle) panelTitle.textContent = "Technology for Creativity";
                     if(rightPanel) rightPanel.classList.remove('panel-open');
+                    // Mobile: fecha o overlay ao processar o álbum
+                    if(window.innerWidth <= 768) {
+                        const sideOverlay = document.querySelector('.craftools-sidebar-overlay');
+                        if(sideOverlay) sideOverlay.classList.remove('visible');
+                        const menuIcon2 = document.getElementById('pwa-menu-icon');
+                        if(menuIcon2) menuIcon2.textContent = 'menu';
+                    }
                 });
             }
 
@@ -662,10 +669,17 @@ export class AlbumTool extends BaseTool {
         if(menuIcon && menuIcon.textContent !== 'close') {
             menuIcon.textContent = 'close';
         }
+        // Mobile: mostra o overlay para que tocar fora feche o painel
+        if(window.innerWidth <= 768) {
+            const sideOverlay = document.querySelector('.craftools-sidebar-overlay');
+            if(sideOverlay) sideOverlay.classList.add('visible');
+        }
+        }
     }
 
     // ── Helpers: build a locked ImageTool element for a grid cell ────────────
     static _buildCellElement(editor, src, pl, pt, cw, ch, unit = 'px') {
+
         const imgEl = ImageTool.createElement('imagem', editor);
         imgEl.setAttribute('x', pl + unit);
         imgEl.setAttribute('y', pt + unit);

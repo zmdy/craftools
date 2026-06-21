@@ -199,6 +199,17 @@ export class Craftools_Editor extends HTMLElement {
             if(menuIcon && menuIcon.textContent !== 'menu') {
                 menuIcon.textContent = 'menu';
             }
+            // Também reseta o estado interno do painel (ex: painel de propriedades aberto)
+            const defaultMenu = document.getElementById('panel-default-menu');
+            const panelBody  = document.getElementById('panel-body');
+            const closePanel = document.getElementById('close-panel');
+            const panelLogo  = document.getElementById('panel-logo');
+            const panelTitle = document.getElementById('panel-title');
+            if(defaultMenu) defaultMenu.classList.remove('d-none');
+            if(panelBody)   panelBody.classList.add('d-none');
+            if(closePanel)  closePanel.classList.add('d-none');
+            if(panelLogo)   panelLogo.classList.remove('d-none');
+            if(panelTitle)  panelTitle.textContent = 'Technology for Creativity';
         };
 
         mobileMenuBtn.addEventListener('click', openSidebar);
@@ -226,6 +237,8 @@ export class Craftools_Editor extends HTMLElement {
                 if(menuIcon && menuIcon.textContent !== 'close') {
                     menuIcon.textContent = 'close';
                 }
+                // No mobile, mostra o overlay para que tocar fora feche o painel
+                if(isMobile()) overlay.classList.add('visible');
             };
 
             if (toolType === 'titulo' || toolType === 'paragrafo') {
@@ -284,6 +297,8 @@ export class Craftools_Editor extends HTMLElement {
             if(menuIcon && menuIcon.textContent !== 'close') {
                 menuIcon.textContent = 'close';
             }
+            // No mobile, mostra o overlay para que tocar fora feche o painel
+            if(isMobile()) overlay.classList.add('visible');
         };
 
         const closePanelMenu = () => {
@@ -295,6 +310,13 @@ export class Craftools_Editor extends HTMLElement {
             document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
             this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
             this.activePage = null;
+            // No mobile, fecha completamente o painel e esconde o overlay
+            if(isMobile()) {
+                if(rightPanel) rightPanel.classList.remove('panel-open');
+                overlay.classList.remove('visible');
+                const menuIcon = document.getElementById('pwa-menu-icon');
+                if(menuIcon) menuIcon.textContent = 'menu';
+            }
         };
 
         // Desktop: drag & drop
