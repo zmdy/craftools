@@ -1,4 +1,5 @@
 import { I18n } from "../../settings/Translations.js";
+import { CommonProperties } from "../../utils/CommonProperties.js";
 import "./PageTool_Translations.js";
 
 export class PageTool {
@@ -162,7 +163,7 @@ export class PageTool {
                     ? window.craftoolsApp.activeMedia.sizes.map((s, i) => `<button class="craftools-pill preset-btn" data-index="${i}">${s.name}</button>`).join('')
                     : `<span style="font-size:11px;color:var(--text-muted)">${I18n.t('pageTool.noPresets')}</span>`;
 
-                const currentColor = pageEl.style.backgroundColor || '#ffffff';
+                const currentColor = CommonProperties._rgbToHex(pageEl.style.backgroundColor || '#ffffff');
 
                 if (panelBody) {
                     panelBody.innerHTML = `

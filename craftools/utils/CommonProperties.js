@@ -206,7 +206,11 @@ export class CommonProperties {
     }
 
     static _rgbToHex(rgb) {
-        if (!rgb || !rgb.startsWith('rgb')) return rgb;
+        if (!rgb) return '#000000';
+        if (rgb === 'white') return '#ffffff';
+        if (rgb === 'black') return '#000000';
+        if (rgb === 'transparent') return '#ffffff'; // Fallback for color inputs
+        if (!rgb.startsWith('rgb')) return rgb;
         const parts = rgb.match(/\d+/g);
         if (!parts) return rgb;
         const hex = (x) => ("0" + parseInt(x).toString(16)).slice(-2);

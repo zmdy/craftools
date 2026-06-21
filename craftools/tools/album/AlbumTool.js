@@ -674,7 +674,6 @@ export class AlbumTool extends BaseTool {
             const sideOverlay = document.querySelector('.craftools-sidebar-overlay');
             if(sideOverlay) sideOverlay.classList.add('visible');
         }
-        }
     }
 
     // ── Helpers: build a locked ImageTool element for a grid cell ────────────

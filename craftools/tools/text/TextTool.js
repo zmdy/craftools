@@ -1,5 +1,6 @@
 import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
+import { CommonProperties } from "../../utils/CommonProperties.js";
 import "./TextTool_Translations.js";
 
 const FONTS = [
@@ -49,7 +50,7 @@ export class TextTool extends BaseTool {
         };
 
         // Current properties extracted from DOM style
-        const currentColor = textElement.style.color || '#1a1a1a';
+        const currentColor = CommonProperties._rgbToHex(textElement.style.color || '#1a1a1a');
         let currentFont = textElement.style.fontFamily || 'DM Sans';
         currentFont = currentFont.replace(/['"]/g, '').split(',')[0].trim();
         const currentSize = parseFloat(textElement.style.fontSize) || 16;
