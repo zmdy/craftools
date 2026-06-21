@@ -7,6 +7,7 @@ import { I18n } from "../settings/Translations.js";
 import { PdfExport } from "../utils/PdfExport.js";
 import { HistoryManager } from "../utils/HistoryManager.js";
 import { SessionManager } from "../utils/SessionManager.js";
+import { MobileToolbar } from "../utils/MobileToolbar.js";
 
 export class Craftools_Editor extends HTMLElement {
     constructor() { super(); }
@@ -171,6 +172,8 @@ export class Craftools_Editor extends HTMLElement {
 
     bindEvents() {
         const isMobile = () => window.innerWidth <= 768;
+        
+        MobileToolbar.init(this);
 
         // ── Mobile menu toggle ─────────────────────────────────────────────
         const mobileMenuBtn = this.querySelector('#mobile-menu-btn');
@@ -185,7 +188,10 @@ export class Craftools_Editor extends HTMLElement {
         });
 
         const openSidebar = () => {
-            if(sidebar) sidebar.classList.add('panel-open');
+            if(sidebar) {
+                sidebar.classList.add('panel-open');
+                if (isMobile()) sidebar.classList.add('mobile-modal-mode');
+            }
             overlay.classList.add('visible');
             const menuIcon = document.getElementById('pwa-menu-icon');
             if(menuIcon && menuIcon.textContent !== 'close') {
@@ -193,7 +199,10 @@ export class Craftools_Editor extends HTMLElement {
             }
         };
         const closeSidebar = () => {
-            if(sidebar) sidebar.classList.remove('panel-open');
+            if(sidebar) {
+                sidebar.classList.remove('panel-open');
+                sidebar.classList.remove('mobile-modal-mode');
+            }
             overlay.classList.remove('visible');
             const menuIcon = document.getElementById('pwa-menu-icon');
             if(menuIcon && menuIcon.textContent !== 'menu') {
@@ -228,6 +237,10 @@ export class Craftools_Editor extends HTMLElement {
             const panelLogo = document.getElementById('panel-logo');
             
             const openPanelMenu = () => {
+                if (isMobile()) {
+                    MobileToolbar.showElementMode(el, toolType);
+                    return;
+                }
                 if(defaultMenu) defaultMenu.classList.add('d-none');
                 if(panelBody) panelBody.classList.remove('d-none');
                 if(closePanel) closePanel.classList.remove('d-none');
@@ -237,8 +250,6 @@ export class Craftools_Editor extends HTMLElement {
                 if(menuIcon && menuIcon.textContent !== 'close') {
                     menuIcon.textContent = 'close';
                 }
-                // No mobile, mostra o overlay para que tocar fora feche o painel
-                if(isMobile()) overlay.classList.add('visible');
             };
 
             if (toolType === 'titulo' || toolType === 'paragrafo') {
@@ -262,6 +273,7 @@ export class Craftools_Editor extends HTMLElement {
 
         this.addEventListener('craftools-element-deselect', (e) => {
             this.ctxBar.hide();
+            if (isMobile()) MobileToolbar.showToolMode();
         });
 
         // ── Language Select ────────────────────────────────────────────────
@@ -292,13 +304,14 @@ export class Craftools_Editor extends HTMLElement {
             if(panelBody) panelBody.classList.remove('d-none');
             if(closePanel) closePanel.classList.remove('d-none');
             if(panelLogo) panelLogo.classList.add('d-none');
-            if(rightPanel) rightPanel.classList.add('panel-open');
+            if(rightPanel) {
+                rightPanel.classList.add('panel-open');
+                if (isMobile()) rightPanel.classList.add('mobile-modal-mode');
+            }
             const menuIcon = document.getElementById('pwa-menu-icon');
             if(menuIcon && menuIcon.textContent !== 'close') {
                 menuIcon.textContent = 'close';
             }
-            // No mobile, mostra o overlay para que tocar fora feche o painel
-            if(isMobile()) overlay.classList.add('visible');
         };
 
         const closePanelMenu = () => {
@@ -307,16 +320,11 @@ export class Craftools_Editor extends HTMLElement {
             if(closePanel) closePanel.classList.add('d-none');
             if(panelLogo) panelLogo.classList.remove('d-none');
             if(panelTitle) panelTitle.textContent = "Technology for Creativity";
+            if(rightPanel) rightPanel.classList.remove('mobile-modal-mode');
             document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
             this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
             this.activePage = null;
-            // No mobile, fecha completamente o painel e esconde o overlay
-            if(isMobile()) {
-                if(rightPanel) rightPanel.classList.remove('panel-open');
-                overlay.classList.remove('visible');
-                const menuIcon = document.getElementById('pwa-menu-icon');
-                if(menuIcon) menuIcon.textContent = 'menu';
-            }
+            if (isMobile()) MobileToolbar.showToolMode();
         };
 
         // Desktop: drag & drop
