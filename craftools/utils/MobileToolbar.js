@@ -378,18 +378,57 @@ export class MobileToolbar {
     static _renderTextFont(container, el, textEl) {
         if (!textEl) return;
         const fonts = ['DM Sans','DM Serif Display','DM Mono','Open Sans','Pacifico','Lobster','Georgia','Arial','Times New Roman','Courier New','Impact','Parisienne','Dancing Script','Quicksand'];
+        
+        let savedLocalFonts = [];
+        try {
+            const stored = localStorage.getItem('craftools-local-fonts');
+            if (stored) savedLocalFonts = JSON.parse(stored);
+        } catch (e) {}
+        
+        if (Array.isArray(savedLocalFonts)) {
+            savedLocalFonts.forEach(font => {
+                if (!fonts.includes(font)) fonts.push(font);
+            });
+        }
+
         const current = (textEl.style.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
+        if (current && !fonts.includes(current)) fonts.push(current);
 
         container.innerHTML = `
             <div class="mmp-section">
-                <select class="mmp-select" id="mmp-font">
+                <select class="mmp-select" id="mmp-font" style="margin-bottom:12px;">
                     ${fonts.map(f => `<option value="${f}" ${f===current?'selected':''} style="font-family:'${f}',sans-serif">${f}</option>`).join('')}
                 </select>
+                <label style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:-4px;">Adicionar Fonte Customizada</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="mmp-custom-font" class="mmp-input" placeholder="Ex: Roboto" value="">
+                    <button class="mmp-full-btn" id="mmp-add-font" style="width:auto; padding:8px 16px;">Carregar</button>
+                </div>
             </div>
         `;
         container.querySelector('#mmp-font').onchange = e => {
             textEl.style.fontFamily = `'${e.target.value}', sans-serif`;
             CommonProperties._triggerChange(el);
+            container.querySelector('#mmp-custom-font').value = '';
+        };
+        container.querySelector('#mmp-add-font').onclick = () => {
+            const val = container.querySelector('#mmp-custom-font').value.trim();
+            if(!val) return;
+            textEl.style.fontFamily = `'${val}', sans-serif`;
+            CommonProperties._triggerChange(el);
+            
+            if(!fonts.includes(val)) {
+                savedLocalFonts.push(val);
+                localStorage.setItem('craftools-local-fonts', JSON.stringify(savedLocalFonts));
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                opt.selected = true;
+                container.querySelector('#mmp-font').appendChild(opt);
+                fonts.push(val);
+            } else {
+                container.querySelector('#mmp-font').value = val;
+            }
         };
     }
 

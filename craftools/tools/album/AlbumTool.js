@@ -499,6 +499,12 @@ export class AlbumTool extends BaseTool {
                         ${!canGenerate ? 'disabled' : ''}>
                         <span class="material-symbols-outlined">dynamic_feed</span> ${existingGrid ? 'Gerar Novamente' : 'Gerar Álbum'}
                     </button>
+                    ${existingGrid ? `
+                    <button class="craftools-topbtn" id="album-clear-btn"
+                        style="width: 100%; justify-content: center; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 4px;">
+                        <span class="material-symbols-outlined">delete</span> Apagar Álbum
+                    </button>
+                    ` : ''}
                 </div>
             `;
 
@@ -612,6 +618,19 @@ export class AlbumTool extends BaseTool {
                 });
             }
 
+            // ── Bind: Clear Album ──────────────────────────────────────────
+            const albumClearBtn = panelBody.querySelector('#album-clear-btn');
+            if (albumClearBtn) {
+                albumClearBtn.addEventListener('click', () => {
+                    const grid = pageEl.querySelector('.craftools-grid-container');
+                    if (grid) grid.remove();
+                    editor.querySelectorAll('.craftools-element').forEach(el => {
+                        if (el.deselect) el.deselect();
+                    });
+                    renderPanel();
+                });
+            }
+
             // ── Bind: Generate ─────────────────────────────────────────────
             const generateBtn = panelBody.querySelector('#album-generate-btn');
             if (generateBtn) {
@@ -629,7 +648,10 @@ export class AlbumTool extends BaseTool {
                     if(closePanel) closePanel.classList.add('d-none');
                     if(panelLogo) panelLogo.classList.remove('d-none');
                     if(panelTitle) panelTitle.textContent = "Technology for Creativity";
-                    if(rightPanel) rightPanel.classList.remove('panel-open');
+                    if(rightPanel) {
+                        rightPanel.classList.remove('panel-open');
+                        rightPanel.classList.remove('mobile-modal-mode');
+                    }
                     // Mobile: fecha o overlay ao processar o álbum
                     if(window.innerWidth <= 768) {
                         const sideOverlay = document.querySelector('.craftools-sidebar-overlay');
@@ -664,7 +686,10 @@ export class AlbumTool extends BaseTool {
         if(panelBody) panelBody.classList.remove('d-none');
         if(closePanel) closePanel.classList.remove('d-none');
         if(panelLogo) panelLogo.classList.add('d-none');
-        if(rightPanel) rightPanel.classList.add('panel-open');
+        if(rightPanel) {
+            rightPanel.classList.add('panel-open');
+            if (window.innerWidth <= 768) rightPanel.classList.add('mobile-modal-mode');
+        }
         const menuIcon = document.getElementById('pwa-menu-icon');
         if(menuIcon && menuIcon.textContent !== 'close') {
             menuIcon.textContent = 'close';
