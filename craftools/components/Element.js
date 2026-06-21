@@ -247,7 +247,12 @@ export class Craftools_Element extends HTMLElement {
 
         if (this._outsideHandler) return;
         this._outsideHandler = (e) => {
-            if (!this.contains(e.target) && !e.target.closest('.craftools-ctxbar') && !e.target.closest('.craftools-panel')) {
+            if (!this.contains(e.target) && 
+                !e.target.closest('.craftools-ctxbar') && 
+                !e.target.closest('.craftools-panel') &&
+                !e.target.closest('.footer-nav-area') &&
+                !e.target.closest('#mobile-mini-panel') &&
+                !e.target.closest('#mobile-mini-overlay')) {
                 this.deselect();
             }
         };
