@@ -2,6 +2,7 @@ import { Craftools_Settings } from "../settings/Settings.js";
 import { PageTool } from "../tools/page/PageTool.js";
 import { TextTool } from "../tools/text/TextTool.js";
 import { ImageTool } from "../tools/image/ImageTool.js";
+import { QRCodeTool } from "../tools/qrcode/QRCodeTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 import { PdfExport } from "../utils/PdfExport.js";
@@ -275,6 +276,13 @@ export class Craftools_Editor extends HTMLElement {
                 if (panelBody) ImageTool.renderPropertiesPanel(panelBody, el);
                 openPanelMenu();
                 this.activePage = null;
+            } else if (toolType === 'qrcode') {
+                this.ctxBar.show(el, QRCodeTool.getCtxOptions(el));
+
+                if (panelTitle) panelTitle.textContent = I18n.t('qrTool.panelTitle') || 'Propriedades do QR Code';
+                if (panelBody) QRCodeTool.renderPropertiesPanel(panelBody, el);
+                openPanelMenu();
+                this.activePage = null;
             } else {
                 this.ctxBar.show(el, []);
             }
@@ -350,7 +358,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -373,6 +381,12 @@ export class Craftools_Editor extends HTMLElement {
                     const el = ImageTool.createElement(tool, this);
                     el.setAttribute('x', cx - 100);
                     el.setAttribute('y', cy - 100);
+                    mainPage.appendChild(el);
+                } else if (tool === 'qrcode') {
+                    const { QRCodeTool } = await import('../tools/qrcode/QRCodeTool.js');
+                    const el = QRCodeTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 90);
+                    el.setAttribute('y', cy - 90);
                     mainPage.appendChild(el);
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');

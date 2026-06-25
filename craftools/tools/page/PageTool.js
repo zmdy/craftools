@@ -25,7 +25,7 @@ export class PageTool {
             if (toolType === 'album') {
                 const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
-            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem') {
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
                 
@@ -35,8 +35,8 @@ export class PageTool {
                 const cellTarget = e.target.closest('.craftools-grid-cell');
                 const pRect = pageEl.getBoundingClientRect();
 
-                let elW = toolType === 'imagem' ? 200 : 120;
-                let elH = toolType === 'imagem' ? 150 : 40;
+                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : 120);
+                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : 40);
 
                 if (cellTarget && window.craftoolsAutoSnap !== false) {
                     const cRect = cellTarget.getBoundingClientRect();
@@ -60,6 +60,9 @@ export class PageTool {
                     if (toolType === 'imagem') {
                         dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200));
                         dropY = Math.max(10, Math.min(dropY - 75, (pRect.height / scale) - 150));
+                    } else if (toolType === 'qrcode') {
+                        dropX = Math.max(10, Math.min(dropX - 90, (pRect.width / scale) - 180));
+                        dropY = Math.max(10, Math.min(dropY - 90, (pRect.height / scale) - 180));
                     } else {
                         dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
                         dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
@@ -70,6 +73,9 @@ export class PageTool {
                 if (toolType === 'imagem') {
                     const { ImageTool } = await import('../image/ImageTool.js');
                     el = ImageTool.createElement(toolType, editor);
+                } else if (toolType === 'qrcode') {
+                    const { QRCodeTool } = await import('../qrcode/QRCodeTool.js');
+                    el = QRCodeTool.createElement(toolType, editor);
                 } else {
                     const { TextTool } = await import('../text/TextTool.js');
                     el = TextTool.createElement(toolType, editor);

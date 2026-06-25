@@ -55,6 +55,7 @@ export class MobileToolbar {
             { icon: 'notes',         label: 'Texto',      action: () => this._triggerTool('paragrafo') },
             { icon: 'image',         label: 'Imagem',     action: () => this._triggerTool('imagem') },
             { icon: 'photo_library', label: 'Álbum',      action: () => this._triggerTool('album') },
+            { icon: 'qr_code_2',     label: 'QR Code',    action: () => this._triggerTool('qrcode') },
             { icon: 'note_add',      label: 'Nova Pág.',  action: () => this._triggerAction('newpage') },
             { icon: 'picture_as_pdf',label: 'PDF',        action: () => this._triggerAction('export') },
             { icon: 'layers',        label: 'Papéis',     action: () => this._triggerAction('papeis') },
@@ -76,6 +77,8 @@ export class MobileToolbar {
             items = this._getImageItems(element);
         } else if (type === 'titulo' || type === 'paragrafo') {
             items = this._getTextItems(element);
+        } else if (type === 'qrcode') {
+            items = this._getQrItems(element);
         }
 
         // Botão "voltar" sempre no início
@@ -165,6 +168,39 @@ export class MobileToolbar {
             {
                 icon: 'content_copy', label: 'Copiar',
                 action: () => this.openMiniPanel('Copiar / Colar Estilo', c => this._renderCopyPaste(c, el, '[contenteditable]'))
+            },
+        ];
+    }
+
+    static _getQrItems(el) {
+        return [
+            {
+                icon: 'edit_note', label: 'Conteúdo',
+                action: () => this.openMiniPanel(I18n.t('qrTool.contentType') || 'Conteúdo do QR Code', c => this._renderQrContent(c, el))
+            },
+            {
+                icon: 'palette', label: 'Cores',
+                action: () => this.openMiniPanel('Cores do QR Code', c => this._renderQrColors(c, el))
+            },
+            {
+                icon: 'shield', label: 'Correção',
+                action: () => this.openMiniPanel(I18n.t('qrTool.ecLevel') || 'Correção de Erro', c => this._renderQrEcLevel(c, el))
+            },
+            {
+                icon: 'border_style', label: 'Borda',
+                action: () => this.openMiniPanel('Borda', c => CommonProperties.renderBorder(c, el, 'svg'))
+            },
+            {
+                icon: 'rounded_corner', label: 'Arred.',
+                action: () => this.openMiniPanel('Arredondamento', c => CommonProperties.renderBorderRadius(c, el, 'svg'))
+            },
+            {
+                icon: 'layers', label: 'Camada',
+                action: () => this.openMiniPanel('Camada (Z-Index)', c => CommonProperties.renderZIndex(c, el))
+            },
+            {
+                icon: 'content_copy', label: 'Copiar',
+                action: () => this.openMiniPanel('Copiar / Colar Estilo', c => this._renderCopyPaste(c, el, 'svg'))
             },
         ];
     }
@@ -486,6 +522,104 @@ export class MobileToolbar {
         });
     }
 
+    // ─── Section renders: QR Code ──────────────────────────────────────────────
+
+    static _renderQrContent(container, el) {
+        import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
+            const meta = el._craftoolsMeta || QRCodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+
+            container.innerHTML = `
+                <div class="mmp-section">
+                    <select class="mmp-select" id="mmp-qr-type" style="margin-bottom:12px;">
+                        <option value="texto" ${meta.payloadType === 'texto' ? 'selected' : ''}>${I18n.t('qrTool.typeText')}</option>
+                        <option value="wifi" ${meta.payloadType === 'wifi' ? 'selected' : ''}>${I18n.t('qrTool.typeWifi')}</option>
+                        <option value="telefone" ${meta.payloadType === 'telefone' ? 'selected' : ''}>${I18n.t('qrTool.typePhone')}</option>
+                        <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
+                        <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
+                    </select>
+                    <div id="mmp-qr-fields"></div>
+                </div>
+            `;
+
+            const fieldsContainer = container.querySelector('#mmp-qr-fields');
+            const renderFields = () => {
+                fieldsContainer.innerHTML = QRCodeTool._renderTypeFields(meta);
+                QRCodeTool._bindTypeFields(fieldsContainer, el, meta);
+            };
+            renderFields();
+
+            container.querySelector('#mmp-qr-type').onchange = (e) => {
+                meta.payloadType = e.target.value;
+                renderFields();
+                QRCodeTool._regenerate(el);
+            };
+        });
+    }
+
+    static _renderQrColors(container, el) {
+        import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
+            const meta = el._craftoolsMeta || QRCodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+
+            container.innerHTML = `
+                <div class="mmp-section">
+                    <div class="mmp-field mmp-grid2">
+                        <div>
+                            <label>${I18n.t('qrTool.colorDark')}</label>
+                            <input type="color" id="mmp-qr-dark" class="mmp-color-big" value="${meta.darkColor}">
+                        </div>
+                        <div>
+                            <label>${I18n.t('qrTool.colorLight')}</label>
+                            <input type="color" id="mmp-qr-light" class="mmp-color-big" value="${meta.lightColor === 'transparent' ? '#ffffff' : meta.lightColor}" ${meta.lightColor === 'transparent' ? 'disabled' : ''}>
+                        </div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:13px;">
+                        <input type="checkbox" id="mmp-qr-transparent" ${meta.lightColor === 'transparent' ? 'checked' : ''}>
+                        ${I18n.t('qrTool.transparentBg')}
+                    </label>
+                </div>
+            `;
+
+            const darkInput = container.querySelector('#mmp-qr-dark');
+            const lightInput = container.querySelector('#mmp-qr-light');
+            const transpInput = container.querySelector('#mmp-qr-transparent');
+
+            darkInput.oninput = () => { meta.darkColor = darkInput.value; QRCodeTool._regenerate(el); };
+            lightInput.oninput = () => { meta.lightColor = lightInput.value; QRCodeTool._regenerate(el); };
+            transpInput.onchange = () => {
+                if (transpInput.checked) { meta.lightColor = 'transparent'; lightInput.disabled = true; }
+                else { meta.lightColor = lightInput.value || '#ffffff'; lightInput.disabled = false; }
+                QRCodeTool._regenerate(el);
+            };
+        });
+    }
+
+    static _renderQrEcLevel(container, el) {
+        import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
+            const meta = el._craftoolsMeta || QRCodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+
+            container.innerHTML = `
+                <div class="mmp-section">
+                    <div class="mmp-pill-group" style="flex-wrap:wrap;">
+                        ${['L', 'M', 'Q', 'H'].map(lvl => `
+                            <button class="mmp-pill ${meta.ecLevel === lvl ? 'active' : ''}" data-ec="${lvl}">${lvl}</button>
+                        `).join('')}
+                    </div>
+                    <p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">${I18n.t('qrTool.ecLevelHelp')}</p>
+                </div>
+            `;
+            container.querySelectorAll('.mmp-pill[data-ec]').forEach(btn => {
+                btn.onclick = () => {
+                    meta.ecLevel = btn.dataset.ec;
+                    container.querySelectorAll('.mmp-pill[data-ec]').forEach(b => b.classList.toggle('active', b === btn));
+                    QRCodeTool._regenerate(el);
+                };
+            });
+        });
+    }
+
     // ─── Copiar / Colar estilo ─────────────────────────────────────────────────
 
     static _renderCopyPaste(container, el, targetSelector) {
@@ -539,6 +673,13 @@ export class MobileToolbar {
                 const el = ImageTool.createElement(type, this._editor);
                 el.setAttribute('x', cx - 100);
                 el.setAttribute('y', cy - 100);
+                mainPage.appendChild(el);
+            });
+        } else if (type === 'qrcode') {
+            import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
+                const el = QRCodeTool.createElement(type, this._editor);
+                el.setAttribute('x', cx - 90);
+                el.setAttribute('y', cy - 90);
                 mainPage.appendChild(el);
             });
         } else {

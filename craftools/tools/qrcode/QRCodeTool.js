@@ -1,0 +1,377 @@
+import { I18n } from "../../settings/Translations.js";
+import { BaseTool } from "../BaseTool.js";
+import { QrCode } from "../../utils/QrCode.js";
+import "./QRCodeTool_Translations.js";
+
+/**
+ * QRCodeTool
+ * Ferramenta de criação de QR Code vetorial (SVG) para o editor CrafTools.
+ * A codificação do QR Code é feita pela lib open-source "qrcode-generator"
+ * (vendorizada em craftools/vendor/qrcode-generator/) — este arquivo só monta
+ * o conteúdo (texto, Wi-Fi, telefone, e-mail, SMS) e a interface de edição.
+ */
+export class QRCodeTool extends BaseTool {
+
+    static renderPropertiesPanel(editorPanel, element) {
+        const meta = element._craftoolsMeta || this.getDefaultMeta();
+        if (!element._craftoolsMeta) element._craftoolsMeta = meta;
+
+        if (element.contentArea) {
+            element.contentArea.style.pointerEvents = 'auto';
+            element.contentArea.style.cursor = 'move';
+        }
+
+        const tooLong = QrCode.isLikelyTooLong(this.buildPayload(meta));
+
+        const html = `
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                <div class="craftools-field">
+                    <span class="craftools-label">${I18n.t('qrTool.contentType')}</span>
+                    <select id="qr-type" class="craftools-select" style="width:100%;">
+                        <option value="texto" ${meta.payloadType === 'texto' ? 'selected' : ''}>${I18n.t('qrTool.typeText')}</option>
+                        <option value="wifi" ${meta.payloadType === 'wifi' ? 'selected' : ''}>${I18n.t('qrTool.typeWifi')}</option>
+                        <option value="telefone" ${meta.payloadType === 'telefone' ? 'selected' : ''}>${I18n.t('qrTool.typePhone')}</option>
+                        <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
+                        <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
+                    </select>
+                </div>
+
+                <div id="qr-fields-container" style="display:flex; flex-direction:column; gap:10px;">
+                    ${this._renderTypeFields(meta)}
+                </div>
+
+                <div id="qr-too-long-warning" style="display:${tooLong ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
+                    <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+                    <span>${I18n.t('qrTool.tooLongWarning')}</span>
+                </div>
+
+                <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
+                    <span class="craftools-label">${I18n.t('qrTool.ecLevel')}</span>
+                    <select id="qr-ec-level" class="craftools-select" style="width:100%;">
+                        <option value="L" ${meta.ecLevel === 'L' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelL')}</option>
+                        <option value="M" ${meta.ecLevel === 'M' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelM')}</option>
+                        <option value="Q" ${meta.ecLevel === 'Q' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelQ')}</option>
+                        <option value="H" ${meta.ecLevel === 'H' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelH')}</option>
+                    </select>
+                    <span style="font-size:10px; color: var(--text-muted); display:block; margin-top:4px;">${I18n.t('qrTool.ecLevelHelp')}</span>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.colorDark')}</span>
+                        <input type="color" id="qr-color-dark" class="craftools-color-swatch" value="${meta.darkColor}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.colorLight')}</span>
+                        <input type="color" id="qr-color-light" class="craftools-color-swatch" value="${meta.lightColor === 'transparent' ? '#ffffff' : meta.lightColor}" style="width:100%;" ${meta.lightColor === 'transparent' ? 'disabled' : ''}>
+                    </div>
+                </div>
+                <label class="craftools-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="checkbox" id="qr-bg-transparent" ${meta.lightColor === 'transparent' ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('qrTool.transparentBg')}</span>
+                </label>
+            </div>
+        `;
+
+        editorPanel.innerHTML = html;
+
+        // Render Common Properties (Inherited) — aplica borda/raio/z-index no <svg>
+        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+            border: 'svg',
+            radius: 'svg',
+            zindex: true,
+            onChange: () => {
+                const svg = element.contentArea.querySelector('svg');
+                if (svg) {
+                    meta.borderWidth = parseFloat(svg.style.borderWidth) || 0;
+                    meta.borderStyle = svg.style.borderStyle || 'none';
+                    meta.borderColor = svg.style.borderColor || '#000000';
+                    meta.borderRadius = svg.style.borderRadius || '0px';
+                }
+            }
+        });
+
+        // --- Bindings ---
+        const typeSelect = editorPanel.querySelector('#qr-type');
+        typeSelect.onchange = () => {
+            meta.payloadType = typeSelect.value;
+            this.renderPropertiesPanel(editorPanel, element);
+            this._regenerate(element);
+        };
+
+        this._bindTypeFields(editorPanel, element, meta);
+
+        const ecSelect = editorPanel.querySelector('#qr-ec-level');
+        ecSelect.onchange = () => {
+            meta.ecLevel = ecSelect.value;
+            this._regenerate(element);
+        };
+
+        const colorDark = editorPanel.querySelector('#qr-color-dark');
+        colorDark.oninput = () => {
+            meta.darkColor = colorDark.value;
+            this._regenerate(element);
+        };
+
+        const colorLight = editorPanel.querySelector('#qr-color-light');
+        colorLight.oninput = () => {
+            meta.lightColor = colorLight.value;
+            this._regenerate(element);
+        };
+
+        const bgTransparent = editorPanel.querySelector('#qr-bg-transparent');
+        bgTransparent.onchange = () => {
+            if (bgTransparent.checked) {
+                meta.lightColor = 'transparent';
+                colorLight.disabled = true;
+            } else {
+                meta.lightColor = colorLight.value || '#ffffff';
+                colorLight.disabled = false;
+            }
+            this._regenerate(element);
+        };
+    }
+
+    /** Gera o HTML dos campos específicos do tipo de conteúdo selecionado. */
+    static _renderTypeFields(meta) {
+        switch (meta.payloadType) {
+            case 'wifi':
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.wifiSsid')}</span>
+                        <input type="text" id="qr-wifi-ssid" class="craftools-input" value="${this._esc(meta.wifiSsid)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.wifiSecurity')}</span>
+                        <select id="qr-wifi-security" class="craftools-select" style="width:100%;">
+                            <option value="WPA" ${meta.wifiSecurity === 'WPA' ? 'selected' : ''}>WPA/WPA2</option>
+                            <option value="WEP" ${meta.wifiSecurity === 'WEP' ? 'selected' : ''}>WEP</option>
+                            <option value="nopass" ${meta.wifiSecurity === 'nopass' ? 'selected' : ''}>${I18n.t('qrTool.wifiSecurityNone')}</option>
+                        </select>
+                    </div>
+                    <div class="craftools-field" id="qr-wifi-pass-field" style="${meta.wifiSecurity === 'nopass' ? 'display:none;' : ''}">
+                        <span class="craftools-label">${I18n.t('qrTool.wifiPassword')}</span>
+                        <input type="text" id="qr-wifi-pass" class="craftools-input" value="${this._esc(meta.wifiPassword)}" style="width:100%;">
+                    </div>
+                `;
+            case 'telefone':
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.phoneLabel')}</span>
+                        <input type="tel" id="qr-phone" class="craftools-input" placeholder="${I18n.t('qrTool.phonePlaceholder')}" value="${this._esc(meta.phone)}" style="width:100%;">
+                    </div>
+                `;
+            case 'email':
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.emailLabel')}</span>
+                        <input type="email" id="qr-email" class="craftools-input" value="${this._esc(meta.email)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.emailSubject')}</span>
+                        <input type="text" id="qr-email-subject" class="craftools-input" value="${this._esc(meta.emailSubject)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.emailBody')}</span>
+                        <textarea id="qr-email-body" class="craftools-input" rows="2" style="width:100%; resize:vertical;">${this._esc(meta.emailBody)}</textarea>
+                    </div>
+                `;
+            case 'sms':
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.smsLabel')}</span>
+                        <input type="tel" id="qr-sms-phone" class="craftools-input" value="${this._esc(meta.smsPhone)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.smsBody')}</span>
+                        <textarea id="qr-sms-body" class="craftools-input" rows="2" style="width:100%; resize:vertical;">${this._esc(meta.smsBody)}</textarea>
+                    </div>
+                `;
+            default:
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.textLabel')}</span>
+                        <textarea id="qr-text" class="craftools-input" rows="3" placeholder="${I18n.t('qrTool.textPlaceholder')}" style="width:100%; resize:vertical;">${this._esc(meta.text)}</textarea>
+                    </div>
+                `;
+        }
+    }
+
+    /** Liga os listeners dos campos específicos do tipo de conteúdo atual. */
+    static _bindTypeFields(editorPanel, element, meta) {
+        const regen = () => {
+            this._regenerate(element);
+            this._updateWarning(editorPanel, meta);
+        };
+
+        switch (meta.payloadType) {
+            case 'wifi': {
+                const ssid = editorPanel.querySelector('#qr-wifi-ssid');
+                const sec = editorPanel.querySelector('#qr-wifi-security');
+                const pass = editorPanel.querySelector('#qr-wifi-pass');
+                const passField = editorPanel.querySelector('#qr-wifi-pass-field');
+                if (ssid) ssid.oninput = () => { meta.wifiSsid = ssid.value; regen(); };
+                if (sec) sec.onchange = () => {
+                    meta.wifiSecurity = sec.value;
+                    if (passField) passField.style.display = sec.value === 'nopass' ? 'none' : '';
+                    regen();
+                };
+                if (pass) pass.oninput = () => { meta.wifiPassword = pass.value; regen(); };
+                break;
+            }
+            case 'telefone': {
+                const phone = editorPanel.querySelector('#qr-phone');
+                if (phone) phone.oninput = () => { meta.phone = phone.value; regen(); };
+                break;
+            }
+            case 'email': {
+                const email = editorPanel.querySelector('#qr-email');
+                const subject = editorPanel.querySelector('#qr-email-subject');
+                const body = editorPanel.querySelector('#qr-email-body');
+                if (email) email.oninput = () => { meta.email = email.value; regen(); };
+                if (subject) subject.oninput = () => { meta.emailSubject = subject.value; regen(); };
+                if (body) body.oninput = () => { meta.emailBody = body.value; regen(); };
+                break;
+            }
+            case 'sms': {
+                const phone = editorPanel.querySelector('#qr-sms-phone');
+                const body = editorPanel.querySelector('#qr-sms-body');
+                if (phone) phone.oninput = () => { meta.smsPhone = phone.value; regen(); };
+                if (body) body.oninput = () => { meta.smsBody = body.value; regen(); };
+                break;
+            }
+            default: {
+                const text = editorPanel.querySelector('#qr-text');
+                if (text) text.oninput = () => { meta.text = text.value; regen(); };
+            }
+        }
+    }
+
+    static _updateWarning(editorPanel, meta) {
+        const warningEl = editorPanel.querySelector('#qr-too-long-warning');
+        if (warningEl) warningEl.style.display = QrCode.isLikelyTooLong(this.buildPayload(meta)) ? 'flex' : 'none';
+    }
+
+    /** Reconstrói o SVG do QR Code a partir do estado atual de `_craftoolsMeta`. */
+    static _regenerate(element) {
+        const meta = element._craftoolsMeta;
+        if (!meta || !element.contentArea) return;
+
+        const payload = this.buildPayload(meta);
+        const svgString = QrCode.buildSvgString(payload, {
+            ecLevel: meta.ecLevel,
+            darkColor: meta.darkColor,
+            lightColor: meta.lightColor
+        });
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = svgString;
+        const fresh = wrapper.firstElementChild;
+
+        let svg = element.contentArea.querySelector('svg');
+        if (svg) {
+            // Mantém o mesmo nó <svg> (preserva borda/raio aplicados via CommonProperties)
+            svg.setAttribute('viewBox', fresh.getAttribute('viewBox'));
+            svg.innerHTML = fresh.innerHTML;
+        } else {
+            fresh.style.userSelect = 'none';
+            fresh.style.pointerEvents = 'none';
+            element.contentArea.appendChild(fresh);
+        }
+
+        this._triggerChange(element);
+    }
+
+    static _triggerChange(element) {
+        const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
+        element.dispatchEvent(event);
+    }
+
+    static _esc(val) {
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /** Constrói a string final a ser codificada no QR a partir do tipo de conteúdo. */
+    static buildPayload(meta) {
+        if (!meta) return '';
+        switch (meta.payloadType) {
+            case 'wifi': {
+                const esc = (s) => String(s || '').replace(/([\\;,:"])/g, '\\$1');
+                const sec = meta.wifiSecurity || 'WPA';
+                if (sec === 'nopass') return `WIFI:T:nopass;S:${esc(meta.wifiSsid)};;`;
+                return `WIFI:T:${sec};S:${esc(meta.wifiSsid)};P:${esc(meta.wifiPassword)};;`;
+            }
+            case 'telefone':
+                return meta.phone ? `tel:${meta.phone.replace(/\s+/g, '')}` : '';
+            case 'email': {
+                if (!meta.email) return '';
+                const params = [];
+                if (meta.emailSubject) params.push('subject=' + encodeURIComponent(meta.emailSubject));
+                if (meta.emailBody) params.push('body=' + encodeURIComponent(meta.emailBody));
+                const qs = params.length ? '?' + params.join('&') : '';
+                return `mailto:${meta.email}${qs}`;
+            }
+            case 'sms': {
+                if (!meta.smsPhone) return '';
+                const body = meta.smsBody ? `?body=${encodeURIComponent(meta.smsBody)}` : '';
+                return `sms:${meta.smsPhone.replace(/\s+/g, '')}${body}`;
+            }
+            default:
+                return meta.text || '';
+        }
+    }
+
+    static getCtxOptions() {
+        return [];
+    }
+
+    static getDefaultMeta() {
+        return {
+            payloadType: 'texto',
+            text: '',
+            wifiSsid: '',
+            wifiPassword: '',
+            wifiSecurity: 'WPA',
+            phone: '',
+            email: '',
+            emailSubject: '',
+            emailBody: '',
+            smsPhone: '',
+            smsBody: '',
+            ecLevel: 'M',
+            darkColor: '#000000',
+            lightColor: '#ffffff',
+            borderWidth: 0,
+            borderStyle: 'none',
+            borderColor: '#000000',
+            borderRadius: 0
+        };
+    }
+
+    static createElement(type, editorApp) {
+        const el = document.createElement('craftools-element');
+        el.setAttribute('x', '50');
+        el.setAttribute('y', '50');
+        el.setAttribute('w', '180');
+        el.setAttribute('h', '180');
+        el.setAttribute('data-craftool', 'qrcode');
+
+        el._craftoolsMeta = this.getDefaultMeta();
+
+        const svg = QrCode.buildSvgElement(this.buildPayload(el._craftoolsMeta), {
+            ecLevel: el._craftoolsMeta.ecLevel,
+            darkColor: el._craftoolsMeta.darkColor,
+            lightColor: el._craftoolsMeta.lightColor
+        });
+        svg.style.userSelect = 'none';
+        svg.style.pointerEvents = 'none';
+
+        el.appendChild(svg);
+
+        return el;
+    }
+}
