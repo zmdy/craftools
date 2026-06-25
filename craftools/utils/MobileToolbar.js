@@ -13,6 +13,7 @@ import { FILTERS_CONFIG, ImageFilters } from '../tools/image/ImageFilters.js';
 import { ImageTransform } from '../tools/image/ImageTransform.js';
 import { CommonProperties } from './CommonProperties.js';
 import { I18n } from '../settings/Translations.js';
+import { Notify } from './Notify.js';
 
 export class MobileToolbar {
     static _footer = null;       // <ul> do footer
@@ -507,8 +508,8 @@ export class MobileToolbar {
         };
         container.querySelector('#mmp-paste-style').onclick = () => {
             const clip = window.__craftoolsClipboardStyle;
-            if (!clip) return alert('Nenhum estilo copiado!');
-            if (clip.type !== el.getAttribute('data-craftool')) return alert('Tipos incompatíveis.');
+            if (!clip) return Notify.toast('Nenhum estilo copiado!', 'error');
+            if (clip.type !== el.getAttribute('data-craftool')) return Notify.toast('Tipos incompatíveis.', 'error');
             if (target && clip.cssText) target.style.cssText = clip.cssText;
             if (clip.zIndex) el.style.zIndex = clip.zIndex;
             if (clip.meta && el._craftoolsMeta) { const m = {...clip.meta}; if (el._craftoolsMeta.src) m.src = el._craftoolsMeta.src; Object.assign(el._craftoolsMeta, m); }

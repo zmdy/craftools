@@ -4,13 +4,15 @@
  * aplicar as diretivas CSS @page corretas por tamanho de página, e disparar
  * window.print() via blob URL em uma nova janela.
  */
+import { Notify } from "./Notify.js";
+
 export class PdfExport {
 
     // ── Entry point ────────────────────────────────────────────────────────────
     static print(editor) {
         const pages = [...editor.querySelectorAll('.craftools-page')];
         if (!pages.length) {
-            alert('Nenhuma página encontrada para exportar.');
+            Notify.toast('Nenhuma página encontrada para exportar.', 'error');
             return;
         }
 
@@ -269,7 +271,7 @@ ${body}
 
         const win = window.open(url, '_blank');
         if (!win) {
-            alert('Seu navegador bloqueou a abertura da janela de impressão. Permita pop-ups para este site.');
+            Notify.toast('Seu navegador bloqueou a abertura da janela de impressão. Permita pop-ups para este site.', 'error', 6000);
             URL.revokeObjectURL(url);
             return;
         }

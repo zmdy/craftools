@@ -1,5 +1,6 @@
 import { I18n } from "../../settings/Translations.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
+import { Notify } from "../../utils/Notify.js";
 import "./PageTool_Translations.js";
 
 export class PageTool {
@@ -325,21 +326,21 @@ export class PageTool {
 
                 // Delete Page
                 if (panelBody) {
-                    panelBody.querySelector('#delete-page-btn').addEventListener('click', () => {
-                        if (confirm(I18n.t('pageTool.confirmDelete'))) {
+                    panelBody.querySelector('#delete-page-btn').addEventListener('click', async () => {
+                        if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: 'Excluir' })) {
                             const pagesWrapper = editor.querySelector('#pages-wrapper');
                             if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
                                 editor.activePage.remove();
-                                
+
                                 if(defaultMenu) defaultMenu.classList.remove('d-none');
                                 if(panelBody) panelBody.classList.add('d-none');
                                 if(closePanel) closePanel.classList.add('d-none');
                                 if(panelLogo) panelLogo.classList.remove('d-none');
                                 if(panelTitle) panelTitle.textContent = "Technology for Creativity";
-                                
+
                                 editor.activePage = null;
                             } else {
-                                alert(I18n.t('pageTool.alertLastPage'));
+                                Notify.toast(I18n.t('pageTool.alertLastPage'), 'error');
                             }
                         }
                     });

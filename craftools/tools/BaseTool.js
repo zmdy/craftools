@@ -1,4 +1,5 @@
 import { CommonProperties } from "../utils/CommonProperties.js";
+import { Notify } from "../utils/Notify.js";
 
 /**
  * BaseTool
@@ -86,9 +87,9 @@ export class BaseTool {
 
         btnPaste.addEventListener('click', () => {
             const clip = window.__craftoolsClipboardStyle;
-            if (!clip) return alert('Nenhum estilo copiado!');
+            if (!clip) return Notify.toast('Nenhum estilo copiado!', 'error');
             if (clip.type !== element.getAttribute('data-craftool')) {
-                return alert('Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem).');
+                return Notify.toast('Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem).', 'error');
             }
 
             // Aplica CSS Inline (garante compatibilidade com propriedades futuras)
