@@ -39,6 +39,7 @@ export class Craftools_Editor extends HTMLElement {
                         <button class="craftools-icon-btn" title="Desfazer (Ctrl+Z)" id="undo-btn" disabled>
                             <span class="material-symbols-outlined">undo</span>
                         </button>
+                        <span id="history-indicator" title="Ações guardadas no histórico de desfazer/refazer" style="font-size: 10px; color: var(--text-secondary); padding: 0 2px; min-width: 28px; text-align: center; user-select: none;">0/10</span>
                         <button class="craftools-icon-btn" title="Refazer (Ctrl+Y)" id="redo-btn" disabled>
                             <span class="material-symbols-outlined">redo</span>
                         </button>
@@ -93,12 +94,20 @@ export class Craftools_Editor extends HTMLElement {
         const pagesWrapper = this.querySelector('#pages-wrapper');
         const undoBtn = this.querySelector('#undo-btn');
         const redoBtn = this.querySelector('#redo-btn');
+        const historyIndicator = this.querySelector('#history-indicator');
 
         // ── Undo / Redo buttons ────────────────────────────────────────────
-        const updateHistoryButtons = ({ canUndo, canRedo } = {}) => {
+        const updateHistoryButtons = ({ canUndo, canRedo, count, max } = {}) => {
             if (undoBtn) undoBtn.disabled = !HistoryManager.canUndo;
             if (redoBtn) redoBtn.disabled = !HistoryManager.canRedo;
+            if (historyIndicator) {
+                const c = typeof count === 'number' ? count : HistoryManager.historyCount;
+                const m = typeof max === 'number' ? max : HistoryManager.maxStates;
+                historyIndicator.textContent = `${c}/${m}`;
+                historyIndicator.title = `Histórico de desfazer/refazer: ${c} de ${m} ações guardadas (limite máximo)`;
+            }
         };
+        updateHistoryButtons();
 
         undoBtn?.addEventListener('click', () => {
             HistoryManager.undo(pagesWrapper);

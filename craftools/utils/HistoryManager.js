@@ -80,6 +80,14 @@ class _HistoryManager {
     get canUndo() { return this._index > 0; }
     get canRedo() { return this._index < this._stack.length - 1; }
 
+    /** Quantos estados estão guardados agora (0 a maxStates). Usado pela UI
+     * para mostrar um indicador visível de quão perto o usuário está do
+     * limite do histórico (ex: "7/10"). */
+    get historyCount() { return this._stack.length; }
+
+    /** Limite máximo de estados guardados (MAX_STATES). */
+    get maxStates() { return MAX_STATES; }
+
     /** Limpa todo o histórico (ex: ao abrir novo projeto) */
     clear() {
         this._stack = [];
@@ -115,7 +123,12 @@ class _HistoryManager {
     _emit() {
         const evt = new CustomEvent('craftools-history-change', {
             bubbles: true,
-            detail: { canUndo: this.canUndo, canRedo: this.canRedo }
+            detail: {
+                canUndo: this.canUndo,
+                canRedo: this.canRedo,
+                count: this.historyCount,
+                max: this.maxStates,
+            }
         });
         document.dispatchEvent(evt);
     }
