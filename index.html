@@ -710,6 +710,13 @@
                     if (originalRedo && pwaRedo) {
                         pwaRedo.classList.toggle('disabled', originalRedo.disabled);
                     }
+                    // Espelha o indicador "N/10" do histórico (ver Editor.js / HistoryManager.js)
+                    const desktopIndicator = document.getElementById('history-indicator');
+                    const pwaIndicator = document.getElementById('pwa-history-indicator');
+                    if (desktopIndicator && pwaIndicator) {
+                        pwaIndicator.textContent = desktopIndicator.textContent;
+                        pwaIndicator.title = desktopIndicator.title;
+                    }
                 };
 
                 document.addEventListener('craftools-history-change', syncUndoRedoState);
@@ -896,6 +903,7 @@
                     <a href="#" id="pwa-undo" class="box-icon disabled" style="text-decoration:none;" title="Desfazer (Ctrl+Z)">
                         <span class="material-symbols-outlined">undo</span>
                     </a>
+                    <span id="pwa-history-indicator" title="Ações guardadas no histórico de desfazer/refazer" style="font-size: 10px; color: var(--text, #71717a); padding: 0 2px; user-select: none;">0/10</span>
                     <a href="#" id="pwa-redo" class="box-icon disabled" style="text-decoration:none;" title="Refazer (Ctrl+Y)">
                         <span class="material-symbols-outlined">redo</span>
                     </a>
@@ -1017,6 +1025,23 @@
         window.CRAFTOOLS_CONFIG = {
             apiBase: 'http://127.0.0.1/craftools_api',
         };
+
+        // Verificação de ambiente: se a página não está em localhost mas o
+        // apiBase ainda aponta para 127.0.0.1 (valor de desenvolvimento),
+        // avisa em alto e bom som no console em vez de falhar silenciosamente
+        // (ApiDataLoader.js cairia no fallback local sem nenhum aviso visível).
+        (function () {
+            const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const usingDevApiBase = (window.CRAFTOOLS_CONFIG.apiBase || '').indexOf('127.0.0.1') !== -1;
+            if (usingDevApiBase && !isLocalHost) {
+                console.error(
+                    '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase ainda aponta para 127.0.0.1 (valor de ' +
+                    'desenvolvimento) neste host de produção (' + window.location.hostname + '). ' +
+                    'GridSizes, templates de álbum e a biblioteca de imagens da craftools_api vão cair ' +
+                    'no fallback local. Configure apiBase para a URL real do craftools_api antes de publicar.'
+                );
+            }
+        })();
     </script>
     <!-- Bootstrap 5.3.8 JS bundle (CDN, antes vendorizado em vendor/bootstrap/) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha256-5P1JGBOIxI7FBAvT/mb1fCnI5n/NhQKzNUuW7Hq0fMc=" crossorigin="anonymous"></script>

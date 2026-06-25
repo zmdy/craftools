@@ -74,7 +74,10 @@ export async function loadGridSizes() {
         return apiData;
     }
 
-    console.info('[ApiDataLoader] API indisponível — usando GridSizes.js local como fallback.');
+    console.warn(
+        '[ApiDataLoader] API indisponível ou sem dados — usando GridSizes.js local como fallback. ' +
+        'Verifique window.CRAFTOOLS_CONFIG.apiBase (configurado no index.html) e se a craftools_api está no ar.'
+    );
     _cache.gridSizes = GridSizesFallback;
     return GridSizesFallback;
 }
@@ -94,7 +97,10 @@ export async function loadAlbumTemplates() {
         return apiData;
     }
 
-    console.info('[ApiDataLoader] AlbumTemplates: API indisponível, retornando vazio.');
+    console.warn(
+        '[ApiDataLoader] AlbumTemplates: API indisponível ou sem dados — retornando lista vazia ' +
+        '(não há fallback local para templates de álbum). Verifique window.CRAFTOOLS_CONFIG.apiBase.'
+    );
     _cache.albumTemplates = [];
     return [];
 }
