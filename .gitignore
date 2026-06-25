@@ -1,1 +1,8 @@
 html/
+
+# Vendor: arquivos que ficaram redundantes depois da troca para CDN (Bootstrap
+# CSS + JS) e da limpeza de libs nao usadas (ver docs/HTML_Assets_Plan.md).
+# Continuam em disco so porque este ambiente nao conseguiu apaga-los; nao
+# devem ser versionados. So vendor/pwa-template/style.css continua em uso.
+vendor/bootstrap/
+vendor/pwa-template/assets/
