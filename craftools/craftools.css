@@ -230,11 +230,15 @@ input[type="number"] { -moz-appearance:textfield; }
 }
 
 /* Camadas da cell: garante empilhamento correto */
+/* Os handles ficam acima do z-index:100 que craftools-element assume ao ser
+   selecionado (ver Element.js select()), senão o primeiro clique na foto
+   cobre a alça e ela não pode mais ser arrastada. */
 .craftools-grid-cell .cell-bg-layer    { z-index: 0; }
 .craftools-grid-cell .cell-content-layer { z-index: 1; }
 .craftools-grid-cell .cell-overlay-layer { z-index: 4; }
-.craftools-grid-cell .album-drag-handle  { z-index: 50; }
-.craftools-grid-cell .cell-edit-btn      { z-index: 50; }
+.craftools-grid-cell .album-drag-handle  { z-index: 110; }
+.craftools-grid-cell .cell-edit-btn      { z-index: 120; }
+.photostrip-slot .slot-drag-handle       { z-index: 110; }
 
 /* Resize handle */
 .craftools-resize { position:absolute; bottom:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border:2px solid var(--bg-panel); border-radius:2px; cursor:se-resize; z-index:10; opacity:0; transition:opacity .15s; touch-action:none; }

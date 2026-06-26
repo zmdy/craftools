@@ -175,6 +175,7 @@ ${pageRules}
         clone.querySelectorAll([
             '.craftools-ctrlbar',
             '.album-drag-handle',
+            '.slot-drag-handle',
             '.craftools-sidebar-overlay',
             '.cell-edit-btn',
         ].join(',')).forEach(el => el.remove());

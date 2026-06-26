@@ -282,44 +282,45 @@ export class Craftools_LayoutGrid {
             // cell count/shape, so on cross-block drop we revert Sortable's own move
             // and instead swap the two cells' CONTENT, resizing it to fit (this is the
             // same logic the previous native drag-and-drop implementation used).
-            new Sortable(groupDiv, {
-                group: promoGroupName,
-                handle: '.album-drag-handle',
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onStart: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grabbing';
-                },
-                onMove: (evt) => {
-                    lastRelated = evt.related;
-                    return true;
-                },
-                onEnd: (evt) => {
-                    const h = evt.item.querySelector('.album-drag-handle');
-                    if (h) h.style.cursor = 'grab';
+            //
+            // Stripe-shaped blocks are excluded entirely: their cells' position is
+            // fixed, and what moves instead are the individual photo slots inside
+            // them (handled by the inner Sortable in _buildInnerStripGrid, shared
+            // via `stripGroupName` across every stripe instance of this block).
+            if (!isStripeSlot) {
+                new Sortable(groupDiv, {
+                    group: promoGroupName,
+                    handle: '.album-drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onStart: (evt) => {
+                        const h = evt.item.querySelector('.album-drag-handle');
+                        if (h) h.style.cursor = 'grabbing';
+                    },
+                    onMove: (evt) => {
+                        lastRelated = evt.related;
+                        return true;
+                    },
+                    onEnd: (evt) => {
+                        const h = evt.item.querySelector('.album-drag-handle');
+                        if (h) h.style.cursor = 'grab';
 
-                    if (evt.from === evt.to) return; // same-shape reorder — Sortable's own move is already correct
+                        if (evt.from === evt.to) return; // same-shape reorder — Sortable's own move is already correct
 
-                    const itemEl = evt.item;
-                    const displaced = lastRelated;
+                        const itemEl = evt.item;
+                        const displaced = lastRelated;
 
-                    // Revert the container move (each block must keep its exact cell count/shape);
-                    // only the CONTENT of the two cells gets swapped.
-                    const refNode = evt.from.children[evt.oldIndex] || null;
-                    evt.from.insertBefore(itemEl, refNode);
+                        // Revert the container move (each block must keep its exact cell count/shape);
+                        // only the CONTENT of the two cells gets swapped.
+                        const refNode = evt.from.children[evt.oldIndex] || null;
+                        evt.from.insertBefore(itemEl, refNode);
 
-                    // A stripe-shaped cell holds N photos in its own inner sub-grid, not in
-                    // .cell-content-layer, so a 1:1 content swap with a plain cell isn't
-                    // meaningful — skip it (the container move above is already reverted,
-                    // so this is a safe no-op rather than a silent data loss).
-                    const isStripeCell = (el) => el.dataset.isPhotostrip === 'true';
-                    if (displaced && displaced !== itemEl && displaced.parentNode &&
-                        !isStripeCell(itemEl) && !isStripeCell(displaced)) {
-                        this._swapCellContent(itemEl, displaced, unit);
+                        if (displaced && displaced !== itemEl && displaced.parentNode) {
+                            this._swapCellContent(itemEl, displaced, unit);
+                        }
                     }
-                }
-            });
+                });
+            }
         });
     }
 
@@ -341,22 +342,12 @@ export class Craftools_LayoutGrid {
             this._buildInnerStripGrid(stripeEl, this.template, stripeItems, startIdx + s * this.itemsPerStripe, unit, photostripGroup, renderCellContentCallback);
         }
 
-        // Outer whole-stripe reordering — every stripe on this page is the same
-        // size (defined by the single top-level template), so a plain Sortable
-        // reorder (like normal/grid mode already uses) is safe here too.
-        new Sortable(grid, {
-            animation: 200,
-            handle: '.album-drag-handle',
-            ghostClass: 'sortable-ghost',
-            onStart: (evt) => {
-                const h = evt.item.querySelector('.album-drag-handle');
-                if (h) h.style.cursor = 'grabbing';
-            },
-            onEnd: (evt) => {
-                const h = evt.item.querySelector('.album-drag-handle');
-                if (h) h.style.cursor = 'grab';
-            }
-        });
+        // Note: stripes themselves are intentionally NOT draggable as whole units —
+        // their position on the page is fixed. What moves are the individual photo
+        // slots inside them (within the same stripe or across other stripes sharing
+        // `photostripGroup`), handled by the inner Sortable set up in
+        // _buildInnerStripGrid. This avoids two competing drag handles fighting for
+        // the same corner of the stripe.
     }
 
     // ── Shared: build the inner N×M photostrip slot grid inside a stripe/cell
@@ -413,7 +404,7 @@ export class Craftools_LayoutGrid {
                 position: absolute;
                 top: 2px;
                 left: 2px;
-                z-index: 50;
+                z-index: 110;
                 background: var(--bg-input, rgba(255,255,255,0.85));
                 border: 1px solid var(--border, #e5e7eb);
                 border-radius: 3px;
@@ -577,30 +568,33 @@ export class Craftools_LayoutGrid {
         `;
         cellWrap.appendChild(overlayLayer);
 
-        // ── Alça de arrasto da stripe/célula ───────────────────────────────
-        // Usada pelo Sortable para reordenar a stripe/célula inteira (em modo
-        // normal, photostrip e promo_kit). Os slots individuais de uma
-        // photostrip têm, além desta, sua própria alça (.slot-drag-handle).
-        let dragHandle = document.createElement('div');
-        dragHandle.className = "album-drag-handle";
-        dragHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-secondary);">drag_indicator</span>';
-        dragHandle.style.cssText = `
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            z-index: 50;
-            background: var(--bg-input, #fff);
-            border: 1px solid var(--border, #e5e7eb);
-            border-radius: 4px;
-            padding: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: grab;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        `;
+        // ── Alça de arrasto da célula inteira ──────────────────────────────
+        // Apenas para células não-stripe (modo normal e slots simples de
+        // promo_kit). Stripes (photostrip) têm posição fixa; o que se move são
+        // as fotos individuais dentro delas, via a alça própria de cada slot
+        // (.slot-drag-handle).
+        if (!isStripe) {
+            let dragHandle = document.createElement('div');
+            dragHandle.className = "album-drag-handle";
+            dragHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-secondary);">drag_indicator</span>';
+            dragHandle.style.cssText = `
+                position: absolute;
+                top: 4px;
+                left: 4px;
+                z-index: 110;
+                background: var(--bg-input, #fff);
+                border: 1px solid var(--border, #e5e7eb);
+                border-radius: 4px;
+                padding: 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: grab;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            `;
 
-        cellWrap.appendChild(dragHandle);
+            cellWrap.appendChild(dragHandle);
+        }
 
         // ── Botão de edição da célula/stripe ─────────────────────────────
         let editBtn = document.createElement('div');
@@ -610,7 +604,7 @@ export class Craftools_LayoutGrid {
             position: absolute;
             top: 4px;
             right: 4px;
-            z-index: 55;
+            z-index: 120;
             background: var(--bg-input, #fff);
             border: 1px solid var(--border, #e5e7eb);
             border-radius: 4px;
