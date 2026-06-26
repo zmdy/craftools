@@ -235,6 +235,53 @@ export class Craftools_Editor extends HTMLElement {
         mobileMenuBtn.addEventListener('click', openSidebar);
         overlay.addEventListener('click', closeSidebar);
 
+        // ── Resizable panel (drag handle near the right edge) ───────────────
+        // Desktop only — on mobile the panel becomes a bottom sheet and the
+        // handle is hidden via CSS (vertical resize uses its own indicator).
+        const PANEL_MIN_W = 240;
+        const PANEL_MAX_W = 480;
+        const PANEL_WIDTH_KEY = 'craftools-panel-width';
+
+        const resizeHandle = document.getElementById('panel-resize-handle');
+        if (resizeHandle && sidebar) {
+            // Restaura a largura salva (CSS mobile com !important sobrepõe isso quando necessário)
+            const savedWidth = parseInt(localStorage.getItem(PANEL_WIDTH_KEY), 10);
+            if (!isNaN(savedWidth) && savedWidth >= PANEL_MIN_W && savedWidth <= PANEL_MAX_W) {
+                sidebar.style.width = savedWidth + 'px';
+            }
+
+            let startX = 0;
+            let startWidth = 0;
+
+            const onPointerMove = (e) => {
+                const delta = e.clientX - startX;
+                const newWidth = Math.min(PANEL_MAX_W, Math.max(PANEL_MIN_W, startWidth + delta));
+                sidebar.style.width = newWidth + 'px';
+            };
+            const onPointerUp = () => {
+                document.removeEventListener('pointermove', onPointerMove);
+                sidebar.classList.remove('resizing');
+                resizeHandle.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                localStorage.setItem(PANEL_WIDTH_KEY, parseInt(sidebar.style.width, 10));
+            };
+
+            resizeHandle.onpointerdown = (e) => {
+                if (isMobile()) return;
+                e.preventDefault();
+                startX = e.clientX;
+                startWidth = sidebar.getBoundingClientRect().width;
+                sidebar.classList.add('resizing');
+                resizeHandle.classList.add('resizing');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+                resizeHandle.setPointerCapture(e.pointerId);
+                document.addEventListener('pointermove', onPointerMove, { passive: false });
+                document.addEventListener('pointerup', onPointerUp, { once: true });
+            };
+        }
+
         // ── Element selection ──────────────────────────────────────────────
         this.addEventListener('craftools-element-select', (e) => {
             const el = e.detail.element;

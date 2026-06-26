@@ -318,11 +318,37 @@
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
+            position: relative;
             z-index: 10;
             transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .sidenav-panel.panel-open {
             margin-left: 0; /* Open on desktop */
+        }
+        /* Mantém a transição de abertura/fechamento, mas não anima durante o
+           arrasto de redimensionamento (senão a largura "atrasa" do mouse). */
+        .sidenav-panel.resizing {
+            transition: none;
+        }
+
+        /* Alça de redimensionamento — fica perto da borda direita do painel;
+           ao passar o mouse por cima, fica visível e o cursor muda para
+           indicar que é possível arrastar para aumentar/diminuir a largura. */
+        .craftools-panel-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 20;
+            background: transparent;
+            touch-action: none;
+        }
+        .craftools-panel-resize-handle:hover,
+        .craftools-panel-resize-handle.resizing {
+            background: var(--accent, #f97316);
+            opacity: 0.35;
         }
         @media (max-width: 768px) {
             .sidenav-panel {
@@ -330,6 +356,10 @@
             }
             .sidenav-panel.mobile-modal-mode {
                 display: flex !important;
+            }
+            /* Redimensionamento horizontal não se aplica ao bottom sheet mobile */
+            .craftools-panel-resize-handle {
+                display: none !important;
             }
         }
 
@@ -940,7 +970,9 @@
         
         <!-- LEFT PANEL (Menu & Properties) -->
         <div class="craftools-panel sidenav-panel" id="right-panel">
-            
+
+            <div class="craftools-panel-resize-handle" id="panel-resize-handle"></div>
+
             <div class="craftools-panel-drag-indicator"></div>
             
             <div class="craftools-panel-head sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4" style="position: relative;">
