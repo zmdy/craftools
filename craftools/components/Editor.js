@@ -37,11 +37,11 @@ export class Craftools_Editor extends HTMLElement {
                     <span style="font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 700; color: var(--text-primary);">CrafTools</span>
                     <span class="topbar-sep" style="width: 1px; height: 16px; background: var(--border); flex-shrink: 0;"></span>
                     <div style="display: flex; align-items: center; gap: 2px; background: var(--bg-input); border-radius: 6px; padding: 2px;">
-                        <button class="craftools-icon-btn" title="Desfazer (Ctrl+Z)" id="undo-btn" disabled>
+                        <button class="craftools-icon-btn" title="${I18n.t('editor.undoTitle')}" id="undo-btn" disabled>
                             <span class="material-symbols-outlined">undo</span>
                         </button>
-                        <span id="history-indicator" title="Ações guardadas no histórico de desfazer/refazer" style="font-size: 10px; color: var(--text-secondary); padding: 0 2px; min-width: 28px; text-align: center; user-select: none;">0/10</span>
-                        <button class="craftools-icon-btn" title="Refazer (Ctrl+Y)" id="redo-btn" disabled>
+                        <span id="history-indicator" title="${I18n.t('editor.historyIndicatorTitle')}" style="font-size: 10px; color: var(--text-secondary); padding: 0 2px; min-width: 28px; text-align: center; user-select: none;">0/10</span>
+                        <button class="craftools-icon-btn" title="${I18n.t('editor.redoTitle')}" id="redo-btn" disabled>
                             <span class="material-symbols-outlined">redo</span>
                         </button>
                     </div>
@@ -63,6 +63,7 @@ export class Craftools_Editor extends HTMLElement {
                     <select id="lang-select" style="padding: 4px 8px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 11px; margin-right: 4px;">
                         <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
                         <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                        <option value="es" ${I18n.currentLang === 'es' ? 'selected' : ''}>ES-ES</option>
                     </select>
                     <button class="craftools-icon-btn" title="${I18n.t('editor.themeToggle')}" id="theme-btn">
                         <span class="material-symbols-outlined">dark_mode</span>
@@ -105,7 +106,7 @@ export class Craftools_Editor extends HTMLElement {
                 const c = typeof count === 'number' ? count : HistoryManager.historyCount;
                 const m = typeof max === 'number' ? max : HistoryManager.maxStates;
                 historyIndicator.textContent = `${c}/${m}`;
-                historyIndicator.title = `Histórico de desfazer/refazer: ${c} de ${m} ações guardadas (limite máximo)`;
+                historyIndicator.title = I18n.t('editor.historyIndicatorDetail').replace('{c}', c).replace('{m}', m);
             }
         };
         updateHistoryButtons();
@@ -265,21 +266,21 @@ export class Craftools_Editor extends HTMLElement {
             if (toolType === 'titulo' || toolType === 'paragrafo') {
                 this.ctxBar.show(el, TextTool.getCtxOptions(el));
                 
-                if (panelTitle) panelTitle.textContent = toolType === 'titulo' ? (I18n.t('textTool.propsTitle') || 'Propriedades do Título') : (I18n.t('textTool.propsParagraph') || 'Propriedades do Parágrafo');
+                if (panelTitle) panelTitle.textContent = toolType === 'titulo' ? I18n.t('textTool.propsTitle') : I18n.t('textTool.propsParagraph');
                 if (panelBody) TextTool.renderPropertiesPanel(panelBody, el);
                 openPanelMenu();
                 this.activePage = null;
             } else if (toolType === 'imagem') {
                 this.ctxBar.show(el, ImageTool.getCtxOptions(el));
                 
-                if (panelTitle) panelTitle.textContent = I18n.t('imageTool.panelTitle') || 'Propriedades da Imagem';
+                if (panelTitle) panelTitle.textContent = I18n.t('imageTool.panelTitle');
                 if (panelBody) ImageTool.renderPropertiesPanel(panelBody, el);
                 openPanelMenu();
                 this.activePage = null;
             } else if (toolType === 'qrcode') {
                 this.ctxBar.show(el, QRCodeTool.getCtxOptions(el));
 
-                if (panelTitle) panelTitle.textContent = I18n.t('qrTool.panelTitle') || 'Propriedades do QR Code';
+                if (panelTitle) panelTitle.textContent = I18n.t('qrTool.panelTitle');
                 if (panelBody) QRCodeTool.renderPropertiesPanel(panelBody, el);
                 openPanelMenu();
                 this.activePage = null;

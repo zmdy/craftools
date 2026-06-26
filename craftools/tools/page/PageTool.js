@@ -333,7 +333,7 @@ export class PageTool {
                 // Delete Page
                 if (panelBody) {
                     panelBody.querySelector('#delete-page-btn').addEventListener('click', async () => {
-                        if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: 'Excluir' })) {
+                        if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: I18n.t('pageTool.deletePage') })) {
                             const pagesWrapper = editor.querySelector('#pages-wrapper');
                             if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
                                 editor.activePage.remove();

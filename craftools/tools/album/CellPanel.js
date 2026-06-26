@@ -6,6 +6,8 @@
 
 import { CellBackground } from './CellBackground.js';
 import { ApiPicker } from './ApiPicker.js';
+import { I18n } from '../../settings/Translations.js';
+import './CellPanel_Translations.js';
 
 // Posições disponíveis para bg-position (grade 3x3)
 const POSITIONS = [
@@ -35,7 +37,7 @@ export class CellPanel {
         // If the clicked element is a photostrip slot, resolve to the stripe container
         const targetCell = cellEl.closest('.craftools-grid-cell') || cellEl;
 
-        panelTitle.textContent = targetCell.dataset.isPhotostrip ? 'Editar Tirinha' : 'Editar Célula';
+        panelTitle.textContent = targetCell.dataset.isPhotostrip ? I18n.t('cellPanel.editStrip') : I18n.t('cellPanel.editCell');
         rightPanel.classList.remove('hidden');
 
         // Destacar célula selecionada
@@ -66,13 +68,13 @@ export class CellPanel {
             // Section Header
             const header = document.createElement('div');
             header.style.cssText = 'padding: 10px 0 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border); margin-top: 5px; letter-spacing: 0.5px;';
-            header.textContent = 'Fundo & Overlay da Célula';
+            header.textContent = I18n.t('cellPanel.bgOverlayHeader');
             container.appendChild(header);
 
             // Tabs
             const tabs = document.createElement('div');
             tabs.style.cssText = 'display:flex; border-bottom:1px solid var(--border); margin-bottom: 12px;';
-            [['bg','Fundo','background_2'], ['overlay','Overlay','layers'], ['border','Borda','border_style']]
+            [['bg', I18n.t('pageTool.background'), 'background_2'], ['overlay', I18n.t('cellPanel.tabOverlay'), 'layers'], ['border', I18n.t('common.border'), 'border_style']]
                 .forEach(([id, label, icon]) => {
                     const btn = document.createElement('button');
                     btn.style.cssText = `
@@ -121,7 +123,7 @@ function renderBgTab(container, cellEl, state, rerender) {
     // Sub-tabs
     const subTabs = document.createElement('div');
     subTabs.style.cssText = 'display:flex; gap:4px; margin-bottom:12px;';
-    [['color','Cor','palette'],['gradient','Gradiente','gradient'],['image','Imagem','image']]
+    [['color', I18n.t('pageTool.color'), 'palette'],['gradient', I18n.t('pageTool.gradient'), 'gradient'],['image', I18n.t('editor.image'), 'image']]
         .forEach(([id, label, icon]) => {
             const btn = document.createElement('button');
             btn.style.cssText = `
@@ -157,7 +159,7 @@ function renderBgTab(container, cellEl, state, rerender) {
     // Botão limpar
     const clearBtn = document.createElement('button');
     clearBtn.style.cssText = 'margin-top:14px; width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:"DM Sans",sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;';
-    clearBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">delete</span> Remover Fundo';
+    clearBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;">delete</span> ${I18n.t('cellPanel.removeBg')}`;
     clearBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -172,7 +174,7 @@ function renderColorMode(container, cellEl) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
     wrap.innerHTML = `
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Cor Sólida</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">${I18n.t('cellPanel.solidColor')}</label>
         <div style="display:flex; gap:8px; align-items:center;">
             <input type="color" id="bg-color-pick" value="${bgVal}"
                 style="width:44px; height:44px; border:1px solid var(--border); border-radius:8px; cursor:pointer; padding:2px;">
@@ -221,15 +223,15 @@ function renderGradientMode(container, cellEl) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
     wrap.innerHTML = `
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Gradiente CSS</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">${I18n.t('cellPanel.gradientCss')}</label>
         <div id="grad-preview" style="height:60px; border-radius:10px; background:${currentGrad}; border:1px solid var(--border);"></div>
         <div style="display:flex; gap:6px; align-items:center;">
             <select id="grad-type" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; flex:1;">
-                <option value="linear">Linear</option>
-                <option value="radial">Radial</option>
+                <option value="linear">${I18n.t('cellPanel.linear')}</option>
+                <option value="radial">${I18n.t('cellPanel.radial')}</option>
             </select>
             <div style="display:flex; align-items:center; gap:4px;">
-                <span style="font-size:11px; color:var(--text-secondary);">Ângulo</span>
+                <span style="font-size:11px; color:var(--text-secondary);">${I18n.t('cellPanel.angle')}</span>
                 <input type="number" id="grad-angle" value="135" min="0" max="360"
                     style="width:55px; padding:5px; border-radius:6px; border:1px solid var(--border);
                            background:var(--bg-input); color:var(--text-primary); font-size:12px; text-align:center;">
@@ -238,15 +240,15 @@ function renderGradientMode(container, cellEl) {
         </div>
         <div style="display:flex; gap:8px;">
             <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted);">Cor inicial</label>
+                <label style="font-size:10px; color:var(--text-muted);">${I18n.t('cellPanel.startColor')}</label>
                 <input type="color" id="grad-c1" value="#f97316" style="width:100%; height:36px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px;">
             </div>
             <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted);">Cor final</label>
+                <label style="font-size:10px; color:var(--text-muted);">${I18n.t('cellPanel.endColor')}</label>
                 <input type="color" id="grad-c2" value="#ea580c" style="width:100%; height:36px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px;">
             </div>
         </div>
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-top:4px;">Ou cole um gradiente CSS</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-top:4px;">${I18n.t('cellPanel.pasteGradientCss')}</label>
         <textarea id="grad-raw" rows="2" style="width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-size:11px; font-family:'DM Mono',monospace; resize:vertical; box-sizing:border-box;">${currentGrad}</textarea>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
             ${[
@@ -353,10 +355,10 @@ function renderImageMode(container, cellEl, state, role) {
     sourceBtns.style.cssText = 'display:flex; gap:6px;';
     sourceBtns.innerHTML = `
         <button id="src-upload" style="flex:1; padding:7px; border-radius:8px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); cursor:pointer; font-size:11px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; justify-content:center; gap:4px;">
-            <span class="material-symbols-outlined" style="font-size:16px;">upload</span> Upload
+            <span class="material-symbols-outlined" style="font-size:16px;">upload</span> ${I18n.t('cellPanel.uploadBtn')}
         </button>
         <button id="src-api" style="flex:1; padding:7px; border-radius:8px; border:1px solid var(--accent); background:var(--accent-subtle,#fff7ed); color:var(--accent); cursor:pointer; font-size:11px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; justify-content:center; gap:4px;">
-            <span class="material-symbols-outlined" style="font-size:16px;">cloud</span> Da API
+            <span class="material-symbols-outlined" style="font-size:16px;">cloud</span> ${I18n.t('cellPanel.fromApiBtn')}
         </button>
     `;
     const fileInput = document.createElement('input');
@@ -402,7 +404,7 @@ function renderImageMode(container, cellEl, state, role) {
     // ── Controles de posição (grade 3×3) ─────────────────────────────────
     const posLabel = document.createElement('label');
     posLabel.style.cssText = 'font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;';
-    posLabel.textContent = 'Posicionamento';
+    posLabel.textContent = I18n.t('cellPanel.positioning');
     wrap.appendChild(posLabel);
 
     const posGrid = document.createElement('div');
@@ -438,6 +440,7 @@ function renderImageMode(container, cellEl, state, role) {
     // ── Fit ──────────────────────────────────────────────────────────────
     const fitWrap = document.createElement('div');
     fitWrap.style.cssText = 'display:flex; gap:6px;';
+    const fitLabels = { cover: I18n.t('cellPanel.fitCover'), contain: I18n.t('cellPanel.fitContain'), auto: I18n.t('cellPanel.fitAuto') };
     ['cover','contain','auto'].forEach(fit => {
         const btn = document.createElement('button');
         btn.style.cssText = `flex:1; padding:5px; border-radius:6px; font-size:10px; cursor:pointer;
@@ -445,7 +448,7 @@ function renderImageMode(container, cellEl, state, role) {
             background:${selectedSize===fit?'var(--accent-subtle,#fff7ed)':'var(--bg-input)'};
             color:${selectedSize===fit?'var(--accent)':'var(--text-secondary)'};
             font-family:'DM Sans',sans-serif;`;
-        btn.textContent = fit.charAt(0).toUpperCase() + fit.slice(1);
+        btn.textContent = fitLabels[fit];
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -469,7 +472,7 @@ function renderImageMode(container, cellEl, state, role) {
         const opacWrap = document.createElement('div');
         opacWrap.innerHTML = `
             <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px;">
-                Opacidade: <span id="opac-val">${Math.round(selectedOpacity*100)}%</span>
+                ${I18n.t('imageTool.opacity')}: <span id="opac-val">${Math.round(selectedOpacity*100)}%</span>
             </label>
             <input type="range" id="opac-range" min="0" max="100" value="${Math.round(selectedOpacity*100)}"
                 style="width:100%;">
@@ -491,7 +494,7 @@ function renderOverlayTab(container, cellEl, state, rerender) {
 
     const clearBtn = document.createElement('button');
     clearBtn.style.cssText = 'margin-top:14px; width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:"DM Sans",sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;';
-    clearBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">delete</span> Remover Overlay';
+    clearBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;">delete</span> ${I18n.t('cellPanel.removeOverlay')}`;
     clearBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -510,21 +513,21 @@ function renderBorderTab(container, cellEl) {
     const section = document.createElement('div');
     section.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
     section.innerHTML = `
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Borda</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">${I18n.t('common.border')}</label>
         <div style="display:flex; gap:6px; align-items:center;">
             <input type="number" id="cell-bw" class="craftools-input" value="${bw}" min="0" max="20" style="width:55px;">
             <select id="cell-bs" class="craftools-select" style="flex:1;">
-                <option value="none" ${bs==='none'?'selected':''}>Nenhuma</option>
-                <option value="solid" ${bs==='solid'?'selected':''}>Sólida</option>
-                <option value="dashed" ${bs==='dashed'?'selected':''}>Tracejada</option>
-                <option value="dotted" ${bs==='dotted'?'selected':''}>Pontilhada</option>
+                <option value="none" ${bs==='none'?'selected':''}>${I18n.t('common.borderNone')}</option>
+                <option value="solid" ${bs==='solid'?'selected':''}>${I18n.t('common.borderSolid')}</option>
+                <option value="dashed" ${bs==='dashed'?'selected':''}>${I18n.t('common.borderDashed')}</option>
+                <option value="dotted" ${bs==='dotted'?'selected':''}>${I18n.t('common.borderDotted')}</option>
             </select>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
             <input type="color" id="cell-bc" value="${bc.startsWith('#')?bc:'#cccccc'}" style="width:40px; height:32px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px;">
-            <span style="font-size:12px; color:var(--text-secondary);">Cor da borda</span>
+            <span style="font-size:12px; color:var(--text-secondary);">${I18n.t('common.borderColor')}</span>
         </div>
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Arredondamento (px)</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">${I18n.t('common.radius')}</label>
         <input type="number" id="cell-br" class="craftools-input" value="${parseFloat(cellEl.style.borderRadius)||0}" min="0" max="100" style="width:80px;">
     `;
 

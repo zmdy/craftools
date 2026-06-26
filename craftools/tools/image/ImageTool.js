@@ -54,7 +54,7 @@ export class ImageTool extends BaseTool {
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 4px; border-top: 1px solid var(--border); margin-top: 5px;">
                     <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${I18n.t('imageTool.transform') || 'Ajustes de Transformação'}</span>
                     <button id="img-reset-btn" style="font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 3px; font-family: 'DM Sans', sans-serif; padding: 2px 4px; border-radius: 4px;">
-                        <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> Reset
+                        <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> ${I18n.t('imageTool.reset')}
                     </button>
                 </div>
 
@@ -76,7 +76,7 @@ export class ImageTool extends BaseTool {
 
                 <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">Preenchimento de Fundo (Blur)</span>
+                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.bgBlur')}</span>
                         <span id="bgblur-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.bgBlur || 0}px</span>
                     </div>
                     <input type="range" id="bgblur-slider" min="1" max="100" step="1" value="${meta.bgBlur || 20}" style="width:100%;">

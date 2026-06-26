@@ -5,7 +5,7 @@
 - [X] Text Tool: make a "copy and paste style" button in the properties panel
 - [X] Export to PDF using blob
 - [X] Mobile-first interface
-- [ ] Translations: general overview and refinments
+- [X] Translations: general overview and refinments
 - [X] Make the right panel become the sidebar
 - [X] Auto-center text in albums
 - [X] Fix the footer bug showing buttons prematurely
@@ -13,7 +13,7 @@
 - [X] In album mode, show a preview of the photo size and the number of photos on the page
 - [X] Implement comic strip mode
 - [X] When loading fonts from the PC, they should be saved (via cache/cookies/storage)
-- [ ] Create a "clear pages" button especially for the album tool
+- [X] Create a "clear pages" button especially for the album tool
 
 # v0.2
 - [ ] Improve the PropertiesPanel (add icons make it more organized)

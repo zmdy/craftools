@@ -1,5 +1,6 @@
 import { CommonProperties } from "../utils/CommonProperties.js";
 import { Notify } from "../utils/Notify.js";
+import { I18n } from "../settings/Translations.js";
 
 /**
  * BaseTool
@@ -53,13 +54,13 @@ export class BaseTool {
 
         const html = `
             <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-                <button id="btn-copy-styles" class="craftools-pill" style="flex: 1; justify-content: center; gap: 4px;" title="Copiar Estilos">
+                <button id="btn-copy-styles" class="craftools-pill" style="flex: 1; justify-content: center; gap: 4px;" title="${I18n.t('common.copyStyles')}">
                     <span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span>
-                    Copiar
+                    ${I18n.t('common.copy')}
                 </button>
-                <button id="btn-paste-styles" class="craftools-pill" style="flex: 1; justify-content: center; gap: 4px;" title="Colar Estilos">
+                <button id="btn-paste-styles" class="craftools-pill" style="flex: 1; justify-content: center; gap: 4px;" title="${I18n.t('common.pasteStyles')}">
                     <span class="material-symbols-outlined" style="font-size: 14px;">content_paste</span>
-                    Colar
+                    ${I18n.t('common.paste')}
                 </button>
             </div>
         `;
@@ -81,15 +82,15 @@ export class BaseTool {
             
             // Feedback visual
             const originalText = btnCopy.innerHTML;
-            btnCopy.innerHTML = `<span class="material-symbols-outlined" style="font-size: 14px; color: var(--accent);">check</span> Copiado`;
+            btnCopy.innerHTML = `<span class="material-symbols-outlined" style="font-size: 14px; color: var(--accent);">check</span> ${I18n.t('common.copied')}`;
             setTimeout(() => btnCopy.innerHTML = originalText, 1500);
         });
 
         btnPaste.addEventListener('click', () => {
             const clip = window.__craftoolsClipboardStyle;
-            if (!clip) return Notify.toast('Nenhum estilo copiado!', 'error');
+            if (!clip) return Notify.toast(I18n.t('common.noStyleCopied'), 'error');
             if (clip.type !== element.getAttribute('data-craftool')) {
-                return Notify.toast('Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem).', 'error');
+                return Notify.toast(I18n.t('common.incompatibleStyleTypes'), 'error');
             }
 
             // Aplica CSS Inline (garante compatibilidade com propriedades futuras)

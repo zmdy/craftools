@@ -83,7 +83,8 @@ export class Craftools{
         if (!session || !session.html) return;
 
         const ts = new Date(session.timestamp);
-        const dateStr = ts.toLocaleDateString(I18n.currentLang === 'pt-br' ? 'pt-BR' : 'en-US', {
+        const localeMap = { 'pt-br': 'pt-BR', 'es': 'es-ES', 'en': 'en-US' };
+        const dateStr = ts.toLocaleDateString(localeMap[I18n.currentLang] || 'en-US', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
@@ -117,12 +118,12 @@ export class Craftools{
                 <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #f97316, #fb923c); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 8px 24px rgba(249,115,22,0.3);">
                     <span class="material-symbols-outlined" style="font-size: 28px; color: #fff;">history</span>
                 </div>
-                <h2 style="font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 700; color: var(--text-primary, #fff); margin: 0 0 8px;">Sessão recuperada</h2>
+                <h2 style="font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 700; color: var(--text-primary, #fff); margin: 0 0 8px;">${I18n.t('sessionRecovery.title')}</h2>
                 <p style="font-size: 13px; color: var(--text-secondary, rgba(255,255,255,0.6)); margin: 0 0 6px; line-height: 1.6;">
-                    Detectamos uma sessão de trabalho não finalizada.
+                    ${I18n.t('sessionRecovery.message')}
                 </p>
                 <p style="font-size: 12px; color: var(--text-muted, rgba(255,255,255,0.4)); margin: 0 0 28px;">
-                    Salva em: <strong style="color: var(--accent, #f97316);">${dateStr}</strong>
+                    ${I18n.t('sessionRecovery.savedAt')} <strong style="color: var(--accent, #f97316);">${dateStr}</strong>
                 </p>
                 <div style="display: flex; gap: 12px; justify-content: center;">
                     <button id="ct-recovery-new" style="
@@ -131,7 +132,7 @@ export class Craftools{
                         font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
                         transition: all 0.2s;
                     " onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
-                        Novo projeto
+                        ${I18n.t('sessionRecovery.newProject')}
                     </button>
                     <button id="ct-recovery-restore" style="
                         padding: 10px 24px; border-radius: 10px; border: none;
@@ -142,7 +143,7 @@ export class Craftools{
                         transition: all 0.2s;
                     " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
                         <span class="material-symbols-outlined" style="font-size:14px; vertical-align: middle; margin-right: 4px;">restore</span>
-                        Recuperar sessão
+                        ${I18n.t('sessionRecovery.restoreSession')}
                     </button>
                 </div>
             </div>

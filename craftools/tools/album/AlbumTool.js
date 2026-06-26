@@ -378,8 +378,8 @@ export class AlbumTool extends BaseTool {
                             </div>
                             <div style="flex:1; min-width:0; overflow:hidden;">
                                 <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}</div>
-                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? 'Tamanhos Mistos' : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
-                                <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">Gap: ${t.cellGap} mm</div>
+                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
+                                <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
                                 <button class="page-preview-btn" data-tidx="${idx}" style="
                                     font-size:9px; padding:2px 7px; border-radius:4px;
                                     background:transparent; border:1px solid ${isActive ? 'rgba(255,255,255,0.5)' : 'var(--border,#374151)'};
@@ -387,7 +387,7 @@ export class AlbumTool extends BaseTool {
                                     display:inline-flex; align-items:center; gap:3px;
                                 ">
                                     <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
-                                    Ver Página
+                                    ${I18n.t('albumTool.viewPage')}
                                 </button>
                             </div>
                         </div>
@@ -404,38 +404,38 @@ export class AlbumTool extends BaseTool {
                 if (selectedMode === 'album') {
                     step4Html = `
                         <div class="craftools-field">
-                            <span class="craftools-label">4. Selecionar Fotos</span>
+                            <span class="craftools-label">${I18n.t('albumTool.step4SelectPhotos')}</span>
                             <input type="file" id="album-file-input" multiple accept="image/*" style="display: none;">
                             <button class="craftools-topbtn" id="album-select-btn" style="width: 100%; justify-content: center;">
                                 <span class="material-symbols-outlined">imagesmode</span>
-                                ${photos.length > 0 ? `${photos.length} foto(s) selecionada(s)` : 'Selecionar Fotos'}
+                                ${photos.length > 0 ? I18n.t('albumTool.photosSelectedCount').replace('{n}', photos.length) : I18n.t('albumTool.selectPhotos')}
                             </button>
                         </div>`;
                 } else {
                     const autoQty = selectedSize ? calcPerPage(selectedTemplate, selectedSize) : '—';
                     step4Html = `
                         <div class="craftools-field">
-                            <span class="craftools-label">4. Quantidade de Cartões</span>
+                            <span class="craftools-label">${I18n.t('albumTool.step4CardQty')}</span>
                             <div style="display: flex; gap: 6px; margin-bottom: 10px;">
                                 <button class="craftools-pill qty-mode-btn ${cardQuantityMode === 'auto' ? 'active' : ''}" data-qmode="auto" style="flex:1; text-align:center;">
-                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">auto_awesome</span> Auto (${autoQty})
+                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">auto_awesome</span> ${I18n.t('albumTool.auto')} (${autoQty})
                                 </button>
                                 <button class="craftools-pill qty-mode-btn ${cardQuantityMode === 'manual' ? 'active' : ''}" data-qmode="manual" style="flex:1; text-align:center;">
-                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">edit</span> Manual
+                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">edit</span> ${I18n.t('albumTool.manual')}
                                 </button>
                             </div>
                             ${cardQuantityMode === 'manual' ? `
-                                <input type="number" id="card-qty-input" class="craftools-input" 
-                                    min="1" max="999" value="${cardManualQty}" 
+                                <input type="number" id="card-qty-input" class="craftools-input"
+                                    min="1" max="999" value="${cardManualQty}"
                                     style="width: 100%; text-align: center; font-size: 20px; font-weight: 700; padding: 10px;">
                             ` : ''}
                         </div>
                         <div class="craftools-field">
-                            <span class="craftools-label">5. Imagem do Cartão</span>
+                            <span class="craftools-label">${I18n.t('albumTool.step5CardImage')}</span>
                             <input type="file" id="card-file-input" accept="image/*" style="display: none;">
                             <button class="craftools-topbtn" id="card-select-btn" style="width: 100%; justify-content: center;">
                                 <span class="material-symbols-outlined">photo_camera</span>
-                                ${cardPhoto ? '1 imagem selecionada ✓' : 'Selecionar Imagem'}
+                                ${cardPhoto ? I18n.t('albumTool.cardImageSelected') : I18n.t('albumTool.selectImageBtn')}
                             </button>
                         </div>`;
                 }
@@ -463,17 +463,17 @@ export class AlbumTool extends BaseTool {
 
                     ${selectedTemplate ? `
                     <div class="craftools-field">
-                        <span class="craftools-label">3. Modo</span>
+                        <span class="craftools-label">${I18n.t('albumTool.step3Mode')}</span>
                         <div style="display: flex; gap: 6px;">
-                            <button class="craftools-pill mode-btn ${selectedMode === 'album' ? 'active' : ''}" data-mode="album" 
+                            <button class="craftools-pill mode-btn ${selectedMode === 'album' ? 'active' : ''}" data-mode="album"
                                 style="flex:1; text-align:center; padding: 10px 6px; flex-direction:column; display:flex; align-items:center; gap:4px; height:auto;">
                                 <span class="material-symbols-outlined" style="font-size:22px;">photo_library</span>
-                                <span style="font-size:10px;">Álbum de fotos</span>
+                                <span style="font-size:10px;">${I18n.t('albumTool.modePhotoAlbum')}</span>
                             </button>
                             <button class="craftools-pill mode-btn ${selectedMode === 'card' ? 'active' : ''}" data-mode="card"
                                 style="flex:1; text-align:center; padding: 10px 6px; flex-direction:column; display:flex; align-items:center; gap:4px; height:auto;">
                                 <span class="material-symbols-outlined" style="font-size:22px;">contact_page</span>
-                                <span style="font-size:10px;">Cartão de visita</span>
+                                <span style="font-size:10px;">${I18n.t('albumTool.modeBusinessCard')}</span>
                             </button>
                         </div>
                     </div>` : ''}
@@ -482,49 +482,49 @@ export class AlbumTool extends BaseTool {
 
                     <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span class="craftools-label" style="margin:0;">Alinhamento Automático</span>
+                            <span class="craftools-label" style="margin:0;">${I18n.t('albumTool.autoAlign')}</span>
                             <button class="craftools-pill auto-snap-btn ${window.craftoolsAutoSnap !== false ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
                                 <span class="material-symbols-outlined" style="font-size:14px;">center_focus_strong</span>
-                                ${window.craftoolsAutoSnap !== false ? 'Ativado' : 'Desativado'}
+                                ${window.craftoolsAutoSnap !== false ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
                             </button>
                         </div>
-                        
+
                         ${window.craftoolsAutoSnap !== false ? `
                         <div style="margin-bottom: 10px;">
-                            <span class="craftools-label" style="margin:0 0 4px 0;">Posição do Snap</span>
+                            <span class="craftools-label" style="margin:0 0 4px 0;">${I18n.t('albumTool.snapPosition')}</span>
                             <select class="craftools-input snap-align-select" style="width: 100%; padding: 4px; font-size: 12px;">
-                                <option value="top-left" ${window.craftoolsAutoSnapAlign === 'top-left' ? 'selected' : ''}>Superior Esquerdo</option>
-                                <option value="top-center" ${window.craftoolsAutoSnapAlign === 'top-center' ? 'selected' : ''}>Superior Centro</option>
-                                <option value="top-right" ${window.craftoolsAutoSnapAlign === 'top-right' ? 'selected' : ''}>Superior Direito</option>
-                                <option value="center-left" ${window.craftoolsAutoSnapAlign === 'center-left' ? 'selected' : ''}>Centro Esquerdo</option>
-                                <option value="center-center" ${window.craftoolsAutoSnapAlign === 'center-center' ? 'selected' : ''}>Centro Centro</option>
-                                <option value="center-right" ${window.craftoolsAutoSnapAlign === 'center-right' ? 'selected' : ''}>Centro Direito</option>
-                                <option value="bottom-left" ${window.craftoolsAutoSnapAlign === 'bottom-left' ? 'selected' : ''}>Inferior Esquerdo</option>
-                                <option value="bottom-center" ${(window.craftoolsAutoSnapAlign || 'bottom-center') === 'bottom-center' ? 'selected' : ''}>Inferior Centro</option>
-                                <option value="bottom-right" ${window.craftoolsAutoSnapAlign === 'bottom-right' ? 'selected' : ''}>Inferior Direito</option>
+                                <option value="top-left" ${window.craftoolsAutoSnapAlign === 'top-left' ? 'selected' : ''}>${I18n.t('albumTool.snapTopLeft')}</option>
+                                <option value="top-center" ${window.craftoolsAutoSnapAlign === 'top-center' ? 'selected' : ''}>${I18n.t('albumTool.snapTopCenter')}</option>
+                                <option value="top-right" ${window.craftoolsAutoSnapAlign === 'top-right' ? 'selected' : ''}>${I18n.t('albumTool.snapTopRight')}</option>
+                                <option value="center-left" ${window.craftoolsAutoSnapAlign === 'center-left' ? 'selected' : ''}>${I18n.t('albumTool.snapCenterLeft')}</option>
+                                <option value="center-center" ${window.craftoolsAutoSnapAlign === 'center-center' ? 'selected' : ''}>${I18n.t('albumTool.snapCenterCenter')}</option>
+                                <option value="center-right" ${window.craftoolsAutoSnapAlign === 'center-right' ? 'selected' : ''}>${I18n.t('albumTool.snapCenterRight')}</option>
+                                <option value="bottom-left" ${window.craftoolsAutoSnapAlign === 'bottom-left' ? 'selected' : ''}>${I18n.t('albumTool.snapBottomLeft')}</option>
+                                <option value="bottom-center" ${(window.craftoolsAutoSnapAlign || 'bottom-center') === 'bottom-center' ? 'selected' : ''}>${I18n.t('albumTool.snapBottomCenter')}</option>
+                                <option value="bottom-right" ${window.craftoolsAutoSnapAlign === 'bottom-right' ? 'selected' : ''}>${I18n.t('albumTool.snapBottomRight')}</option>
                             </select>
                         </div>
                         ` : ''}
-                        
+
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="craftools-label" style="margin:0;">Ajuste Inteligente (Auto-rotação)</span>
+                            <span class="craftools-label" style="margin:0;">${I18n.t('albumTool.smartFit')}</span>
                             <button class="craftools-pill smart-fit-btn ${smartFit ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
                                 <span class="material-symbols-outlined" style="font-size:14px;">auto_fix_high</span>
-                                ${smartFit ? 'Ativado' : 'Desativado'}
+                                ${smartFit ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
                             </button>
                         </div>
-                        <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px;">Rotaciona a foto automaticamente se a proporção (retrato/paisagem) for diferente do slot da grade.</span>
+                        <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px;">${I18n.t('albumTool.smartFitHelp')}</span>
                     </div>
 
                     <button class="craftools-topbtn" id="album-generate-btn"
                         style="width: 100%; justify-content: center; background: var(--accent); color: white; border: none; margin-top: 4px;"
                         ${!canGenerate ? 'disabled' : ''}>
-                        <span class="material-symbols-outlined">dynamic_feed</span> ${existingGrid ? 'Gerar Novamente' : 'Gerar Álbum'}
+                        <span class="material-symbols-outlined">dynamic_feed</span> ${existingGrid ? I18n.t('albumTool.generateAgain') : I18n.t('albumTool.generateAlbum')}
                     </button>
                     ${existingGrid ? `
                     <button class="craftools-topbtn" id="album-clear-btn"
                         style="width: 100%; justify-content: center; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 4px;">
-                        <span class="material-symbols-outlined">delete</span> Apagar Álbum
+                        <span class="material-symbols-outlined">delete</span> ${I18n.t('albumTool.clearAlbum')}
                     </button>
                     ` : ''}
                 </div>

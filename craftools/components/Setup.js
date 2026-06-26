@@ -27,6 +27,7 @@ export class Craftools_Setup extends HTMLElement{
                 <select id="lang-select" style="padding: 6px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 12px;">
                     <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
                     <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                    <option value="es" ${I18n.currentLang === 'es' ? 'selected' : ''}>ES-ES</option>
                 </select>
             </div>
             <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; margin: auto;">
@@ -63,8 +64,8 @@ export class Craftools_Setup extends HTMLElement{
             sizesHtml += `
             <a href="#" data-size="${index}" class="media-btn" style="background: var(--bg-panel); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow);">
                 <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent);">${size.icon}</span>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${size.name} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit}${descSize})</span></h3>
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${size.description}</p>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${I18n.t('sizes.' + mediaKey + '.' + size.key)} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit}${descSize})</span></h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${I18n.t('sizes.' + mediaKey + '.' + size.key + 'Desc')}</p>
             </a>`;
         });
         sizesHtml += "</div>";
@@ -75,6 +76,7 @@ export class Craftools_Setup extends HTMLElement{
                 <select id="lang-select" style="padding: 6px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 12px;">
                     <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
                     <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                    <option value="es" ${I18n.currentLang === 'es' ? 'selected' : ''}>ES-ES</option>
                 </select>
             </div>
             <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; position: relative; margin: auto;">

@@ -6,6 +6,8 @@
  * Nenhum token é enviado do cliente — o acesso sem token retorna conteúdo Free.
  * Tokens de planos premium serão injetados futuramente via autenticação no app.
  */
+import { I18n } from "../../settings/Translations.js";
+import "./ApiPicker_Translations.js";
 
 /** @returns {string} URL base da API sem barra final */
 function getApiBase() {
@@ -131,14 +133,14 @@ export class ApiPicker {
                 <!-- Header -->
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0;">
                     <div>
-                        <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--text-primary);">Biblioteca de Imagens</h3>
-                        <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary);">Selecione uma imagem da API para usar</p>
+                        <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--text-primary);">${I18n.t('apiPicker.title')}</h3>
+                        <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary);">${I18n.t('apiPicker.subtitle')}</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div class="tier-filter-bar">
-                            <button class="tier-btn active" data-tier="all">Todos</button>
-                            <button class="tier-btn" data-tier="free">Free</button>
-                            <button class="tier-btn" data-tier="premium">Premium</button>
+                            <button class="tier-btn active" data-tier="all">${I18n.t('apiPicker.tierAll')}</button>
+                            <button class="tier-btn" data-tier="free">${I18n.t('apiPicker.tierFree')}</button>
+                            <button class="tier-btn" data-tier="premium">${I18n.t('apiPicker.tierPremium')}</button>
                         </div>
                         <button id="api-picker-close" style="
                             width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
@@ -151,7 +153,7 @@ export class ApiPicker {
 
                 <!-- Busca -->
                 <div style="padding: 10px 16px; border-bottom:1px solid var(--border); flex-shrink:0;">
-                    <input id="api-search" type="text" placeholder="Filtrar por nome de coleção..."
+                    <input id="api-search" type="text" placeholder="${I18n.t('apiPicker.searchPlaceholder')}"
                         style="width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--border);
                                 background:var(--bg-input); color:var(--text-primary); font-size:13px;
                                 outline:none; font-family:'DM Sans',sans-serif; box-sizing:border-box;">
@@ -161,7 +163,7 @@ export class ApiPicker {
                 <div id="api-picker-body" style="flex:1; overflow-y:auto; padding: 0;">
                     <div class="api-loader">
                         <span class="material-symbols-outlined spin">progress_activity</span>
-                        <span>Carregando coleções...</span>
+                        <span>${I18n.t('apiPicker.loadingCollections')}</span>
                     </div>
                 </div>
             `;
@@ -204,20 +206,20 @@ export class ApiPicker {
             if (!apiEndpoint) {
                 body.innerHTML = `<div class="api-error">
                     <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:8px;">settings</span>
-                    API não configurada.<br><small>Defina <code>window.CRAFTOOLS_CONFIG.apiBase</code> no index.html.</small>
+                    ${I18n.t('apiPicker.apiNotConfigured')}<br><small>${I18n.t('apiPicker.apiNotConfiguredHint')}</small>
                 </div>`;
             } else {
                 fetch(apiEndpoint)
                     .then(r => r.json())
                     .then(json => {
-                        if (json.status !== 'success') throw new Error(json.message || 'Erro na API');
+                        if (json.status !== 'success') throw new Error(json.message || 'API Error');
                         allCollections = json.data || [];
                         renderCollections(allCollections);
                     })
                     .catch(err => {
                         body.innerHTML = `<div class="api-error">
                             <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:8px;">wifi_off</span>
-                            Erro ao conectar à API:<br><small>${err.message}</small>
+                            ${I18n.t('apiPicker.apiConnectError')}<br><small>${err.message}</small>
                         </div>`;
                     });
             }
@@ -232,7 +234,7 @@ export class ApiPicker {
 
                 if (filtered.length === 0) {
                     body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-muted); font-size:13px;">
-                        Nenhuma coleção encontrada.
+                        ${I18n.t('apiPicker.noCollections')}
                     </div>`;
                     return;
                 }
@@ -256,8 +258,8 @@ export class ApiPicker {
                                 <div style="font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${parentPath}</div>
                             </div>
                             <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                                ${isPremium ? '<span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;">PREMIUM</span>' : '<span style="background:#10b981;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;">FREE</span>'}
-                                <span style="font-size:11px; color:var(--text-muted);">${col.images?.length || 0} imagens</span>
+                                ${isPremium ? `<span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;">${I18n.t('apiPicker.tierPremium').toUpperCase()}</span>` : `<span style="background:#10b981;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;">${I18n.t('apiPicker.tierFree').toUpperCase()}</span>`}
+                                <span style="font-size:11px; color:var(--text-muted);">${I18n.t('apiPicker.imagesCount').replace('{n}', col.images?.length || 0)}</span>
                             </div>
                         </div>
                         <div class="api-collection-body">
@@ -266,7 +268,7 @@ export class ApiPicker {
                                     // api_url pode ser relativa (v1/assets/...) ou absoluta (http://...)
                                     const imgUrl = img.api_url.startsWith('http') ? img.api_url : `${base}/${img.api_url}`;
                                     return `
-                                    <div class="api-img-thumb" data-url="${imgUrl}" data-col-tier="${col.tier}" data-img-tier="${img.tier}" title="Clique para usar">
+                                    <div class="api-img-thumb" data-url="${imgUrl}" data-col-tier="${col.tier}" data-img-tier="${img.tier}" title="${I18n.t('apiPicker.clickToUse')}">
                                         <div class="thumb-loading"><span class="material-symbols-outlined" style="font-size:18px;">image</span></div>
                                         <img src="${imgUrl}" loading="lazy"
                                              onload="this.previousElementSibling.style.display='none'"

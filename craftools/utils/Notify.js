@@ -17,6 +17,8 @@
  *     opts: { confirmLabel, cancelLabel, danger }
  */
 
+import { I18n } from "../settings/Translations.js";
+
 const TYPE_ICON = {
     info: 'info',
     success: 'check_circle',
@@ -99,7 +101,7 @@ export const Notify = {
      * @returns {Promise<boolean>}
      */
     confirm(message, opts = {}) {
-        const { confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = false } = opts;
+        const { confirmLabel = I18n.t('common.confirm'), cancelLabel = I18n.t('common.cancel'), danger = false } = opts;
 
         return new Promise((resolve) => {
             const overlay = document.createElement('div');

@@ -5,6 +5,8 @@
  * window.print() via blob URL em uma nova janela.
  */
 import { Notify } from "./Notify.js";
+import { I18n } from "../settings/Translations.js";
+import "./PdfExport_Translations.js";
 
 export class PdfExport {
 
@@ -12,7 +14,7 @@ export class PdfExport {
     static print(editor) {
         const pages = [...editor.querySelectorAll('.craftools-page')];
         if (!pages.length) {
-            Notify.toast('Nenhuma página encontrada para exportar.', 'error');
+            Notify.toast(I18n.t('pdfExport.noPagesFound'), 'error');
             return;
         }
 
@@ -238,8 +240,10 @@ ${pageRules}
 
     // ── Envolve tudo num documento HTML completo ──────────────────────────────
     static _wrapDocument(css, body) {
+        const htmlLangMap = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
+        const htmlLang = htmlLangMap[I18n.currentLang] || 'pt-BR';
         return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="${htmlLang}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -271,7 +275,7 @@ ${body}
 
         const win = window.open(url, '_blank');
         if (!win) {
-            Notify.toast('Seu navegador bloqueou a abertura da janela de impressão. Permita pop-ups para este site.', 'error', 6000);
+            Notify.toast(I18n.t('pdfExport.popupBlocked'), 'error', 6000);
             URL.revokeObjectURL(url);
             return;
         }

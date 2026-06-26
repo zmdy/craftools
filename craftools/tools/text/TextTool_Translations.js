@@ -14,7 +14,12 @@ I18n.addTranslations('textTool', {
         underline: "Sublinhado",
         addTitle: "Adicionar Título",
         addSubtitle: "Adicionar Subtítulo",
-        addText: "Adicionar Texto"
+        addText: "Adicionar Texto",
+        localFontPlaceholder: "Digitar fonte local (ex: Comic Sans)...",
+        listLocalFontsTitle: "Listar fontes instaladas no PC",
+        localFontsUnsupported: "Acesso a fontes locais não é suportado pelo seu navegador atual. Use o campo ao lado para digitar o nome da fonte instalada.",
+        localFontsLoaded: "{n} fontes locais carregadas com sucesso na lista!",
+        localFontsError: "Permissão para listar fontes locais negada ou erro ao acessar:"
     },
     "en": {
         propsTitle: "Title Properties",
@@ -29,6 +34,31 @@ I18n.addTranslations('textTool', {
         underline: "Underline",
         addTitle: "Add Title",
         addSubtitle: "Add Subtitle",
-        addText: "Add Text"
+        addText: "Add Text",
+        localFontPlaceholder: "Type local font name (e.g. Comic Sans)...",
+        listLocalFontsTitle: "List fonts installed on this device",
+        localFontsUnsupported: "Local font access is not supported by your current browser. Use the field next to it to type the installed font's name.",
+        localFontsLoaded: "{n} local fonts successfully loaded into the list!",
+        localFontsError: "Permission to list local fonts was denied or an error occurred:"
+    },
+    "es": {
+        propsTitle: "Propiedades del Título",
+        propsParagraph: "Propiedades del Párrafo",
+        font: "Fuente",
+        color: "Color",
+        chooseColor: "Elige el color",
+        size: "Tamaño",
+        align: "Alineación",
+        bold: "Negrita",
+        italic: "Cursiva",
+        underline: "Subrayado",
+        addTitle: "Añadir Título",
+        addSubtitle: "Añadir Subtítulo",
+        addText: "Añadir Texto",
+        localFontPlaceholder: "Escribe el nombre de la fuente local (ej.: Comic Sans)...",
+        listLocalFontsTitle: "Listar fuentes instaladas en el equipo",
+        localFontsUnsupported: "El acceso a fuentes locales no es compatible con tu navegador actual. Usa el campo de al lado para escribir el nombre de la fuente instalada.",
+        localFontsLoaded: "¡{n} fuentes locales cargadas correctamente en la lista!",
+        localFontsError: "Permiso para listar fuentes locales denegado o error al acceder:"
     }
 });

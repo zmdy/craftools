@@ -14,6 +14,7 @@ import { ImageTransform } from '../tools/image/ImageTransform.js';
 import { CommonProperties } from './CommonProperties.js';
 import { I18n } from '../settings/Translations.js';
 import { Notify } from './Notify.js';
+import './MobileToolbar_Translations.js';
 
 export class MobileToolbar {
     static _footer = null;       // <ul> do footer
@@ -51,14 +52,14 @@ export class MobileToolbar {
         this.closeMiniPanel();
 
         const items = [
-            { icon: 'title',         label: 'Título',     action: () => this._triggerTool('titulo') },
-            { icon: 'notes',         label: 'Texto',      action: () => this._triggerTool('paragrafo') },
-            { icon: 'image',         label: 'Imagem',     action: () => this._triggerTool('imagem') },
-            { icon: 'photo_library', label: 'Álbum',      action: () => this._triggerTool('album') },
-            { icon: 'qr_code_2',     label: 'QR Code',    action: () => this._triggerTool('qrcode') },
-            { icon: 'note_add',      label: 'Nova Pág.',  action: () => this._triggerAction('newpage') },
-            { icon: 'picture_as_pdf',label: 'PDF',        action: () => this._triggerAction('export') },
-            { icon: 'layers',        label: 'Papéis',     action: () => this._triggerAction('papeis') },
+            { icon: 'title',         label: I18n.t('mobileToolbar.toolTitle'),   action: () => this._triggerTool('titulo') },
+            { icon: 'notes',         label: I18n.t('mobileToolbar.toolText'),    action: () => this._triggerTool('paragrafo') },
+            { icon: 'image',         label: I18n.t('mobileToolbar.toolImage'),   action: () => this._triggerTool('imagem') },
+            { icon: 'photo_library', label: I18n.t('mobileToolbar.toolAlbum'),   action: () => this._triggerTool('album') },
+            { icon: 'qr_code_2',     label: I18n.t('mobileToolbar.toolQrCode'),  action: () => this._triggerTool('qrcode') },
+            { icon: 'note_add',      label: I18n.t('mobileToolbar.toolNewPage'), action: () => this._triggerAction('newpage') },
+            { icon: 'picture_as_pdf',label: I18n.t('mobileToolbar.toolPdf'),     action: () => this._triggerAction('export') },
+            { icon: 'layers',        label: I18n.t('mobileToolbar.toolPapers'),  action: () => this._triggerAction('papeis') },
         ];
 
         this._renderFooterItems(items);
@@ -84,7 +85,7 @@ export class MobileToolbar {
         // Botão "voltar" sempre no início
         items.unshift({
             icon: 'arrow_back',
-            label: 'Fechar',
+            label: I18n.t('mobileToolbar.close'),
             action: () => {
                 this.showToolMode();
                 // Deseleciona o elemento no editor
@@ -100,36 +101,36 @@ export class MobileToolbar {
     static _getImageItems(el) {
         return [
             {
-                icon: 'photo_camera', label: 'Foto',
-                action: () => this.openMiniPanel('Trocar Foto', c => this._renderImagePhoto(c, el))
+                icon: 'photo_camera', label: I18n.t('mobileToolbar.photoLabel'),
+                action: () => this.openMiniPanel(I18n.t('imageTool.switchPhoto'), c => this._renderImagePhoto(c, el))
             },
             {
-                icon: 'tune', label: 'Ajuste',
-                action: () => this.openMiniPanel('Ajuste de Imagem', c => this._renderImageTransform(c, el))
+                icon: 'tune', label: I18n.t('mobileToolbar.adjustLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.adjustPanelTitle'), c => this._renderImageTransform(c, el))
             },
             {
-                icon: 'photo_filter', label: 'Filtros',
-                action: () => this.openMiniPanel('Filtros CSS', c => this._renderImageFilters(c, el))
+                icon: 'photo_filter', label: I18n.t('mobileToolbar.filtersLabel'),
+                action: () => this.openMiniPanel(I18n.t('imageTool.cssFilters'), c => this._renderImageFilters(c, el))
             },
             {
-                icon: 'fit_screen', label: 'Encaixe',
-                action: () => this.openMiniPanel('Encaixe da Imagem', c => this._renderImageFit(c, el))
+                icon: 'fit_screen', label: I18n.t('mobileToolbar.fitLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.fitPanelTitle'), c => this._renderImageFit(c, el))
             },
             {
-                icon: 'border_style', label: 'Borda',
-                action: () => this.openMiniPanel('Borda', c => CommonProperties.renderBorder(c, el, 'img'))
+                icon: 'border_style', label: I18n.t('common.border'),
+                action: () => this.openMiniPanel(I18n.t('common.border'), c => CommonProperties.renderBorder(c, el, 'img'))
             },
             {
-                icon: 'rounded_corner', label: 'Arred.',
-                action: () => this.openMiniPanel('Arredondamento', c => CommonProperties.renderBorderRadius(c, el, 'img'))
+                icon: 'rounded_corner', label: I18n.t('mobileToolbar.radiusLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.radiusPanelTitle'), c => CommonProperties.renderBorderRadius(c, el, 'img'))
             },
             {
-                icon: 'layers', label: 'Camada',
-                action: () => this.openMiniPanel('Camada (Z-Index)', c => CommonProperties.renderZIndex(c, el))
+                icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
+                action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
-                icon: 'content_copy', label: 'Copiar',
-                action: () => this.openMiniPanel('Copiar / Colar Estilo', c => this._renderCopyPaste(c, el, 'img'))
+                icon: 'content_copy', label: I18n.t('common.copy'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, 'img'))
             },
         ];
     }
@@ -138,36 +139,36 @@ export class MobileToolbar {
         const textEl = el.contentArea?.querySelector('[contenteditable]');
         return [
             {
-                icon: 'font_download', label: 'Fonte',
-                action: () => this.openMiniPanel('Fonte', c => this._renderTextFont(c, el, textEl))
+                icon: 'font_download', label: I18n.t('textTool.font'),
+                action: () => this.openMiniPanel(I18n.t('textTool.font'), c => this._renderTextFont(c, el, textEl))
             },
             {
-                icon: 'format_size', label: 'Tamanho',
-                action: () => this.openMiniPanel('Tamanho', c => this._renderTextSize(c, el, textEl))
+                icon: 'format_size', label: I18n.t('textTool.size'),
+                action: () => this.openMiniPanel(I18n.t('textTool.size'), c => this._renderTextSize(c, el, textEl))
             },
             {
-                icon: 'palette', label: 'Cor',
-                action: () => this.openMiniPanel('Cor do Texto', c => this._renderTextColor(c, el, textEl))
+                icon: 'palette', label: I18n.t('mobileToolbar.colorLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.textColorPanelTitle'), c => this._renderTextColor(c, el, textEl))
             },
             {
-                icon: 'format_align_left', label: 'Alinha.',
-                action: () => this.openMiniPanel('Alinhamento', c => this._renderTextAlign(c, el, textEl))
+                icon: 'format_align_left', label: I18n.t('mobileToolbar.alignLabel'),
+                action: () => this.openMiniPanel(I18n.t('textTool.align'), c => this._renderTextAlign(c, el, textEl))
             },
             {
-                icon: 'border_style', label: 'Borda',
-                action: () => this.openMiniPanel('Borda', c => CommonProperties.renderBorder(c, el, '[contenteditable]'))
+                icon: 'border_style', label: I18n.t('common.border'),
+                action: () => this.openMiniPanel(I18n.t('common.border'), c => CommonProperties.renderBorder(c, el, '[contenteditable]'))
             },
             {
-                icon: 'padding', label: 'Padding',
-                action: () => this.openMiniPanel('Espaçamento Interno', c => CommonProperties.renderPadding(c, el, '[contenteditable]'))
+                icon: 'padding', label: I18n.t('mobileToolbar.paddingLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.paddingPanelTitle'), c => CommonProperties.renderPadding(c, el, '[contenteditable]'))
             },
             {
-                icon: 'layers', label: 'Camada',
-                action: () => this.openMiniPanel('Camada (Z-Index)', c => CommonProperties.renderZIndex(c, el))
+                icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
+                action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
-                icon: 'content_copy', label: 'Copiar',
-                action: () => this.openMiniPanel('Copiar / Colar Estilo', c => this._renderCopyPaste(c, el, '[contenteditable]'))
+                icon: 'content_copy', label: I18n.t('common.copy'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, '[contenteditable]'))
             },
         ];
     }
@@ -175,32 +176,32 @@ export class MobileToolbar {
     static _getQrItems(el) {
         return [
             {
-                icon: 'edit_note', label: 'Conteúdo',
-                action: () => this.openMiniPanel(I18n.t('qrTool.contentType') || 'Conteúdo do QR Code', c => this._renderQrContent(c, el))
+                icon: 'edit_note', label: I18n.t('mobileToolbar.qrContentLabel'),
+                action: () => this.openMiniPanel(I18n.t('qrTool.contentType'), c => this._renderQrContent(c, el))
             },
             {
-                icon: 'palette', label: 'Cores',
-                action: () => this.openMiniPanel('Cores do QR Code', c => this._renderQrColors(c, el))
+                icon: 'palette', label: I18n.t('mobileToolbar.qrColorsLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.qrColorsPanelTitle'), c => this._renderQrColors(c, el))
             },
             {
-                icon: 'shield', label: 'Correção',
-                action: () => this.openMiniPanel(I18n.t('qrTool.ecLevel') || 'Correção de Erro', c => this._renderQrEcLevel(c, el))
+                icon: 'shield', label: I18n.t('mobileToolbar.qrEcLabel'),
+                action: () => this.openMiniPanel(I18n.t('qrTool.ecLevel'), c => this._renderQrEcLevel(c, el))
             },
             {
-                icon: 'border_style', label: 'Borda',
-                action: () => this.openMiniPanel('Borda', c => CommonProperties.renderBorder(c, el, 'svg'))
+                icon: 'border_style', label: I18n.t('common.border'),
+                action: () => this.openMiniPanel(I18n.t('common.border'), c => CommonProperties.renderBorder(c, el, 'svg'))
             },
             {
-                icon: 'rounded_corner', label: 'Arred.',
-                action: () => this.openMiniPanel('Arredondamento', c => CommonProperties.renderBorderRadius(c, el, 'svg'))
+                icon: 'rounded_corner', label: I18n.t('mobileToolbar.radiusLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.radiusPanelTitle'), c => CommonProperties.renderBorderRadius(c, el, 'svg'))
             },
             {
-                icon: 'layers', label: 'Camada',
-                action: () => this.openMiniPanel('Camada (Z-Index)', c => CommonProperties.renderZIndex(c, el))
+                icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
+                action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
-                icon: 'content_copy', label: 'Copiar',
-                action: () => this.openMiniPanel('Copiar / Colar Estilo', c => this._renderCopyPaste(c, el, 'svg'))
+                icon: 'content_copy', label: I18n.t('common.copy'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, 'svg'))
             },
         ];
     }
@@ -277,7 +278,7 @@ export class MobileToolbar {
             <div class="mmp-section">
                 <button class="mmp-full-btn" id="mmp-img-switch">
                     <span class="material-symbols-outlined">photo_camera</span>
-                    Trocar Foto
+                    ${I18n.t('imageTool.switchPhoto')}
                 </button>
                 <input type="file" id="mmp-img-file" style="display:none;" accept="image/*">
             </div>
@@ -305,24 +306,24 @@ export class MobileToolbar {
         container.innerHTML = `
             <div class="mmp-section">
                 <div class="mmp-field">
-                    <label>Zoom <span class="mmp-val" id="mmp-zoom-val">${Math.round((meta.zoom||1)*100)}%</span></label>
+                    <label>${I18n.t('mobileToolbar.zoomLabel')} <span class="mmp-val" id="mmp-zoom-val">${Math.round((meta.zoom||1)*100)}%</span></label>
                     <input type="range" id="mmp-zoom" min="0.1" max="5" step="0.05" value="${meta.zoom||1}">
                 </div>
                 <div class="mmp-field">
-                    <label>Rotação <span class="mmp-val" id="mmp-rot-val">${meta.rotation||0}°</span></label>
+                    <label>${I18n.t('mobileToolbar.rotationLabel')} <span class="mmp-val" id="mmp-rot-val">${meta.rotation||0}°</span></label>
                     <input type="range" id="mmp-rot" min="-180" max="180" step="1" value="${meta.rotation||0}">
                 </div>
                 <div class="mmp-field">
-                    <label>Blur de Fundo <span class="mmp-val" id="mmp-blur-val">${meta.bgBlur||0}px</span></label>
+                    <label>${I18n.t('mobileToolbar.bgBlurLabel')} <span class="mmp-val" id="mmp-blur-val">${meta.bgBlur||0}px</span></label>
                     <input type="range" id="mmp-blur" min="0" max="100" step="1" value="${meta.bgBlur||0}">
                 </div>
                 <div class="mmp-field mmp-grid2">
                     <div>
-                        <label>Pos X</label>
+                        <label>${I18n.t('mobileToolbar.posXLabel')}</label>
                         <input type="number" id="mmp-posx" class="mmp-input" value="${Math.round(meta.posX||0)}">
                     </div>
                     <div>
-                        <label>Pos Y</label>
+                        <label>${I18n.t('mobileToolbar.posYLabel')}</label>
                         <input type="number" id="mmp-posy" class="mmp-input" value="${Math.round(meta.posY||0)}">
                     </div>
                 </div>
@@ -436,10 +437,10 @@ export class MobileToolbar {
                 <select class="mmp-select" id="mmp-font" style="margin-bottom:12px;">
                     ${fonts.map(f => `<option value="${f}" ${f===current?'selected':''} style="font-family:'${f}',sans-serif">${f}</option>`).join('')}
                 </select>
-                <label style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:-4px;">Adicionar Fonte Customizada</label>
+                <label style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:-4px;">${I18n.t('mobileToolbar.addCustomFont')}</label>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="mmp-custom-font" class="mmp-input" placeholder="Ex: Roboto" value="">
-                    <button class="mmp-full-btn" id="mmp-add-font" style="width:auto; padding:8px 16px;">Carregar</button>
+                    <input type="text" id="mmp-custom-font" class="mmp-input" placeholder="${I18n.t('mobileToolbar.customFontPlaceholder')}" value="">
+                    <button class="mmp-full-btn" id="mmp-add-font" style="width:auto; padding:8px 16px;">${I18n.t('mobileToolbar.loadFontBtn')}</button>
                 </div>
             </div>
         `;
@@ -475,7 +476,7 @@ export class MobileToolbar {
         container.innerHTML = `
             <div class="mmp-section">
                 <div class="mmp-field">
-                    <label>Tamanho <span class="mmp-val" id="mmp-size-val">${size}px</span></label>
+                    <label>${I18n.t('textTool.size')} <span class="mmp-val" id="mmp-size-val">${size}px</span></label>
                     <input type="range" id="mmp-size-range" min="8" max="200" step="1" value="${size}">
                 </div>
                 <input type="number" id="mmp-size-num" class="mmp-input" value="${size}" style="width:80px;text-align:center;margin:0 auto;display:block;">
@@ -494,7 +495,7 @@ export class MobileToolbar {
         container.innerHTML = `
             <div class="mmp-section mmp-center">
                 <input type="color" class="mmp-color-big" id="mmp-txt-color" value="${CommonProperties._rgbToHex(col) || col}">
-                <label style="margin-top:8px;font-size:13px;">Cor do Texto</label>
+                <label style="margin-top:8px;font-size:13px;">${I18n.t('mobileToolbar.textColorPanelTitle')}</label>
             </div>
         `;
         container.querySelector('#mmp-txt-color').oninput = e => { textEl.style.color = e.target.value; CommonProperties._triggerChange(el); };
@@ -627,23 +628,23 @@ export class MobileToolbar {
         container.innerHTML = `
             <div class="mmp-section">
                 <button class="mmp-full-btn" id="mmp-copy-style">
-                    <span class="material-symbols-outlined">content_copy</span> Copiar Estilo
+                    <span class="material-symbols-outlined">content_copy</span> ${I18n.t('common.copyStyles')}
                 </button>
                 <button class="mmp-full-btn mmp-secondary" id="mmp-paste-style">
-                    <span class="material-symbols-outlined">content_paste</span> Colar Estilo
+                    <span class="material-symbols-outlined">content_paste</span> ${I18n.t('common.pasteStyles')}
                 </button>
             </div>
         `;
         container.querySelector('#mmp-copy-style').onclick = () => {
             window.__craftoolsClipboardStyle = { type: el.getAttribute('data-craftool'), cssText: target?.style.cssText, zIndex: el.style.zIndex, meta: el._craftoolsMeta ? JSON.parse(JSON.stringify(el._craftoolsMeta)) : null };
             const btn = container.querySelector('#mmp-copy-style');
-            btn.innerHTML = '<span class="material-symbols-outlined" style="color:var(--accent)">check</span> Copiado!';
-            setTimeout(() => { btn.innerHTML = '<span class="material-symbols-outlined">content_copy</span> Copiar Estilo'; }, 1500);
+            btn.innerHTML = `<span class="material-symbols-outlined" style="color:var(--accent)">check</span> ${I18n.t('common.copied')}`;
+            setTimeout(() => { btn.innerHTML = `<span class="material-symbols-outlined">content_copy</span> ${I18n.t('common.copyStyles')}`; }, 1500);
         };
         container.querySelector('#mmp-paste-style').onclick = () => {
             const clip = window.__craftoolsClipboardStyle;
-            if (!clip) return Notify.toast('Nenhum estilo copiado!', 'error');
-            if (clip.type !== el.getAttribute('data-craftool')) return Notify.toast('Tipos incompatíveis.', 'error');
+            if (!clip) return Notify.toast(I18n.t('common.noStyleCopied'), 'error');
+            if (clip.type !== el.getAttribute('data-craftool')) return Notify.toast(I18n.t('common.incompatibleStyleTypes'), 'error');
             if (target && clip.cssText) target.style.cssText = clip.cssText;
             if (clip.zIndex) el.style.zIndex = clip.zIndex;
             if (clip.meta && el._craftoolsMeta) { const m = {...clip.meta}; if (el._craftoolsMeta.src) m.src = el._craftoolsMeta.src; Object.assign(el._craftoolsMeta, m); }

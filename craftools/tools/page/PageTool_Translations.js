@@ -28,5 +28,19 @@ I18n.addTranslations('pageTool', {
         confirmDelete: "Are you sure you want to delete this page? This action cannot be undone.",
         alertLastPage: "You cannot delete the only remaining page.",
         newPageLabel: "New Page"
+    },
+    "es": {
+        title: "Configuración de Página",
+        presets: "Predefinición",
+        noPresets: "Sin predefiniciones",
+        dimensions: "Dimensiones",
+        background: "Fondo",
+        color: "Color",
+        gradient: "Degradado",
+        imageUrl: "URL de la imagen",
+        deletePage: "Eliminar Página",
+        confirmDelete: "¿Seguro que deseas eliminar esta página? Esta acción no se puede deshacer.",
+        alertLastPage: "No puedes eliminar la única página restante.",
+        newPageLabel: "Nueva Página"
     }
 });

@@ -62,10 +62,10 @@ export class TextTool extends BaseTool {
                     <select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></select>
                     
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <input type="text" id="text-prop-custom-font" class="craftools-input" 
-                            placeholder="Digitar fonte local (ex: Comic Sans)..." 
+                        <input type="text" id="text-prop-custom-font" class="craftools-input"
+                            placeholder="${I18n.t('textTool.localFontPlaceholder')}"
                             style="flex: 1; padding: 6px 9px; font-size: 11px;">
-                        <button class="craftools-pill" id="text-prop-load-local" title="Listar fontes instaladas no PC" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                        <button class="craftools-pill" id="text-prop-load-local" title="${I18n.t('textTool.listLocalFontsTitle')}" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
                             <span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC
                         </button>
                     </div>
@@ -220,7 +220,7 @@ export class TextTool extends BaseTool {
             
             const fontAccessApi = navigator.queryLocalFonts || window.queryLocalFonts;
             if (!fontAccessApi) {
-                alert("Acesso a fontes locais não é suportado pelo seu navegador atual. Use o campo ao lado para digitar o nome da fonte instalada.");
+                alert(I18n.t('textTool.localFontsUnsupported'));
                 return;
             }
             
@@ -243,11 +243,11 @@ export class TextTool extends BaseTool {
                 // Atualiza o select com as novas fontes mantendo a fonte atual selecionada
                 populateFontSelect(fontSelect.value);
                 
-                alert(`${families.length} fontes locais carregadas com sucesso na lista!`);
+                alert(I18n.t('textTool.localFontsLoaded').replace('{n}', families.length));
                 localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> PC';
             } catch (err) {
                 console.error(err);
-                alert("Permissão para listar fontes locais negada ou erro ao acessar: " + err.message);
+                alert(I18n.t('textTool.localFontsError') + " " + err.message);
                 localBtn.disabled = false;
                 localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC';
             }

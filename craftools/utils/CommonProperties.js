@@ -16,19 +16,19 @@ export class CommonProperties {
 
         const html = `
             <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
-                <span class="craftools-label" style="font-weight: 700;">Borda</span>
+                <span class="craftools-label" style="font-weight: 700;">${I18n.t('common.border')}</span>
                 <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
                     <input type="number" id="prop-border-width" class="craftools-input" value="${parseFloat(target.style.borderWidth) || 0}" min="0" max="20" style="width: 50px;">
                     <select id="prop-border-style" class="craftools-select" style="flex: 1; padding: 6px;">
-                        <option value="none" ${target.style.borderStyle === 'none' ? 'selected' : ''}>Nenhuma</option>
-                        <option value="solid" ${target.style.borderStyle === 'solid' ? 'selected' : ''}>Sólida</option>
-                        <option value="dashed" ${target.style.borderStyle === 'dashed' ? 'selected' : ''}>Tracejada</option>
-                        <option value="dotted" ${target.style.borderStyle === 'dotted' ? 'selected' : ''}>Pontilhada</option>
+                        <option value="none" ${target.style.borderStyle === 'none' ? 'selected' : ''}>${I18n.t('common.borderNone')}</option>
+                        <option value="solid" ${target.style.borderStyle === 'solid' ? 'selected' : ''}>${I18n.t('common.borderSolid')}</option>
+                        <option value="dashed" ${target.style.borderStyle === 'dashed' ? 'selected' : ''}>${I18n.t('common.borderDashed')}</option>
+                        <option value="dotted" ${target.style.borderStyle === 'dotted' ? 'selected' : ''}>${I18n.t('common.borderDotted')}</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <input type="color" id="prop-border-color" class="craftools-color-swatch" value="${this._rgbToHex(target.style.borderColor) || '#000000'}">
-                    <span style="font-size: 12px; color: var(--text-secondary)">Cor da Borda</span>
+                    <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('common.borderColor')}</span>
                 </div>
             </div>
         `;
@@ -70,7 +70,7 @@ export class CommonProperties {
 
         const html = `
             <div class="craftools-field">
-                <span class="craftools-label" style="font-weight: 700;">Arredondamento (px)</span>
+                <span class="craftools-label" style="font-weight: 700;">${I18n.t('common.radius')}</span>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <div style="display:flex; align-items:center; gap:4px;">
                         <span class="material-symbols-outlined" style="font-size:14px; color:var(--text-muted);">rounded_corner</span>
@@ -126,12 +126,12 @@ export class CommonProperties {
 
         const html = `
             <div class="craftools-field">
-                <span class="craftools-label" style="font-weight: 700;">Espaçamento Interno (Padding)</span>
+                <span class="craftools-label" style="font-weight: 700;">${I18n.t('common.padding')}</span>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <input type="number" id="prop-pad-t" class="craftools-input" value="${pt}" min="0" placeholder="Topo">
-                    <input type="number" id="prop-pad-r" class="craftools-input" value="${pr}" min="0" placeholder="Direita">
-                    <input type="number" id="prop-pad-b" class="craftools-input" value="${pb}" min="0" placeholder="Base">
-                    <input type="number" id="prop-pad-l" class="craftools-input" value="${pl}" min="0" placeholder="Esquerda">
+                    <input type="number" id="prop-pad-t" class="craftools-input" value="${pt}" min="0" placeholder="${I18n.t('common.top')}">
+                    <input type="number" id="prop-pad-r" class="craftools-input" value="${pr}" min="0" placeholder="${I18n.t('common.right')}">
+                    <input type="number" id="prop-pad-b" class="craftools-input" value="${pb}" min="0" placeholder="${I18n.t('common.bottom')}">
+                    <input type="number" id="prop-pad-l" class="craftools-input" value="${pl}" min="0" placeholder="${I18n.t('common.left')}">
                 </div>
             </div>
         `;
@@ -160,12 +160,12 @@ export class CommonProperties {
     static renderZIndex(container, element, onChange) {
         const html = `
             <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 12px;">
-                <span class="craftools-label" style="font-weight: 700;">Camada (Z-Index)</span>
+                <span class="craftools-label" style="font-weight: 700;">${I18n.t('common.zindex')}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <input type="number" id="prop-zindex" class="craftools-input" value="${element.style.zIndex || 2}" style="flex: 1;">
                     <div style="display: flex; gap: 2px;">
-                        <button class="craftools-pill" id="z-up" title="Subir"><span class="material-symbols-outlined" style="font-size:16px;">keyboard_arrow_up</span></button>
-                        <button class="craftools-pill" id="z-down" title="Descer"><span class="material-symbols-outlined" style="font-size:16px;">keyboard_arrow_down</span></button>
+                        <button class="craftools-pill" id="z-up" title="${I18n.t('common.moveUp')}"><span class="material-symbols-outlined" style="font-size:16px;">keyboard_arrow_up</span></button>
+                        <button class="craftools-pill" id="z-down" title="${I18n.t('common.moveDown')}"><span class="material-symbols-outlined" style="font-size:16px;">keyboard_arrow_down</span></button>
                     </div>
                 </div>
             </div>
