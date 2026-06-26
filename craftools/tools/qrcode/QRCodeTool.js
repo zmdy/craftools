@@ -33,6 +33,7 @@ export class QRCodeTool extends BaseTool {
                         <option value="telefone" ${meta.payloadType === 'telefone' ? 'selected' : ''}>${I18n.t('qrTool.typePhone')}</option>
                         <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
                         <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
+                        <option value="pix" ${meta.payloadType === 'pix' ? 'selected' : ''}>${I18n.t('qrTool.typePix')}</option>
                     </select>
                 </div>
 
@@ -187,6 +188,33 @@ export class QRCodeTool extends BaseTool {
                         <textarea id="qr-sms-body" class="craftools-input" rows="2" style="width:100%; resize:vertical;">${this._esc(meta.smsBody)}</textarea>
                     </div>
                 `;
+            case 'pix':
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixKey')}</span>
+                        <input type="text" id="qr-pix-key" class="craftools-input" placeholder="${I18n.t('qrTool.pixKeyPlaceholder')}" value="${this._esc(meta.pixKey)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixName')}</span>
+                        <input type="text" id="qr-pix-name" class="craftools-input" maxlength="25" value="${this._esc(meta.pixName)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixCity')}</span>
+                        <input type="text" id="qr-pix-city" class="craftools-input" maxlength="15" value="${this._esc(meta.pixCity)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixAmount')}</span>
+                        <input type="number" id="qr-pix-amount" class="craftools-input" min="0" step="0.01" placeholder="${I18n.t('qrTool.pixAmountPlaceholder')}" value="${this._esc(meta.pixAmount)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixTxid')}</span>
+                        <input type="text" id="qr-pix-txid" class="craftools-input" maxlength="25" placeholder="${I18n.t('qrTool.pixTxidPlaceholder')}" value="${this._esc(meta.pixTxid)}" style="width:100%;">
+                    </div>
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.pixMessage')}</span>
+                        <input type="text" id="qr-pix-message" class="craftools-input" maxlength="72" value="${this._esc(meta.pixMessage)}" style="width:100%;">
+                    </div>
+                `;
             default:
                 return `
                     <div class="craftools-field">
@@ -238,6 +266,21 @@ export class QRCodeTool extends BaseTool {
                 const body = editorPanel.querySelector('#qr-sms-body');
                 if (phone) phone.oninput = () => { meta.smsPhone = phone.value; regen(); };
                 if (body) body.oninput = () => { meta.smsBody = body.value; regen(); };
+                break;
+            }
+            case 'pix': {
+                const key = editorPanel.querySelector('#qr-pix-key');
+                const name = editorPanel.querySelector('#qr-pix-name');
+                const city = editorPanel.querySelector('#qr-pix-city');
+                const amount = editorPanel.querySelector('#qr-pix-amount');
+                const txid = editorPanel.querySelector('#qr-pix-txid');
+                const message = editorPanel.querySelector('#qr-pix-message');
+                if (key) key.oninput = () => { meta.pixKey = key.value; regen(); };
+                if (name) name.oninput = () => { meta.pixName = name.value; regen(); };
+                if (city) city.oninput = () => { meta.pixCity = city.value; regen(); };
+                if (amount) amount.oninput = () => { meta.pixAmount = amount.value; regen(); };
+                if (txid) txid.oninput = () => { meta.pixTxid = txid.value; regen(); };
+                if (message) message.oninput = () => { meta.pixMessage = message.value; regen(); };
                 break;
             }
             default: {
@@ -320,9 +363,77 @@ export class QRCodeTool extends BaseTool {
                 const body = meta.smsBody ? `?body=${encodeURIComponent(meta.smsBody)}` : '';
                 return `sms:${meta.smsPhone.replace(/\s+/g, '')}${body}`;
             }
+            case 'pix':
+                return this.buildPixPayload(meta);
             default:
                 return meta.text || '';
         }
+    }
+
+    /**
+     * Constrói o payload "Pix Copia e Cola" (BR Code estático) seguindo o
+     * Manual de Padrões para Iniciação do Pix (BACEN / EMV QR Code Specification).
+     * Estrutura TLV: ID(2) + LEN(2) + VALUE, finalizado com CRC16 (ID 63).
+     */
+    static buildPixPayload(meta) {
+        if (!meta || !meta.pixKey || !String(meta.pixKey).trim()) return '';
+
+        const field = (id, value) => `${id}${String(value).length.toString().padStart(2, '0')}${value}`;
+
+        const sanitize = (val, max, fallback = '') => {
+            let v = this._stripAccents(String(val || '')).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim();
+            if (!v) v = fallback;
+            return v.slice(0, max);
+        };
+
+        const key = String(meta.pixKey).trim();
+        const name = sanitize(meta.pixName, 25, 'RECEBEDOR PIX');
+        const city = sanitize(meta.pixCity, 15, 'BRASIL');
+        const txid = (String(meta.pixTxid || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 25)) || '***';
+        const message = sanitize(meta.pixMessage, 72);
+
+        let payload = '';
+        payload += field('00', '01');                                            // Payload Format Indicator
+        payload += field('01', '11');                                            // Point of Initiation Method (estático/reutilizável)
+        payload += field('26', field('00', 'BR.GOV.BCB.PIX') + field('01', key)); // Merchant Account Information – Pix
+        payload += field('52', '0000');                                          // Merchant Category Code
+        payload += field('53', '986');                                           // Transaction Currency (BRL)
+
+        const amount = parseFloat(String(meta.pixAmount || '').replace(',', '.'));
+        if (!isNaN(amount) && amount > 0) {
+            payload += field('54', amount.toFixed(2));                           // Transaction Amount (opcional)
+        }
+
+        payload += field('58', 'BR');                                            // Country Code
+        payload += field('59', name);                                            // Merchant Name
+        payload += field('60', city);                                            // Merchant City
+
+        let addData = field('05', txid);                                         // Reference Label (TXID)
+        if (message) addData = field('02', message) + addData;                   // Mensagem ao pagador (opcional)
+        payload += field('62', addData);                                         // Additional Data Field Template
+
+        payload += '6304';                                                       // ID+LEN do CRC (sempre fixo "6304")
+        payload += this._crc16(payload);                                         // CRC16-CCITT-FALSE dos dados acima
+
+        return payload;
+    }
+
+    /** CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF, sem XOR final) — usado no campo 63 do Pix. */
+    static _crc16(str) {
+        let crc = 0xFFFF;
+        for (let i = 0; i < str.length; i++) {
+            crc ^= (str.charCodeAt(i) << 8) & 0xFFFF;
+            for (let j = 0; j < 8; j++) {
+                crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+            }
+        }
+        return crc.toString(16).toUpperCase().padStart(4, '0');
+    }
+
+    /** Remove acentos/diacríticos (ex.: "São Paulo" -> "Sao Paulo") para campos ASCII do Pix. */
+    static _stripAccents(str) {
+        const diacritics = new RegExp(String.fromCharCode(92) + 'u0300-' + String.fromCharCode(92) + 'u036f', 'g');
+        return String(str || '').normalize('NFD').replace(diacritics, '');
     }
 
     static getCtxOptions() {
@@ -342,6 +453,12 @@ export class QRCodeTool extends BaseTool {
             emailBody: '',
             smsPhone: '',
             smsBody: '',
+            pixKey: '',
+            pixName: '',
+            pixCity: '',
+            pixAmount: '',
+            pixTxid: '',
+            pixMessage: '',
             ecLevel: 'M',
             darkColor: '#000000',
             lightColor: '#ffffff',
