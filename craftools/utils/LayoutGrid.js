@@ -29,13 +29,24 @@ export class Craftools_LayoutGrid {
         return this.template.cellSpacing || 0;
     }
 
+    // ── Detect if an arbitrary slot definition (e.g. a promo_kit cellSlots[i]
+    // entry) is itself a photostrip — lets promo kits mix plain-cell slots
+    // with photostrip slots of different sizes. ───────────────────────────
+    _isStripeSlot(slot) {
+        return !!(slot && (slot.cellLines || slot.cellColumns));
+    }
+
+    _itemsPerUnit(slot) {
+        return this._isStripeSlot(slot) ? (slot.cellLines || 1) * (slot.cellColumns || 1) : 1;
+    }
+
     async render(items, renderCellContentCallback) {
         // Carregar biblioteca externa para reordenação se necessário
         if (!window.Sortable) {
             await new Promise(resolve => {
                 let s = document.createElement('script');
                 s.src = "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js";
-                s.onload = resolve; 
+                s.onload = resolve;
                 document.head.appendChild(s);
             });
         }
@@ -45,23 +56,26 @@ export class Craftools_LayoutGrid {
         const pageSizeParts = this.pageSize.size.split(',').map(Number);
         const docW = pageSizeParts[0];
         const docH = pageSizeParts[1];
-        
+
         const margins = this.template.pageMargin.split(" ").map(v => parseFloat(v));
         const [mT, mR, mB, mL] = margins;
-        
+
         const cellW = this.template.cellWidth;
         const cellH = this.template.cellHeight;
         const gap = this.template.cellGap || 0;
 
         const availableW = docW - mL - mR;
         const availableH = docH - mT - mB;
-        
+
         const isPromo = this.template.type === 'promo_kit';
         let perPage = 0;
         let cols = 1, rows = 1, stripesPerPage = 1;
 
         if (isPromo) {
-            perPage = this.template.cellSlots.reduce((sum, slot) => sum + slot.cellCount, 0);
+            // Slots that are themselves photostrips consume cellLines*cellColumns
+            // items per instance instead of just 1 (promo kits = mix of plain-cell
+            // slots and photostrip slots of varying sizes).
+            perPage = this.template.cellSlots.reduce((sum, slot) => sum + slot.cellCount * this._itemsPerUnit(slot), 0);
         } else {
             const slotW = cellW + gap;
             const slotH = cellH + gap;
@@ -74,7 +88,8 @@ export class Craftools_LayoutGrid {
         let currentPage = this.startPage;
         let pagesWrapper = this.editor.querySelector('#pages-wrapper');
 
-        // Shared group name for cross-stripe drag in photostrip mode (per render call)
+        // Shared group name for cross-stripe drag in photostrip mode (per render call,
+        // spans every page so photos can be dragged between stripes on different pages too).
         const photostripGroup = `photostrip-group-${Date.now()}`;
 
         for (let i = 0; i < items.length; i += perPage) {
@@ -89,7 +104,7 @@ export class Craftools_LayoutGrid {
             currentPage.innerHTML = '';
             currentPage.style.width = docW + unit;
             currentPage.style.minHeight = docH + unit;
-            currentPage.style.background = '#ffffff'; 
+            currentPage.style.background = '#ffffff';
             currentPage.style.position = 'relative';
 
             // Container CSS Grid (outer — positions stripes on the page)
@@ -132,7 +147,7 @@ export class Craftools_LayoutGrid {
                     this._renderNormalCells(grid, items, i, perPage, unit, renderCellContentCallback);
 
                     // Outer drag-and-drop for normal cells (whole-cell handle)
-                    new Sortable(grid, { 
+                    new Sortable(grid, {
                         animation: 200,
                         handle: '.album-drag-handle',
                         ghostClass: "sortable-ghost",
@@ -167,6 +182,9 @@ export class Craftools_LayoutGrid {
     }
 
     // ── Promo Kit rendering (Smart Bin Packing) ────────────────────────
+    // A promo kit is a flexible collection of slots of varying sizes; any slot
+    // can also be a photostrip (cellLines/cellColumns) — in that case each
+    // "cell" of the slot is an entire stripe sub-grid rather than a single photo.
     _renderPromoKit(grid, items, startIdx, perPage, unit, availableW, availableH, renderCellContentCallback) {
         const gap = parseFloat(this.template.cellGap) || 0;
         let currentX = 0;
@@ -202,7 +220,13 @@ export class Craftools_LayoutGrid {
         let localItemIdx = 0;
         const pageItems = items.slice(startIdx, startIdx + perPage);
 
-        blocks.forEach(b => {
+        // Shared Sortable group for this page's promo kit — lets cells be dragged
+        // across differently-shaped blocks (handled via the swap-and-resize logic
+        // below), in addition to plain reordering within a same-shaped block.
+        const promoGroupName = `promo-kit-group-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        let lastRelated = null;
+
+        blocks.forEach((b, blockIdx) => {
             let groupDiv = document.createElement('div');
             groupDiv.className = 'promo-group';
             groupDiv.style.cssText = `
@@ -218,124 +242,84 @@ export class Craftools_LayoutGrid {
             `;
             grid.appendChild(groupDiv);
 
+            const isStripeSlot = this._isStripeSlot(b.slot);
+            const itemsPerUnit = this._itemsPerUnit(b.slot);
+            // Shared group for stripe instances belonging to this same slot definition,
+            // so photos can be dragged between stripe instances within the block.
+            const stripGroupName = `${promoGroupName}-strip-${b.slot.id || blockIdx}`;
+
             for (let c = 0; c < b.slot.cellCount; c++) {
-                const itemData = pageItems[localItemIdx];
-                
                 const cellWrap = this._buildStripeContainer(b.slot.cellWidth, b.slot.cellHeight, unit, groupDiv, startIdx + localItemIdx, b.slot);
                 groupDiv.appendChild(cellWrap);
 
-                // --- Native Drag and Drop Logic ---
-                cellWrap.draggable = true;
-
-                cellWrap.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', startIdx + localItemIdx);
-                    Craftools_LayoutGrid.draggedPromoCell = cellWrap;
-                    setTimeout(() => cellWrap.style.opacity = '0.5', 0);
-                });
-
-                cellWrap.addEventListener('dragend', (e) => {
-                    cellWrap.style.opacity = '1';
-                    Craftools_LayoutGrid.draggedPromoCell = null;
-                });
-
-                cellWrap.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    cellWrap.style.boxShadow = 'inset 0 0 0 2px var(--accent)';
-                });
-
-                cellWrap.addEventListener('dragleave', (e) => {
-                    cellWrap.style.boxShadow = '';
-                });
-
-                cellWrap.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    cellWrap.style.boxShadow = '';
-                    
-                    const draggedCell = Craftools_LayoutGrid.draggedPromoCell;
-                    if (draggedCell && draggedCell !== cellWrap) {
-                        const draggedContentLayer = draggedCell.querySelector('.cell-content-layer');
-                        const targetContentLayer = cellWrap.querySelector('.cell-content-layer');
-                        
-                        // Grab the actual images/elements inside the content layers
-                        const draggedEls = Array.from(draggedContentLayer.children);
-                        const targetEls = Array.from(targetContentLayer.children);
-                        
-                        // Extract target cell dimensions
-                        const targetW = parseFloat(cellWrap.style.width);
-                        const targetH = parseFloat(cellWrap.style.height);
-                        
-                        // Extract dragged cell dimensions
-                        const draggedW = parseFloat(draggedCell.style.width);
-                        const draggedH = parseFloat(draggedCell.style.height);
-
-                        // Swap them
-                        draggedEls.forEach(el => {
-                            if (el.tagName.toLowerCase() === 'craftools-element') {
-                                const targetPadT = parseFloat(targetContentLayer.style.paddingTop) || 0;
-                                const targetPadR = parseFloat(targetContentLayer.style.paddingRight) || 0;
-                                const targetPadB = parseFloat(targetContentLayer.style.paddingBottom) || 0;
-                                const targetPadL = parseFloat(targetContentLayer.style.paddingLeft) || 0;
-                                const innerTargetW = targetW - targetPadL - targetPadR;
-                                const innerTargetH = targetH - targetPadT - targetPadB;
-
-                                el.pw = innerTargetW;
-                                el.ph = innerTargetH;
-                                el.px = targetPadL;
-                                el.py = targetPadT;
-                                if (typeof el._applyTransform === 'function') el._applyTransform();
-
-                                el.setAttribute('w', innerTargetW + unit);
-                                el.setAttribute('h', innerTargetH + unit);
-                                el.setAttribute('x', targetPadL + unit);
-                                el.setAttribute('y', targetPadT + unit);
-                                el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
-                            }
-                            targetContentLayer.appendChild(el);
-                        });
-                        
-                        targetEls.forEach(el => {
-                            if (el.tagName.toLowerCase() === 'craftools-element') {
-                                const draggedPadT = parseFloat(draggedContentLayer.style.paddingTop) || 0;
-                                const draggedPadR = parseFloat(draggedContentLayer.style.paddingRight) || 0;
-                                const draggedPadB = parseFloat(draggedContentLayer.style.paddingBottom) || 0;
-                                const draggedPadL = parseFloat(draggedContentLayer.style.paddingLeft) || 0;
-                                const innerDraggedW = draggedW - draggedPadL - draggedPadR;
-                                const innerDraggedH = draggedH - draggedPadT - draggedPadB;
-
-                                el.pw = innerDraggedW;
-                                el.ph = innerDraggedH;
-                                el.px = draggedPadL;
-                                el.py = draggedPadT;
-                                if (typeof el._applyTransform === 'function') el._applyTransform();
-
-                                el.setAttribute('w', innerDraggedW + unit);
-                                el.setAttribute('h', innerDraggedH + unit);
-                                el.setAttribute('x', draggedPadL + unit);
-                                el.setAttribute('y', draggedPadT + unit);
-                                el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
-                            }
-                            draggedContentLayer.appendChild(el);
-                        });
+                if (isStripeSlot) {
+                    // This "cell" is itself a photostrip — build its inner sub-grid.
+                    const subItems = pageItems.slice(localItemIdx, localItemIdx + itemsPerUnit);
+                    this._buildInnerStripGrid(cellWrap, b.slot, subItems, startIdx + localItemIdx, unit, stripGroupName, renderCellContentCallback);
+                } else {
+                    const itemData = pageItems[localItemIdx];
+                    if (itemData && renderCellContentCallback) {
+                        const contentLayer = cellWrap.querySelector('.cell-content-layer');
+                        renderCellContentCallback(contentLayer, itemData, startIdx + localItemIdx, b.slot);
                     }
-                });
 
-                if (itemData && renderCellContentCallback) {
-                    const contentLayer = cellWrap.querySelector('.cell-content-layer');
-                    renderCellContentCallback(contentLayer, itemData, startIdx + localItemIdx, b.slot);
-                }
-                
-                // Ensure elements inside don't interfere with dragging
-                const imgEl = cellWrap.querySelector('craftools-element');
-                if (imgEl) {
-                    imgEl.setAttribute('draggable', 'false');
-                    const imgNode = imgEl.querySelector('img');
-                    if (imgNode) imgNode.setAttribute('draggable', 'false');
+                    // Ensure elements inside don't interfere with dragging
+                    const imgEl = cellWrap.querySelector('craftools-element');
+                    if (imgEl) {
+                        imgEl.setAttribute('draggable', 'false');
+                        const imgNode = imgEl.querySelector('img');
+                        if (imgNode) imgNode.setAttribute('draggable', 'false');
+                    }
                 }
 
-                localItemIdx++;
+                localItemIdx += itemsPerUnit;
             }
+
+            // --- SortableJS-driven drag for whole cells within/across blocks ---
+            // Same-shaped blocks: a plain reorder (Sortable's default move) is safe
+            // since every sibling is identical in size.
+            // Differently-shaped blocks: a plain move would break each block's fixed
+            // cell count/shape, so on cross-block drop we revert Sortable's own move
+            // and instead swap the two cells' CONTENT, resizing it to fit (this is the
+            // same logic the previous native drag-and-drop implementation used).
+            new Sortable(groupDiv, {
+                group: promoGroupName,
+                handle: '.album-drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onStart: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grabbing';
+                },
+                onMove: (evt) => {
+                    lastRelated = evt.related;
+                    return true;
+                },
+                onEnd: (evt) => {
+                    const h = evt.item.querySelector('.album-drag-handle');
+                    if (h) h.style.cursor = 'grab';
+
+                    if (evt.from === evt.to) return; // same-shape reorder — Sortable's own move is already correct
+
+                    const itemEl = evt.item;
+                    const displaced = lastRelated;
+
+                    // Revert the container move (each block must keep its exact cell count/shape);
+                    // only the CONTENT of the two cells gets swapped.
+                    const refNode = evt.from.children[evt.oldIndex] || null;
+                    evt.from.insertBefore(itemEl, refNode);
+
+                    // A stripe-shaped cell holds N photos in its own inner sub-grid, not in
+                    // .cell-content-layer, so a 1:1 content swap with a plain cell isn't
+                    // meaningful — skip it (the container move above is already reverted,
+                    // so this is a safe no-op rather than a silent data loss).
+                    const isStripeCell = (el) => el.dataset.isPhotostrip === 'true';
+                    if (displaced && displaced !== itemEl && displaced.parentNode &&
+                        !isStripeCell(itemEl) && !isStripeCell(displaced)) {
+                        this._swapCellContent(itemEl, displaced, unit);
+                    }
+                }
+            });
         });
     }
 
@@ -344,13 +328,6 @@ export class Craftools_LayoutGrid {
         const cellW = this.template.cellWidth;
         const cellH = this.template.cellHeight;
         const stripItems = items.slice(startIdx, startIdx + perPage);
-        const spacing = this.cellSpacing;
-
-        const paddings = this.template.cellPadding.split(" ").map(p => parseFloat(p));
-        const pT = isNaN(paddings[0]) ? 0 : paddings[0];
-        const pR = isNaN(paddings[1]) ? pT : paddings[1];
-        const pB = isNaN(paddings[2]) ? pT : paddings[2];
-        const pL = isNaN(paddings[3]) ? pR : paddings[3];
 
         for (let s = 0; s < stripesPerPage; s++) {
             const stripeItems = stripItems.slice(s * this.itemsPerStripe, (s + 1) * this.itemsPerStripe);
@@ -360,131 +337,187 @@ export class Craftools_LayoutGrid {
             const stripeEl = this._buildStripeContainer(cellW, cellH, unit, grid, startIdx + s * this.itemsPerStripe);
             grid.appendChild(stripeEl);
 
-            // Inner grid of photo slots — uses cellSpacing as gap
-            const innerGrid = document.createElement('div');
-            innerGrid.className = 'photostrip-inner-grid';
-            innerGrid.style.cssText = `
-                position: absolute;
-                inset: ${pT}${unit} ${pR}${unit} ${pB}${unit} ${pL}${unit};
-                display: grid;
-                grid-template-columns: repeat(${this.stripCols}, 1fr);
-                grid-template-rows: repeat(${this.stripLines}, 1fr);
-                gap: ${spacing}${unit};
+            // Inner grid of photo slots (uses cellSpacing as gap) + per-slot Sortable drag.
+            this._buildInnerStripGrid(stripeEl, this.template, stripeItems, startIdx + s * this.itemsPerStripe, unit, photostripGroup, renderCellContentCallback);
+        }
+
+        // Outer whole-stripe reordering — every stripe on this page is the same
+        // size (defined by the single top-level template), so a plain Sortable
+        // reorder (like normal/grid mode already uses) is safe here too.
+        new Sortable(grid, {
+            animation: 200,
+            handle: '.album-drag-handle',
+            ghostClass: 'sortable-ghost',
+            onStart: (evt) => {
+                const h = evt.item.querySelector('.album-drag-handle');
+                if (h) h.style.cursor = 'grabbing';
+            },
+            onEnd: (evt) => {
+                const h = evt.item.querySelector('.album-drag-handle');
+                if (h) h.style.cursor = 'grab';
+            }
+        });
+    }
+
+    // ── Shared: build the inner N×M photostrip slot grid inside a stripe/cell
+    // container, wiring up Sortable-driven drag for the individual photo slots.
+    // Used both by top-level photostrip mode and by promo_kit slots that are
+    // themselves photostrips. `slotDef` carries cellLines/cellColumns/cellSpacing/
+    // cellPadding for whichever shape applies (the top-level template, or an
+    // individual promo_kit cellSlots[i] entry). ───────────────────────────────
+    _buildInnerStripGrid(stripeEl, slotDef, subItems, baseGlobalIdx, unit, groupName, renderCellContentCallback) {
+        const stripLines = slotDef.cellLines || 1;
+        const stripCols = slotDef.cellColumns || 1;
+        const spacing = slotDef.cellSpacing || 0;
+
+        const paddings = String(slotDef.cellPadding || '0').split(" ").map(p => parseFloat(p));
+        const pT = isNaN(paddings[0]) ? 0 : paddings[0];
+        const pR = isNaN(paddings[1]) ? pT : paddings[1];
+        const pB = isNaN(paddings[2]) ? pT : paddings[2];
+        const pL = isNaN(paddings[3]) ? pR : paddings[3];
+
+        const innerGrid = document.createElement('div');
+        innerGrid.className = 'photostrip-inner-grid';
+        innerGrid.style.cssText = `
+            position: absolute;
+            inset: ${pT}${unit} ${pR}${unit} ${pB}${unit} ${pL}${unit};
+            z-index: 2;
+            display: grid;
+            grid-template-columns: repeat(${stripCols}, 1fr);
+            grid-template-rows: repeat(${stripLines}, 1fr);
+            gap: ${spacing}${unit};
+            box-sizing: border-box;
+        `;
+
+        // Insert inner grid between content-layer (z:1) and overlay-layer (z:4)
+        const overlayLayer = stripeEl.querySelector('.cell-overlay-layer');
+        if (overlayLayer) stripeEl.insertBefore(innerGrid, overlayLayer);
+        else stripeEl.appendChild(innerGrid);
+
+        // Create individual photo slots
+        subItems.forEach((itemData, slotIdx) => {
+            const slot = document.createElement('div');
+            slot.className = 'photostrip-slot';
+            slot.dataset.slotIdx = slotIdx;
+            slot.style.cssText = `
+                position: relative;
+                overflow: hidden;
                 box-sizing: border-box;
             `;
 
-            // Insert inner grid between content-layer (z:1) and overlay-layer (z:4)
-            stripeEl.insertBefore(innerGrid, stripeEl.querySelector('.cell-overlay-layer'));
+            // Each slot gets a small drag handle for visual indicator
+            const slotHandle = document.createElement('div');
+            slotHandle.className = 'slot-drag-handle';
+            slotHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;color:var(--text-secondary);">drag_indicator</span>';
+            slotHandle.style.cssText = `
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                z-index: 50;
+                background: var(--bg-input, rgba(255,255,255,0.85));
+                border: 1px solid var(--border, #e5e7eb);
+                border-radius: 3px;
+                padding: 1px 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: grab;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+                opacity: 0.8;
+                transition: opacity 0.15s;
+            `;
+            slot.appendChild(slotHandle);
 
-            // Create individual photo slots
-            stripeItems.forEach((itemData, slotIdx) => {
-                const slot = document.createElement('div');
-                slot.className = 'photostrip-slot';
-                slot.dataset.slotIdx = slotIdx;
-                slot.style.cssText = `
-                    position: relative;
-                    overflow: hidden;
-                    box-sizing: border-box;
-                `;
+            // Make handle fully opaque on hover
+            slotHandle.addEventListener('mouseenter', () => { slotHandle.style.opacity = '1'; });
+            slotHandle.addEventListener('mouseleave', () => { slotHandle.style.opacity = '0.8'; });
 
-                // Make the slot itself draggable (so dragging the photo or handle works)
-                slot.draggable = true;
+            innerGrid.appendChild(slot);
 
-                // Each slot gets a small drag handle for visual indicator
-                const slotHandle = document.createElement('div');
-                slotHandle.className = 'slot-drag-handle';
-                slotHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;color:var(--text-secondary);">drag_indicator</span>';
-                slotHandle.style.cssText = `
-                    position: absolute;
-                    top: 2px;
-                    left: 2px;
-                    z-index: 50;
-                    background: var(--bg-input, rgba(255,255,255,0.85));
-                    border: 1px solid var(--border, #e5e7eb);
-                    border-radius: 3px;
-                    padding: 1px 2px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: grab;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-                    opacity: 0.8;
-                    transition: opacity 0.15s;
-                `;
-                slot.appendChild(slotHandle);
+            if (renderCellContentCallback) {
+                renderCellContentCallback(slot, itemData, baseGlobalIdx + slotIdx, slotDef);
+            }
 
-                // Make handle fully opaque on hover
-                slotHandle.addEventListener('mouseenter', () => { slotHandle.style.opacity = '1'; });
-                slotHandle.addEventListener('mouseleave', () => { slotHandle.style.opacity = '0.8'; });
-
-                // Native Drag and Drop logic for content swapping on slot level
-                slot.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    // We don't really need to set data, but Firefox requires it for D&D to work
-                    e.dataTransfer.setData('text/plain', slotIdx);
-                    Craftools_LayoutGrid.draggedSlot = slot;
-                    setTimeout(() => slot.style.opacity = '0.5', 0);
-                });
-
-                slot.addEventListener('dragend', (e) => {
-                    slot.style.opacity = '1';
-                    Craftools_LayoutGrid.draggedSlot = null;
-                });
-
-                slot.addEventListener('dragover', (e) => {
-                    e.preventDefault(); // Necessary to allow dropping
-                    e.dataTransfer.dropEffect = 'move';
-                    slot.style.boxShadow = 'inset 0 0 0 2px var(--accent)';
-                });
-
-                slot.addEventListener('dragleave', (e) => {
-                    slot.style.boxShadow = '';
-                });
-
-                slot.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    slot.style.boxShadow = '';
-                    
-                    const draggedSlot = Craftools_LayoutGrid.draggedSlot;
-                    if (draggedSlot && draggedSlot !== slot) {
-                        // Swap the content elements (excluding the drag handle)
-                        const draggedContent = Array.from(draggedSlot.children).find(c => !c.classList.contains('slot-drag-handle'));
-                        const targetContent = Array.from(slot.children).find(c => !c.classList.contains('slot-drag-handle'));
-                        
-                        // Swap them by appending them to each other's parents
-                        if (draggedContent && targetContent) {
-                            draggedSlot.appendChild(targetContent);
-                            slot.appendChild(draggedContent);
-                        } else if (draggedContent) {
-                            slot.appendChild(draggedContent);
-                        } else if (targetContent) {
-                            draggedSlot.appendChild(targetContent);
-                        }
-                    }
-                });
-
-                innerGrid.appendChild(slot);
-
-                if (renderCellContentCallback) {
-                    renderCellContentCallback(slot, itemData, startIdx + s * this.itemsPerStripe + slotIdx);
+            // Ensure the content inside slot doesn't interfere with dragging
+            const imgEl = slot.querySelector('craftools-element');
+            if (imgEl) {
+                imgEl.setAttribute('draggable', 'false');
+                const imgNode = imgEl.querySelector('img');
+                if (imgNode) {
+                    imgNode.setAttribute('draggable', 'false');
                 }
+            }
+        });
 
-                // Ensure the content inside slot doesn't interfere with dragging
-                const imgEl = slot.querySelector('craftools-element');
-                if (imgEl) {
-                    imgEl.setAttribute('draggable', 'false');
-                    const imgNode = imgEl.querySelector('img');
-                    if (imgNode) {
-                        imgNode.setAttribute('draggable', 'false');
-                    }
-                }
-            });
-        }
+        // Sortable-driven reordering for photo slots. Every slot sharing
+        // `groupName` is the same size, so a plain reorder (move) is safe —
+        // this also enables cross-stripe dragging (slots from a different
+        // stripe instance, possibly on a different page, sharing the group).
+        new Sortable(innerGrid, {
+            group: groupName,
+            handle: '.slot-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onStart: (evt) => {
+                const h = evt.item.querySelector('.slot-drag-handle');
+                if (h) h.style.cursor = 'grabbing';
+            },
+            onEnd: (evt) => {
+                const h = evt.item.querySelector('.slot-drag-handle');
+                if (h) h.style.cursor = 'grab';
+            }
+        });
+
+        return innerGrid;
+    }
+
+    // ── Shared: swap the CONTENT of two plain (non-stripe) cell wrappers,
+    // resizing the swapped craftools-element to fit its new cell. Used when a
+    // promo_kit cell is dragged across two differently-shaped blocks, where a
+    // plain DOM move would break each block's fixed cell shape. ─────────────
+    _swapCellContent(cellA, cellB, unit) {
+        const layerA = cellA.querySelector('.cell-content-layer');
+        const layerB = cellB.querySelector('.cell-content-layer');
+        if (!layerA || !layerB) return;
+
+        const elsA = Array.from(layerA.children);
+        const elsB = Array.from(layerB.children);
+
+        const wA = parseFloat(cellA.style.width);
+        const hA = parseFloat(cellA.style.height);
+        const wB = parseFloat(cellB.style.width);
+        const hB = parseFloat(cellB.style.height);
+
+        const fit = (el, targetLayer, targetW, targetH) => {
+            if (!el.tagName || el.tagName.toLowerCase() !== 'craftools-element') return;
+            const padT = parseFloat(targetLayer.style.paddingTop) || 0;
+            const padR = parseFloat(targetLayer.style.paddingRight) || 0;
+            const padB = parseFloat(targetLayer.style.paddingBottom) || 0;
+            const padL = parseFloat(targetLayer.style.paddingLeft) || 0;
+            const innerW = targetW - padL - padR;
+            const innerH = targetH - padT - padB;
+
+            el.pw = innerW;
+            el.ph = innerH;
+            el.px = padL;
+            el.py = padT;
+            if (typeof el._applyTransform === 'function') el._applyTransform();
+
+            el.setAttribute('w', innerW + unit);
+            el.setAttribute('h', innerH + unit);
+            el.setAttribute('x', padL + unit);
+            el.setAttribute('y', padT + unit);
+            el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
+        };
+
+        elsA.forEach(el => { fit(el, layerB, wB, hB); layerB.appendChild(el); });
+        elsB.forEach(el => { fit(el, layerA, wA, hA); layerA.appendChild(el); });
     }
 
     // ── Shared: build the outer stripe/cell container ─────────────────────
     _buildStripeContainer(cellW, cellH, unit, grid, globalIndex, activeSlot = null) {
         const slot = activeSlot || this.template;
+        const isStripe = activeSlot ? this._isStripeSlot(activeSlot) : this.isPhotostrip;
         const paddings = slot.cellPadding.split(" ").map(p => parseFloat(p));
         const pT = isNaN(paddings[0]) ? 0 : paddings[0];
         const pR = isNaN(paddings[1]) ? pT : paddings[1];
@@ -499,7 +532,7 @@ export class Craftools_LayoutGrid {
         let cellWrap = document.createElement('div');
         cellWrap.className = "craftools-grid-cell";
         cellWrap.dataset.cellId = `cell-${Date.now()}-${globalIndex}`;
-        if (this.isPhotostrip) {
+        if (isStripe) {
             cellWrap.dataset.isPhotostrip = 'true';
         }
         cellWrap.style.cssText = `
@@ -524,7 +557,7 @@ export class Craftools_LayoutGrid {
         contentLayer.className = "cell-content-layer";
         contentLayer.style.cssText = `
             position: absolute; inset: 0; z-index: 1;
-            ${this.isPhotostrip ? '' : `padding: ${pT}${unit} ${pR}${unit} ${pB}${unit} ${pL}${unit};`}
+            ${isStripe ? '' : `padding: ${pT}${unit} ${pR}${unit} ${pB}${unit} ${pL}${unit};`}
             box-sizing: border-box;
         `;
         cellWrap.appendChild(contentLayer);
@@ -544,9 +577,10 @@ export class Craftools_LayoutGrid {
         `;
         cellWrap.appendChild(overlayLayer);
 
-        // ── Alça de arrasto da stripe — apenas em modo normal ─────────────
-        // Em photostrip o drag handle some: os slots individuais têm seus próprios handles.
-        // Mantemos o handle da stripe oculto mas presente para compatibilidade de queries.
+        // ── Alça de arrasto da stripe/célula ───────────────────────────────
+        // Usada pelo Sortable para reordenar a stripe/célula inteira (em modo
+        // normal, photostrip e promo_kit). Os slots individuais de uma
+        // photostrip têm, além desta, sua própria alça (.slot-drag-handle).
         let dragHandle = document.createElement('div');
         dragHandle.className = "album-drag-handle";
         dragHandle.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text-secondary);">drag_indicator</span>';
@@ -559,13 +593,13 @@ export class Craftools_LayoutGrid {
             border: 1px solid var(--border, #e5e7eb);
             border-radius: 4px;
             padding: 2px;
-            display: ${this.isPhotostrip ? 'none' : 'flex'};
+            display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         `;
-        
+
         cellWrap.appendChild(dragHandle);
 
         // ── Botão de edição da célula/stripe ─────────────────────────────
@@ -611,7 +645,7 @@ export class Craftools_LayoutGrid {
 
     static updateBorders(editor, width, style, color) {
         if (!editor) return;
-        
+
         // Update all cells in the editor (stripes included — border is on the .craftools-grid-cell)
         editor.querySelectorAll('.craftools-grid-cell').forEach(cell => {
             cell.style.borderWidth = `${width}px`;
@@ -621,7 +655,7 @@ export class Craftools_LayoutGrid {
             cell.style.setProperty('--cell-border-style', style);
             cell.style.setProperty('--cell-border-color', color);
         });
-        
+
         // Store configuration in all grid containers for state persistence
         editor.querySelectorAll('.craftools-grid-container').forEach(grid => {
             grid.dataset.borderWidth = width;

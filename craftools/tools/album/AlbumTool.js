@@ -49,7 +49,12 @@ export class AlbumTool extends BaseTool {
         // ── Helpers ────────────────────────────────────────────────────────
         const calcPerPage = (template, size) => {
             if (template.type === 'promo_kit') {
-                return template.cellSlots.reduce((sum, slot) => sum + slot.cellCount, 0);
+                // Slots that are themselves photostrips (cellLines/cellColumns) consume
+                // cellLines*cellColumns items per instance instead of just 1.
+                return template.cellSlots.reduce((sum, slot) => {
+                    const itemsPerUnit = (slot.cellLines || slot.cellColumns) ? (slot.cellLines || 1) * (slot.cellColumns || 1) : 1;
+                    return sum + slot.cellCount * itemsPerUnit;
+                }, 0);
             }
             const parts = size.size.split(',').map(Number);
             const docW = parts[0];
@@ -198,26 +203,45 @@ export class AlbumTool extends BaseTool {
                             shelfH = 0;
                         }
 
+                        const isStripeSlot = !!(b.slot.cellLines || b.slot.cellColumns);
+                        const sLines = b.slot.cellLines || 1;
+                        const sCols = b.slot.cellColumns || 1;
+
                         for (let r = 0; r < b.rows; r++) {
                             for (let c = 0; c < b.cols; c++) {
                                 if (r * b.cols + c >= b.slot.cellCount) break;
-                                
+
                                 const cellLeft = mL + currentX + c * (b.slot.cellWidth + b.slotGap);
                                 const cellTop = mT + currentY + r * (b.slot.cellHeight + b.slotGap);
-                                
+
                                 const padParts = b.slot.cellPadding.split(' ').map(v => parseFloat(v));
                                 const [padT, padR, padB, padL] = padParts;
-                                
+
                                 const pLeft = Math.round(cellLeft * scale);
                                 const pTop = Math.round(cellTop * scale);
                                 const pCellW = Math.max(1, Math.round(b.slot.cellWidth * scale));
                                 const pCellH = Math.max(1, Math.round(b.slot.cellHeight * scale));
-                                
+
                                 const innerLeft = Math.round(padL * scale);
                                 const innerTop = Math.round(padT * scale);
                                 const innerW = Math.max(1, Math.round((b.slot.cellWidth - padL - padR) * scale));
                                 const innerH = Math.max(1, Math.round((b.slot.cellHeight - padT - padB) * scale));
-                                
+
+                                let innerHtml;
+                                if (isStripeSlot) {
+                                    // Slot is itself a photostrip — draw its inner N×M sub-grid
+                                    innerHtml = `<div style="
+                                        position:absolute; left:${innerLeft}px; top:${innerTop}px;
+                                        width:${innerW}px; height:${innerH}px;
+                                        display:grid;
+                                        grid-template-columns:repeat(${sCols},1fr);
+                                        grid-template-rows:repeat(${sLines},1fr);
+                                        gap:1px;
+                                    ">${Array(sLines * sCols).fill(`<div style="background:#9ca3af;"></div>`).join('')}</div>`;
+                                } else {
+                                    innerHtml = `<div style="position:absolute; left:${innerLeft}px; top:${innerTop}px; width:${innerW}px; height:${innerH}px; background:#9ca3af;"></div>`;
+                                }
+
                                 cellsHtml += `<div style="
                                     position:absolute;
                                     left:${pLeft}px; top:${pTop}px;
@@ -226,9 +250,7 @@ export class AlbumTool extends BaseTool {
                                     border:1px solid #d1d5db;
                                     box-sizing:border-box;
                                     overflow:hidden;
-                                ">
-                                    <div style="position:absolute; left:${innerLeft}px; top:${innerTop}px; width:${innerW}px; height:${innerH}px; background:#9ca3af;"></div>
-                                </div>`;
+                                ">${innerHtml}</div>`;
                             }
                         }
 

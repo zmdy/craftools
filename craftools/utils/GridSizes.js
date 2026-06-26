@@ -9,7 +9,38 @@ export const GridSizes = [
         ],
         pageMargin: "20 15 15 15",
         cellGap: 2,
-        sizes: ["210,297", "297,210", "297,420"] 
+        sizes: ["210,297", "297,210", "297,420"]
+    },
+    // ── Promo Kit + Photostrip (mix) ─────────────────────────────────────
+    // A promo_kit slot can itself be a photostrip: just add cellLines/cellColumns
+    // (and optionally cellSpacing) to that cellSlots[] entry. In that case,
+    // cellCount means "number of stripe instances" of that shape — each instance
+    // consumes cellLines*cellColumns photos instead of just 1.
+    {
+        name: "Promo Kit + Tirinha (5x5 + tirinha 4x12)",
+        type: "promo_kit",
+        cellSlots: [
+            // Slot "tirinha": cada célula aqui é uma tirinha inteira de 3 fotos verticais
+            { id: "strip1", cellWidth: 40, cellHeight: 120, cellPadding: "2 2 2 2", cellCount: 2, cellGap: 2, cellLines: 3, cellColumns: 1, cellSpacing: 2 },
+            // Slot normal: células simples 5x5
+            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 4, cellGap: 2 }
+        ],
+        pageMargin: "20 15 15 15",
+        cellGap: 2,
+        sizes: ["210,297", "297,210", "297,420"]
+    },
+    {
+        name: "Promo Kit Aniversário (Tirinha 10x15 + Polaroids 7x9)",
+        type: "promo_kit",
+        cellSlots: [
+            // Slot "tirinha": 1 instância de uma tirinha 2x2 (4 fotos)
+            { id: "strip1", cellWidth: 100, cellHeight: 150, cellPadding: "3 3 3 3", cellCount: 1, cellGap: 2, cellLines: 2, cellColumns: 2, cellSpacing: 3 },
+            // Slot normal: polaroids 7x9
+            { id: "g1", cellWidth: 70, cellHeight: 90, cellPadding: "3 3 23 3", cellCount: 2, cellGap: 2 }
+        ],
+        pageMargin: "20 15 15 15",
+        cellGap: 2,
+        sizes: ["210,297", "297,210", "297,420"]
     },
     {
         name: "Fotos 5x5 com borda",
