@@ -556,8 +556,6 @@ export class AlbumTool extends BaseTool {
                 PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
                 PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
                 PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
-                
-            PanelUI.bindAccordions(panelBody);
 
             // ── Bind: Step 1 — Size ────────────────────────────────────────
             panelBody.querySelectorAll('.size-btn').forEach(btn => {
@@ -736,6 +734,9 @@ export class AlbumTool extends BaseTool {
                      Craftools_LayoutGrid.updateBorders(editor, bWidth, bStyle, bColor);
                 });
             }
+
+            // Bind accordion toggles at the very end so dynamic accordions like "Forma" are also bound
+            PanelUI.bindAccordions(panelBody);
         };
 
         renderPanel();
