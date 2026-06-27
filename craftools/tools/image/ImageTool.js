@@ -263,16 +263,42 @@ export class ImageTool extends BaseTool {
         // ── Grid Cell background & overlay integration ─────────────────────
         const cellEl = element.closest('.craftools-grid-cell');
         if (cellEl) {
-            const cellContainer = document.createElement('div');
-            cellContainer.className = 'craftools-cell-props-container';
-            cellContainer.style.cssText = 'border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; display: flex; flex-direction: column; gap: 10px;';
-            editorPanel.firstElementChild.appendChild(cellContainer);
-            
+            // Create a placeholder accordion at the top level of the panel
+            const cellAccWrapper = document.createElement('div');
+            cellAccWrapper.className = 'ct-accordion';
+            cellAccWrapper.dataset.accordionId = 'img-cell-bg';
+            editorPanel.appendChild(cellAccWrapper);
+
             // Import dinâmico para evitar dependências circulares
+            // (também garante que as traduções de CellPanel estejam carregadas)
             import('../album/CellPanel.js').then(({ CellPanel }) => {
-                CellPanel.renderInto(cellContainer, cellEl, () => {
-                    // Callback quando propriedades do fundo mudarem
+                // Render the accordion header now that translations are available
+                cellAccWrapper.innerHTML = `
+                    <button class="ct-accordion-header" type="button" data-toggle-accordion="img-cell-bg">
+                        <span class="ct-accordion-icon">
+                            <span class="material-symbols-outlined">background_2</span>
+                        </span>
+                        <span class="ct-accordion-title">${I18n.t('cellPanel.bgOverlayHeader') || 'Fundo & Overlay'}</span>
+                        <span class="ct-accordion-chevron">
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </span>
+                    </button>
+                    <div class="ct-accordion-body">
+                        <div class="ct-accordion-content" id="img-cell-bg-content"></div>
+                    </div>
+                `;
+
+                // Bind this new accordion into the one-open-at-a-time logic
+                import('../../utils/PanelUI.js').then(({ PanelUI }) => {
+                    PanelUI.bindAccordions(editorPanel);
                 });
+
+                const content = editorPanel.querySelector('#img-cell-bg-content');
+                if (content) {
+                    CellPanel.renderInto(content, cellEl, () => {
+                        // Callback quando propriedades do fundo mudarem
+                    });
+                }
             });
         }
 
