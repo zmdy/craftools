@@ -108,7 +108,7 @@ export class ImageTool extends BaseTool {
 
         
         // Render Common Properties (Inherited)
-        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+        this.renderCommonProperties(editorPanel, element, {
             border: 'img',
             radius: 'img',
             zindex: true,

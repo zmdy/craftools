@@ -535,11 +535,27 @@ export class AlbumTool extends BaseTool {
                 </div>
             `;
 
+            // Determine which accordion should be open based on step completion
+            let openTamanho = true;
+            let openConteudo = false;
+            let openConfigs = false;
+            let openAcoes = false;
+
+            if (selectedTemplate) {
+                openTamanho = false;
+                if ((selectedMode === 'album' && photos.length > 0) || (selectedMode === 'card' && cardPhoto !== null)) {
+                    openConteudo = false;
+                    openAcoes = true;
+                } else {
+                    openConteudo = true;
+                }
+            }
+
             panelBody.innerHTML = 
-                PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: true }) +
-                PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: !!selectedTemplate }) +
-                PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs) +
-                PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: true });
+                PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
+                PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
+                PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
+                PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
                 
             PanelUI.bindAccordions(panelBody);
 
