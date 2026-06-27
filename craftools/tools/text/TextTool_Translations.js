@@ -4,6 +4,7 @@ I18n.addTranslations('textTool', {
     "pt-br": {
         propsTitle: "Propriedades do Título",
         propsParagraph: "Propriedades do Parágrafo",
+        typography: "Tipografia",
         font: "Fonte",
         color: "Cor",
         chooseColor: "Escolha a cor",
@@ -24,6 +25,7 @@ I18n.addTranslations('textTool', {
     "en": {
         propsTitle: "Title Properties",
         propsParagraph: "Paragraph Properties",
+        typography: "Typography",
         font: "Font",
         color: "Color",
         chooseColor: "Choose color",
@@ -44,6 +46,7 @@ I18n.addTranslations('textTool', {
     "es": {
         propsTitle: "Propiedades del Título",
         propsParagraph: "Propiedades del Párrafo",
+        typography: "Tipografía",
         font: "Fuente",
         color: "Color",
         chooseColor: "Elige el color",

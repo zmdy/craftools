@@ -3,6 +3,10 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('albumTool', {
     "pt-br": {
         panelTitle: "Gerador de Álbum",
+        sizeAndLayout: "Tamanho & Layout",
+        content: "Conteúdo",
+        settings: "Configurações",
+        actions: "Ações",
         step1: "1. Escolher Tamanho",
         step2: "2. Template Grid",
         step3: "3. Opções",
@@ -45,6 +49,10 @@ I18n.addTranslations('albumTool', {
     },
     "en": {
         panelTitle: "Album Generator",
+        sizeAndLayout: "Size & Layout",
+        content: "Content",
+        settings: "Settings",
+        actions: "Actions",
         step1: "1. Choose Size",
         step2: "2. Grid Template",
         step3: "3. Options",
@@ -87,6 +95,10 @@ I18n.addTranslations('albumTool', {
     },
     "es": {
         panelTitle: "Generador de Álbum",
+        sizeAndLayout: "Tamaño y Diseño",
+        content: "Contenido",
+        settings: "Configuraciones",
+        actions: "Acciones",
         step1: "1. Elegir Tamaño",
         step2: "2. Plantilla de Cuadrícula",
         step3: "3. Opciones",

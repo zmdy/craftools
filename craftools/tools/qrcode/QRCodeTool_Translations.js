@@ -3,6 +3,8 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('qrTool', {
     "pt-br": {
         panelTitle: "Propriedades do QR Code",
+        content: "Conteúdo",
+        appearance: "Aparência",
         contentType: "Tipo de Conteúdo",
         typeText: "Texto / Link",
         typeWifi: "Wi-Fi",
@@ -45,6 +47,8 @@ I18n.addTranslations('qrTool', {
     },
     "en": {
         panelTitle: "QR Code Properties",
+        content: "Content",
+        appearance: "Appearance",
         contentType: "Content Type",
         typeText: "Text / Link",
         typeWifi: "Wi-Fi",
@@ -87,6 +91,8 @@ I18n.addTranslations('qrTool', {
     },
     "es": {
         panelTitle: "Propiedades del Código QR",
+        content: "Contenido",
+        appearance: "Apariencia",
         contentType: "Tipo de Contenido",
         typeText: "Texto / Enlace",
         typeWifi: "Wi-Fi",

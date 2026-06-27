@@ -70,7 +70,10 @@ export const Translations = {
             paste: "Colar",
             copied: "Copiado",
             noStyleCopied: "Nenhum estilo copiado!",
-            incompatibleStyleTypes: "Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem)."
+            incompatibleStyleTypes: "Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem).",
+            sectionForma: "Forma (Borda, Margem...)",
+            sectionTamanho: "Tamanho & Posicionamento",
+            sectionEstilo: "Estilo"
         },
         sessionRecovery: {
             title: "Sessão recuperada",
@@ -173,7 +176,10 @@ export const Translations = {
             paste: "Paste",
             copied: "Copied",
             noStyleCopied: "No style copied yet!",
-            incompatibleStyleTypes: "You can only paste styles between elements of the same type (e.g. Image to Image)."
+            incompatibleStyleTypes: "You can only paste styles between elements of the same type (e.g. Image to Image).",
+            sectionForma: "Shape (Border, Margin...)",
+            sectionTamanho: "Size & Position",
+            sectionEstilo: "Style"
         },
         sessionRecovery: {
             title: "Session recovered",
@@ -276,7 +282,10 @@ export const Translations = {
             paste: "Pegar",
             copied: "Copiado",
             noStyleCopied: "¡Ningún estilo copiado!",
-            incompatibleStyleTypes: "Solo puedes pegar estilos entre elementos del mismo tipo (ej.: Imagen a Imagen)."
+            incompatibleStyleTypes: "Solo puedes pegar estilos entre elementos del mismo tipo (ej.: Imagen a Imagen).",
+            sectionForma: "Forma (Borde, Margen...)",
+            sectionTamanho: "Tamaño y Posición",
+            sectionEstilo: "Estilo"
         },
         sessionRecovery: {
             title: "Sesión recuperada",

@@ -3,6 +3,8 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('imageTool', {
     "pt-br": {
         panelTitle: "Propriedades da Imagem",
+        source: "Fonte",
+        effects: "Efeitos",
         uploadPhoto: "Carregar Foto",
         switchPhoto: "Trocar Foto",
         fit: "Ajuste",
@@ -26,6 +28,8 @@ I18n.addTranslations('imageTool', {
     },
     "en": {
         panelTitle: "Image Properties",
+        source: "Source",
+        effects: "Effects",
         uploadPhoto: "Upload Photo",
         switchPhoto: "Switch Photo",
         fit: "Fit",
@@ -49,6 +53,8 @@ I18n.addTranslations('imageTool', {
     },
     "es": {
         panelTitle: "Propiedades de la Imagen",
+        source: "Origen",
+        effects: "Efectos",
         uploadPhoto: "Cargar Foto",
         switchPhoto: "Cambiar Foto",
         fit: "Ajuste",
