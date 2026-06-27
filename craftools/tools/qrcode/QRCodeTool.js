@@ -1,6 +1,7 @@
 import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { QrCode } from "../../utils/QrCode.js";
+import { PanelUI } from "../../utils/PanelUI.js";
 import "./QRCodeTool_Translations.js";
 
 /**
@@ -23,63 +24,67 @@ export class QRCodeTool extends BaseTool {
 
         const tooLong = QrCode.isLikelyTooLong(this.buildPayload(meta));
 
-        const html = `
-            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div class="craftools-field">
-                    <span class="craftools-label">${I18n.t('qrTool.contentType')}</span>
-                    <select id="qr-type" class="craftools-select" style="width:100%;">
-                        <option value="texto" ${meta.payloadType === 'texto' ? 'selected' : ''}>${I18n.t('qrTool.typeText')}</option>
-                        <option value="wifi" ${meta.payloadType === 'wifi' ? 'selected' : ''}>${I18n.t('qrTool.typeWifi')}</option>
-                        <option value="telefone" ${meta.payloadType === 'telefone' ? 'selected' : ''}>${I18n.t('qrTool.typePhone')}</option>
-                        <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
-                        <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
-                        <option value="pix" ${meta.payloadType === 'pix' ? 'selected' : ''}>${I18n.t('qrTool.typePix')}</option>
-                    </select>
-                </div>
+        const htmlConteudo = `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('qrTool.contentType')}</span>
+                <select id="qr-type" class="craftools-select" style="width:100%;">
+                    <option value="texto" ${meta.payloadType === 'texto' ? 'selected' : ''}>${I18n.t('qrTool.typeText')}</option>
+                    <option value="wifi" ${meta.payloadType === 'wifi' ? 'selected' : ''}>${I18n.t('qrTool.typeWifi')}</option>
+                    <option value="telefone" ${meta.payloadType === 'telefone' ? 'selected' : ''}>${I18n.t('qrTool.typePhone')}</option>
+                    <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
+                    <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
+                    <option value="pix" ${meta.payloadType === 'pix' ? 'selected' : ''}>${I18n.t('qrTool.typePix')}</option>
+                </select>
+            </div>
 
-                <div id="qr-fields-container" style="display:flex; flex-direction:column; gap:10px;">
-                    ${this._renderTypeFields(meta)}
-                </div>
+            <div id="qr-fields-container" style="display:flex; flex-direction:column; gap:10px;">
+                ${this._renderTypeFields(meta)}
+            </div>
 
-                <div id="qr-too-long-warning" style="display:${tooLong ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
-                    <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
-                    <span>${I18n.t('qrTool.tooLongWarning')}</span>
-                </div>
-
-                <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
-                    <span class="craftools-label">${I18n.t('qrTool.ecLevel')}</span>
-                    <select id="qr-ec-level" class="craftools-select" style="width:100%;">
-                        <option value="L" ${meta.ecLevel === 'L' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelL')}</option>
-                        <option value="M" ${meta.ecLevel === 'M' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelM')}</option>
-                        <option value="Q" ${meta.ecLevel === 'Q' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelQ')}</option>
-                        <option value="H" ${meta.ecLevel === 'H' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelH')}</option>
-                    </select>
-                    <span style="font-size:10px; color: var(--text-muted); display:block; margin-top:4px;">${I18n.t('qrTool.ecLevelHelp')}</span>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('qrTool.colorDark')}</span>
-                        <input type="color" id="qr-color-dark" class="craftools-color-swatch" value="${meta.darkColor}" style="width:100%;">
-                    </div>
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('qrTool.colorLight')}</span>
-                        <input type="color" id="qr-color-light" class="craftools-color-swatch" value="${meta.lightColor === 'transparent' ? '#ffffff' : meta.lightColor}" style="width:100%;" ${meta.lightColor === 'transparent' ? 'disabled' : ''}>
-                    </div>
-                </div>
-                <label class="craftools-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
-                    <input type="checkbox" id="qr-bg-transparent" ${meta.lightColor === 'transparent' ? 'checked' : ''}>
-                    <span class="craftools-label" style="margin:0;">${I18n.t('qrTool.transparentBg')}</span>
-                </label>
+            <div id="qr-too-long-warning" style="display:${tooLong ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
+                <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+                <span>${I18n.t('qrTool.tooLongWarning')}</span>
             </div>
         `;
 
-        editorPanel.innerHTML = html;
+        const htmlAparencia = `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('qrTool.ecLevel')}</span>
+                <select id="qr-ec-level" class="craftools-select" style="width:100%;">
+                    <option value="L" ${meta.ecLevel === 'L' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelL')}</option>
+                    <option value="M" ${meta.ecLevel === 'M' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelM')}</option>
+                    <option value="Q" ${meta.ecLevel === 'Q' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelQ')}</option>
+                    <option value="H" ${meta.ecLevel === 'H' ? 'selected' : ''}>${I18n.t('qrTool.ecLevelH')}</option>
+                </select>
+                <span style="font-size:10px; color: var(--text-muted); display:block; margin-top:4px;">${I18n.t('qrTool.ecLevelHelp')}</span>
+            </div>
 
-        // Render Common Properties (Inherited) — aplica borda/raio/z-index no <svg>
-        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('qrTool.colorDark')}</span>
+                    <input type="color" id="qr-color-dark" class="craftools-color-swatch" value="${meta.darkColor}" style="width:100%;">
+                </div>
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('qrTool.colorLight')}</span>
+                    <input type="color" id="qr-color-light" class="craftools-color-swatch" value="${meta.lightColor === 'transparent' ? '#ffffff' : meta.lightColor}" style="width:100%;" ${meta.lightColor === 'transparent' ? 'disabled' : ''}>
+                </div>
+            </div>
+            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="qr-bg-transparent" ${meta.lightColor === 'transparent' ? 'checked' : ''}>
+                <span class="craftools-label" style="margin:0;">${I18n.t('qrTool.transparentBg')}</span>
+            </label>
+        `;
+
+        editorPanel.innerHTML = 
+            PanelUI.accordion('qr-conteudo', 'qr_code', I18n.t('qrTool.content') || 'Conteúdo', htmlConteudo, { open: true }) +
+            PanelUI.accordion('qr-aparencia', 'palette', I18n.t('qrTool.appearance') || 'Aparência', htmlAparencia);
+
+        // Render Common Properties (Inherited from BaseTool now handles it all)
+        this.renderCommonProperties(editorPanel, element, {
             border: 'svg',
             radius: 'svg',
+            padding: 'svg',
+            margin: 'svg',
             zindex: true,
             onChange: () => {
                 const svg = element.contentArea.querySelector('svg');

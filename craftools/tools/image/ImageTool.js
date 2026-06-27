@@ -2,6 +2,7 @@ import { I18n } from "../../settings/Translations.js";
 import { FILTERS_CONFIG, ImageFilters } from "./ImageFilters.js";
 import { ImageTransform } from "./ImageTransform.js";
 import { BaseTool } from "../BaseTool.js";
+import { PanelUI } from "../../utils/PanelUI.js";
 import "./ImageTool_Translations.js";
 
 export class ImageTool extends BaseTool {
@@ -22,85 +23,89 @@ export class ImageTool extends BaseTool {
         }
 
         let filtersHtml = FILTERS_CONFIG.map(f => `
-            <div class="craftools-field" style="padding: 4px 0;">
-                <span class="craftools-label">${I18n.t('imageTool.' + f.label)}</span>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" class="filter-slider" data-key="${f.key}" data-unit="${f.unit || ''}" 
-                        min="${f.min}" max="${f.max}" step="${f.step}" style="flex:1;" 
-                        value="${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}">
-                    <span class="filter-val" style="font-size: 11px; width: 33px; text-align: right; color: var(--text-muted); font-family: monospace;">${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}</span>
+            <div class="ct-field-row" style="margin-bottom:8px;">
+                <div class="ct-filter-icon" title="${I18n.t('imageTool.' + f.label)}">
+                    <span class="material-symbols-outlined">${f.icon}</span>
                 </div>
+                <input type="range" class="filter-slider" data-key="${f.key}" data-unit="${f.unit || ''}" 
+                    min="${f.min}" max="${f.max}" step="${f.step}" style="flex:1;" 
+                    value="${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}">
+                <span class="filter-val ct-val-badge">${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}${f.unit || ''}</span>
             </div>
         `).join('');
 
-        const html = `
-            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div class="craftools-panel-section">
-                    <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span> ${I18n.t('imageTool.uploadPhoto')}
-                    </button>
-                    <input type="file" id="img-file-hidden" style="display:none;" accept="image/*">
-                </div>
+        const htmlFonte = `
+            <div class="ct-field">
+                <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span> ${I18n.t('imageTool.uploadPhoto')}
+                </button>
+                <input type="file" id="img-file-hidden" style="display:none;" accept="image/*">
+            </div>
 
-                <div class="craftools-field">
-                    <span class="craftools-label">${I18n.t('imageTool.fit')}</span>
-                    <div style="display: flex; gap: 4px;">
-                        ${['contain', 'cover', 'fill'].map(fit => `
-                            <button class="craftools-pill fit-btn ${meta.objectFit === fit ? 'active' : ''}" data-fit="${fit}" style="flex:1;">${fit}</button>
-                        `).join('')}
-                    </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('imageTool.fit')}</span>
+                <div style="display: flex; gap: 4px;">
+                    ${['contain', 'cover', 'fill'].map(fit => `
+                        <button class="craftools-pill fit-btn ${meta.objectFit === fit ? 'active' : ''}" data-fit="${fit}" style="flex:1;">${fit}</button>
+                    `).join('')}
                 </div>
-
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 4px; border-top: 1px solid var(--border); margin-top: 5px;">
-                    <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${I18n.t('imageTool.transform') || 'Ajustes de Transformação'}</span>
-                    <button id="img-reset-btn" style="font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 3px; font-family: 'DM Sans', sans-serif; padding: 2px 4px; border-radius: 4px;">
-                        <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> ${I18n.t('imageTool.reset')}
-                    </button>
-                </div>
-
-                <div class="craftools-field">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.zoom')}</span>
-                        <span id="zoom-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${Math.round((meta.zoom || 1) * 100)}%</span>
-                    </div>
-                    <input type="range" id="zoom-slider" min="0.1" max="5" step="0.05" value="${meta.zoom || 1}" style="width:100%;">
-                </div>
-
-                <div class="craftools-field">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.rotation')}</span>
-                        <span id="rotate-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.rotation || 0}°</span>
-                    </div>
-                    <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="${meta.rotation || 0}" style="width:100%;">
-                </div>
-
-                <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.bgBlur')}</span>
-                        <span id="bgblur-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.bgBlur || 0}px</span>
-                    </div>
-                    <input type="range" id="bgblur-slider" min="1" max="100" step="1" value="${meta.bgBlur || 20}" style="width:100%;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('imageTool.posX')}</span>
-                        <input type="number" id="pos-x-input" class="craftools-input" value="${Math.round(meta.posX || 0)}" style="width: 100%;">
-                    </div>
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('imageTool.posY')}</span>
-                        <input type="number" id="pos-y-input" class="craftools-input" value="${Math.round(meta.posY || 0)}" style="width: 100%;">
-                    </div>
-                </div>
-
-                <div style="padding: 10px 0 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border); margin-top: 5px; letter-spacing: 0.5px;">
-                    ${I18n.t('imageTool.cssFilters')}
-                </div>
-                ${filtersHtml}
             </div>
         `;
 
-        editorPanel.innerHTML = html;
+        const htmlTransformacao = `
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                <button id="img-reset-btn" class="craftools-pill" style="font-size: 10px; color: var(--accent); padding: 4px 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> ${I18n.t('imageTool.reset')}
+                </button>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">zoom_in</span>${I18n.t('imageTool.zoom')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="zoom-slider" min="0.1" max="5" step="0.05" value="${meta.zoom || 1}" style="flex:1;">
+                    <span id="zoom-val-display" class="ct-val-badge">${Math.round((meta.zoom || 1) * 100)}%</span>
+                </div>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">rotate_right</span>${I18n.t('imageTool.rotation')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="${meta.rotation || 0}" style="flex:1;">
+                    <span id="rotate-val-display" class="ct-val-badge">${meta.rotation || 0}°</span>
+                </div>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">open_with</span>${I18n.t('imageTool.position') || 'Posição na Máscara'}</div>
+                <div class="ct-field-grid2">
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <span style="font-size:9px;color:var(--text-muted);">X</span>
+                        <input type="number" id="pos-x-input" class="craftools-input" value="${Math.round(meta.posX || 0)}" style="text-align:center;padding:4px;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <span style="font-size:9px;color:var(--text-muted);">Y</span>
+                        <input type="number" id="pos-y-input" class="craftools-input" value="${Math.round(meta.posY || 0)}" style="text-align:center;padding:4px;">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const htmlEfeitos = `
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">blur_on</span>${I18n.t('imageTool.bgBlur')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="bgblur-slider" min="0" max="100" step="1" value="${meta.bgBlur || 0}" style="flex:1;">
+                    <span id="bgblur-val-display" class="ct-val-badge">${meta.bgBlur || 0}px</span>
+                </div>
+            </div>
+        `;
+
+        editorPanel.innerHTML = 
+            PanelUI.accordion('img-fonte', 'photo_camera', I18n.t('imageTool.source') || 'Fonte', htmlFonte, { open: true }) +
+            PanelUI.accordion('img-transform', 'transform', I18n.t('imageTool.transform') || 'Transformação', htmlTransformacao) +
+            PanelUI.accordion('img-filters', 'auto_fix_high', I18n.t('imageTool.cssFilters'), filtersHtml) +
+            PanelUI.accordion('img-efeitos', 'magic_button', I18n.t('imageTool.effects') || 'Efeitos', htmlEfeitos);
+
         
         // Render Common Properties (Inherited)
         this.renderCommonProperties(editorPanel.firstElementChild, element, {

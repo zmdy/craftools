@@ -117,6 +117,87 @@ html, body {
 .craftools-field:last-child { border-bottom:none; }
 .craftools-label  { display:block; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
 
+/* ── Accordion Sections ───────────────────────────────────────────────────── */
+.ct-accordion { border-bottom: 1px solid var(--border); }
+.ct-accordion:last-child { border-bottom: none; }
+
+.ct-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background .12s;
+    user-select: none;
+}
+.ct-accordion-header:hover { background: var(--bg-hover); }
+
+.ct-accordion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.ct-accordion-icon .material-symbols-outlined { font-size: 15px; line-height: 1; }
+
+.ct-accordion-title { flex: 1; }
+
+.ct-accordion-chevron {
+    color: var(--text-muted);
+    transition: transform .2s cubic-bezier(.22,1,.36,1);
+    flex-shrink: 0;
+}
+.ct-accordion-chevron .material-symbols-outlined { font-size: 16px; line-height: 1; }
+.ct-accordion.open .ct-accordion-chevron { transform: rotate(180deg); }
+
+.ct-accordion-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .25s cubic-bezier(.22,1,.36,1), opacity .2s;
+    opacity: 0;
+}
+.ct-accordion.open .ct-accordion-body {
+    max-height: 1200px;
+    opacity: 1;
+}
+.ct-accordion-content { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Panel field rows (inside accordion) ─────────────────────────────────── */
+.ct-field { display: flex; flex-direction: column; gap: 5px; }
+.ct-field-row { display: flex; align-items: center; gap: 8px; }
+.ct-field-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ct-field-grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+.ct-sublabel { font-size: 9px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; display: flex; align-items: center; gap: 3px; }
+.ct-sublabel .material-symbols-outlined { font-size: 11px; }
+
+/* Filter icon badges (Image tool) */
+.ct-filter-icon { width: 22px; height: 22px; border-radius: 5px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+
+/* Copy/Paste styles bar */
+.ct-copypaste-bar { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
+.ct-copypaste-bar .craftools-pill { flex: 1; justify-content: center; gap: 4px; font-size: 10px; }
+
+/* Compact value display next to sliders */
+.ct-val-badge { font-size: 10px; font-family: monospace; color: var(--accent); font-weight: 700; min-width: 36px; text-align: right; flex-shrink: 0; }
+
+/* Danger section */
+.ct-danger-section { padding: 10px 14px; }
+
+
+
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 .craftools-input  { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color .15s; }
 .craftools-input:focus { border-color:var(--border-focus); }

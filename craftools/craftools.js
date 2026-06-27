@@ -35,6 +35,46 @@ export class Craftools{
 
         // Check for saved session recovery
         this._checkSessionRecovery();
+        
+        // Load custom fonts from IndexedDB
+        this._loadCustomFonts();
+    }
+
+    // Loads custom fonts uploaded by the user from IndexedDB
+    _loadCustomFonts() {
+        const req = indexedDB.open('CraftoolsFonts', 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('fonts')) {
+                db.createObjectStore('fonts');
+            }
+        };
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if(!db.objectStoreNames.contains('fonts')) return;
+            const tx = db.transaction('fonts', 'readonly');
+            const store = tx.objectStore('fonts');
+            const getAll = store.getAll();
+            const getKeys = store.getAllKeys();
+            
+            getAll.onsuccess = () => {
+                getKeys.onsuccess = async () => {
+                    window.__craftoolsCustomFonts = window.__craftoolsCustomFonts || {};
+                    for(let i=0; i<getKeys.result.length; i++) {
+                        const fontName = getKeys.result[i];
+                        const buffer = getAll.result[i];
+                        try {
+                            const fontFace = new FontFace(fontName, buffer);
+                            const loadedFace = await fontFace.load();
+                            document.fonts.add(loadedFace);
+                            window.__craftoolsCustomFonts[fontName] = true;
+                        } catch(err) {
+                            console.error('Failed to load custom font from DB', fontName, err);
+                        }
+                    }
+                };
+            };
+        };
     }
 
     // Sets the wrapper and checks if it's valid

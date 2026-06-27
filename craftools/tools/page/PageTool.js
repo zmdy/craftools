@@ -1,5 +1,6 @@
 import { I18n } from "../../settings/Translations.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
+import { PanelUI } from "../../utils/PanelUI.js";
 import { Notify } from "../../utils/Notify.js";
 import "./PageTool_Translations.js";
 
@@ -173,15 +174,14 @@ export class PageTool {
                 const currentColor = CommonProperties._rgbToHex(pageEl.style.backgroundColor || '#ffffff');
 
                 if (panelBody) {
-                    panelBody.innerHTML = `
-                        <div class="craftools-field">
+                    const htmlTamanho = `
+                        <div class="ct-field">
                             <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
                                 ${presetsHtml}
                             </div>
                         </div>
-
-                        <div class="craftools-field">
+                        <div class="ct-field">
                             <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
                             <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
                                 ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
@@ -193,8 +193,10 @@ export class PageTool {
                                 <span style="color: var(--text-muted); font-size: 11px;" id="dim-unit-label">${currentUnit}</span>
                             </div>
                         </div>
+                    `;
 
-                        <div class="craftools-field">
+                    const htmlFundo = `
+                        <div class="ct-field">
                             <span class="craftools-label">${I18n.t('pageTool.background')}</span>
                             <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
                                 <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
@@ -219,13 +221,22 @@ export class PageTool {
                                 <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
                             </div>
                         </div>
+                    `;
 
-                        <div class="craftools-field">
-                            <button class="craftools-danger-btn" id="delete-page-btn">
-                                <span class="material-symbols-outlined">delete</span> ${I18n.t('pageTool.deletePage')}
+                    const htmlAcoes = `
+                        <div class="ct-danger-section">
+                            <button class="craftools-danger-btn" id="delete-page-btn" style="width:100%; justify-content:center; gap:6px;">
+                                <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ${I18n.t('pageTool.deletePage')}
                             </button>
                         </div>
                     `;
+
+                    panelBody.innerHTML = 
+                        PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Tamanho', htmlTamanho, { open: true }) +
+                        PanelUI.accordion('page-fundo', 'palette', I18n.t('pageTool.background') || 'Fundo', htmlFundo) +
+                        PanelUI.accordion('page-acoes', 'warning', I18n.t('pageTool.actions') || 'Ações', htmlAcoes);
+                        
+                    PanelUI.bindAccordions(panelBody);
                 }
 
                 let activeUnit = currentUnit;

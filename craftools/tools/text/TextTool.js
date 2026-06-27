@@ -1,6 +1,7 @@
 import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
+import { PanelUI } from "../../utils/PanelUI.js";
 import "./TextTool_Translations.js";
 
 const FONTS = [
@@ -55,57 +56,63 @@ export class TextTool extends BaseTool {
         currentFont = currentFont.replace(/['"]/g, '').split(',')[0].trim();
         const currentSize = parseFloat(textElement.style.fontSize) || 16;
 
-        let html = `
-            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div class="craftools-field" style="padding: 0 0 10px 0; display: flex; flex-direction: column; gap: 6px;">
-                    <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
-                    <select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></select>
-                    
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <input type="text" id="text-prop-custom-font" class="craftools-input"
-                            placeholder="${I18n.t('textTool.localFontPlaceholder')}"
-                            style="flex: 1; padding: 6px 9px; font-size: 11px;">
-                        <button class="craftools-pill" id="text-prop-load-local" title="${I18n.t('textTool.listLocalFontsTitle')}" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC
-                        </button>
-                    </div>
-                </div>
+        const htmlTipografia = `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
+                <select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></select>
                 
-                <div class="craftools-field" style="padding: 10px 0;">
-                    <span class="craftools-label">${I18n.t('textTool.color') || 'Cor'}</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="color" class="craftools-color-swatch" id="text-prop-color" value="${currentColor}">
-                        <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('textTool.chooseColor') || 'Escolha a cor'}</span>
-                    </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <input type="text" id="text-prop-custom-font" class="craftools-input"
+                        placeholder="${I18n.t('textTool.localFontPlaceholder')}"
+                        style="flex: 1; padding: 6px 9px; font-size: 11px;">
+                    <button class="craftools-pill" id="text-prop-load-local" title="${I18n.t('textTool.listLocalFontsTitle')}" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC
+                    </button>
+                    <button class="craftools-pill" id="text-prop-upload-font-btn" title="Upload" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span>
+                    </button>
+                    <input type="file" id="text-prop-font-file" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
                 </div>
-                
-                <div class="craftools-field" style="padding: 10px 0;">
-                    <span class="craftools-label">${I18n.t('textTool.size') || 'Tamanho'}</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="range" id="text-prop-size-range" min="8" max="200" step="1" style="flex:1;" value="${currentSize}">
-                        <input type="number" class="craftools-input" id="text-prop-size-num" style="width: 55px; text-align: center;" value="${currentSize}">
-                    </div>
+            </div>
+            
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('textTool.color') || 'Cor'}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="color" class="craftools-color-swatch" id="text-prop-color" value="${currentColor}">
+                    <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('textTool.chooseColor') || 'Escolha a cor'}</span>
                 </div>
-                
-                <div class="craftools-field" style="padding: 10px 0; border-bottom: none;">
-                    <span class="craftools-label">${I18n.t('textTool.align') || 'Alinhamento'}</span>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="craftools-pill text-align-btn" data-align="left"><span class="material-symbols-outlined" style="font-size:14px;">format_align_left</span></button>
-                        <button class="craftools-pill text-align-btn" data-align="center"><span class="material-symbols-outlined" style="font-size:14px;">format_align_center</span></button>
-                        <button class="craftools-pill text-align-btn" data-align="right"><span class="material-symbols-outlined" style="font-size:14px;">format_align_right</span></button>
-                        <button class="craftools-pill text-align-btn" data-align="justify"><span class="material-symbols-outlined" style="font-size:14px;">format_align_justify</span></button>
-                    </div>
+            </div>
+            
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('textTool.size') || 'Tamanho'}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" id="text-prop-size-range" min="8" max="200" step="1" style="flex:1;" value="${currentSize}">
+                    <input type="number" class="craftools-input" id="text-prop-size-num" style="width: 55px; text-align: center;" value="${currentSize}">
                 </div>
             </div>
         `;
-        
-        editorPanel.innerHTML = html;
 
-        // Render Common Properties (Inherited)
-        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+        const htmlAlinhamento = `
+            <div class="ct-field">
+                <div style="display: flex; gap: 4px;">
+                    <button class="craftools-pill text-align-btn" data-align="left" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_left</span></button>
+                    <button class="craftools-pill text-align-btn" data-align="center" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_center</span></button>
+                    <button class="craftools-pill text-align-btn" data-align="right" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_right</span></button>
+                    <button class="craftools-pill text-align-btn" data-align="justify" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_justify</span></button>
+                </div>
+            </div>
+        `;
+
+        editorPanel.innerHTML = 
+            PanelUI.accordion('text-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
+            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento);
+
+        // Render Common Properties (Inherited from BaseTool now handles it all)
+        this.renderCommonProperties(editorPanel, element, {
             border: '[contenteditable]',
             radius: '[contenteditable]',
             padding: '[contenteditable]',
+            margin: '[contenteditable]',
             zindex: true
         });
         
@@ -149,9 +156,23 @@ export class TextTool extends BaseTool {
                     }
                 });
             }
+            
+            // Adiciona fontes do IndexedDB
+            if (window.__craftoolsCustomFonts) {
+                Object.keys(window.__craftoolsCustomFonts).forEach(font => {
+                    if (![...fontSelect.options].some(opt => opt.value === font)) {
+                        const option = document.createElement('option');
+                        option.value = font;
+                        option.textContent = font;
+                        option.style.fontFamily = `'${font}', sans-serif`;
+                        if(font === selectedFont) option.selected = true;
+                        fontSelect.appendChild(option);
+                    }
+                });
+            }
 
             // Adiciona a fonte atual se for externa e não estiver na lista
-            if (selectedFont && !FONTS.includes(selectedFont) && !savedLocalFonts.includes(selectedFont)) {
+            if (selectedFont && !FONTS.includes(selectedFont) && !savedLocalFonts.includes(selectedFont) && (!window.__craftoolsCustomFonts || !window.__craftoolsCustomFonts[selectedFont])) {
                 const option = document.createElement('option');
                 option.value = selectedFont;
                 option.textContent = selectedFont;
@@ -252,6 +273,49 @@ export class TextTool extends BaseTool {
                 localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC';
             }
         });
+
+        // Botão de upload
+        const uploadBtn = editorPanel.querySelector('#text-prop-upload-font-btn');
+        const fileInput = editorPanel.querySelector('#text-prop-font-file');
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                uploadBtn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size: 14px;">progress_activity</span>';
+                
+                try {
+                    const fontName = file.name.replace(/\.[^/.]+$/, "");
+                    const buffer = await file.arrayBuffer();
+                    const fontFace = new FontFace(fontName, buffer);
+                    const loadedFace = await fontFace.load();
+                    document.fonts.add(loadedFace);
+                    
+                    window.__craftoolsCustomFonts = window.__craftoolsCustomFonts || {};
+                    window.__craftoolsCustomFonts[fontName] = true;
+                    
+                    // Save to IndexedDB
+                    const req = indexedDB.open('CraftoolsFonts', 1);
+                    req.onupgradeneeded = (ev) => {
+                        const db = ev.target.result;
+                        if (!db.objectStoreNames.contains('fonts')) db.createObjectStore('fonts');
+                    };
+                    req.onsuccess = (ev) => {
+                        const db = ev.target.result;
+                        const tx = db.transaction('fonts', 'readwrite');
+                        tx.objectStore('fonts').put(buffer, fontName);
+                    };
+                    
+                    populateFontSelect(fontName);
+                    fontSelect.dispatchEvent(new Event('change'));
+                } catch(err) {
+                    alert('Erro ao carregar fonte: ' + err.message);
+                }
+                uploadBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span>';
+            });
+        }
+
 
         const colorInput = editorPanel.querySelector('#text-prop-color');
         colorInput.addEventListener('input', (e) => {

@@ -1,13 +1,13 @@
 export const FILTERS_CONFIG = [
-    { key: 'brightness', label: 'brightness', min: 0, max: 2, step: 0.01, def: 1 },
-    { key: 'contrast', label: 'contrast', min: 0, max: 3, step: 0.01, def: 1 },
-    { key: 'saturate', label: 'saturate', min: 0, max: 3, step: 0.01, def: 1 },
-    { key: 'hue-rotate', label: 'hueRotate', min: 0, max: 360, step: 1, def: 0, unit: 'deg' },
-    { key: 'blur', label: 'blur', min: 0, max: 20, step: 0.1, def: 0, unit: 'px' },
-    { key: 'grayscale', label: 'grayscale', min: 0, max: 1, step: 0.01, def: 0 },
-    { key: 'sepia', label: 'sepia', min: 0, max: 1, step: 0.01, def: 0 },
-    { key: 'invert', label: 'invert', min: 0, max: 1, step: 0.01, def: 0 },
-    { key: 'opacity', label: 'opacity', min: 0, max: 1, step: 0.01, def: 1 }
+    { key: 'brightness', label: 'brightness', min: 0, max: 2, step: 0.01, def: 1, icon: 'light_mode' },
+    { key: 'contrast', label: 'contrast', min: 0, max: 3, step: 0.01, def: 1, icon: 'contrast' },
+    { key: 'saturate', label: 'saturate', min: 0, max: 3, step: 0.01, def: 1, icon: 'water_drop' },
+    { key: 'hue-rotate', label: 'hueRotate', min: 0, max: 360, step: 1, def: 0, unit: 'deg', icon: 'palette' },
+    { key: 'blur', label: 'blur', min: 0, max: 20, step: 0.1, def: 0, unit: 'px', icon: 'blur_on' },
+    { key: 'grayscale', label: 'grayscale', min: 0, max: 1, step: 0.01, def: 0, icon: 'filter_b_and_w' },
+    { key: 'sepia', label: 'sepia', min: 0, max: 1, step: 0.01, def: 0, icon: 'coffee' },
+    { key: 'invert', label: 'invert', min: 0, max: 1, step: 0.01, def: 0, icon: 'invert_colors' },
+    { key: 'opacity', label: 'opacity', min: 0, max: 1, step: 0.01, def: 1, icon: 'opacity' }
 ];
 
 export class ImageFilters {

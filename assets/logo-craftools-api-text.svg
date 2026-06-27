@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="106mm"
+   height="16mm"
+   viewBox="0 0 106 16"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   sodipodi:docname="logo-craftools-api-text.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.0957491"
+     inkscape:cx="207.1642"
+     inkscape:cy="101.75687"
+     inkscape:window-width="1440"
+     inkscape:window-height="837"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient3"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#d75b06;stop-opacity:1;"
+         offset="0.08425415"
+         id="stop2" />
+      <stop
+         style="stop-color:#f97316;stop-opacity:1;"
+         offset="1"
+         id="stop3" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3"
+       id="radialGradient268"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.1190669,0,0,0.17031266,-995.8807,-6.1219138)"
+       cx="937.26489"
+       cy="82.409279"
+       fx="937.26489"
+       fy="82.409279"
+       r="34.953053" />
+    <linearGradient
+       id="linearGradient269"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#d75b06;stop-opacity:1;"
+         offset="0"
+         id="stop269" />
+      <stop
+         style="stop-color:#f97316;stop-opacity:1;"
+         offset="1"
+         id="stop268" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient1"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient2"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient4"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient6"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient8"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient269"
+       id="radialGradient10"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1,0,0,0.15219165,0.98221551,82.745831)"
+       cx="937.26489"
+       cy="70.898216"
+       fx="937.26489"
+       fy="70.898216"
+       r="34.953053" />
+  </defs>
+  <g
+     inkscape:label="Camada 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-weight:300;font-size:15.8746px;line-height:1;font-family:Kalnia;-inkscape-font-specification:'Kalnia Light';text-align:center;text-decoration-color:#000000;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:url(#radialGradient268);stroke-width:3.21417;stroke-miterlimit:1;stroke-dasharray:6.42833, 3.21417;paint-order:fill markers stroke"
+       x="52.981453"
+       y="11.905891"
+       id="text268"><tspan
+         sodipodi:role="line"
+         id="tspan268"
+         style="font-style:normal;font-variant:normal;font-weight:100;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:'Kikuta Thin';fill:url(#radialGradient268);fill-opacity:1;stroke:none;stroke-width:3.21417"
+         x="52.981453"
+         y="11.905891"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:Kikuta;fill:url(#radialGradient268);fill-opacity:1;stroke-width:3.21417"
+           id="tspan263">api.cra</tspan><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:'Kikuta Bold';fill:url(#radialGradient268);fill-opacity:1;stroke-width:3.21417"
+           id="tspan264">ft</tspan><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:Kikuta;fill:url(#radialGradient268);fill-opacity:1;stroke-width:3.21417"
+           id="tspan265">oo</tspan><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:Kikuta;fill:url(#radialGradient268);fill-opacity:1;stroke-width:3.21417"
+           id="tspan267">l<tspan
+   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Kikuta;-inkscape-font-specification:'Kikuta Bold';fill:url(#radialGradient268);fill-opacity:1;stroke-width:3.21417"
+   id="tspan266">s</tspan></tspan></tspan></text>
+  </g>
+</svg>
