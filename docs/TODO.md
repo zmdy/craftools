@@ -16,15 +16,15 @@
 - [X] Create a "clear pages" button especially for the album tool
 
 # v0.2
-- [ ] Improve the PropertiesPanel (add icons make it more organized)
-- [ ] Add borders and border radius to every element (images, titles, paragraphs)
-- [ ] Tools: Shapes, forms, papers, icons and emojis
-- [ ] Export to PNG (72, 96 and 300 dpi)
-- [ ] Allow albuns with different photo sizes in the same page
+- [X] Improve the PropertiesPanel (add icons make it more organized)
+- [X] Add a snap toggle in each tool in album repeat modo to turn it on/off
 - [ ] In the album, allow users to choose a custom size (and change existing ones, saving to cache/cookies/storage), automatically calculating the best layout (landscape or portrait)
 - [ ] Remove landscape/portrait options from the size settings; the system will calculate automatically
 - [ ] Create the option to repeat a text (or any tool) in album mode, making it repeat in the remaining cells
-- [ ] Add a snap toggle in each tool in album repeat modo to turn it on/off
+- [ ] Allow albuns with different photo sizes in the same page
+- [ ] Add borders and border radius to every element (images, titles, paragraphs)
+- [ ] Tools: Shapes/forms, papers, icons and emojis, spotify code
+- [ ] Export to PNG (72, 96 and 300 dpi)
 - [ ] Implement animations (fadein)
 
 # v0.3

@@ -170,7 +170,7 @@ html, body {
     opacity: 0;
 }
 .ct-accordion.open .ct-accordion-body {
-    max-height: 1200px;
+    max-height: 500vh;
     opacity: 1;
 }
 .ct-accordion-content { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
