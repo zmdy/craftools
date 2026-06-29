@@ -52,6 +52,8 @@ export class AlbumTool extends BaseTool {
             if (template.type === 'promo_kit') {
                 // Slots that are themselves photostrips (cellLines/cellColumns) consume
                 // cellLines*cellColumns items per instance instead of just 1.
+                // Slots with slotLines/slotColumns are regular cells (1 photo each)
+                // — cellCount is already the total number of individual photos.
                 return template.cellSlots.reduce((sum, slot) => {
                     const itemsPerUnit = (slot.cellLines || slot.cellColumns) ? (slot.cellLines || 1) * (slot.cellColumns || 1) : 1;
                     return sum + slot.cellCount * itemsPerUnit;
@@ -161,187 +163,132 @@ export class AlbumTool extends BaseTool {
                 </div>`;
             };
 
-            // ── Helper: full page preview (with margin & gap) ──────────────
+            // ── Helper: full page preview rendered as SVG ─────────────────
+            // Uses SVG viewBox in real document units (mm) so the engine
+            // handles all scaling — no manual coordinate multiplication needed.
             const buildPagePreview = (t) => {
                 if (!selectedSize) return '';
                 const parts = selectedSize.size.split(',').map(Number);
                 const docW = parts[0];
                 const docH = parts[1];
-                
-                // Scale full page to fit in preview box
+
                 const PAGE_MAX_W = 180;
                 const PAGE_MAX_H = 140;
-                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH, 1);
-                const pDocW  = Math.round(docW  * scale);
-                const pDocH  = Math.round(docH  * scale);
+                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH);
+                const svgW = Math.round(docW * scale);
+                const svgH = Math.round(docH * scale);
+
+                // stroke-width in viewBox units so it appears as ~1 px on screen
+                const sw = (1 / scale).toFixed(3);
+
+                const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
+                const [mT, mR, mB, mL] = margins;
+
+                // Helper — draw one cell (border box + inner photo rect(s))
+                const drawCell = (x, y, cW, cH, padStr, isStripe, sL, sC) => {
+                    const [pT, pR, pB, pL] = padStr.split(' ').map(v => parseFloat(v));
+                    const iX = x + pL;
+                    const iY = y + pT;
+                    const iW = Math.max(0, cW - pL - pR);
+                    const iH = Math.max(0, cH - pT - pB);
+
+                    let out = `<rect x="${x}" y="${y}" width="${cW}" height="${cH}" fill="white" stroke="#d1d5db" stroke-width="${sw}"/>`;
+
+                    if (isStripe) {
+                        // Stripe / slotLines-slotColumns: inner N×M sub-grid
+                        const slotW = iW / sC;
+                        const slotH = iH / sL;
+                        for (let sr = 0; sr < sL; sr++) {
+                            for (let sc = 0; sc < sC; sc++) {
+                                out += `<rect x="${(iX + sc * slotW).toFixed(2)}" y="${(iY + sr * slotH).toFixed(2)}" width="${slotW.toFixed(2)}" height="${slotH.toFixed(2)}" fill="#9ca3af"/>`;
+                            }
+                        }
+                    } else {
+                        // Plain single photo area
+                        out += `<rect x="${iX}" y="${iY}" width="${iW}" height="${iH}" fill="#9ca3af"/>`;
+                    }
+                    return out;
+                };
+
+                let shapes = '';
 
                 if (t.type === 'promo_kit') {
-                    const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
-                    const [mT, mR, mB, mL] = margins;
                     const gap = t.cellGap || 0;
-                    
                     const availableW = docW - mL - mR;
-                    let currentX = 0;
-                    let currentY = 0;
-                    let shelfH = 0;
+                    let curX = 0, curY = 0, shelfH = 0;
 
-                    const blocks = t.cellSlots.map((slot) => {
+                    // Build blocks — respect explicit slotColumns/slotLines when present
+                    const blocks = t.cellSlots.map(slot => {
                         const slotGap = slot.cellGap !== undefined ? parseFloat(slot.cellGap) : gap;
-                        const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
-                        const cols = Math.min(slot.cellCount, Kmax);
-                        const rows = Math.ceil(slot.cellCount / cols);
+                        let cols, rows;
+                        if (slot.slotColumns && slot.slotLines) {
+                            cols = slot.slotColumns;
+                            rows = slot.slotLines;
+                        } else {
+                            const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
+                            cols = Math.min(slot.cellCount, Kmax);
+                            rows = Math.ceil(slot.cellCount / cols);
+                        }
                         const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * slotGap : 0);
                         const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * slotGap : 0);
                         return { slot, cols, rows, blockW, blockH, slotGap };
                     });
 
-                    let cellsHtml = '';
-
+                    // Shelf-pack blocks and assign positions
                     blocks.forEach(b => {
-                        if (currentX + b.blockW > availableW && currentX > 0) {
-                            currentX = 0;
-                            currentY += shelfH + gap;
-                            shelfH = 0;
+                        if (curX + b.blockW > availableW && curX > 0) {
+                            curX = 0; curY += shelfH + gap; shelfH = 0;
                         }
+                        b.x = curX; b.y = curY;
+                        curX += b.blockW + gap;
+                        shelfH = Math.max(shelfH, b.blockH);
+                    });
 
+                    // Render each cell in each block
+                    blocks.forEach(b => {
+                        // cellLines/cellColumns = old stripe-in-kit pattern (inner sub-grid per cell)
+                        // slotLines/slotColumns = explicit layout grid; each grid item = 1 plain photo
                         const isStripeSlot = !!(b.slot.cellLines || b.slot.cellColumns);
-                        const sLines = b.slot.cellLines || 1;
-                        const sCols = b.slot.cellColumns || 1;
+                        const sL = b.slot.cellLines || 1;
+                        const sC = b.slot.cellColumns || 1;
 
                         for (let r = 0; r < b.rows; r++) {
                             for (let c = 0; c < b.cols; c++) {
                                 if (r * b.cols + c >= b.slot.cellCount) break;
-
-                                const cellLeft = mL + currentX + c * (b.slot.cellWidth + b.slotGap);
-                                const cellTop = mT + currentY + r * (b.slot.cellHeight + b.slotGap);
-
-                                const padParts = b.slot.cellPadding.split(' ').map(v => parseFloat(v));
-                                const [padT, padR, padB, padL] = padParts;
-
-                                const pLeft = Math.round(cellLeft * scale);
-                                const pTop = Math.round(cellTop * scale);
-                                const pCellW = Math.max(1, Math.round(b.slot.cellWidth * scale));
-                                const pCellH = Math.max(1, Math.round(b.slot.cellHeight * scale));
-
-                                const innerLeft = Math.round(padL * scale);
-                                const innerTop = Math.round(padT * scale);
-                                const innerW = Math.max(1, Math.round((b.slot.cellWidth - padL - padR) * scale));
-                                const innerH = Math.max(1, Math.round((b.slot.cellHeight - padT - padB) * scale));
-
-                                let innerHtml;
-                                if (isStripeSlot) {
-                                    // Slot is itself a photostrip — draw its inner N×M sub-grid
-                                    innerHtml = `<div style="
-                                        position:absolute; left:${innerLeft}px; top:${innerTop}px;
-                                        width:${innerW}px; height:${innerH}px;
-                                        display:grid;
-                                        grid-template-columns:repeat(${sCols},1fr);
-                                        grid-template-rows:repeat(${sLines},1fr);
-                                        gap:1px;
-                                    ">${Array(sLines * sCols).fill(`<div style="background:#9ca3af;"></div>`).join('')}</div>`;
-                                } else {
-                                    innerHtml = `<div style="position:absolute; left:${innerLeft}px; top:${innerTop}px; width:${innerW}px; height:${innerH}px; background:#9ca3af;"></div>`;
-                                }
-
-                                cellsHtml += `<div style="
-                                    position:absolute;
-                                    left:${pLeft}px; top:${pTop}px;
-                                    width:${pCellW}px; height:${pCellH}px;
-                                    background:#ffffff;
-                                    border:1px solid #d1d5db;
-                                    box-sizing:border-box;
-                                    overflow:hidden;
-                                ">${innerHtml}</div>`;
+                                const cx = mL + b.x + c * (b.slot.cellWidth  + b.slotGap);
+                                const cy = mT + b.y + r * (b.slot.cellHeight + b.slotGap);
+                                shapes += drawCell(cx, cy, b.slot.cellWidth, b.slot.cellHeight, b.slot.cellPadding, isStripeSlot, sL, sC);
                             }
                         }
-
-                        currentX += b.blockW + gap;
-                        shelfH = Math.max(shelfH, b.blockH);
                     });
 
-                    return `<div style="position:relative; flex-shrink:0; width:${pDocW}px; height:${pDocH}px; background:#ffffff; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin: 6px auto 0;">${cellsHtml}</div>`;
-                }
+                } else {
+                    // Normal grid or photostrip
+                    const gap  = t.cellGap || 0;
+                    const cW   = t.cellWidth;
+                    const cH   = t.cellHeight;
+                    const cols = Math.max(1, Math.floor((docW - mL - mR + gap) / (cW + gap)));
+                    const rows = Math.max(1, Math.floor((docH - mT - mB + gap) / (cH + gap)));
+                    const isStripe = !!(t.cellLines || t.cellColumns);
+                    const sL = t.cellLines  || 1;
+                    const sC = t.cellColumns || 1;
 
-                const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
-                const [mT, mR, mB, mL] = margins;
-                const cols = Math.max(1, Math.floor((docW - mL - mR + t.cellGap) / (t.cellWidth + t.cellGap)));
-                const rows = Math.max(1, Math.floor((docH - mT - mB + t.cellGap) / (t.cellHeight + t.cellGap)));
-
-                // Scale full page to fit in preview box (already calculated above)
-                const pMT    = Math.round(mT    * scale);
-                const pMR    = Math.round(mR    * scale);
-                const pMB    = Math.round(mB    * scale);
-                const pML    = Math.round(mL    * scale);
-                const pCellW = Math.round(t.cellWidth  * scale);
-                const pCellH = Math.round(t.cellHeight * scale);
-                const pGap   = t.cellGap > 0 ? Math.max(1, Math.round(t.cellGap * scale)) : 0;
-
-                const padParts = t.cellPadding.split(' ').map(v => parseFloat(v));
-                const [padT, padR, padB, padL] = padParts;
-
-                const isStripe = !!(t.cellLines || t.cellColumns);
-                const sLines   = t.cellLines   || 1;
-                const sCols    = t.cellColumns || 1;
-
-                let cellsHtml = '';
-                for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < cols; c++) {
-                        const left = pML + c * (pCellW + pGap);
-                        const top  = pMT + r * (pCellH + pGap);
-
-                        let innerContent = '';
-                        if (isStripe) {
-                            // Draw the N×M internal grid of photo slots
-                            const iPadT = Math.round(padT * scale);
-                            const iPadR = Math.round(padR * scale);
-                            const iPadB = Math.round(padB * scale);
-                            const iPadL = Math.round(padL * scale);
-                            const innerW = pCellW - iPadL - iPadR;
-                            const innerH = pCellH - iPadT - iPadB;
-                            const slotW  = Math.max(1, Math.floor(innerW / sCols));
-                            const slotH  = Math.max(1, Math.floor(innerH / sLines));
-                            innerContent = `<div style="
-                                position:absolute;
-                                top:${iPadT}px; left:${iPadL}px;
-                                width:${innerW}px; height:${innerH}px;
-                                display:grid;
-                                grid-template-columns:repeat(${sCols},1fr);
-                                grid-template-rows:repeat(${sLines},1fr);
-                                gap:1px;
-                            ">${Array(sLines * sCols).fill(`<div style="background:#9ca3af;"></div>`).join('')}</div>`;
-                        } else {
-                            const pPhotoW = Math.max(1, Math.round((t.cellWidth  - padL - padR) * scale));
-                            const pPhotoH = Math.max(1, Math.round((t.cellHeight - padT - padB) * scale));
-                            innerContent = `<div style="
-                                position:absolute;
-                                left:${Math.round(padL*scale)}px;
-                                top:${Math.round(padT*scale)}px;
-                                width:${pPhotoW}px; height:${pPhotoH}px;
-                                background:#9ca3af;
-                            "></div>`;
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const cx = mL + c * (cW + gap);
+                            const cy = mT + r * (cH + gap);
+                            shapes += drawCell(cx, cy, cW, cH, t.cellPadding, isStripe, sL, sC);
                         }
-
-                        cellsHtml += `<div style="
-                            position:absolute;
-                            left:${left}px; top:${top}px;
-                            width:${pCellW}px; height:${pCellH}px;
-                            background:#ffffff;
-                            border:1px solid #d1d5db;
-                            overflow:hidden;
-                        ">${innerContent}</div>`;
                     }
                 }
 
-                return `<div style="
-                    position:relative; flex-shrink:0;
-                    width:${pDocW}px; height:${pDocH}px;
-                    background:#ffffff;
-                    border:1px solid #d1d5db;
-                    border-radius:3px;
-                    box-shadow:0 1px 4px rgba(0,0,0,0.12);
-                    margin: 6px auto 0;
-                ">${cellsHtml}</div>`;
+                return `<svg viewBox="0 0 ${docW} ${docH}" width="${svgW}" height="${svgH}"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="display:block; background:white; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin:6px auto 0;">
+                    ${shapes}
+                </svg>`;
             };
+
 
             const templateHtml = matchingTemplates.length > 0
                 ? matchingTemplates.map((t, idx) => {
