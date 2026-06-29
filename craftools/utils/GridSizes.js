@@ -4,11 +4,58 @@ export const GridSizes = [
         type: "promo_kit",
         cellSlots: [
             { id: "polaroid", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 23 3", cellCount: 4, slotLines: 2, slotColumns: 2, cellGap: 0, },
-            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 8, slotLines: 3, slotColumns: 2, cellGap: 0, },
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 8, slotLines: 3, slotColumns: 3, cellGap: 0, },
         ],
-        pageMargin: "5 5 5 5",
+        pageMargin: "0 0 0 0",
         cellGap: 0,
         sizes: ["297,210", "297,420"]
+    },
+    {
+        name: "Kit 12fts. (4 quadradas + 8 mini)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "polaroid_quadrada", cellWidth: 70, cellHeight: 70, cellPadding: "3 3 23 3", cellCount: 4, slotLines: 2, slotColumns: 2, cellGap: 0, },
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 8, slotLines: 3, slotColumns: 3, cellGap: 0, },
+        ],
+        pageMargin: "0 0 0 0",
+        cellGap: 0,
+        sizes: ["297,210", "297,420"]
+    },
+    {
+        name: "Kit 20fts. (4 tirinhas + 8 mini)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "strip1", cellWidth: 50, cellHeight: 148, cellPadding: "3 3 18 3", cellCount: 4, cellGap: 2, cellLines: 3, cellColumns: 1, cellSpacing: 3, cellGap: 0, },
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 8,  cellGap: 0, },
+        ],
+        pageMargin: "5 2 5 2",
+        cellGap: 0,
+        sizes: ["210,297", "297,420"]
+    },
+    {
+        name: "Kit 12fts. (2 tirinhas + 2 polaroid + 4 mini)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "strip1", cellWidth: 50, cellHeight: 148, cellPadding: "3 3 18 3", cellCount: 2, cellGap: 2, cellLines: 3, cellColumns: 1, cellSpacing: 3, cellGap: 0, },
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 4,  cellGap: 0, slotLines: 2, slotColumns: 2},
+            { id: "polaroid", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 23 3", cellCount: 2, slotLines: 2, slotColumns: 2, cellGap: 0, }, 
+        ],
+        pageMargin: "0 0 0 0",
+        cellGap: 5,
+        sizes: ["210,297", "297,420"]
+    },
+    {
+        name: "Kit 16fts. (4 tirinhas + 2 polaroid + 4 mini)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "strip1", cellWidth: 50, cellHeight: 148, cellPadding: "3 3 18 3", cellCount: 4, cellGap: 2, cellLines: 3, cellColumns: 1, cellSpacing: 3, cellGap: 0, slotLines: 1, slotColumns: 4},
+            { id: "polaroid", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 23 3", cellCount: 2, cellGap: 0, }, 
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 2,  cellGap: 0, slotLines: 2, slotColumns: 1,},
+            
+        ],
+        pageMargin: "0 0 0 0",
+        cellGap: 5,
+        sizes: ["210,297", "297,420"]
     },
     {
         name: "Promo Kit (5x5, 5x7, 7x9)",
@@ -111,7 +158,7 @@ export const GridSizes = [
         name: "Fotos 7x7 Polaroid",
         cellWidth: 70,
         cellHeight: 70,
-        cellPadding: "3 3 13 3", 
+        cellPadding: "3 3 23 3", 
         pageMargin: "5 5 5 5", 
         cellGap: 0,
         sizes: ["297,210", , "297,420", ] 

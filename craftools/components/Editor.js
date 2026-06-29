@@ -331,12 +331,24 @@ export class Craftools_Editor extends HTMLElement {
                 if (panelBody) QRCodeTool.renderPropertiesPanel(panelBody, el);
                 openPanelMenu();
                 this.activePage = null;
+            } else if (toolType === 'papeis') {
+                import('../tools/paper/PaperTool.js').then(({ PaperTool }) => {
+                    this.ctxBar.show(el, PaperTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('paperTool.panelTitle') || 'Propriedades de Papel';
+                    if (panelBody) PaperTool.renderPropertiesPanel(panelBody, el);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
             } else {
                 this.ctxBar.show(el, []);
             }
         });
 
         this.addEventListener('craftools-element-deselect', (e) => {
+            const el = e.detail.element;
+            if (el && el.getAttribute('data-craftool') === 'papeis') {
+                el.style.zIndex = '1';
+            }
             this.ctxBar.hide();
             if (isMobile()) MobileToolbar.showToolMode();
         });
@@ -406,7 +418,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'papeis'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -436,6 +448,13 @@ export class Craftools_Editor extends HTMLElement {
                     el.setAttribute('x', cx - 90);
                     el.setAttribute('y', cy - 90);
                     mainPage.appendChild(el);
+                } else if (tool === 'papeis') {
+                    const { PaperTool } = await import('../tools/paper/PaperTool.js');
+                    const el = PaperTool.createElement(tool, this);
+                    mainPage.appendChild(el);
+                    setTimeout(() => {
+                        if (typeof el.select === 'function') el.select();
+                    }, 50);
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');
                     const el = TextTool.createElement(tool, this);
@@ -454,11 +473,31 @@ export class Craftools_Editor extends HTMLElement {
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '');
             if (tool === 'gerador' || tool === 'papeis') {
-                btn.addEventListener('click', (e) => {
+                btn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     
+                    if (tool === 'papeis') {
+                        // Encontra a página ativa
+                        const page = this.querySelector('.craftools-page') || document.querySelector('.craftools-page');
+                        if (page) {
+                            let paperEl = page.querySelector('craftools-element[data-craftool="papeis"]');
+                            if (!paperEl) {
+                                // Cria um papel novo
+                                const { PaperTool } = await import('../tools/paper/PaperTool.js');
+                                paperEl = PaperTool.createElement('papeis', this);
+                                page.appendChild(paperEl);
+                            }
+                            // Seleciona o papel
+                            setTimeout(() => {
+                                if (typeof paperEl.select === 'function') paperEl.select();
+                            }, 50);
+                            closeSidebar();
+                            return;
+                        }
+                    }
+
                     if(panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
                     if(panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
                     openPanelMenu();

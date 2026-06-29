@@ -77,13 +77,20 @@ export class PageTool {
                 } else if (toolType === 'qrcode') {
                     const { QRCodeTool } = await import('../qrcode/QRCodeTool.js');
                     el = QRCodeTool.createElement(toolType, editor);
+                } else if (toolType === 'papeis') {
+                    const { PaperTool } = await import('../paper/PaperTool.js');
+                    el = PaperTool.createElement(toolType, editor);
+                    // O papel cobre a página inteira, então alinhamos em 0, 0
+                    dropX = 0;
+                    dropY = 0;
                 } else {
                     const { TextTool } = await import('../text/TextTool.js');
                     el = TextTool.createElement(toolType, editor);
                 }
                 
-                el.setAttribute('x', dropX);
-                el.setAttribute('y', dropY);
+                const unit = el.getAttribute('w') ? el.getAttribute('w').replace(/[0-9.-]/g, '') : 'px';
+                el.setAttribute('x', dropX + (toolType === 'papeis' ? unit : ''));
+                el.setAttribute('y', dropY + (toolType === 'papeis' ? unit : ''));
 
                 if (!el.parentNode) {
                     targetContainer.appendChild(el);
@@ -146,6 +153,15 @@ export class PageTool {
                     const { AlbumTool } = await import('../album/AlbumTool.js');
                     AlbumTool.setup(editor, pageEl);
                     return;
+                }
+                
+                // Check if page has a paper element
+                const paperEl = pageEl.querySelector('craftools-element[data-craftool="papeis"]');
+                if (paperEl) {
+                    if (typeof paperEl.select === 'function') {
+                        paperEl.select();
+                        return;
+                    }
                 }
                 
                 const rightPanel = document.getElementById('right-panel');
