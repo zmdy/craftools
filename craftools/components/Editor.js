@@ -184,6 +184,14 @@ export class Craftools_Editor extends HTMLElement {
     bindEvents() {
         const isMobile = () => window.innerWidth <= 768;
         
+        const restoreOriginalCanvas = () => {
+            const pagesWrapper = document.getElementById('pages-wrapper');
+            if (pagesWrapper) pagesWrapper.style.display = '';
+            const canvasPreview = document.getElementById('gerador-canvas-preview');
+            if (canvasPreview) canvasPreview.remove();
+        };
+        this.restoreOriginalCanvas = restoreOriginalCanvas;
+        
         MobileToolbar.init(this);
 
         // ── Mobile menu toggle ─────────────────────────────────────────────
@@ -230,6 +238,7 @@ export class Craftools_Editor extends HTMLElement {
             if(closePanel)  closePanel.classList.add('d-none');
             if(panelLogo)   panelLogo.classList.remove('d-none');
             if(panelTitle)  panelTitle.textContent = 'Technology for Creativity';
+            restoreOriginalCanvas();
         };
 
         mobileMenuBtn.addEventListener('click', openSidebar);
@@ -282,8 +291,8 @@ export class Craftools_Editor extends HTMLElement {
             };
         }
 
-        // ── Element selection ──────────────────────────────────────────────
         this.addEventListener('craftools-element-select', (e) => {
+            restoreOriginalCanvas();
             const el = e.detail.element;
             const toolType = el.getAttribute('data-craftool');
             
@@ -402,6 +411,7 @@ export class Craftools_Editor extends HTMLElement {
             this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
             this.activePage = null;
             if (isMobile()) MobileToolbar.showToolMode();
+            restoreOriginalCanvas();
         };
 
         // Desktop: drag & drop
@@ -467,6 +477,16 @@ export class Craftools_Editor extends HTMLElement {
                 const placeholder = mainPage.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
             });
+        });
+
+        // Restore canvas when clicking any tool other than gerador
+        toolBtns.forEach(btn => {
+            const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '').replace('pwa-btn-', '');
+            if (tool !== 'gerador') {
+                btn.addEventListener('click', () => {
+                    restoreOriginalCanvas();
+                });
+            }
         });
 
         // Gerador e Papeis — clique direto

@@ -141,15 +141,58 @@ export class GeradorTool {
             return obj;
         };
 
-        // ── Live preview SVG ──────────────────────────────────────────────
+        // ── Live preview SVG on Canvas ────────────────────────────────────
         const renderPreview = () => {
-            const previewEl = panelBody?.querySelector('#gerador-preview');
-            if (!previewEl || !selectedSize) {
-                if (previewEl) previewEl.innerHTML = '';
+            const canvasArea = document.getElementById('canvas-area');
+            const pagesWrapper = document.getElementById('pages-wrapper');
+            if (!canvasArea) return;
+
+            // Hide the active project pages
+            if (pagesWrapper) pagesWrapper.style.display = 'none';
+
+            let canvasPreview = document.getElementById('gerador-canvas-preview');
+            if (!canvasPreview) {
+                canvasPreview = document.createElement('div');
+                canvasPreview.id = 'gerador-canvas-preview';
+                canvasPreview.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    min-height: 100%;
+                    padding: 40px;
+                    box-sizing: border-box;
+                    animation: pageIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+                `;
+                canvasArea.appendChild(canvasPreview);
+            }
+
+            if (!selectedSize) {
+                canvasPreview.innerHTML = '';
                 return;
             }
+
             const tmpl = buildTemplateObject();
-            previewEl.innerHTML = AlbumPreviewSVG.build(tmpl, selectedSize, { maxW: 220, maxH: 180 });
+            const svgHtml = AlbumPreviewSVG.build(tmpl, selectedSize, { maxW: 650, maxH: 650 });
+            canvasPreview.innerHTML = `
+                <div style="
+                    background: var(--bg-shell, #ffffff);
+                    border-radius: 8px;
+                    box-shadow: var(--page-shadow, 0 4px 32px rgba(0,0,0,0.14));
+                    padding: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 16px;
+                    border: 1px solid var(--border);
+                ">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">
+                        ${tmpl.name || g('newTemplate')}
+                    </span>
+                    ${svgHtml}
+                </div>
+            `;
         };
 
         // ── Saved templates list HTML ─────────────────────────────────────
@@ -319,10 +362,6 @@ export class GeradorTool {
 
             const sectionConfig = buildConfigHtml();
 
-            const sectionPreview = `
-                <div id="gerador-preview" style="text-align:center; padding:4px 0; min-height:80px; display:flex; align-items:center; justify-content:center;"></div>
-            `;
-
             const sectionSaved = buildSavedListHtml();
 
             const saveLabel = isEditing ? g('saveUpdate') : g('saveBtn');
@@ -348,7 +387,6 @@ export class GeradorTool {
                     ${PanelUI.accordion('gdr-size',    'straighten',  g('sectionSize'),    sectionSize,    { open: true })}
                     ${PanelUI.accordion('gdr-type',    'category',    g('sectionType'),    sectionType,    { open: true })}
                     ${PanelUI.accordion('gdr-config',  'tune',        g('sectionConfig'),  sectionConfig,  { open: true })}
-                    ${PanelUI.accordion('gdr-preview', 'visibility',  g('sectionPreview'), sectionPreview, { open: true })}
                     ${PanelUI.accordion('gdr-saved',   'folder_open', g('sectionSaved'),   sectionSaved,   { open: false })}
                     ${saveFooter}
                 </div>
