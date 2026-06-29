@@ -141,58 +141,69 @@ export class GeradorTool {
             return obj;
         };
 
-        // ── Live preview SVG on Canvas ────────────────────────────────────
+        // ── Live preview SVG on Page Canvas ────────────────────────────────
         const renderPreview = () => {
             const canvasArea = document.getElementById('canvas-area');
             const pagesWrapper = document.getElementById('pages-wrapper');
-            if (!canvasArea) return;
+            const mainPage = document.getElementById('main-page');
+            if (!canvasArea || !mainPage) return;
 
-            // Hide the active project pages
-            if (pagesWrapper) pagesWrapper.style.display = 'none';
+            // Make sure pages wrapper is visible so the page sheet is shown
+            if (pagesWrapper) pagesWrapper.style.display = '';
 
-            let canvasPreview = document.getElementById('gerador-canvas-preview');
-            if (!canvasPreview) {
-                canvasPreview = document.createElement('div');
-                canvasPreview.id = 'gerador-canvas-preview';
-                canvasPreview.style.cssText = `
+            // Handle floating preview badge in canvasArea (outside the page)
+            let badge = document.getElementById('gerador-canvas-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'gerador-canvas-badge';
+                badge.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    background: #f97316;
+                    color: #fff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 6px 14px;
+                    border-radius: 30px;
+                    z-index: 100;
+                    box-shadow: 0 4px 12px rgba(249,115,22,0.3);
                     display: flex;
-                    flex-direction: column;
                     align-items: center;
-                    justify-content: center;
-                    width: 100%;
-                    min-height: 100%;
-                    padding: 40px;
-                    box-sizing: border-box;
+                    gap: 6px;
+                    pointer-events: none;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                     animation: pageIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
                 `;
-                canvasArea.appendChild(canvasPreview);
+                badge.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size: 15px;">visibility</span>
+                    Pré-visualização
+                `;
+                canvasArea.appendChild(badge);
             }
 
             if (!selectedSize) {
-                canvasPreview.innerHTML = '';
+                mainPage.innerHTML = '';
                 return;
             }
 
             const tmpl = buildTemplateObject();
-            const svgHtml = AlbumPreviewSVG.build(tmpl, selectedSize, { maxW: 650, maxH: 650 });
-            canvasPreview.innerHTML = `
-                <div style="
-                    background: var(--bg-shell, #ffffff);
-                    border-radius: 8px;
-                    box-shadow: var(--page-shadow, 0 4px 32px rgba(0,0,0,0.14));
-                    padding: 24px;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 16px;
-                    border: 1px solid var(--border);
-                ">
-                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">
-                        ${tmpl.name || g('newTemplate')}
-                    </span>
-                    ${svgHtml}
-                </div>
-            `;
+            const svgHtml = AlbumPreviewSVG.build(tmpl, selectedSize, { maxW: 2000, maxH: 2000 });
+            mainPage.innerHTML = svgHtml;
+
+            const svgEl = mainPage.querySelector('svg');
+            if (svgEl) {
+                svgEl.style.border = 'none';
+                svgEl.style.boxShadow = 'none';
+                svgEl.style.borderRadius = '0';
+                svgEl.style.width = '100%';
+                svgEl.style.height = '100%';
+                svgEl.style.maxWidth = '100%';
+                svgEl.style.maxHeight = '100%';
+                svgEl.style.margin = '0';
+                svgEl.style.display = 'block';
+            }
         };
 
         // ── Saved templates list HTML ─────────────────────────────────────

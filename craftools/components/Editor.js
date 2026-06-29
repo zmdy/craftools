@@ -185,10 +185,13 @@ export class Craftools_Editor extends HTMLElement {
         const isMobile = () => window.innerWidth <= 768;
         
         const restoreOriginalCanvas = () => {
-            const pagesWrapper = document.getElementById('pages-wrapper');
-            if (pagesWrapper) pagesWrapper.style.display = '';
-            const canvasPreview = document.getElementById('gerador-canvas-preview');
-            if (canvasPreview) canvasPreview.remove();
+            const mainPage = document.getElementById('main-page');
+            if (mainPage && this._savedPageHtml !== undefined) {
+                mainPage.innerHTML = this._savedPageHtml;
+                delete this._savedPageHtml;
+            }
+            const badge = document.getElementById('gerador-canvas-badge');
+            if (badge) badge.remove();
         };
         this.restoreOriginalCanvas = restoreOriginalCanvas;
         
@@ -518,6 +521,12 @@ export class Craftools_Editor extends HTMLElement {
 
                     if (tool === 'gerador') {
                         const { GeradorTool } = await import('../tools/gerador/GeradorTool.js');
+                        
+                        const mainPage = document.getElementById('main-page');
+                        if (mainPage && this._savedPageHtml === undefined) {
+                            this._savedPageHtml = mainPage.innerHTML;
+                        }
+                        
                         openPanelMenu();
                         this.activePage = null;
                         GeradorTool.setup(this);
