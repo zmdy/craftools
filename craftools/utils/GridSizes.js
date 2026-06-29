@@ -1,5 +1,17 @@
 export const GridSizes = [
     {
+        name: "Kit 8fts. (4 mini + 4 polaroid)",
+        type: "promo_kit",
+        cellSlots: [
+            { id: "polaroid", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 23 3", cellCount: 4, slotLines: 2, slotColumns: 2, cellGap: 0, },
+            { id: "mini", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 18 3", cellCount: 4, slotLines: 2, slotColumns: 2, cellGap: 0, },
+            
+        ],
+        pageMargin: "5 5 5 5",
+        cellGap: 0,
+        sizes: ["297,210", "297,420"]
+    },
+    {
         name: "Promo Kit (5x5, 5x7, 7x9)",
         type: "promo_kit",
         cellSlots: [

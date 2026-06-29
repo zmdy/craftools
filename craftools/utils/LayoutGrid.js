@@ -185,6 +185,11 @@ export class Craftools_LayoutGrid {
     // A promo kit is a flexible collection of slots of varying sizes; any slot
     // can also be a photostrip (cellLines/cellColumns) — in that case each
     // "cell" of the slot is an entire stripe sub-grid rather than a single photo.
+    //
+    // Slots may also declare `slotLines` and `slotColumns` to pin the explicit
+    // row×column layout of their block, bypassing the auto Kmax calculation.
+    // In that case, the block always has exactly slotColumns columns and
+    // slotLines rows regardless of available page width.
     _renderPromoKit(grid, items, startIdx, perPage, unit, availableW, availableH, renderCellContentCallback) {
         const gap = parseFloat(this.template.cellGap) || 0;
         let currentX = 0;
@@ -194,9 +199,19 @@ export class Craftools_LayoutGrid {
         // 1. Generate blocks for each slot
         const blocks = this.template.cellSlots.map((slot) => {
             const slotGap = slot.cellGap !== undefined ? parseFloat(slot.cellGap) : gap;
-            const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
-            const cols = Math.min(slot.cellCount, Kmax);
-            const rows = Math.ceil(slot.cellCount / cols);
+
+            // If the slot explicitly defines slotColumns / slotLines, honour them;
+            // otherwise fall back to the automatic Kmax bin-packing calculation.
+            let cols, rows;
+            if (slot.slotColumns && slot.slotLines) {
+                cols = slot.slotColumns;
+                rows = slot.slotLines;
+            } else {
+                const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
+                cols = Math.min(slot.cellCount, Kmax);
+                rows = Math.ceil(slot.cellCount / cols);
+            }
+
             const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * slotGap : 0);
             const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * slotGap : 0);
             return { slot, cols, rows, blockW, blockH, slotGap };
