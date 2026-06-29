@@ -477,19 +477,17 @@ export class Craftools_Editor extends HTMLElement {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    
+
                     if (tool === 'papeis') {
                         // Encontra a página ativa
                         const page = this.querySelector('.craftools-page') || document.querySelector('.craftools-page');
                         if (page) {
                             let paperEl = page.querySelector('craftools-element[data-craftool="papeis"]');
                             if (!paperEl) {
-                                // Cria um papel novo
                                 const { PaperTool } = await import('../tools/paper/PaperTool.js');
                                 paperEl = PaperTool.createElement('papeis', this);
                                 page.appendChild(paperEl);
                             }
-                            // Seleciona o papel
                             setTimeout(() => {
                                 if (typeof paperEl.select === 'function') paperEl.select();
                             }, 50);
@@ -498,8 +496,17 @@ export class Craftools_Editor extends HTMLElement {
                         }
                     }
 
-                    if(panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
-                    if(panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
+                    if (tool === 'gerador') {
+                        const { GeradorTool } = await import('../tools/gerador/GeradorTool.js');
+                        openPanelMenu();
+                        this.activePage = null;
+                        GeradorTool.setup(this);
+                        return;
+                    }
+
+                    // Fallback (outros)
+                    if (panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
+                    if (panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
                     openPanelMenu();
                     this.activePage = null;
                     closeSidebar();

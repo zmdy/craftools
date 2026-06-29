@@ -14,6 +14,7 @@
  */
 
 import { GridSizes as GridSizesFallback } from './GridSizes.js';
+import { UserTemplates } from './UserTemplates.js';
 
 // Cache em memória para não re-bater a API a cada abertura do painel
 const _cache = {};
@@ -68,18 +69,26 @@ export async function loadGridSizes() {
     if (_cache.gridSizes) return _cache.gridSizes;
 
     const apiData = await fetchResource('grid-sizes');
+    let base;
     if (apiData && apiData.length > 0) {
-        _cache.gridSizes = apiData;
         console.info('[ApiDataLoader] GridSizes carregados da API (%d itens)', apiData.length);
-        return apiData;
+        base = apiData;
+    } else {
+        console.warn(
+            '[ApiDataLoader] API indisponível ou sem dados — usando GridSizes.js local como fallback. ' +
+            'Verifique window.CRAFTOOLS_CONFIG.apiBase (configurado no index.html) e se a craftools_api está no ar.'
+        );
+        base = [...GridSizesFallback];
     }
 
-    console.warn(
-        '[ApiDataLoader] API indisponível ou sem dados — usando GridSizes.js local como fallback. ' +
-        'Verifique window.CRAFTOOLS_CONFIG.apiBase (configurado no index.html) e se a craftools_api está no ar.'
-    );
-    _cache.gridSizes = GridSizesFallback;
-    return GridSizesFallback;
+    // Append user-created templates (from localStorage) after built-in ones
+    const userTemplates = UserTemplates.load();
+    if (userTemplates.length > 0) {
+        console.info('[ApiDataLoader] %d template(s) do usuário carregados do localStorage.', userTemplates.length);
+    }
+
+    _cache.gridSizes = [...base, ...userTemplates];
+    return _cache.gridSizes;
 }
 
 /**

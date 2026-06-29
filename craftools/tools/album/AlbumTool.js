@@ -10,6 +10,7 @@ import { PageTool } from "../page/PageTool.js";
 import { BaseTool } from "../BaseTool.js";
 import { CellPanel } from "./CellPanel.js";
 import { PanelUI } from "../../utils/PanelUI.js";
+import { AlbumPreviewSVG } from "../../utils/AlbumPreviewSVG.js";
 import "./AlbumTool_Translations.js";
 
 export class AlbumTool extends BaseTool {
@@ -164,129 +165,8 @@ export class AlbumTool extends BaseTool {
             };
 
             // ── Helper: full page preview rendered as SVG ─────────────────
-            // Uses SVG viewBox in real document units (mm) so the engine
-            // handles all scaling — no manual coordinate multiplication needed.
             const buildPagePreview = (t) => {
-                if (!selectedSize) return '';
-                const parts = selectedSize.size.split(',').map(Number);
-                const docW = parts[0];
-                const docH = parts[1];
-
-                const PAGE_MAX_W = 180;
-                const PAGE_MAX_H = 140;
-                const scale = Math.min(PAGE_MAX_W / docW, PAGE_MAX_H / docH);
-                const svgW = Math.round(docW * scale);
-                const svgH = Math.round(docH * scale);
-
-                // stroke-width in viewBox units so it appears as ~1 px on screen
-                const sw = (1 / scale).toFixed(3);
-
-                const margins = t.pageMargin.split(' ').map(v => parseFloat(v));
-                const [mT, mR, mB, mL] = margins;
-
-                // Helper — draw one cell (border box + inner photo rect(s))
-                const drawCell = (x, y, cW, cH, padStr, isStripe, sL, sC) => {
-                    const [pT, pR, pB, pL] = padStr.split(' ').map(v => parseFloat(v));
-                    const iX = x + pL;
-                    const iY = y + pT;
-                    const iW = Math.max(0, cW - pL - pR);
-                    const iH = Math.max(0, cH - pT - pB);
-
-                    let out = `<rect x="${x}" y="${y}" width="${cW}" height="${cH}" fill="white" stroke="#d1d5db" stroke-width="${sw}"/>`;
-
-                    if (isStripe) {
-                        // Stripe / slotLines-slotColumns: inner N×M sub-grid
-                        const slotW = iW / sC;
-                        const slotH = iH / sL;
-                        for (let sr = 0; sr < sL; sr++) {
-                            for (let sc = 0; sc < sC; sc++) {
-                                out += `<rect x="${(iX + sc * slotW).toFixed(2)}" y="${(iY + sr * slotH).toFixed(2)}" width="${slotW.toFixed(2)}" height="${slotH.toFixed(2)}" fill="#9ca3af"/>`;
-                            }
-                        }
-                    } else {
-                        // Plain single photo area
-                        out += `<rect x="${iX}" y="${iY}" width="${iW}" height="${iH}" fill="#9ca3af"/>`;
-                    }
-                    return out;
-                };
-
-                let shapes = '';
-
-                if (t.type === 'promo_kit') {
-                    const gap = t.cellGap || 0;
-                    const availableW = docW - mL - mR;
-                    let curX = 0, curY = 0, shelfH = 0;
-
-                    // Build blocks — respect explicit slotColumns/slotLines when present
-                    const blocks = t.cellSlots.map(slot => {
-                        const slotGap = slot.cellGap !== undefined ? parseFloat(slot.cellGap) : gap;
-                        let cols, rows;
-                        if (slot.slotColumns && slot.slotLines) {
-                            cols = slot.slotColumns;
-                            rows = slot.slotLines;
-                        } else {
-                            const Kmax = Math.floor((availableW + slotGap) / (slot.cellWidth + slotGap)) || 1;
-                            cols = Math.min(slot.cellCount, Kmax);
-                            rows = Math.ceil(slot.cellCount / cols);
-                        }
-                        const blockW = cols * slot.cellWidth + (cols > 1 ? (cols - 1) * slotGap : 0);
-                        const blockH = rows * slot.cellHeight + (rows > 1 ? (rows - 1) * slotGap : 0);
-                        return { slot, cols, rows, blockW, blockH, slotGap };
-                    });
-
-                    // Shelf-pack blocks and assign positions
-                    blocks.forEach(b => {
-                        if (curX + b.blockW > availableW && curX > 0) {
-                            curX = 0; curY += shelfH + gap; shelfH = 0;
-                        }
-                        b.x = curX; b.y = curY;
-                        curX += b.blockW + gap;
-                        shelfH = Math.max(shelfH, b.blockH);
-                    });
-
-                    // Render each cell in each block
-                    blocks.forEach(b => {
-                        // cellLines/cellColumns = old stripe-in-kit pattern (inner sub-grid per cell)
-                        // slotLines/slotColumns = explicit layout grid; each grid item = 1 plain photo
-                        const isStripeSlot = !!(b.slot.cellLines || b.slot.cellColumns);
-                        const sL = b.slot.cellLines || 1;
-                        const sC = b.slot.cellColumns || 1;
-
-                        for (let r = 0; r < b.rows; r++) {
-                            for (let c = 0; c < b.cols; c++) {
-                                if (r * b.cols + c >= b.slot.cellCount) break;
-                                const cx = mL + b.x + c * (b.slot.cellWidth  + b.slotGap);
-                                const cy = mT + b.y + r * (b.slot.cellHeight + b.slotGap);
-                                shapes += drawCell(cx, cy, b.slot.cellWidth, b.slot.cellHeight, b.slot.cellPadding, isStripeSlot, sL, sC);
-                            }
-                        }
-                    });
-
-                } else {
-                    // Normal grid or photostrip
-                    const gap  = t.cellGap || 0;
-                    const cW   = t.cellWidth;
-                    const cH   = t.cellHeight;
-                    const cols = Math.max(1, Math.floor((docW - mL - mR + gap) / (cW + gap)));
-                    const rows = Math.max(1, Math.floor((docH - mT - mB + gap) / (cH + gap)));
-                    const isStripe = !!(t.cellLines || t.cellColumns);
-                    const sL = t.cellLines  || 1;
-                    const sC = t.cellColumns || 1;
-
-                    for (let r = 0; r < rows; r++) {
-                        for (let c = 0; c < cols; c++) {
-                            const cx = mL + c * (cW + gap);
-                            const cy = mT + r * (cH + gap);
-                            shapes += drawCell(cx, cy, cW, cH, t.cellPadding, isStripe, sL, sC);
-                        }
-                    }
-                }
-
-                return `<svg viewBox="0 0 ${docW} ${docH}" width="${svgW}" height="${svgH}"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style="display:block; background:white; border:1px solid #d1d5db; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.12); margin:6px auto 0;">
-                    ${shapes}
-                </svg>`;
+                return AlbumPreviewSVG.build(t, selectedSize, { maxW: 180, maxH: 140 });
             };
 
 
@@ -302,6 +182,10 @@ export class AlbumTool extends BaseTool {
                     const secColor  = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
 
                     const isPromo = t.type === 'promo_kit';
+                    const isUserTemplate = t._source === 'user';
+                    const userBadge = isUserTemplate
+                        ? `<span style="display:inline-block; background:#f97316; color:#fff; font-size:8px; padding:1px 5px; border-radius:8px; font-weight:700; margin-left:4px; vertical-align:middle;">✦ Meu Kit</span>`
+                        : '';
                     
                     // Calculate slot preview dimensions for the wrapper
                     let wrapW = 72;
@@ -325,7 +209,7 @@ export class AlbumTool extends BaseTool {
                                 ${slotPreview}
                             </div>
                             <div style="flex:1; min-width:0; overflow:hidden;">
-                                <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}</div>
+                                <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}${userBadge}</div>
                                 <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
                                 <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
                                 <button class="page-preview-btn" data-tidx="${idx}" style="
