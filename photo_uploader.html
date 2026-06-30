@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,8 +14,8 @@
         *, *::before, *::after { box-sizing: border-box; }
 
         :root {
-            --toolbar-h: 56px;
-            --panel-w: 268px;
+            --topbar-h: 48px;
+            --footer-h: 68px;
             --accent: #f97316;
             --bg-app: #f4f4f5;
             --bg-shell: #ffffff;
@@ -32,37 +32,19 @@
             color: var(--text-primary);
         }
 
-        /* ══════════════════════════════════════════════════════════════
-           STEP SHELL — wizard container
-           ══════════════════════════════════════════════════════════════ */
-        #app {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .step {
-            display: none;
-            height: 100%;
-            flex-direction: column;
-        }
+        #app { height: 100vh; display: flex; flex-direction: column; }
+        .step { display: none; height: 100%; flex-direction: column; }
         .step.active { display: flex; }
 
-        /* Step progress dots (shown on upload + edit steps) */
-        #step-progress {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 14px 0;
+        /* ── Step progress ─────────────────────────────────────────────── */
+        #step-progress, .step-progress-bar {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; padding: 14px 0;
             background: var(--bg-shell);
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
-        .sp-dot {
-            display: flex; align-items: center; gap: 6px;
-            font-size: 12px; font-weight: 500; color: var(--text-secondary);
-        }
+        .sp-dot { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
         .sp-dot .circle {
             width: 22px; height: 22px; border-radius: 50%;
             border: 2px solid var(--border);
@@ -76,25 +58,17 @@
         .sp-line { width: 36px; height: 2px; background: var(--border); }
         .sp-line.done { background: var(--accent); }
 
-        /* ══════════════════════════════════════════════════════════════
-           STEP 1 — WELCOME
-           ══════════════════════════════════════════════════════════════ */
+        /* ── STEP 1 — WELCOME ──────────────────────────────────────────── */
         #step-welcome {
-            align-items: center;
-            justify-content: center;
+            align-items: center; justify-content: center;
             background:
                 radial-gradient(circle at 20% 20%, rgba(249,115,22,0.06), transparent 45%),
                 radial-gradient(circle at 80% 80%, rgba(249,115,22,0.05), transparent 45%),
                 var(--bg-app);
         }
-        .welcome-card {
-            max-width: 480px;
-            text-align: center;
-            padding: 40px;
-        }
+        .welcome-card { max-width: 480px; text-align: center; padding: 40px; }
         .welcome-card .w-icon {
-            width: 72px; height: 72px;
-            border-radius: 20px;
+            width: 72px; height: 72px; border-radius: 20px;
             background: linear-gradient(135deg, var(--accent), #fb923c);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 24px;
@@ -103,67 +77,24 @@
         .welcome-card .w-icon .material-symbols-outlined { font-size: 36px; color: white; }
         .welcome-card h1 {
             font-family: 'DM Serif Display', serif;
-            font-size: 30px; font-weight: 400;
-            margin: 0 0 12px;
-            color: var(--text-primary);
+            font-size: 30px; font-weight: 400; margin: 0 0 12px;
             letter-spacing: -0.5px;
         }
-        .welcome-card p {
-            font-size: 14px; line-height: 1.6;
-            color: var(--text-secondary);
-            margin: 0 0 28px;
-        }
-        .welcome-features {
-            display: flex; justify-content: center; gap: 22px;
-            margin-bottom: 32px;
-        }
+        .welcome-card p { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 28px; }
+        .welcome-features { display: flex; justify-content: center; gap: 22px; margin-bottom: 32px; }
         .wf-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .wf-item .material-symbols-outlined { font-size: 22px; color: var(--accent); }
         .wf-item span.wf-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 
-        .btn-large {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 13px 28px;
-            background: var(--accent);
-            color: white;
-            border: none; border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px; font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            box-shadow: 0 8px 20px rgba(249,115,22,0.28);
-        }
-        .btn-large:hover { background: #ea6c0a; transform: translateY(-1px); box-shadow: 0 10px 24px rgba(249,115,22,0.34); }
-        .btn-large .material-symbols-outlined { font-size: 18px; }
-
-        /* ══════════════════════════════════════════════════════════════
-           STEP 2 — UPLOAD
-           ══════════════════════════════════════════════════════════════ */
-        #step-upload {
-            align-items: center;
-            overflow-y: auto;
-        }
-        .upload-shell {
-            width: 100%;
-            max-width: 640px;
-            margin: 0 auto;
-            padding: 36px 24px 48px;
-        }
+        /* ── STEP 2 — UPLOAD ───────────────────────────────────────────── */
+        #step-upload { align-items: center; overflow-y: auto; }
+        .upload-shell { width: 100%; max-width: 640px; margin: 0 auto; padding: 36px 24px 48px; }
         .upload-shell h2 {
             font-family: 'DM Serif Display', serif;
-            font-size: 24px; font-weight: 400;
-            margin: 0 0 6px; text-align: center;
-            color: var(--text-primary);
+            font-size: 24px; font-weight: 400; margin: 0 0 6px; text-align: center;
         }
-        .upload-shell .sub {
-            font-size: 13px; color: var(--text-secondary);
-            text-align: center; margin: 0 0 28px;
-        }
-
-        /* Format pickers row */
-        .picker-row {
-            display: flex; gap: 12px; margin-bottom: 24px;
-        }
+        .upload-shell .sub { font-size: 13px; color: var(--text-secondary); text-align: center; margin: 0 0 28px; }
+        .picker-row { display: flex; gap: 12px; margin-bottom: 24px; }
         .picker-field { flex: 1; }
         .picker-field label {
             display: block; font-size: 11px; font-weight: 600;
@@ -171,71 +102,97 @@
             color: var(--text-secondary); margin-bottom: 6px;
         }
         .picker-select {
-            width: 100%; padding: 10px 12px;
-            border-radius: 8px; border: 1px solid var(--border);
+            width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
             font-family: 'DM Sans', sans-serif; font-size: 13px;
-            background: white; color: var(--text-primary);
-            cursor: pointer;
+            background: white; color: var(--text-primary); cursor: pointer;
         }
         .picker-select:focus { outline: none; border-color: var(--accent); }
-
-        /* Drop zone */
         #drop-zone {
-            border: 2px dashed var(--border);
-            border-radius: 14px;
-            padding: 36px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s;
-            margin-bottom: 20px;
+            border: 2px dashed var(--border); border-radius: 14px; padding: 36px 20px;
+            text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 20px;
         }
         #drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: #fff7ed; }
         #drop-zone .dz-icon { font-size: 40px; color: var(--text-secondary); display: block; margin-bottom: 10px; }
         #drop-zone .dz-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
         #drop-zone .dz-text strong { color: var(--accent); }
         #file-input { display: none; }
-
-        /* Thumbnails grid */
         #thumb-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-            gap: 8px;
-            margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+            gap: 8px; margin-bottom: 20px;
         }
         .thumb-item {
-            position: relative;
-            aspect-ratio: 1;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid transparent;
-            transition: border-color 0.12s;
+            position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+            border: 2px solid transparent; transition: border-color 0.12s;
         }
         .thumb-item:hover { border-color: var(--accent); }
         .thumb-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .thumb-remove {
-            position: absolute; top: 4px; right: 4px;
-            width: 20px; height: 20px;
-            background: rgba(0,0,0,0.65);
-            border-radius: 50%; border: none; cursor: pointer;
+            position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+            background: rgba(0,0,0,0.65); border-radius: 50%; border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.12s;
-            color: white; font-size: 11px; line-height: 1;
+            opacity: 0; transition: opacity 0.12s; color: white; font-size: 11px;
         }
         .thumb-item:hover .thumb-remove { opacity: 1; }
+        #photos-count { text-align: center; font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; }
+        .upload-actions { display: flex; justify-content: center; gap: 10px; }
 
-        #photos-count {
-            text-align: center;
-            font-size: 12px; color: var(--text-secondary);
-            margin-bottom: 24px;
+        /* ── STEP — QUALITY ────────────────────────────────────────────── */
+        #step-quality { align-items: center; overflow-y: auto; }
+        .quality-shell { width: 100%; max-width: 680px; margin: 0 auto; padding: 36px 24px 48px; }
+        .quality-shell h2 { font-family: 'DM Serif Display', serif; font-size: 24px; font-weight: 400; margin: 0 0 6px; text-align: center; }
+        .quality-shell .sub { font-size: 13px; color: var(--text-secondary); text-align: center; margin: 0 0 24px; }
+        .quality-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+        .quality-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px;
+            border-radius: 10px; border: 1px solid var(--border); background: white;
         }
+        .quality-item.low-dpi { border-color: #fca5a5; background: #fef2f2; }
+        .quality-item.mid-dpi { border-color: #fde68a; background: #fffbeb; }
+        .qi-thumb { width: 56px; height: 56px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+        .qi-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .qi-info { flex: 1; min-width: 0; }
+        .qi-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+        .qi-meta { font-size: 11px; color: var(--text-secondary); }
+        .qi-warning { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #b91c1c; margin-top: 5px; }
+        .qi-warning.mid { color: #b45309; }
+        .qi-warning .material-symbols-outlined { font-size: 14px; }
+        .qi-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+        .qi-badge { display: flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .qi-badge .material-symbols-outlined { font-size: 14px; }
+        .qi-badge.good { background: #dcfce7; color: #15803d; }
+        .qi-badge.mid  { background: #fef3c7; color: #b45309; }
+        .qi-badge.low  { background: #fee2e2; color: #b91c1c; }
+        .qi-replace-btn {
+            display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px;
+            border: 1px solid var(--accent); background: white; color: var(--accent);
+            font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+            cursor: pointer; white-space: nowrap; transition: all 0.12s;
+        }
+        .qi-replace-btn:hover { background: var(--accent); color: white; }
+        .qi-replace-btn .material-symbols-outlined { font-size: 14px; }
+        .quality-summary {
+            display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px;
+            margin-bottom: 22px; font-size: 12px;
+        }
+        .quality-summary.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .quality-summary.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+        .quality-summary .material-symbols-outlined { font-size: 20px; }
+        .quality-actions { display: flex; justify-content: center; gap: 10px; }
 
-        .upload-actions {
-            display: flex; justify-content: center; gap: 10px;
+        /* ── Shared buttons ────────────────────────────────────────────── */
+        .btn-large {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 13px 28px; background: var(--accent); color: white;
+            border: none; border-radius: 10px;
+            font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s;
+            box-shadow: 0 8px 20px rgba(249,115,22,0.28);
         }
+        .btn-large:hover { background: #ea6c0a; transform: translateY(-1px); }
+        .btn-large .material-symbols-outlined { font-size: 18px; }
         .btn-ghost {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 11px 20px;
-            background: white; color: var(--text-secondary);
+            padding: 11px 20px; background: white; color: var(--text-secondary);
             border: 1px solid var(--border); border-radius: 9px;
             font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
             cursor: pointer; transition: all 0.12s;
@@ -243,187 +200,288 @@
         .btn-ghost:hover { border-color: #d4d4d8; color: var(--text-primary); }
         .btn-ghost .material-symbols-outlined { font-size: 16px; }
 
-        /* ══════════════════════════════════════════════════════════════
-           STEP 3 — EDIT
-           ══════════════════════════════════════════════════════════════ */
+        /* ── STEP — EDIT ───────────────────────────────────────────────── */
         #step-edit { overflow: hidden; }
 
-        #edit-toolbar {
-            height: var(--toolbar-h);
+        /* Slim top bar */
+        #edit-topbar {
+            height: var(--topbar-h);
             background: var(--bg-shell);
             border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 16px;
-            flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px; padding: 0 14px;
+            flex-shrink: 0; z-index: 10;
         }
-        #edit-toolbar .logo {
-            font-family: 'DM Serif Display', serif;
-            font-size: 17px; color: var(--accent);
-            margin-right: 6px;
+        #edit-topbar .logo { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--accent); }
+        #edit-topbar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
+        #edit-topbar .spacer { flex: 1; }
+        .top-btn {
+            display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+            border-radius: 6px; border: 1px solid var(--border); background: white;
+            font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+            color: var(--text-primary); cursor: pointer; transition: all 0.12s; white-space: nowrap;
         }
-        #edit-toolbar .sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
-        #edit-toolbar .spacer { flex: 1; }
+        .top-btn:hover { background: #f4f4f5; }
+        .top-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .top-btn .material-symbols-outlined { font-size: 15px; }
 
-        .tb-btn {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 12px;
-            border-radius: 6px; border: 1px solid var(--border);
-            background: white;
-            font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-            color: var(--text-primary);
-            cursor: pointer; transition: all 0.12s;
-            white-space: nowrap;
-        }
-        .tb-btn:hover { background: #f4f4f5; border-color: #d4d4d8; }
-        .tb-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-        .tb-btn .material-symbols-outlined { font-size: 16px; }
-
-        #edit-body {
-            display: flex;
-            height: calc(100% - var(--toolbar-h));
-            overflow: hidden;
+        /* Main area: full width, fills between topbar and footer */
+        #edit-main {
+            flex: 1; overflow: hidden; position: relative;
         }
 
-        /* Left tool panel */
-        #left-panel {
-            width: var(--panel-w);
-            background: var(--bg-shell);
-            border-right: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            flex-shrink: 0; overflow-y: auto;
-        }
-        #left-panel-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
-        #left-panel-header h3 { margin: 0; font-size: 13px; font-weight: 600; }
-        #left-panel-header p { margin: 3px 0 0; font-size: 11px; color: var(--text-secondary); }
-
-        .tool-item {
-            margin: 10px 12px 0;
-            padding: 9px 12px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: #fafafa;
-            display: flex; align-items: center; gap: 8px;
-            cursor: grab;
-            font-size: 13px; font-weight: 500;
-            color: var(--text-primary);
-            user-select: none;
-            transition: all 0.12s;
-        }
-        .tool-item:hover { border-color: var(--accent); background: #fff7ed; color: var(--accent); }
-        .tool-item .material-symbols-outlined { font-size: 18px; }
-        .tool-item .tool-hint { font-size: 11px; color: var(--text-secondary); margin-left: auto; }
-
-        #mini-thumb-list {
-            padding: 10px 8px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-        }
-        .mini-thumb {
-            aspect-ratio: 1; border-radius: 5px; overflow: hidden;
-            cursor: grab; border: 1px solid var(--border);
-        }
-        .mini-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-
-        .left-panel-subheader {
-            padding: 14px 16px 6px;
-            border-top: 1px solid var(--border);
-            margin-top: 14px;
-        }
-        .left-panel-subheader h3 { margin: 0; font-size: 13px; font-weight: 600; }
-
-        #left-panel-footer {
-            padding: 8px 12px; margin-top: auto;
-            font-size: 11px; color: var(--text-secondary);
-            border-top: 1px solid var(--border);
-        }
-
-        /* Canvas */
-        #canvas-area {
-            flex: 1;
+        /* ── Scattered view ──────────────────────────────────────────── */
+        #scatter-view {
+            position: absolute; inset: 0;
             overflow: auto;
             background: #d4d4d8;
             background-image: radial-gradient(circle, rgba(0,0,0,.1) 1px, transparent 1px);
             background-size: 18px 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             padding: 8px;
-            position: relative;
         }
+        #scatter-view.hidden { display: none; }
 
         #photo-board {
-            position: relative;
-            background: #f8f8f8;
+            position: relative; background: #f8f8f8; flex-shrink: 0;
             box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 3px;
+            border-radius: 3px; overflow: visible !important;
+        }
+
+        /* Cell click highlight */
+        .craftools-grid-cell { cursor: pointer; transition: box-shadow 0.15s; }
+        .craftools-grid-cell.photo-focused {
+            box-shadow: 0 0 0 3px var(--accent), 0 6px 24px rgba(249,115,22,0.35) !important;
+            z-index: 50 !important;
+        }
+
+        /* ── Gallery/carousel view ───────────────────────────────────── */
+        #gallery-view {
+            position: absolute; inset: 0;
+            background: #111;
+            display: none; align-items: center; overflow: hidden;
+        }
+        #gallery-view.visible { display: flex; }
+
+        #gallery-track {
+            display: flex; align-items: center;
+            gap: 16px;
+            padding: 0 calc(50% - 140px);
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            height: 100%;
+            width: 100%;
+            /* hide scrollbar */
+            scrollbar-width: none;
+        }
+        #gallery-track::-webkit-scrollbar { display: none; }
+
+        .gallery-slide {
+            scroll-snap-align: center;
             flex-shrink: 0;
-            overflow: visible !important; /* override .craftools-page overflow:hidden so jittered/rotated slots aren't clipped */
+            width: 280px;
+            height: calc(100% - 48px);
+            max-height: 420px;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s, box-shadow 0.35s;
+            opacity: 0.45;
+            transform: scale(0.82);
+            cursor: pointer;
+            position: relative;
         }
+        .gallery-slide.active {
+            opacity: 1; transform: scale(1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+        }
+        .gallery-slide img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            pointer-events: none; user-select: none;
+        }
+        /* Photo index badge inside gallery slide */
+        .gallery-slide-num {
+            position: absolute; bottom: 8px; right: 10px;
+            font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.8);
+            background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 20px;
+        }
+        /* Gallery nav arrows */
+        .gallery-arrow {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            z-index: 10; width: 38px; height: 38px; border-radius: 50%;
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: white; backdrop-filter: blur(6px);
+            transition: background 0.15s;
+        }
+        .gallery-arrow:hover { background: rgba(255,255,255,0.22); }
+        .gallery-arrow .material-symbols-outlined { font-size: 20px; }
+        #gallery-prev { left: 14px; }
+        #gallery-next { right: 14px; }
 
-        /* Right panel */
-        #right-panel {
-            width: 232px;
+        /* Gallery photo dots */
+        #gallery-dots {
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 6px; z-index: 10;
+        }
+        .gdot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.4); transition: all 0.2s;
+        }
+        .gdot.active { background: var(--accent); width: 18px; border-radius: 3px; }
+
+        /* ── Bottom footer toolbar ───────────────────────────────────── */
+        #edit-footer {
+            height: var(--footer-h);
             background: var(--bg-shell);
-            border-left: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            flex-shrink: 0; overflow: hidden;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex; align-items: center;
+            padding: 0 16px; gap: 6px;
+            position: relative; z-index: 20;
         }
-        #right-panel-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
-        #right-panel-header h3 { margin: 0; font-size: 13px; font-weight: 600; }
-        #right-panel-body { flex: 1; overflow-y: auto; padding: 12px; }
 
-        #no-selection {
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            gap: 8px; height: 100%;
-            color: var(--text-secondary);
-            font-size: 12px; text-align: center; padding: 20px;
+        #footer-default, #footer-photo {
+            display: flex; align-items: center; gap: 6px; width: 100%;
         }
-        #no-selection .material-symbols-outlined { font-size: 36px; opacity: 0.3; }
+        #footer-photo { display: none; }
 
+        /* View mode toggle */
+        .footer-view-toggle {
+            display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+        }
+        .view-mode-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 8px 14px; background: white; border: none; cursor: pointer;
+            font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
+            color: var(--text-secondary); transition: all 0.15s; white-space: nowrap;
+            border-right: 1px solid var(--border);
+        }
+        .view-mode-btn:last-child { border-right: none; }
+        .view-mode-btn .material-symbols-outlined { font-size: 20px; }
+        .view-mode-btn.active { background: var(--accent); color: white; }
+        .view-mode-btn:not(.active):hover { background: #f4f4f5; color: var(--text-primary); }
+
+        .footer-sep { width: 1px; height: 36px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+        .footer-spacer { flex: 1; }
+
+        /* Footer icon buttons */
+        .footer-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 8px 12px; border-radius: 10px; border: none; background: none;
+            font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+            white-space: nowrap;
+        }
+        .footer-btn:hover { background: #f4f4f5; color: var(--text-primary); }
+        .footer-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .footer-btn:disabled:hover { background: none; }
+        .footer-btn .material-symbols-outlined { font-size: 22px; }
+
+        /* Photo-tool footer buttons (Título / Ajuste) */
+        .footer-tool-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 10px 18px; border-radius: 12px;
+            border: 1px solid var(--border); background: white;
+            font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+            color: var(--text-primary); cursor: pointer; transition: all 0.15s;
+        }
+        .footer-tool-btn .material-symbols-outlined { font-size: 22px; color: var(--accent); }
+        .footer-tool-btn:hover { border-color: var(--accent); background: #fff7ed; }
+        .footer-tool-btn:active { transform: scale(0.95); }
+
+        #footer-deselect-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid var(--border); background: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-secondary); transition: all 0.12s;
+            flex-shrink: 0;
+        }
+        #footer-deselect-btn:hover { background: #f4f4f5; border-color: #d4d4d8; }
+        #footer-deselect-btn .material-symbols-outlined { font-size: 16px; }
+
+        #footer-focused-label {
+            font-size: 12px; font-weight: 600; color: var(--text-primary);
+            flex: 1; text-align: center; display: flex; align-items: center;
+            justify-content: center; gap: 5px;
+        }
+        #footer-focused-label .material-symbols-outlined { font-size: 14px; color: var(--accent); }
+
+        /* ── Bottom sheet ────────────────────────────────────────────── */
+        #sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            z-index: 850; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        #sheet-overlay.visible { opacity: 1; pointer-events: auto; }
+        #bottom-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            max-height: 72dvh; background: var(--bg-shell);
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 -10px 32px rgba(0,0,0,0.18);
+            z-index: 900; flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(0.22,1,0.36,1);
+            display: flex;
+        }
+        #bottom-sheet.open { transform: translateY(0); }
+        .bs-handle { width: 38px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 4px; flex-shrink: 0; }
+        .bs-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 4px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .bs-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+        .bs-close {
+            width: 30px; height: 30px; border-radius: 50%; border: none;
+            background: #f4f4f5; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
+        }
+        .bs-close .material-symbols-outlined { font-size: 18px; }
+        .bs-body { flex: 1; overflow-y: auto; padding: 14px 16px 32px; }
+
+        /* Properties inside sheet */
         .prop-group { margin-bottom: 14px; }
-        .prop-label {
-            font-size: 10px; font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase; letter-spacing: 0.7px;
-            margin-bottom: 5px;
-        }
+        .prop-label { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 5px; }
         .prop-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
         .prop-input {
-            flex: 1; padding: 5px 8px;
-            border-radius: 5px; border: 1px solid var(--border);
-            font-family: 'DM Sans', sans-serif; font-size: 12px;
-            background: white; color: var(--text-primary);
+            flex: 1; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border);
+            font-family: 'DM Sans', sans-serif; font-size: 13px; background: white; color: var(--text-primary);
         }
         .prop-input:focus { outline: none; border-color: var(--accent); }
         .prop-select { width: 100%; }
         .prop-btn {
-            padding: 4px 7px; border-radius: 5px;
-            border: 1px solid var(--border); background: white; cursor: pointer;
-            font-size: 12px; color: var(--text-secondary);
+            padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border); background: white;
+            cursor: pointer; font-size: 12px; color: var(--text-secondary);
             display: flex; align-items: center; transition: all 0.12s;
         }
         .prop-btn:hover { border-color: var(--accent); color: var(--accent); }
         .prop-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .prop-btn .material-symbols-outlined { font-size: 14px; }
-        .prop-color { width: 30px; height: 26px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; padding: 0; }
+        .prop-btn .material-symbols-outlined { font-size: 15px; }
+        .prop-color { width: 34px; height: 32px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; padding: 0; }
         .prop-danger {
-            width: 100%; padding: 7px; border-radius: 6px;
+            width: 100%; padding: 9px; border-radius: 8px;
             border: 1px solid #fca5a5; background: transparent; color: #ef4444;
-            font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 5px;
-            transition: all 0.12s;
+            font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.12s;
         }
         .prop-danger:hover { background: rgba(239,68,68,.08); }
-        .prop-danger .material-symbols-outlined { font-size: 14px; }
+        .prop-danger .material-symbols-outlined { font-size: 15px; }
 
-        /* Loading + toast (shared) */
+        /* Adjust sliders */
+        .adjust-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .adjust-label { font-size: 12px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+        .adjust-row input[type=range] { flex: 1; accent-color: var(--accent); }
+        .adjust-val { font-size: 11px; font-weight: 600; width: 32px; text-align: right; color: var(--text-primary); }
+        .adjust-reset-btn {
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            width: 100%; padding: 9px; border-radius: 8px;
+            border: 1px solid var(--border); background: white; color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.12s;
+        }
+        .adjust-reset-btn:hover { border-color: #d4d4d8; color: var(--text-primary); }
+
+        /* Loading + toast */
         #loading-overlay {
-            position: fixed; inset: 0;
-            background: rgba(255,255,255,0.88);
+            position: fixed; inset: 0; background: rgba(255,255,255,0.88);
             display: none; align-items: center; justify-content: center;
             flex-direction: column; gap: 12px; z-index: 1000;
         }
@@ -436,238 +494,45 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         #loading-overlay p { font-size: 13px; color: var(--text-secondary); margin: 0; }
 
-        /* ══════════════════════════════════════════════════════════════
-           MOBILE FOOTER (CrafTools-style icon bar) — hidden on desktop
-           ══════════════════════════════════════════════════════════════ */
-        #mobile-footer {
-            display: none;
-            flex-shrink: 0;
-            background: var(--bg-shell);
-            border-top: 1px solid var(--border);
-            padding: 6px 4px;
-            align-items: stretch;
-            justify-content: space-around;
-            gap: 2px;
+        #notify {
+            position: fixed; bottom: calc(var(--footer-h) + 16px); left: 50%;
+            transform: translateX(-50%) translateY(40px);
+            background: #18181b; color: white;
+            padding: 9px 16px; border-radius: 8px;
+            font-size: 13px; z-index: 9999; opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease; pointer-events: none;
         }
-        .mf-btn {
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-            background: none; border: none; cursor: pointer;
-            padding: 6px 4px; border-radius: 8px;
-            color: var(--text-secondary);
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.12s;
-            flex: 1;
-        }
-        .mf-btn:active { background: #f4f4f5; }
-        .mf-btn.active { color: var(--accent); }
-        .mf-btn .material-symbols-outlined { font-size: 22px; }
-        .mf-btn .mf-label { font-size: 10px; font-weight: 500; white-space: nowrap; }
-        .mf-btn:disabled { opacity: 0.35; }
+        #notify.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-        /* Mobile bottom sheet — properties panel */
-        #mobile-sheet-overlay {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.45);
-            z-index: 850;
-            opacity: 0;
-            transition: opacity 0.25s;
-            pointer-events: none;
-        }
-        #mobile-sheet-overlay.visible { opacity: 1; pointer-events: auto; }
-
-        #mobile-sheet {
-            display: none;
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
-            max-height: 70dvh;
-            background: var(--bg-shell);
-            border-radius: 18px 18px 0 0;
-            box-shadow: 0 -10px 32px rgba(0,0,0,0.2);
-            z-index: 900;
-            flex-direction: column;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
-        }
-        #mobile-sheet.open { transform: translateY(0); }
-
-        .ms-drag-indicator {
-            width: 38px; height: 4px;
-            background: var(--border);
-            border-radius: 2px;
-            margin: 10px auto 4px;
-            flex-shrink: 0;
-        }
-        .ms-head {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 6px 16px 10px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-        .ms-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
-        .ms-close {
-            width: 30px; height: 30px;
-            border-radius: 50%; border: none;
-            background: #f4f4f5; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-secondary);
-        }
-        .ms-close .material-symbols-outlined { font-size: 18px; }
-        .ms-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
-
-        /* ══════════════════════════════════════════════════════════════
-           STEP — DPI QUALITY CHECK
-           ══════════════════════════════════════════════════════════════ */
-        #step-quality { align-items: center; overflow-y: auto; }
-        .quality-shell {
-            width: 100%; max-width: 680px;
-            margin: 0 auto; padding: 36px 24px 48px;
-        }
-        .quality-shell h2 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 24px; font-weight: 400;
-            margin: 0 0 6px; text-align: center;
-        }
-        .quality-shell .sub {
-            font-size: 13px; color: var(--text-secondary);
-            text-align: center; margin: 0 0 24px;
-        }
-        .quality-list {
-            display: flex; flex-direction: column; gap: 10px;
-            margin-bottom: 24px;
-        }
-        .quality-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px; border-radius: 10px;
-            border: 1px solid var(--border);
-            background: white;
-        }
-        .quality-item.low-dpi { border-color: #fca5a5; background: #fef2f2; }
-        .quality-item.mid-dpi { border-color: #fde68a; background: #fffbeb; }
-        .qi-thumb {
-            width: 56px; height: 56px; border-radius: 8px;
-            overflow: hidden; flex-shrink: 0;
-            position: relative;
-        }
-        .qi-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .qi-info { flex: 1; min-width: 0; }
-        .qi-name {
-            font-size: 12px; font-weight: 600; color: var(--text-primary);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            margin-bottom: 3px;
-        }
-        .qi-meta { font-size: 11px; color: var(--text-secondary); }
-        .qi-warning {
-            display: flex; align-items: center; gap: 4px;
-            font-size: 11px; font-weight: 600; color: #b91c1c;
-            margin-top: 5px;
-        }
-        .qi-warning.mid { color: #b45309; }
-        .qi-warning .material-symbols-outlined { font-size: 14px; }
-
-        .qi-right {
-            display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
-            flex-shrink: 0;
-        }
-        .qi-badge {
-            display: flex; align-items: center; gap: 4px;
-            padding: 4px 9px; border-radius: 20px;
-            font-size: 11px; font-weight: 600;
-            flex-shrink: 0; white-space: nowrap;
-        }
-        .qi-badge .material-symbols-outlined { font-size: 14px; }
-        .qi-badge.good { background: #dcfce7; color: #15803d; }
-        .qi-badge.mid  { background: #fef3c7; color: #b45309; }
-        .qi-badge.low  { background: #fee2e2; color: #b91c1c; }
-
-        .qi-replace-btn {
-            display: flex; align-items: center; gap: 4px;
-            padding: 5px 10px; border-radius: 7px;
-            border: 1px solid var(--accent); background: white; color: var(--accent);
-            font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
-            cursor: pointer; white-space: nowrap;
-            transition: all 0.12s;
-        }
-        .qi-replace-btn:hover { background: var(--accent); color: white; }
-        .qi-replace-btn .material-symbols-outlined { font-size: 14px; }
-
-        .quality-summary {
-            display: flex; align-items: center; gap: 10px;
-            padding: 12px 14px; border-radius: 10px;
-            margin-bottom: 22px; font-size: 12px;
-        }
-        .quality-summary.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-        .quality-summary.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
-        .quality-summary .material-symbols-outlined { font-size: 20px; }
-
-        .quality-actions { display: flex; justify-content: center; gap: 10px; }
-
-        /* ══════════════════════════════════════════════════════════════
-           RESPONSIVE — mobile layout (CrafTools-style: bottom icon bar,
-           no side panels, bottom sheet for properties)
-           ══════════════════════════════════════════════════════════════ */
-        @media (max-width: 768px) {
-            :root { --toolbar-h: 52px; }
-
-            /* Hide text labels in top toolbars, keep icons only */
-            .tb-text { display: none; }
-            .tb-btn { padding: 7px 9px; }
-
-            .picker-row { flex-direction: column; }
-
-            /* Edit step: hide side panels, show mobile footer instead */
-            #left-panel, #right-panel { display: none !important; }
-            #mobile-footer { display: flex; }
-            #mobile-sheet-overlay, #mobile-sheet { display: flex; }
-
-            #canvas-area { padding: 6px; }
-
+        /* Mobile tweaks */
+        @media (max-width: 600px) {
+            .view-mode-btn { padding: 6px 10px; font-size: 9px; }
+            .view-mode-btn .material-symbols-outlined { font-size: 18px; }
+            .footer-tool-btn { padding: 8px 12px; font-size: 10px; }
+            .gallery-slide { width: 220px; }
+            #gallery-track { padding: 0 calc(50% - 110px); }
             .welcome-card { padding: 24px; }
             .welcome-card h1 { font-size: 24px; }
             .welcome-features { gap: 14px; flex-wrap: wrap; }
-
             .upload-shell { padding: 24px 16px 32px; }
             .quality-shell { padding: 24px 14px 32px; }
-
-            /* Step progress: shrink to fit small screens */
-            #step-progress { gap: 4px; padding: 10px 6px; }
-            .sp-dot .circle { width: 18px; height: 18px; font-size: 10px; }
+            .quality-item { flex-wrap: wrap; }
+            .qi-right { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; margin-top: 6px; }
             .sp-dot span.label { display: none; }
             .sp-line { width: 18px; }
-
-            /* Quality items: compact on mobile, stack vertically */
-            .quality-item { flex-wrap: wrap; }
-            .qi-meta { font-size: 10px; }
-            .qi-badge { font-size: 10px; padding: 3px 7px; }
-            .qi-right { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; margin-top: 6px; }
-            .qi-replace-btn { font-size: 10px; padding: 5px 8px; }
         }
-
-        #notify {
-            position: fixed; bottom: 24px; left: 50%;
-            transform: translateX(-50%) translateY(70px);
-            background: #18181b; color: white;
-            padding: 9px 16px; border-radius: 8px;
-            font-size: 13px; z-index: 9999;
-            transition: transform 0.2s ease; pointer-events: none;
-        }
-        #notify.show { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
 <body>
 
 <div id="app">
 
-    <!-- ════════════════ STEP 1 — WELCOME ════════════════ -->
+    <!-- ════ STEP 1 — WELCOME ════ -->
     <div class="step active" id="step-welcome">
         <div class="welcome-card">
             <div class="w-icon"><span class="material-symbols-outlined">auto_awesome_mosaic</span></div>
             <h1>Photo Layout Studio</h1>
-            <p>
-                Crie um mural de fotos com diversos formatos, totalmente
-                adaptado ao tamanho da sua tela. Solte fotos em uma mesa
-                digital, adicione títulos e organize tudo do seu jeito.
-            </p>
+            <p>Crie um mural de fotos espalhado ou navegue em galeria. Adicione títulos, ajuste as fotos e organize tudo do seu jeito.</p>
             <div class="welcome-features">
                 <div class="wf-item">
                     <span class="material-symbols-outlined">upload_file</span>
@@ -675,7 +540,7 @@
                 </div>
                 <div class="wf-item">
                     <span class="material-symbols-outlined">grid_view</span>
-                    <span class="wf-label">Diversos formatos</span>
+                    <span class="wf-label">Espalhado ou Galeria</span>
                 </div>
                 <div class="wf-item">
                     <span class="material-symbols-outlined">edit</span>
@@ -688,9 +553,9 @@
         </div>
     </div>
 
-    <!-- ════════════════ STEP 2 — UPLOAD ════════════════ -->
+    <!-- ════ STEP 2 — UPLOAD ════ -->
     <div class="step" id="step-upload">
-        <div id="step-progress">
+        <div class="step-progress-bar">
             <div class="sp-dot done"><div class="circle">✓</div><span class="label">Início</span></div>
             <div class="sp-line done"></div>
             <div class="sp-dot current"><div class="circle">2</div><span class="label">Upload</span></div>
@@ -699,29 +564,22 @@
             <div class="sp-line"></div>
             <div class="sp-dot"><div class="circle">4</div><span class="label">Edição</span></div>
         </div>
-
         <div class="upload-shell">
             <h2>Envie suas fotos</h2>
             <p class="sub">Escolha o formato do mural e adicione as imagens</p>
-
             <div class="picker-row">
                 <div class="picker-field">
                     <label>Formato</label>
                     <select id="size-select" class="picker-select"></select>
                 </div>
             </div>
-
             <div id="drop-zone">
                 <span class="material-symbols-outlined dz-icon">cloud_upload</span>
-                <div class="dz-text">
-                    <strong>Clique para enviar</strong> ou arraste suas fotos aqui<br>JPG · PNG · WEBP
-                </div>
+                <div class="dz-text"><strong>Clique para enviar</strong> ou arraste suas fotos aqui<br>JPG · PNG · WEBP</div>
             </div>
             <input type="file" id="file-input" accept="image/*" multiple>
-
             <div id="thumb-list"></div>
             <div id="photos-count">0 fotos carregadas</div>
-
             <div class="upload-actions">
                 <button class="btn-ghost" id="back-to-welcome-btn">
                     <span class="material-symbols-outlined">arrow_back</span> Voltar
@@ -733,9 +591,9 @@
         </div>
     </div>
 
-    <!-- ════════════════ STEP — QUALITY (DPI CHECK) ════════════════ -->
+    <!-- ════ STEP — QUALITY ════ -->
     <div class="step" id="step-quality">
-        <div id="step-progress">
+        <div class="step-progress-bar">
             <div class="sp-dot done"><div class="circle">✓</div><span class="label">Início</span></div>
             <div class="sp-line done"></div>
             <div class="sp-dot done"><div class="circle">✓</div><span class="label">Upload</span></div>
@@ -744,15 +602,12 @@
             <div class="sp-line"></div>
             <div class="sp-dot"><div class="circle">4</div><span class="label">Edição</span></div>
         </div>
-
         <div class="quality-shell">
             <h2>Qualidade das fotos</h2>
             <p class="sub">Verificamos a resolução de cada foto para o tamanho de impressão escolhido</p>
-
             <div id="quality-summary-box"></div>
             <div class="quality-list" id="quality-list"></div>
             <input type="file" id="replace-file-input" accept="image/*" style="display:none;">
-
             <div class="quality-actions">
                 <button class="btn-ghost" id="back-to-upload-from-quality-btn">
                     <span class="material-symbols-outlined">arrow_back</span> Voltar
@@ -764,98 +619,106 @@
         </div>
     </div>
 
-    <!-- ════════════════ STEP — EDIT ════════════════ -->
+    <!-- ════ STEP — EDIT ════ -->
     <div class="step" id="step-edit">
-        <div id="edit-toolbar">
-            <span class="logo">PhotoLayout</span>
 
+        <!-- Slim top bar -->
+        <div id="edit-topbar">
+            <span class="logo">PhotoLayout</span>
             <div class="sep"></div>
-            <button class="tb-btn" id="back-to-upload-btn">
-                <span class="material-symbols-outlined">arrow_back</span> <span class="tb-text">Fotos</span>
-            </button>
-            <div class="sep"></div>
-            <button class="tb-btn" id="regenerate-btn">
-                <span class="material-symbols-outlined">refresh</span> <span class="tb-text">Reembaralhar</span>
+            <button class="top-btn" id="back-to-upload-btn">
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span>Fotos</span>
             </button>
             <div class="spacer"></div>
-            <button class="tb-btn" id="undo-btn" disabled>
-                <span class="material-symbols-outlined">undo</span> <span class="tb-text">Desfazer</span>
+            <button class="top-btn" id="undo-btn" disabled>
+                <span class="material-symbols-outlined">undo</span>
+            </button>
+            <button class="top-btn" id="regenerate-btn">
+                <span class="material-symbols-outlined">refresh</span>
             </button>
         </div>
 
-        <div id="edit-body">
-            <!-- Left tool panel (desktop only) -->
-            <div id="left-panel">
-                <div id="left-panel-header">
-                    <h3>Ferramentas</h3>
-                    <p>Arraste o Título para o mural</p>
-                </div>
-
-                <div class="tool-item" id="titulo-tool" draggable="true" data-tool="titulo">
-                    <span class="material-symbols-outlined">title</span>
-                    Título
-                    <span class="tool-hint">arraste →</span>
-                </div>
-
-                <div class="left-panel-subheader">
-                    <h3>Fotos</h3>
-                </div>
-                <div id="mini-thumb-list"></div>
-
-                <div id="left-panel-footer"><span id="mini-photos-count">0 fotos</span></div>
-            </div>
-
-            <!-- Canvas -->
-            <div id="canvas-area">
+        <!-- Main canvas: scattered + gallery -->
+        <div id="edit-main">
+            <!-- Scattered view -->
+            <div id="scatter-view">
                 <div id="photo-board" class="craftools-page"></div>
             </div>
 
-            <!-- Right panel (desktop only) -->
-            <div id="right-panel">
-                <div id="right-panel-header"><h3>Propriedades</h3></div>
-                <div id="right-panel-body">
-                    <div id="no-selection">
-                        <span class="material-symbols-outlined">touch_app</span>
-                        Clique em um título no mural para editar
-                    </div>
-                </div>
+            <!-- Gallery/carousel view -->
+            <div id="gallery-view">
+                <button class="gallery-arrow" id="gallery-prev">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <div id="gallery-track"></div>
+                <button class="gallery-arrow" id="gallery-next">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+                <div id="gallery-dots"></div>
             </div>
         </div>
 
-        <!-- Mobile bottom footer — CrafTools style icon bar -->
-        <div id="mobile-footer">
-            <button class="mf-btn" id="mf-titulo-btn" data-tool="titulo">
-                <span class="material-symbols-outlined">title</span>
-                <span class="mf-label">Título</span>
-            </button>
-            <button class="mf-btn" id="mf-photos-btn">
-                <span class="material-symbols-outlined">photo_library</span>
-                <span class="mf-label">Fotos</span>
-            </button>
-            <button class="mf-btn" id="mf-undo-btn" disabled>
-                <span class="material-symbols-outlined">undo</span>
-                <span class="mf-label">Desfazer</span>
-            </button>
-            <button class="mf-btn" id="mf-shuffle-btn">
-                <span class="material-symbols-outlined">refresh</span>
-                <span class="mf-label">Reembaralhar</span>
-            </button>
-        </div>
-
-        <!-- Mobile bottom sheet — properties panel -->
-        <div id="mobile-sheet-overlay"></div>
-        <div id="mobile-sheet">
-            <div class="ms-drag-indicator"></div>
-            <div class="ms-head">
-                <h3 id="ms-title">Propriedades</h3>
-                <button class="ms-close" id="ms-close-btn">
-                    <span class="material-symbols-outlined">close</span>
+        <!-- Bottom footer toolbar -->
+        <div id="edit-footer">
+            <!-- Default state: view mode + actions -->
+            <div id="footer-default">
+                <div class="footer-view-toggle">
+                    <button class="view-mode-btn active" id="btn-scatter-mode">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        Espalhado
+                    </button>
+                    <button class="view-mode-btn" id="btn-gallery-mode">
+                        <span class="material-symbols-outlined">photo_library</span>
+                        Galeria
+                    </button>
+                </div>
+                <div class="footer-spacer"></div>
+                <div class="footer-sep"></div>
+                <button class="footer-btn" id="footer-undo-btn" disabled>
+                    <span class="material-symbols-outlined">undo</span>
+                    Desfazer
+                </button>
+                <button class="footer-btn" id="footer-shuffle-btn">
+                    <span class="material-symbols-outlined">shuffle</span>
+                    Reembaralhar
                 </button>
             </div>
-            <div class="ms-body" id="ms-body"></div>
+
+            <!-- Photo focused state: tool buttons -->
+            <div id="footer-photo">
+                <button id="footer-deselect-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <div id="footer-focused-label">
+                    <span class="material-symbols-outlined">image</span>
+                    <span id="footer-focused-text">Foto 1</span>
+                </div>
+                <div class="footer-sep"></div>
+                <button class="footer-tool-btn" id="footer-titulo-btn">
+                    <span class="material-symbols-outlined">title</span>
+                    Título
+                </button>
+                <button class="footer-tool-btn" id="footer-ajuste-btn">
+                    <span class="material-symbols-outlined">tune</span>
+                    Ajuste
+                </button>
+            </div>
         </div>
     </div>
+</div>
 
+<!-- Bottom sheet (properties/titulo/ajuste) -->
+<div id="sheet-overlay"></div>
+<div id="bottom-sheet">
+    <div class="bs-handle"></div>
+    <div class="bs-head">
+        <h3 id="bs-title">Propriedades</h3>
+        <button class="bs-close" id="bs-close-btn">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+    <div class="bs-body" id="bs-body"></div>
 </div>
 
 <div id="loading-overlay"><div class="spin"></div><p>Montando o layout…</p></div>
@@ -868,9 +731,8 @@ import { TextTool }          from './craftools/tools/text/TextTool.js';
 
 Craftools_Element.init();
 
-// ── GridSizes: from ?gridsizes= param (base64 JSON) or defaults ─────────────
+// ── GridSizes ─────────────────────────────────────────────────────────────────
 const GridSizesDefault = (await import('./craftools/utils/GridSizes.js')).GridSizes;
-
 function getGridSizesFromURL() {
     try {
         const b64 = new URLSearchParams(location.search).get('gridsizes');
@@ -879,18 +741,24 @@ function getGridSizesFromURL() {
 }
 const gridSizes = getGridSizesFromURL() || GridSizesDefault;
 
-// ── State ────────────────────────────────────────────────────────────────────
-const photos = []; // {url, name, width, height (natural px)}
-let selectedEl = null;
-let lastTemplateUsed = null;
+// ── State ─────────────────────────────────────────────────────────────────────
+const photos = [];          // {url, name, width, height}
+let viewMode       = 'scatter'; // 'scatter' | 'gallery'
+let focusedCell    = null;      // the .craftools-grid-cell currently highlighted (scatter)
+let focusedIndex   = -1;        // photo index of focused item (both modes)
+let galleryIndex   = 0;         // current center slide in gallery
+let lastTemplate   = null;
+let adjustState    = {};        // photoIndex → {brightness, contrast, saturation}
 
-// ── DOM refs ─────────────────────────────────────────────────────────────────
+// ── DOM refs ──────────────────────────────────────────────────────────────────
 const steps = {
     welcome: document.getElementById('step-welcome'),
     upload:  document.getElementById('step-upload'),
     quality: document.getElementById('step-quality'),
     edit:    document.getElementById('step-edit'),
 };
+const loadingOv      = document.getElementById('loading-overlay');
+const notifyEl       = document.getElementById('notify');
 
 const startBtn               = document.getElementById('start-btn');
 const backToWelcomeBtn       = document.getElementById('back-to-welcome-btn');
@@ -905,47 +773,41 @@ const dropZone       = document.getElementById('drop-zone');
 const thumbList      = document.getElementById('thumb-list');
 const photosCount    = document.getElementById('photos-count');
 const sizeSelect     = document.getElementById('size-select');
-
-const miniThumbList    = document.getElementById('mini-thumb-list');
-const miniPhotosCount  = document.getElementById('mini-photos-count');
-
 const qualityList       = document.getElementById('quality-list');
 const qualitySummaryBox = document.getElementById('quality-summary-box');
 const replaceFileInput  = document.getElementById('replace-file-input');
-replaceFileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    handleReplaceFile(file);
-    replaceFileInput.value = ''; // allow re-selecting the same file later
-});
-
 
 const undoBtn        = document.getElementById('undo-btn');
-const canvasArea     = document.getElementById('canvas-area');
 const board          = document.getElementById('photo-board');
-const rightBody      = document.getElementById('right-panel-body');
-const loadingOv      = document.getElementById('loading-overlay');
-const notifyEl       = document.getElementById('notify');
+const scatterView    = document.getElementById('scatter-view');
+const galleryView    = document.getElementById('gallery-view');
+const galleryTrack   = document.getElementById('gallery-track');
+const galleryDots    = document.getElementById('gallery-dots');
+const galleryPrev    = document.getElementById('gallery-prev');
+const galleryNext    = document.getElementById('gallery-next');
 
-// Mobile footer + bottom sheet refs
-const mobileFooter        = document.getElementById('mobile-footer');
-const mfTituloBtn         = document.getElementById('mf-titulo-btn');
-const mfPhotosBtn         = document.getElementById('mf-photos-btn');
-const mfUndoBtn           = document.getElementById('mf-undo-btn');
-const mfShuffleBtn        = document.getElementById('mf-shuffle-btn');
-const mobileSheet         = document.getElementById('mobile-sheet');
-const mobileSheetOverlay  = document.getElementById('mobile-sheet-overlay');
-const msTitle             = document.getElementById('ms-title');
-const msBody              = document.getElementById('ms-body');
-const msCloseBtn          = document.getElementById('ms-close-btn');
+const footerDefault      = document.getElementById('footer-default');
+const footerPhoto        = document.getElementById('footer-photo');
+const footerFocusedText  = document.getElementById('footer-focused-text');
+const footerDeselectBtn  = document.getElementById('footer-deselect-btn');
+const footerTituloBtn    = document.getElementById('footer-titulo-btn');
+const footerAjusteBtn    = document.getElementById('footer-ajuste-btn');
+const footerUndoBtn      = document.getElementById('footer-undo-btn');
+const footerShuffleBtn   = document.getElementById('footer-shuffle-btn');
+const btnScatterMode     = document.getElementById('btn-scatter-mode');
+const btnGalleryMode     = document.getElementById('btn-gallery-mode');
 
-function isMobile() { return window.innerWidth <= 768; }
+const sheetOverlay   = document.getElementById('sheet-overlay');
+const bottomSheet    = document.getElementById('bottom-sheet');
+const bsTitle        = document.getElementById('bs-title');
+const bsBody         = document.getElementById('bs-body');
+const bsCloseBtn     = document.getElementById('bs-close-btn');
 
-// ── Step navigation ──────────────────────────────────────────────────────────
-function goToStep(stepName) {
+// ── Step navigation ───────────────────────────────────────────────────────────
+function goToStep(name) {
     Object.values(steps).forEach(s => s.classList.remove('active'));
-    steps[stepName].classList.add('active');
+    steps[name].classList.add('active');
 }
-
 startBtn.addEventListener('click', () => goToStep('upload'));
 backToWelcomeBtn.addEventListener('click', () => goToStep('welcome'));
 backToUploadBtn.addEventListener('click', () => goToStep('upload'));
@@ -956,23 +818,19 @@ goToQualityBtn.addEventListener('click', () => {
     goToStep('quality');
     renderQualityCheck();
 });
-
 goToEditBtn.addEventListener('click', async () => {
     if (!photos.length) { notify('Envie pelo menos uma foto primeiro'); return; }
     goToStep('edit');
     await generateLayout();
 });
-
 regenerateBtn.addEventListener('click', () => generateLayout());
 
-// ── Format selector ──────────────────────────────────────────────────────────
+// ── Format selector ───────────────────────────────────────────────────────────
 gridSizes.forEach((g, i) => {
     const o = document.createElement('option');
     o.value = i; o.textContent = g.name;
     sizeSelect.appendChild(o);
-
 });
-
 function syncURLParam() {
     const t = gridSizes[+sizeSelect.value];
     if (!t) return;
@@ -983,7 +841,7 @@ function syncURLParam() {
 sizeSelect.addEventListener('change', syncURLParam);
 syncURLParam();
 
-// ── Upload handling (shared between step-2 grid and step-3 mini list) ───────
+// ── Upload ────────────────────────────────────────────────────────────────────
 function loadFiles(files) {
     const valid = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (!valid.length) return;
@@ -996,16 +854,9 @@ function loadFiles(files) {
             photos.push(photo);
             const idx = photos.length - 1;
             addThumb(url, idx);
-            addMiniThumb(url, idx);
-
-            // Load natural pixel dimensions (needed for DPI calculation)
             const probe = new Image();
-            probe.onload = () => {
-                photo.width  = probe.naturalWidth;
-                photo.height = probe.naturalHeight;
-            };
+            probe.onload = () => { photo.width = probe.naturalWidth; photo.height = probe.naturalHeight; };
             probe.src = url;
-
             if (++done === valid.length) {
                 updateCounts();
                 notify(`${valid.length} foto${valid.length > 1 ? 's' : ''} adicionada${valid.length > 1 ? 's' : ''}`);
@@ -1014,385 +865,177 @@ function loadFiles(files) {
         reader.readAsDataURL(file);
     });
 }
-
 function updateCounts() {
     const n = photos.length;
-    const txt = `${n} foto${n !== 1 ? 's' : ''} carregada${n !== 1 ? 's' : ''}`;
-    photosCount.textContent = txt;
-    miniPhotosCount.textContent = `${n} foto${n !== 1 ? 's' : ''}`;
+    photosCount.textContent = `${n} foto${n !== 1 ? 's' : ''} carregada${n !== 1 ? 's' : ''}`;
 }
-
-// ── DPI Quality Check ─────────────────────────────────────────────────────────
-// Estimates the effective print DPI of each photo against the cell size
-// (in mm) it will occupy in the chosen format/template.
-const MM_PER_INCH = 25.4;
-const DPI_GOOD_THRESHOLD = 200; // >= this: good quality
-const DPI_MID_THRESHOLD  = 120; // >= this and < good: usable but soft
-
-function calcDPI(photo, cellWidthMm, cellHeightMm) {
-    if (!photo.width || !photo.height) return null;
-    const cellWidthIn  = cellWidthMm  / MM_PER_INCH;
-    const cellHeightIn = cellHeightMm / MM_PER_INCH;
-    const dpiX = photo.width  / cellWidthIn;
-    const dpiY = photo.height / cellHeightIn;
-    // Effective DPI is the lower of the two axes (the limiting dimension)
-    return Math.min(dpiX, dpiY);
-}
-
-function dpiQualityLevel(dpi) {
-    if (dpi === null) return 'unknown';
-    if (dpi >= DPI_GOOD_THRESHOLD) return 'good';
-    if (dpi >= DPI_MID_THRESHOLD)  return 'mid';
-    return 'low';
-}
-
-async function renderQualityCheck() {
-    const template = gridSizes[+sizeSelect.value];
-    const cellW = template?.cellWidth  || 100;
-    const cellH = template?.cellHeight || 100;
-
-    // Ensure all natural dimensions are loaded before computing
-    await Promise.all(photos.map(p => new Promise(resolve => {
-        if (p.width && p.height) return resolve();
-        const img = new Image();
-        img.onload = () => { p.width = img.naturalWidth; p.height = img.naturalHeight; resolve(); };
-        img.onerror = () => resolve();
-        img.src = p.url;
-    })));
-
-    qualityList.innerHTML = '';
-    let lowCount = 0, midCount = 0, goodCount = 0;
-
-    // Compute DPI/level for every photo, keeping its original index
-    // (needed for in-place replacement) — then sort so low-quality
-    // photos are shown first, mid next, good last.
-    const entries = photos.map((photo, originalIndex) => {
-        const dpi = calcDPI(photo, cellW, cellH);
-        const level = dpiQualityLevel(dpi);
-        return { photo, originalIndex, dpi, level };
-    });
-
-    const levelOrder = { low: 0, mid: 1, unknown: 1, good: 2 };
-    entries.sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
-
-    entries.forEach(({ photo, originalIndex, dpi, level }) => {
-        if (level === 'low') lowCount++;
-        else if (level === 'mid') midCount++;
-        else if (level === 'good') goodCount++;
-
-        const item = document.createElement('div');
-        item.className = `quality-item ${level === 'low' ? 'low-dpi' : ''} ${level === 'mid' ? 'mid-dpi' : ''}`;
-
-        const thumb = document.createElement('div');
-        thumb.className = 'qi-thumb';
-        const img = document.createElement('img');
-        img.src = photo.url;
-        thumb.appendChild(img);
-
-        const info = document.createElement('div');
-        info.className = 'qi-info';
-        const name = document.createElement('div');
-        name.className = 'qi-name';
-        name.textContent = photo.name;
-
-        const meta = document.createElement('div');
-        meta.className = 'qi-meta';
-        meta.textContent = photo.width
-            ? `${photo.width}×${photo.height}px para célula de ${cellW}×${cellH}mm`
-            : 'Calculando…';
-        info.appendChild(name);
-        info.appendChild(meta);
-
-        // Warning text shown only for low-quality photos
-        if (level === 'low') {
-            const warn = document.createElement('div');
-            warn.className = 'qi-warning';
-            warn.innerHTML = `<span class="material-symbols-outlined">report</span>
-                Resolução baixa — pode ficar borrada na impressão`;
-            info.appendChild(warn);
-        } else if (level === 'mid') {
-            const warn = document.createElement('div');
-            warn.className = 'qi-warning mid';
-            warn.innerHTML = `<span class="material-symbols-outlined">info</span>
-                Resolução mediana — qualidade aceitável, não ideal`;
-            info.appendChild(warn);
-        }
-
-        const right = document.createElement('div');
-        right.className = 'qi-right';
-
-        const badge = document.createElement('div');
-        const dpiLabel = dpi !== null ? `${Math.round(dpi)} DPI` : '—';
-        if (level === 'good') {
-            badge.className = 'qi-badge good';
-            badge.innerHTML = `<span class="material-symbols-outlined">check_circle</span>${dpiLabel}`;
-        } else if (level === 'mid') {
-            badge.className = 'qi-badge mid';
-            badge.innerHTML = `<span class="material-symbols-outlined">warning</span>${dpiLabel}`;
-        } else if (level === 'low') {
-            badge.className = 'qi-badge low';
-            badge.innerHTML = `<span class="material-symbols-outlined">error</span>${dpiLabel}`;
-        } else {
-            badge.className = 'qi-badge mid';
-            badge.textContent = '—';
-        }
-        right.appendChild(badge);
-
-        // "Substituir foto" button — shown for low and mid quality photos
-        if (level === 'low' || level === 'mid') {
-            const replaceBtn = document.createElement('button');
-            replaceBtn.className = 'qi-replace-btn';
-            replaceBtn.innerHTML = `<span class="material-symbols-outlined">sync_alt</span> Substituir foto`;
-            replaceBtn.addEventListener('click', () => triggerPhotoReplace(originalIndex));
-            right.appendChild(replaceBtn);
-        }
-
-        item.appendChild(thumb);
-        item.appendChild(info);
-        item.appendChild(right);
-        qualityList.appendChild(item);
-    });
-
-    // Summary box
-    if (lowCount > 0) {
-        qualitySummaryBox.innerHTML = `
-            <div class="quality-summary warn">
-                <span class="material-symbols-outlined">report</span>
-                <span>${lowCount} foto${lowCount > 1 ? 's estão' : ' está'} com resolução baixa
-                e pode${lowCount > 1 ? 'm' : ''} ficar borrada${lowCount > 1 ? 's' : ''} na impressão.
-                Considere substituí-la${lowCount > 1 ? 's' : ''} por imagens maiores.</span>
-            </div>`;
-    } else if (midCount > 0) {
-        qualitySummaryBox.innerHTML = `
-            <div class="quality-summary warn">
-                <span class="material-symbols-outlined">info</span>
-                <span>${midCount} foto${midCount > 1 ? 's têm' : ' tem'} resolução mediana.
-                A qualidade deve ficar aceitável, mas não ideal.</span>
-            </div>`;
-    } else {
-        qualitySummaryBox.innerHTML = `
-            <div class="quality-summary ok">
-                <span class="material-symbols-outlined">check_circle</span>
-                <span>Todas as fotos têm boa resolução para o formato escolhido.</span>
-            </div>`;
-    }
-}
-
-// ── Replace a low/mid quality photo in place ─────────────────────────────────
-let _replaceTargetIndex = null;
-function triggerPhotoReplace(index) {
-    _replaceTargetIndex = index;
-    replaceFileInput.click();
-}
-
-function handleReplaceFile(file) {
-    if (_replaceTargetIndex === null || !file || !file.type.startsWith('image/')) return;
-    const index = _replaceTargetIndex;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const url = e.target.result;
-        photos[index].url = url;
-        photos[index].name = file.name;
-        photos[index].width = 0;
-        photos[index].height = 0;
-
-        const probe = new Image();
-        probe.onload = () => {
-            photos[index].width  = probe.naturalWidth;
-            photos[index].height = probe.naturalHeight;
-            renderQualityCheck(); // refresh list with new DPI value
-        };
-        probe.src = url;
-
-        // Keep the thumbnail lists in sync too
-        thumbList.innerHTML = '';
-        miniThumbList.innerHTML = '';
-        photos.forEach((p, i) => { addThumb(p.url, i); addMiniThumb(p.url, i); });
-
-        notify('Foto substituída');
-        _replaceTargetIndex = null;
-    };
-    reader.readAsDataURL(file);
-}
-
 function addThumb(url, index) {
     const item = document.createElement('div');
     item.className = 'thumb-item';
-    item.dataset.photoIndex = index;
-
-    const img = document.createElement('img');
-    img.src = url;
-
-    const btn = document.createElement('button');
-    btn.className = 'thumb-remove';
-    btn.innerHTML = '✕';
-    btn.addEventListener('click', e => {
-        e.stopPropagation();
-        removePhoto(index);
-    });
-
+    const img = document.createElement('img'); img.src = url;
+    const btn = document.createElement('button'); btn.className = 'thumb-remove'; btn.innerHTML = '✕';
+    btn.addEventListener('click', e => { e.stopPropagation(); removePhoto(index); });
     item.appendChild(img); item.appendChild(btn);
     thumbList.appendChild(item);
 }
-
-function addMiniThumb(url, index) {
-    const item = document.createElement('div');
-    item.className = 'mini-thumb';
-    item.draggable = true;
-    item.dataset.photoIndex = index;
-    const img = document.createElement('img');
-    img.src = url;
-    item.appendChild(img);
-    miniThumbList.appendChild(item);
-}
-
 function removePhoto(index) {
     photos.splice(index, 1);
-    // Re-render both thumb lists since indices shift
     thumbList.innerHTML = '';
-    miniThumbList.innerHTML = '';
-    photos.forEach((p, i) => { addThumb(p.url, i); addMiniThumb(p.url, i); });
+    photos.forEach((p, i) => addThumb(p.url, i));
     updateCounts();
 }
-
 fileInput.addEventListener('change', e => loadFiles(e.target.files));
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    loadFiles(e.dataTransfer.files);
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadFiles(e.dataTransfer.files); });
+
+// ── DPI Quality Check ─────────────────────────────────────────────────────────
+const MM_PER_INCH = 25.4, DPI_GOOD = 200, DPI_MID = 120;
+function calcDPI(photo, wMm, hMm) {
+    if (!photo.width || !photo.height) return null;
+    return Math.min(photo.width / (wMm / MM_PER_INCH), photo.height / (hMm / MM_PER_INCH));
+}
+function dpiLevel(dpi) {
+    if (dpi === null) return 'unknown';
+    return dpi >= DPI_GOOD ? 'good' : dpi >= DPI_MID ? 'mid' : 'low';
+}
+async function renderQualityCheck() {
+    const tmpl = gridSizes[+sizeSelect.value];
+    const cellW = tmpl?.cellWidth || 100, cellH = tmpl?.cellHeight || 100;
+    await Promise.all(photos.map(p => new Promise(res => {
+        if (p.width && p.height) return res();
+        const img = new Image();
+        img.onload = () => { p.width = img.naturalWidth; p.height = img.naturalHeight; res(); };
+        img.onerror = () => res(); img.src = p.url;
+    })));
+    qualityList.innerHTML = '';
+    let low = 0, mid = 0;
+    const entries = photos.map((photo, i) => { const dpi = calcDPI(photo, cellW, cellH); return { photo, i, dpi, level: dpiLevel(dpi) }; });
+    entries.sort((a,b) => ({low:0,mid:1,unknown:1,good:2}[a.level] - {low:0,mid:1,unknown:1,good:2}[b.level]));
+    entries.forEach(({ photo, i, dpi, level }) => {
+        if (level === 'low') low++;
+        else if (level === 'mid') mid++;
+        const item = document.createElement('div');
+        item.className = `quality-item${level === 'low' ? ' low-dpi' : level === 'mid' ? ' mid-dpi' : ''}`;
+        item.innerHTML = `
+            <div class="qi-thumb"><img src="${photo.url}"></div>
+            <div class="qi-info">
+                <div class="qi-name">${photo.name}</div>
+                <div class="qi-meta">${photo.width}×${photo.height}px → célula ${cellW}×${cellH}mm</div>
+                ${level === 'low' ? '<div class="qi-warning"><span class="material-symbols-outlined">report</span>Resolução baixa</div>' : ''}
+                ${level === 'mid' ? '<div class="qi-warning mid"><span class="material-symbols-outlined">info</span>Resolução mediana</div>' : ''}
+            </div>
+            <div class="qi-right">
+                <div class="qi-badge ${level === 'good' ? 'good' : level === 'mid' ? 'mid' : 'low'}">
+                    <span class="material-symbols-outlined">${level === 'good' ? 'check_circle' : level === 'mid' ? 'warning' : 'error'}</span>
+                    ${dpi !== null ? Math.round(dpi) + ' DPI' : '—'}
+                </div>
+                ${level !== 'good' ? `<button class="qi-replace-btn" data-idx="${i}"><span class="material-symbols-outlined">sync_alt</span>Substituir</button>` : ''}
+            </div>`;
+        qualityList.appendChild(item);
+    });
+    qualityList.querySelectorAll('.qi-replace-btn').forEach(btn =>
+        btn.addEventListener('click', () => triggerPhotoReplace(+btn.dataset.idx)));
+    qualitySummaryBox.innerHTML = low > 0
+        ? `<div class="quality-summary warn"><span class="material-symbols-outlined">report</span><span>${low} foto${low>1?'s estão':' está'} com resolução baixa.</span></div>`
+        : mid > 0
+        ? `<div class="quality-summary warn"><span class="material-symbols-outlined">info</span><span>${mid} foto${mid>1?'s têm':' tem'} resolução mediana.</span></div>`
+        : `<div class="quality-summary ok"><span class="material-symbols-outlined">check_circle</span><span>Todas as fotos estão com boa resolução.</span></div>`;
+}
+let _replaceIdx = null;
+function triggerPhotoReplace(idx) { _replaceIdx = idx; replaceFileInput.click(); }
+replaceFileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (_replaceIdx === null || !file || !file.type.startsWith('image/')) return;
+    const idx = _replaceIdx;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        photos[idx].url = ev.target.result; photos[idx].name = file.name;
+        photos[idx].width = 0; photos[idx].height = 0;
+        const probe = new Image();
+        probe.onload = () => { photos[idx].width = probe.naturalWidth; photos[idx].height = probe.naturalHeight; renderQualityCheck(); };
+        probe.src = ev.target.result;
+        thumbList.innerHTML = ''; photos.forEach((p,i) => addThumb(p.url,i));
+        notify('Foto substituída'); _replaceIdx = null;
+    };
+    reader.readAsDataURL(file);
+    replaceFileInput.value = '';
 });
 
-// ── Generate Layout — board sized to fit the user's viewport ────────────────
-// We compute the grid in mm (correct proportions from the template),
-// then render the board in px at a scale that fits the available
-// canvas viewport width, instead of using true physical mm sizing
-// (which made A0 etc. absurdly large on screen).
-
+// ── Generate scattered layout ─────────────────────────────────────────────────
 async function generateLayout() {
     if (!photos.length) { notify('Envie pelo menos uma foto primeiro'); return; }
-
     const template = gridSizes[+sizeSelect.value];
     if (!template) return;
-    lastTemplateUsed = template;
+    lastTemplate = template;
 
     loadingOv.classList.add('visible');
-    // Wait for the step to be visible and laid out before measuring
-    // canvasArea dimensions — a plain setTimeout(0) can fire before the
-    // browser has finished reflow after the 'active' class was toggled.
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     await new Promise(r => setTimeout(r, 20));
 
     board.querySelectorAll('craftools-element, .craftools-grid-cell').forEach(el => el.remove());
-    selectedEl = null;
-    showNoSelection();
+    focusedCell = null; focusedIndex = -1;
+    setFooterMode('default');
     HistoryManager.clear();
 
-    // ── Grid math, done in abstract "mm-like" units from the template ──────
-    const margins = template.pageMargin.split(' ').map(Number);
+    const margins = (template.pageMargin || '5 5 5 5').split(' ').map(Number);
     const [mT, mR, mB, mL] = margins;
-    const cellW = template.cellWidth;
-    const cellH = template.cellHeight;
-    const gap   = template.cellGap || 0;
-
-    // Reference paper size used purely to compute the grid's aspect ratio.
-    // Fixed to A3 landscape (420×297mm) so the board always uses a wide,
-    // screen-filling proportion regardless of what's in template.sizes.
-    const refW = 420;
-    const refH = 297;
-
-    const availW = refW - mL - mR;
-    const availH = refH - mT - mB;
-
+    const cellW = template.cellWidth, cellH = template.cellHeight, gap = template.cellGap || 0;
+    const refW = 420, refH = 297;
+    const availW = refW - mL - mR, availH = refH - mT - mB;
     const cols = Math.max(1, Math.floor((availW + gap) / (cellW + gap)));
     const rows = Math.max(1, Math.floor((availH + gap) / (cellH + gap)));
-    const slotsPerSection = cols * rows;
-    const totalSections = Math.ceil(photos.length / slotsPerSection);
-
-    // Total "design units" (same scale as cellWidth/cellHeight from template)
+    const spp = cols * rows;
+    const secs = Math.ceil(photos.length / spp);
     const designW = refW;
-    const designH = mT + totalSections * (rows * (cellH + gap) - gap) + (totalSections - 1) * mB + mB;
-    const finalDesignH = Math.max(refH, designH);
+    const designH = Math.max(refH, mT + secs * (rows * (cellH + gap) - gap) + (secs - 1) * mB + mB);
 
-    // ── Fit the design to FULL viewport (board fills the entire screen) ────
-    const isMobileView = window.innerWidth <= 768;
-    const horizontalPadding = isMobileView ? 8 : 16;
-    const verticalPadding   = isMobileView ? 8 : 16;
+    const viewportW = scatterView.clientWidth  - 16;
+    const viewportH = scatterView.clientHeight - 16;
+    const scale = Math.max(0.05, Math.min(viewportW / designW, viewportH / designH));
 
-    const viewportW = canvasArea.clientWidth  - horizontalPadding;
-    const viewportH = canvasArea.clientHeight - verticalPadding;
+    board.style.width  = `${designW * scale}px`;
+    board.style.height = `${designH * scale}px`;
+    board.dataset.scale = scale;
 
-    const scaleByWidth  = viewportW / designW;
-    const scaleByHeight = viewportH / finalDesignH;
-    // Fill as much of the screen as possible — no upper zoom cap
-    const scale = Math.min(scaleByWidth, scaleByHeight);
-    const finalScale = Math.max(scale, 0.05);
-
-    const boardWpx = designW * finalScale;
-    const boardHpx = finalDesignH * finalScale;
-
-    board.style.width  = `${boardWpx}px`;
-    board.style.height = `${boardHpx}px`;
-    board.dataset.scale = finalScale;
-    board.dataset.designW = designW;
-
-    // ── Enable native snap: titles snap to nearest .craftools-grid-cell ────
     window.craftoolsAutoSnap = true;
     window.craftoolsAutoSnapAlign = 'bottom-center';
 
-    // Parse cell padding
     const padParts = (template.cellPadding || '0 0 0 0').split(' ').map(Number);
     const [padT, padR, padB, padL] = padParts;
 
     photos.forEach((photo, idx) => {
-        const section  = Math.floor(idx / slotsPerSection);
-        const localIdx = idx % slotsPerSection;
-        const col      = localIdx % cols;
-        const row      = Math.floor(localIdx / cols);
-
+        const sec = Math.floor(idx / spp), local = idx % spp;
+        const col = local % cols, row = Math.floor(local / cols);
         const baseX = mL + col * (cellW + gap);
-        const baseY = mT + section * (rows * (cellH + gap) + mB) + row * (cellH + gap);
-
-        // Random jitter + rotation, scaled in design units
-        const jitterX  = (Math.random() - 0.5) * (cellW * 0.06);
-        const jitterY  = (Math.random() - 0.5) * (cellH * 0.06);
-        const rotation = (Math.random() - 0.5) * 7; // ±3.5°
-
-        const x = (baseX + jitterX) * finalScale;
-        const y = (baseY + jitterY) * finalScale;
-        const w = cellW * finalScale;
-        const h = cellH * finalScale;
+        const baseY = mT + sec * (rows * (cellH + gap) + mB) + row * (cellH + gap);
+        const jx = (Math.random() - 0.5) * cellW * 0.06;
+        const jy = (Math.random() - 0.5) * cellH * 0.06;
+        const rot = (Math.random() - 0.5) * 7;
 
         const cell = document.createElement('div');
         cell.className = 'craftools-grid-cell';
+        cell.dataset.photoIndex = idx;
         cell.style.cssText = [
             'position:absolute',
-            `left:${x}px`,
-            `top:${y}px`,
-            `width:${w}px`,
-            `height:${h}px`,
-            `transform:rotate(${rotation.toFixed(2)}deg)`,
+            `left:${(baseX + jx) * scale}px`, `top:${(baseY + jy) * scale}px`,
+            `width:${cellW * scale}px`, `height:${cellH * scale}px`,
+            `transform:rotate(${rot.toFixed(2)}deg)`,
             'transform-origin:center center',
             'background:#ffffff',
             'box-shadow:2px 3px 10px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.10)',
-            'box-sizing:border-box',
-            'overflow:visible',
+            'box-sizing:border-box', 'overflow:visible',
         ].join(';');
 
         const bgLayer = document.createElement('div');
-        bgLayer.className = 'cell-bg-layer';
         bgLayer.style.cssText = 'position:absolute;inset:0;background:#ffffff;';
 
         const imgWrap = document.createElement('div');
-        imgWrap.className = 'cell-content-layer';
         imgWrap.style.cssText = [
             'position:absolute',
-            `top:${padT * finalScale}px`,
-            `right:${padR * finalScale}px`,
-            `bottom:${padB * finalScale}px`,
-            `left:${padL * finalScale}px`,
+            `top:${padT*scale}px`, `right:${padR*scale}px`,
+            `bottom:${padB*scale}px`, `left:${padL*scale}px`,
             'overflow:hidden',
         ].join(';');
 
@@ -1400,161 +1043,280 @@ async function generateLayout() {
         img.src = photo.url;
         img.draggable = false;
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;user-select:none;pointer-events:none;';
+        applyAdjust(img, idx);
 
         imgWrap.appendChild(img);
         cell.appendChild(bgLayer);
         cell.appendChild(imgWrap);
+
+        // Click to focus this photo
+        cell.addEventListener('click', (e) => {
+            // Don't interfere with draggable craftools-elements
+            if (e.target.closest('craftools-element')) return;
+            focusPhoto(cell, idx);
+        });
+
         board.appendChild(cell);
     });
+
+    // Build gallery slides too (reuse photos)
+    buildGallery();
 
     await new Promise(r => setTimeout(r, 50));
     try { HistoryManager.snapshot(board); } catch {}
     updateUndoBtn();
     loadingOv.classList.remove('visible');
-    notify(`Layout pronto — ${photos.length} fotos posicionadas`);
-
-    canvasArea.scrollTo({ top: 0, behavior: 'smooth' });
+    notify(`${photos.length} foto${photos.length > 1 ? 's' : ''} posicionada${photos.length > 1 ? 's' : ''}`);
+    scatterView.scrollTo({ top: 0 });
 }
 
-// Re-fit board on window resize (keeps everything proportionally on screen)
+// ── Resize ────────────────────────────────────────────────────────────────────
 let resizeTimer;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-        if (steps.edit.classList.contains('active') && photos.length) {
-            generateLayout();
-        }
+        if (steps.edit.classList.contains('active') && photos.length) generateLayout();
     }, 350);
 });
 
-// ── Título tool: drag from panel → drop on board ─────────────────────────────
-document.getElementById('titulo-tool').addEventListener('dragstart', e => {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'tool', tool: 'titulo' }));
-    e.dataTransfer.effectAllowed = 'copy';
+// ── View mode toggle ──────────────────────────────────────────────────────────
+btnScatterMode.addEventListener('click', () => setViewMode('scatter'));
+btnGalleryMode.addEventListener('click', () => setViewMode('gallery'));
+
+function setViewMode(mode) {
+    viewMode = mode;
+    btnScatterMode.classList.toggle('active', mode === 'scatter');
+    btnGalleryMode.classList.toggle('active', mode === 'gallery');
+    scatterView.classList.toggle('hidden', mode !== 'scatter');
+    galleryView.classList.toggle('visible', mode === 'gallery');
+    if (mode === 'gallery') {
+        // Sync gallery to focused photo or start at 0
+        scrollGalleryTo(focusedIndex >= 0 ? focusedIndex : 0);
+    }
+    // Deselect when switching modes
+    defocusPhoto();
+}
+
+// ── Gallery ───────────────────────────────────────────────────────────────────
+function buildGallery() {
+    galleryTrack.innerHTML = '';
+    galleryDots.innerHTML  = '';
+
+    photos.forEach((photo, idx) => {
+        const slide = document.createElement('div');
+        slide.className = 'gallery-slide';
+        slide.dataset.idx = idx;
+
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.draggable = false;
+        applyAdjust(img, idx);
+
+        const num = document.createElement('div');
+        num.className = 'gallery-slide-num';
+        num.textContent = `${idx + 1} / ${photos.length}`;
+
+        slide.appendChild(img);
+        slide.appendChild(num);
+        galleryTrack.appendChild(slide);
+
+        slide.addEventListener('click', () => {
+            if (idx === galleryIndex) {
+                // Already center — toggle focus
+                if (focusedIndex === idx) defocusPhoto();
+                else focusPhoto(slide, idx);
+            } else {
+                scrollGalleryTo(idx);
+            }
+        });
+
+        // Dot
+        const dot = document.createElement('div');
+        dot.className = 'gdot';
+        galleryDots.appendChild(dot);
+    });
+
+    updateGalleryActive(0);
+
+    // Detect active slide on scroll
+    let scrollTimer;
+    galleryTrack.addEventListener('scroll', () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+            const slides = galleryTrack.querySelectorAll('.gallery-slide');
+            const trackRect = galleryTrack.getBoundingClientRect();
+            const trackCenter = trackRect.left + trackRect.width / 2;
+            let closest = 0, minDist = Infinity;
+            slides.forEach((s, i) => {
+                const r = s.getBoundingClientRect();
+                const dist = Math.abs((r.left + r.width / 2) - trackCenter);
+                if (dist < minDist) { minDist = dist; closest = i; }
+            });
+            updateGalleryActive(closest);
+        }, 80);
+    }, { passive: true });
+}
+
+function scrollGalleryTo(idx) {
+    const slides = galleryTrack.querySelectorAll('.gallery-slide');
+    if (!slides[idx]) return;
+    slides[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    updateGalleryActive(idx);
+}
+
+function updateGalleryActive(idx) {
+    galleryIndex = idx;
+    galleryTrack.querySelectorAll('.gallery-slide').forEach((s, i) => s.classList.toggle('active', i === idx));
+    galleryDots.querySelectorAll('.gdot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+galleryPrev.addEventListener('click', () => scrollGalleryTo(Math.max(0, galleryIndex - 1)));
+galleryNext.addEventListener('click', () => scrollGalleryTo(Math.min(photos.length - 1, galleryIndex + 1)));
+
+// ── Photo focus (both modes) ──────────────────────────────────────────────────
+function focusPhoto(el, idx) {
+    // Clear previous
+    board.querySelectorAll('.photo-focused').forEach(c => c.classList.remove('photo-focused'));
+
+    focusedCell  = el;
+    focusedIndex = idx;
+
+    if (viewMode === 'scatter') el.classList.add('photo-focused');
+
+    footerFocusedText.textContent = `Foto ${idx + 1}`;
+    setFooterMode('photo');
+}
+
+function defocusPhoto() {
+    board.querySelectorAll('.photo-focused').forEach(c => c.classList.remove('photo-focused'));
+    focusedCell  = null;
+    focusedIndex = -1;
+    setFooterMode('default');
+    closeSheet();
+    // Deselect any craftools-element
+    document.querySelectorAll('craftools-element').forEach(el => el.deselect?.());
+}
+
+footerDeselectBtn.addEventListener('click', defocusPhoto);
+
+// Click on canvas background → deselect
+scatterView.addEventListener('mousedown', e => {
+    if (e.target === scatterView || e.target === board) defocusPhoto();
 });
 
-board.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+// ── Footer mode ───────────────────────────────────────────────────────────────
+function setFooterMode(mode) {
+    footerDefault.style.display = mode === 'default' ? 'flex' : 'none';
+    footerPhoto.style.display   = mode === 'photo'   ? 'flex' : 'none';
+}
 
+// ── Footer actions ─────────────────────────────────────────────────────────────
+footerUndoBtn.addEventListener('click', () => {
+    try { HistoryManager.undo(board); } catch {}
+    updateUndoBtn();
+});
+footerShuffleBtn.addEventListener('click', () => generateLayout());
+
+// Título: place a text element on/near the focused photo
+footerTituloBtn.addEventListener('click', () => {
+    if (focusedIndex < 0) return;
+
+    if (viewMode === 'gallery') {
+        // Switch to scatter first so the title is placed on the board
+        setViewMode('scatter');
+    }
+
+    // Find the focused cell on the board
+    const cell = board.querySelector(`.craftools-grid-cell[data-photo-index="${focusedIndex}"]`);
+    if (!cell) return;
+
+    const cellRect  = cell.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+
+    const xPx = (cellRect.left - boardRect.left) + cellRect.width / 2 - 80;
+    const yPx = (cellRect.bottom - boardRect.top) + 6;
+
+    const el = TextTool.createElement('titulo', null);
+    el.setAttribute('x', `${Math.max(0, xPx).toFixed(1)}px`);
+    el.setAttribute('y', `${yPx.toFixed(1)}px`);
+    el.setAttribute('w', '160px');
+    el.setAttribute('h', '32px');
+    board.appendChild(el);
+
+    try { HistoryManager.snapshot(board); } catch {}
+    updateUndoBtn();
+    el.select?.();
+
+    openSheet('Título', buildTituloProps(el));
+    notify('Título adicionado');
+});
+
+// Ajuste: open brightness/contrast/saturation panel for focused photo
+footerAjusteBtn.addEventListener('click', () => {
+    if (focusedIndex < 0) return;
+    openSheet('Ajuste de foto', buildAjusteProps(focusedIndex));
+});
+
+// ── Título tool via drag on scatter board ─────────────────────────────────────
+board.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
 board.addEventListener('drop', e => {
     e.preventDefault();
-    let data;
-    try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
-
+    let data; try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
     if (data.type === 'tool' && data.tool === 'titulo') {
         const rect = board.getBoundingClientRect();
-        const xPx = e.clientX - rect.left;
-        const yPx = e.clientY - rect.top;
-
         const el = TextTool.createElement('titulo', null);
-        el.setAttribute('x', `${xPx.toFixed(1)}px`);
-        el.setAttribute('y', `${yPx.toFixed(1)}px`);
-        el.setAttribute('w', '160px');
-        el.setAttribute('h', '32px');
-
+        el.setAttribute('x', `${(e.clientX - rect.left).toFixed(1)}px`);
+        el.setAttribute('y', `${(e.clientY - rect.top).toFixed(1)}px`);
+        el.setAttribute('w', '160px'); el.setAttribute('h', '32px');
         board.appendChild(el);
         try { HistoryManager.snapshot(board); } catch {}
         updateUndoBtn();
     }
 });
 
-// ── Element selection → Properties panel (desktop sidebar / mobile sheet) ───
+// ── craftools-element events ──────────────────────────────────────────────────
 document.addEventListener('craftools-element-select', e => {
-    selectedEl = e.detail.element;
-    const tool = selectedEl.getAttribute('data-craftool');
+    const tool = e.detail.element.getAttribute('data-craftool');
     if (tool === 'titulo' || tool === 'paragrafo') {
-        renderTextProperties(selectedEl);
-        if (isMobile()) openMobileSheet('Propriedades do título');
-    } else {
-        showNoSelection('Selecione um título para editar o estilo');
+        openSheet('Título', buildTituloProps(e.detail.element));
     }
 });
-
-document.addEventListener('craftools-element-deselect', () => {
-    selectedEl = null;
-    showNoSelection();
-    closeMobileSheet();
-});
-
+document.addEventListener('craftools-element-deselect', () => closeSheet());
 document.addEventListener('craftools-element-change', () => {
     try { HistoryManager.snapshot(board); } catch {}
     updateUndoBtn();
 });
-
 document.addEventListener('craftools-element-delete', () => {
-    selectedEl = null;
-    showNoSelection();
-    closeMobileSheet();
+    closeSheet();
     try { HistoryManager.snapshot(board); } catch {}
     updateUndoBtn();
 });
 
-canvasArea.addEventListener('mousedown', e => {
-    if (e.target === canvasArea || e.target === board) {
-        document.querySelectorAll('craftools-element').forEach(el => el.deselect?.());
-    }
-});
-
-// ── Mobile bottom sheet helpers ──────────────────────────────────────────────
-function openMobileSheet(title) {
-    msTitle.textContent = title || 'Propriedades';
-    mobileSheet.classList.add('open');
-    mobileSheetOverlay.classList.add('visible');
+// ── Bottom sheet ──────────────────────────────────────────────────────────────
+function openSheet(title, content) {
+    bsTitle.textContent = title;
+    bsBody.innerHTML = '';
+    bsBody.appendChild(content);
+    bottomSheet.classList.add('open');
+    sheetOverlay.classList.add('visible');
 }
-function closeMobileSheet() {
-    mobileSheet.classList.remove('open');
-    mobileSheetOverlay.classList.remove('visible');
+function closeSheet() {
+    bottomSheet.classList.remove('open');
+    sheetOverlay.classList.remove('visible');
 }
-msCloseBtn.addEventListener('click', () => {
-    closeMobileSheet();
+bsCloseBtn.addEventListener('click', () => {
+    closeSheet();
     document.querySelectorAll('craftools-element').forEach(el => el.deselect?.());
 });
-mobileSheetOverlay.addEventListener('click', () => {
-    closeMobileSheet();
+sheetOverlay.addEventListener('click', () => {
+    closeSheet();
     document.querySelectorAll('craftools-element').forEach(el => el.deselect?.());
 });
 
-// ── Mobile footer actions ────────────────────────────────────────────────────
-// "Título": tap-to-add — places a title centered on the board (mobile has no drag-and-drop)
-mfTituloBtn.addEventListener('click', () => {
-    const rect = board.getBoundingClientRect();
-    const el = TextTool.createElement('titulo', null);
-    el.setAttribute('x', `${(rect.width / 2 - 80).toFixed(1)}px`);
-    el.setAttribute('y', `${(rect.height / 2 - 16).toFixed(1)}px`);
-    el.setAttribute('w', '160px');
-    el.setAttribute('h', '32px');
-    board.appendChild(el);
-    try { HistoryManager.snapshot(board); } catch {}
-    updateUndoBtn();
-    el.select?.();
-});
-
-// "Fotos": opens a sheet listing photos to re-shuffle/remove (lightweight mobile view)
-mfPhotosBtn.addEventListener('click', () => {
-    msTitle.textContent = 'Fotos do mural';
-    msBody.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-            ${photos.map(p => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;">
-                <img src="${p.url}" style="width:100%;height:100%;object-fit:cover;display:block;">
-            </div>`).join('')}
-        </div>
-        <p style="font-size:12px;color:var(--text-secondary);margin-top:14px;text-align:center;">
-            ${photos.length} foto${photos.length !== 1 ? 's' : ''} no mural
-        </p>`;
-    openMobileSheet('Fotos do mural');
-});
-
-mfUndoBtn.addEventListener('click', () => {
-    try { HistoryManager.undo(board); } catch {}
-    updateUndoBtn();
-});
-
-mfShuffleBtn.addEventListener('click', () => generateLayout());
-
-// ── Text Properties Panel ────────────────────────────────────────────────────
-function renderTextProperties(element) {
+// ── Título properties panel ───────────────────────────────────────────────────
+function buildTituloProps(element) {
     const textEl = element.contentArea?.querySelector('[contenteditable]');
-
-    if (!textEl) { showNoSelection(); return; }
+    if (!textEl) { const d = document.createElement('div'); d.textContent = 'Selecione um título'; return d; }
 
     const toHex = c => {
         if (!c || c === 'inherit') return '#1a1a1a';
@@ -1562,24 +1324,17 @@ function renderTextProperties(element) {
         const m = c.match(/(\d+),\s*(\d+),\s*(\d+)/);
         return m ? '#' + [m[1],m[2],m[3]].map(n => (+n).toString(16).padStart(2,'0')).join('') : '#1a1a1a';
     };
+    const size   = parseFloat(textEl.style.fontSize) || 28;
+    const color  = toHex(textEl.style.color);
+    const font   = (textEl.style.fontFamily || 'DM Serif Display').replace(/['"]/g,'').split(',')[0].trim();
+    const align  = textEl.style.textAlign || 'center';
+    const bold   = ['700','bold'].includes(textEl.style.fontWeight);
+    const italic = textEl.style.fontStyle === 'italic';
 
-    const size     = parseFloat(textEl.style.fontSize) || 28;
-    const color    = toHex(textEl.style.color);
-    const font     = (textEl.style.fontFamily || 'DM Serif Display').replace(/['"]/g,'').split(',')[0].trim();
-    const align    = textEl.style.textAlign || 'center';
-    const isBold   = ['700','bold'].includes(textEl.style.fontWeight);
-    const isItalic = textEl.style.fontStyle === 'italic';
+    const FONTS = ['DM Serif Display','DM Sans','Open Sans','Pacifico','Lobster','Georgia','Arial','Times New Roman','Parisienne','Dancing Script','Quicksand','Grenze Gotisch'];
 
-    const FONTS = [
-        'DM Serif Display','DM Sans','Open Sans','Pacifico','Lobster',
-        'Georgia','Arial','Times New Roman','Parisienne','Dancing Script','Quicksand','Grenze Gotisch'
-    ];
-
-    const targetContainer = isMobile() ? msBody : rightBody;
-    // Clear the other container so stale duplicate IDs never linger
-    (isMobile() ? rightBody : msBody).innerHTML = '';
-
-    targetContainer.innerHTML = `
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
         <div class="prop-group">
             <div class="prop-label">Fonte</div>
             <select id="pp-font" class="prop-input prop-select">
@@ -1589,46 +1344,30 @@ function renderTextProperties(element) {
         <div class="prop-group">
             <div class="prop-label">Tamanho (px)</div>
             <div class="prop-row">
-                <input type="range" id="pp-size-r" min="8" max="200" step="1" value="${size}" style="flex:1;">
-                <input type="number" id="pp-size-n" class="prop-input" value="${size}" style="width:52px;text-align:center;">
+                <input type="range" id="pp-size-r" min="8" max="200" step="1" value="${size}" style="flex:1;accent-color:var(--accent);">
+                <input type="number" id="pp-size-n" class="prop-input" value="${size}" style="width:56px;text-align:center;">
             </div>
         </div>
         <div class="prop-group">
             <div class="prop-label">Cor</div>
             <div class="prop-row">
                 <input type="color" id="pp-color" class="prop-color" value="${color}">
-                <span id="pp-color-val" style="font-size:11px;color:var(--text-secondary);flex:1;">${color}</span>
+                <span id="pp-color-val" style="font-size:12px;color:var(--text-secondary);flex:1;padding-left:8px;">${color}</span>
             </div>
         </div>
         <div class="prop-group">
-            <div class="prop-label">Estilo</div>
+            <div class="prop-label">Estilo &amp; Alinhamento</div>
             <div class="prop-row">
-                <button class="prop-btn ${isBold?'active':''}" id="pp-bold">
-                    <span class="material-symbols-outlined">format_bold</span>
-                </button>
-                <button class="prop-btn ${isItalic?'active':''}" id="pp-italic">
-                    <span class="material-symbols-outlined">format_italic</span>
-                </button>
+                <button class="prop-btn ${bold?'active':''}" id="pp-bold"><span class="material-symbols-outlined">format_bold</span></button>
+                <button class="prop-btn ${italic?'active':''}" id="pp-italic"><span class="material-symbols-outlined">format_italic</span></button>
+                <div style="flex:1"></div>
+                <button class="prop-btn ${align==='left'?'active':''}" data-align="left"><span class="material-symbols-outlined">format_align_left</span></button>
+                <button class="prop-btn ${align==='center'?'active':''}" data-align="center"><span class="material-symbols-outlined">format_align_center</span></button>
+                <button class="prop-btn ${align==='right'?'active':''}" data-align="right"><span class="material-symbols-outlined">format_align_right</span></button>
             </div>
         </div>
         <div class="prop-group">
-            <div class="prop-label">Alinhamento</div>
-            <div class="prop-row">
-                <button class="prop-btn ${align==='left'?'active':''}" id="pp-al" data-align="left">
-                    <span class="material-symbols-outlined">format_align_left</span>
-                </button>
-                <button class="prop-btn ${align==='center'?'active':''}" id="pp-ac" data-align="center">
-                    <span class="material-symbols-outlined">format_align_center</span>
-                </button>
-                <button class="prop-btn ${align==='right'?'active':''}" id="pp-ar" data-align="right">
-                    <span class="material-symbols-outlined">format_align_right</span>
-                </button>
-            </div>
-        </div>
-        <div class="prop-group">
-            <button class="prop-danger" id="pp-del">
-                <span class="material-symbols-outlined">delete</span> Excluir título
-            </button>
+            <button class="prop-danger" id="pp-del"><span class="material-symbols-outlined">delete</span>Excluir título</button>
         </div>`;
 
     const systemFonts = ['Arial','Times New Roman','Courier New','Georgia','Impact'];
@@ -1636,66 +1375,105 @@ function renderTextProperties(element) {
         if (systemFonts.includes(f)) return;
         const id = 'gf-' + f.replace(/\s/g,'-');
         if (!document.getElementById(id)) {
-            const l = document.createElement('link');
-            l.id = id; l.rel = 'stylesheet';
+            const l = document.createElement('link'); l.id = id; l.rel = 'stylesheet';
             l.href = `https://fonts.googleapis.com/css2?family=${f.replace(/\s+/g,'+')}:wght@400;700&display=swap`;
             document.head.appendChild(l);
         }
     };
     ensureFont(font);
 
-    targetContainer.querySelector('#pp-font').addEventListener('change', e => {
-        ensureFont(e.target.value);
-        textEl.style.fontFamily = `'${e.target.value}', sans-serif`;
-    });
-
-    const sizeRange = targetContainer.querySelector('#pp-size-r');
-    const sizeNum   = targetContainer.querySelector('#pp-size-n');
-    sizeRange.addEventListener('input', e => { textEl.style.fontSize = e.target.value + 'px'; sizeNum.value = e.target.value; });
-    sizeNum.addEventListener('input',   e => { textEl.style.fontSize = e.target.value + 'px'; sizeRange.value = e.target.value; });
-
-    const colorInp = targetContainer.querySelector('#pp-color');
-    const colorVal = targetContainer.querySelector('#pp-color-val');
-    colorInp.addEventListener('input', e => { textEl.style.color = e.target.value; colorVal.textContent = e.target.value; });
-
-    targetContainer.querySelector('#pp-bold').addEventListener('click', function() {
-        textEl.style.fontWeight = textEl.style.fontWeight === '700' ? '400' : '700';
-        this.classList.toggle('active');
-    });
-    targetContainer.querySelector('#pp-italic').addEventListener('click', function() {
-        textEl.style.fontStyle = textEl.style.fontStyle === 'italic' ? 'normal' : 'italic';
-        this.classList.toggle('active');
-    });
-
-    ['pp-al','pp-ac','pp-ar'].forEach(id => {
-        targetContainer.querySelector('#' + id).addEventListener('click', function() {
-            textEl.style.textAlign = this.dataset.align;
-            targetContainer.querySelectorAll('[data-align]').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-
-    targetContainer.querySelector('#pp-del').addEventListener('click', () => {
-        element.remove();
-        selectedEl = null;
-        showNoSelection();
-        closeMobileSheet();
+    wrap.querySelector('#pp-font').addEventListener('change', e => { ensureFont(e.target.value); textEl.style.fontFamily = `'${e.target.value}', sans-serif`; });
+    const sr = wrap.querySelector('#pp-size-r'), sn = wrap.querySelector('#pp-size-n');
+    sr.addEventListener('input', e => { textEl.style.fontSize = e.target.value + 'px'; sn.value = e.target.value; });
+    sn.addEventListener('input', e => { textEl.style.fontSize = e.target.value + 'px'; sr.value = e.target.value; });
+    const ci = wrap.querySelector('#pp-color'), cv = wrap.querySelector('#pp-color-val');
+    ci.addEventListener('input', e => { textEl.style.color = e.target.value; cv.textContent = e.target.value; });
+    wrap.querySelector('#pp-bold').addEventListener('click', function() { textEl.style.fontWeight = textEl.style.fontWeight === '700' ? '400' : '700'; this.classList.toggle('active'); });
+    wrap.querySelector('#pp-italic').addEventListener('click', function() { textEl.style.fontStyle = textEl.style.fontStyle === 'italic' ? 'normal' : 'italic'; this.classList.toggle('active'); });
+    wrap.querySelectorAll('[data-align]').forEach(btn => btn.addEventListener('click', function() {
+        textEl.style.textAlign = this.dataset.align;
+        wrap.querySelectorAll('[data-align]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+    }));
+    wrap.querySelector('#pp-del').addEventListener('click', () => {
+        element.remove(); closeSheet();
         try { HistoryManager.snapshot(board); } catch {}
         updateUndoBtn();
     });
+    return wrap;
 }
 
-function showNoSelection(msg = 'Clique em um título no mural para editar') {
-    rightBody.innerHTML = `<div id="no-selection">
-        <span class="material-symbols-outlined">touch_app</span>${msg}</div>`;
+// ── Ajuste (brightness / contrast / saturation) ───────────────────────────────
+function getAdjust(idx) {
+    if (!adjustState[idx]) adjustState[idx] = { brightness: 100, contrast: 100, saturation: 100 };
+    return adjustState[idx];
+}
+function applyAdjust(imgEl, idx) {
+    const a = getAdjust(idx);
+    imgEl.style.filter = `brightness(${a.brightness}%) contrast(${a.contrast}%) saturate(${a.saturation}%)`;
+}
+function applyAdjustToPhoto(idx) {
+    // Apply to scatter board cell
+    const cell = board.querySelector(`.craftools-grid-cell[data-photo-index="${idx}"]`);
+    if (cell) {
+        const img = cell.querySelector('img');
+        if (img) applyAdjust(img, idx);
+    }
+    // Apply to gallery slide
+    const slide = galleryTrack.querySelector(`.gallery-slide[data-idx="${idx}"]`);
+    if (slide) {
+        const img = slide.querySelector('img');
+        if (img) applyAdjust(img, idx);
+    }
 }
 
-// ── Undo ─────────────────────────────────────────────────────────────────────
+function buildAjusteProps(idx) {
+    const a = getAdjust(idx);
+    const wrap = document.createElement('div');
+
+    const makeRow = (label, key, min, max, val) => {
+        const row = document.createElement('div');
+        row.className = 'adjust-row';
+        row.innerHTML = `
+            <span class="adjust-label">${label}</span>
+            <input type="range" min="${min}" max="${max}" value="${val}" style="flex:1;accent-color:var(--accent);">
+            <span class="adjust-val">${val}</span>`;
+        const slider = row.querySelector('input');
+        const valEl  = row.querySelector('.adjust-val');
+        slider.addEventListener('input', () => {
+            a[key] = +slider.value;
+            valEl.textContent = slider.value;
+            applyAdjustToPhoto(idx);
+        });
+        return row;
+    };
+
+    wrap.appendChild(makeRow('Brilho', 'brightness', 50, 200, a.brightness));
+    wrap.appendChild(makeRow('Contraste', 'contrast', 50, 200, a.contrast));
+    wrap.appendChild(makeRow('Saturação', 'saturation', 0, 200, a.saturation));
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'adjust-reset-btn';
+    resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">restart_alt</span>Restaurar padrão';
+    resetBtn.addEventListener('click', () => {
+        adjustState[idx] = { brightness: 100, contrast: 100, saturation: 100 };
+        applyAdjustToPhoto(idx);
+        // Rebuild the panel
+        wrap.innerHTML = '';
+        const fresh = buildAjusteProps(idx);
+        wrap.appendChild(...fresh.childNodes);
+        // Easier: just reopen
+        openSheet('Ajuste de foto', buildAjusteProps(idx));
+    });
+    wrap.appendChild(resetBtn);
+    return wrap;
+}
+
+// ── Undo ──────────────────────────────────────────────────────────────────────
 undoBtn.addEventListener('click', () => {
     try { HistoryManager.undo(board); } catch {}
     updateUndoBtn();
 });
-
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
@@ -1703,11 +1481,8 @@ document.addEventListener('keydown', e => {
         updateUndoBtn();
     }
 });
-
 function updateUndoBtn() {
-    const disabled = !HistoryManager.canUndo;
-    undoBtn.disabled = disabled;
-    mfUndoBtn.disabled = disabled;
+    undoBtn.disabled = footerUndoBtn.disabled = !HistoryManager.canUndo;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
