@@ -264,15 +264,14 @@
 
         #gallery-track {
             display: flex; align-items: center;
-            gap: 16px;
-            padding: 0 calc(50% - 140px);
+            gap: 20px;
+            /* horizontal padding set by JS to half-viewport minus half-slide-width */
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
             height: 100%;
             width: 100%;
-            /* hide scrollbar */
             scrollbar-width: none;
         }
         #gallery-track::-webkit-scrollbar { display: none; }
@@ -280,30 +279,47 @@
         .gallery-slide {
             scroll-snap-align: center;
             flex-shrink: 0;
-            width: 280px;
-            height: calc(100% - 48px);
-            max-height: 420px;
-            border-radius: 12px;
+            /* w/h set by JS from template cellWidth/cellHeight ratio */
+            border-radius: 4px;
             overflow: hidden;
             transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s, box-shadow 0.35s;
             opacity: 0.45;
             transform: scale(0.82);
             cursor: pointer;
             position: relative;
+            background: #ffffff;
         }
         .gallery-slide.active {
             opacity: 1; transform: scale(1);
             box-shadow: 0 20px 60px rgba(0,0,0,0.55);
         }
-        .gallery-slide img {
+        /* Image area — inset by the cell padding, same as scatter */
+        .gallery-img-area {
+            position: absolute;
+            overflow: hidden;
+        }
+        .gallery-img-area img {
             width: 100%; height: 100%; object-fit: cover; display: block;
             pointer-events: none; user-select: none;
         }
+        /* Caption area — lives in the bottom padding zone (e.g. polaroid white space) */
+        .gallery-caption {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 11px; font-weight: 500;
+            color: #333; text-align: center;
+            padding: 4px 10px;
+            line-height: 1.3;
+            pointer-events: none;
+        }
         /* Photo index badge inside gallery slide */
         .gallery-slide-num {
-            position: absolute; bottom: 8px; right: 10px;
-            font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.8);
-            background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 20px;
+            position: absolute; top: 8px; right: 8px;
+            font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9);
+            background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 20px;
+            z-index: 2;
         }
         /* Gallery nav arrows */
         .gallery-arrow {
@@ -749,6 +765,8 @@ let focusedIndex   = -1;        // photo index of focused item (both modes)
 let galleryIndex   = 0;         // current center slide in gallery
 let lastTemplate   = null;
 let adjustState    = {};        // photoIndex → {brightness, contrast, saturation}
+let photoTransforms   = {};     // photoIndex → {posX, posY, zoom, rotation}
+let photoAjusteActive = {};     // photoIndex → bool  (pan/zoom gestures enabled)
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const steps = {
@@ -1032,6 +1050,7 @@ async function generateLayout() {
         bgLayer.style.cssText = 'position:absolute;inset:0;background:#ffffff;';
 
         const imgWrap = document.createElement('div');
+        imgWrap.className = 'cell-img-layer';
         imgWrap.style.cssText = [
             'position:absolute',
             `top:${padT*scale}px`, `right:${padR*scale}px`,
@@ -1043,11 +1062,12 @@ async function generateLayout() {
         img.src = photo.url;
         img.draggable = false;
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;user-select:none;pointer-events:none;';
-        applyAdjust(img, idx);
+        applyPhotoStyle(img, idx);
 
         imgWrap.appendChild(img);
         cell.appendChild(bgLayer);
         cell.appendChild(imgWrap);
+        attachPhotoPanZoom(imgWrap, idx);
 
         // Click to focus this photo
         cell.addEventListener('click', (e) => {
@@ -1090,7 +1110,7 @@ function setViewMode(mode) {
     scatterView.classList.toggle('hidden', mode !== 'scatter');
     galleryView.classList.toggle('visible', mode === 'gallery');
     if (mode === 'gallery') {
-        // Sync gallery to focused photo or start at 0
+        syncGalleryCaptions();
         scrollGalleryTo(focusedIndex >= 0 ? focusedIndex : 0);
     }
     // Deselect when switching modes
@@ -1102,27 +1122,73 @@ function buildGallery() {
     galleryTrack.innerHTML = '';
     galleryDots.innerHTML  = '';
 
+    if (!lastTemplate || !photos.length) return;
+
+    // Compute slide size from template aspect ratio, fitting inside the gallery view
+    const cellW = lastTemplate.cellWidth  || 60;
+    const cellH = lastTemplate.cellHeight || 85;
+    const padParts = (lastTemplate.cellPadding || '0 0 0 0').split(' ').map(Number);
+    const [padT, padR, padB, padL] = padParts;
+
+    const galleryRect = galleryView.getBoundingClientRect();
+    const maxH = galleryRect.height * 0.80;
+    const maxW = galleryRect.width  * 0.52;
+    const aspect = cellW / cellH;
+    let slideH = maxH;
+    let slideW = slideH * aspect;
+    if (slideW > maxW) { slideW = maxW; slideH = slideW / aspect; }
+
+    // Padding as fraction of slide px dimensions
+    const pxPerUnitW = slideW / cellW;
+    const pxPerUnitH = slideH / cellH;
+    const insetT = padT * pxPerUnitH;
+    const insetR = padR * pxPerUnitW;
+    const insetB = padB * pxPerUnitH;
+    const insetL = padL * pxPerUnitW;
+
+    // Center-offset padding for the track so first/last slides can be centered
+    const sidePad = (galleryRect.width - slideW) / 2;
+    galleryTrack.style.paddingLeft  = `${sidePad}px`;
+    galleryTrack.style.paddingRight = `${sidePad}px`;
+
     photos.forEach((photo, idx) => {
         const slide = document.createElement('div');
         slide.className = 'gallery-slide';
         slide.dataset.idx = idx;
+        slide.style.width  = `${slideW}px`;
+        slide.style.height = `${slideH}px`;
+
+        // Image area — respects template padding (shows polaroid white border)
+        const imgArea = document.createElement('div');
+        imgArea.className = 'gallery-img-area';
+        imgArea.style.cssText = `top:${insetT}px;right:${insetR}px;bottom:${insetB}px;left:${insetL}px;`;
 
         const img = document.createElement('img');
         img.src = photo.url;
         img.draggable = false;
         applyAdjust(img, idx);
 
+        imgArea.appendChild(img);
+        attachPhotoPanZoom(imgArea, idx);
+        slide.appendChild(imgArea);
+
+        // Caption zone — shows any title text associated with this photo
+        const caption = document.createElement('div');
+        caption.className = 'gallery-caption';
+        caption.dataset.captionFor = idx;
+        caption.style.height = `${insetB}px`;
+        slide.appendChild(caption);
+
+        // Badge
         const num = document.createElement('div');
         num.className = 'gallery-slide-num';
-        num.textContent = `${idx + 1} / ${photos.length}`;
-
-        slide.appendChild(img);
+        num.textContent = `${idx + 1}/${photos.length}`;
         slide.appendChild(num);
+
         galleryTrack.appendChild(slide);
 
         slide.addEventListener('click', () => {
             if (idx === galleryIndex) {
-                // Already center — toggle focus
                 if (focusedIndex === idx) defocusPhoto();
                 else focusPhoto(slide, idx);
             } else {
@@ -1137,6 +1203,7 @@ function buildGallery() {
     });
 
     updateGalleryActive(0);
+    syncGalleryCaptions();
 
     // Detect active slide on scroll
     let scrollTimer;
@@ -1155,6 +1222,21 @@ function buildGallery() {
             updateGalleryActive(closest);
         }, 80);
     }, { passive: true });
+}
+
+// Sync caption text from board's craftools-element titles to gallery slides
+function syncGalleryCaptions() {
+    // Reset all captions
+    galleryTrack.querySelectorAll('.gallery-caption').forEach(c => c.textContent = '');
+
+    // For each title element on the board that has a data-caption-for attribute, copy its text
+    board.querySelectorAll('craftools-element[data-caption-for]').forEach(el => {
+        const photoIdx = el.getAttribute('data-caption-for');
+        const textEl   = el.contentArea?.querySelector('[contenteditable]');
+        const text     = textEl?.textContent?.trim() || '';
+        const cap = galleryTrack.querySelector(`.gallery-caption[data-caption-for="${photoIdx}"]`);
+        if (cap) cap.textContent = text;
+    });
 }
 
 function scrollGalleryTo(idx) {
@@ -1188,6 +1270,11 @@ function focusPhoto(el, idx) {
 }
 
 function defocusPhoto() {
+    // Disable pan/zoom for previously focused photo
+    if (focusedIndex >= 0) {
+        photoAjusteActive[focusedIndex] = false;
+        enableAjusteCursors(focusedIndex, false);
+    }
     board.querySelectorAll('.photo-focused').forEach(c => c.classList.remove('photo-focused'));
     focusedCell  = null;
     focusedIndex = -1;
@@ -1217,38 +1304,56 @@ footerUndoBtn.addEventListener('click', () => {
 });
 footerShuffleBtn.addEventListener('click', () => generateLayout());
 
-// Título: place a text element on/near the focused photo
+// Título: place a caption text element inside the bottom padding of the focused photo
 footerTituloBtn.addEventListener('click', () => {
     if (focusedIndex < 0) return;
 
-    if (viewMode === 'gallery') {
-        // Switch to scatter first so the title is placed on the board
-        setViewMode('scatter');
-    }
-
-    // Find the focused cell on the board
     const cell = board.querySelector(`.craftools-grid-cell[data-photo-index="${focusedIndex}"]`);
     if (!cell) return;
+
+    // Check if this photo already has a caption — if so, just select it
+    const existing = board.querySelector(`craftools-element[data-caption-for="${focusedIndex}"]`);
+    if (existing) {
+        existing.select?.();
+        openSheet('Título', buildTituloProps(existing));
+        return;
+    }
+
+    // Compute position inside the bottom padding area (e.g. polaroid white space)
+    const scale    = +board.dataset.scale || 1;
+    const padParts = (lastTemplate?.cellPadding || '0 0 0 0').split(' ').map(Number);
+    const [padT, padR, padB, padL] = padParts;
 
     const cellRect  = cell.getBoundingClientRect();
     const boardRect = board.getBoundingClientRect();
 
-    const xPx = (cellRect.left - boardRect.left) + cellRect.width / 2 - 80;
-    const yPx = (cellRect.bottom - boardRect.top) + 6;
+    const cellLeft = cellRect.left - boardRect.left;
+    const cellTop  = cellRect.top  - boardRect.top;
+
+    // Text width = cell width minus left+right padding (stays within white border)
+    const textW = cellRect.width - (padL + padR) * scale;
+    const textH = 28;
+
+    // Vertical center of the bottom padding zone
+    const padBpx = padB * scale;
+    const textY  = cellTop + cellRect.height - padBpx + (padBpx - textH) / 2;
+    const textX  = cellLeft + padL * scale;
 
     const el = TextTool.createElement('titulo', null);
-    el.setAttribute('x', `${Math.max(0, xPx).toFixed(1)}px`);
-    el.setAttribute('y', `${yPx.toFixed(1)}px`);
-    el.setAttribute('w', '160px');
-    el.setAttribute('h', '32px');
+    el.setAttribute('x', `${Math.max(0, textX).toFixed(1)}px`);
+    el.setAttribute('y', `${Math.max(0, textY).toFixed(1)}px`);
+    el.setAttribute('w', `${Math.max(60, textW).toFixed(1)}px`);
+    el.setAttribute('h', `${textH}px`);
+    el.setAttribute('data-caption-for', String(focusedIndex));
     board.appendChild(el);
 
     try { HistoryManager.snapshot(board); } catch {}
     updateUndoBtn();
     el.select?.();
 
-    openSheet('Título', buildTituloProps(el));
-    notify('Título adicionado');
+    openSheet('Legenda', buildTituloProps(el));
+    notify('Legenda adicionada');
+    syncGalleryCaptions();
 });
 
 // Ajuste: open brightness/contrast/saturation panel for focused photo
@@ -1285,6 +1390,7 @@ document.addEventListener('craftools-element-deselect', () => closeSheet());
 document.addEventListener('craftools-element-change', () => {
     try { HistoryManager.snapshot(board); } catch {}
     updateUndoBtn();
+    syncGalleryCaptions();
 });
 document.addEventListener('craftools-element-delete', () => {
     closeSheet();
@@ -1303,6 +1409,11 @@ function openSheet(title, content) {
 function closeSheet() {
     bottomSheet.classList.remove('open');
     sheetOverlay.classList.remove('visible');
+    // Disable pan/zoom gestures when sheet closes
+    if (focusedIndex >= 0 && photoAjusteActive[focusedIndex]) {
+        photoAjusteActive[focusedIndex] = false;
+        enableAjusteCursors(focusedIndex, false);
+    }
 }
 bsCloseBtn.addEventListener('click', () => {
     closeSheet();
@@ -1324,7 +1435,7 @@ function buildTituloProps(element) {
         const m = c.match(/(\d+),\s*(\d+),\s*(\d+)/);
         return m ? '#' + [m[1],m[2],m[3]].map(n => (+n).toString(16).padStart(2,'0')).join('') : '#1a1a1a';
     };
-    const size   = parseFloat(textEl.style.fontSize) || 28;
+    const size   = parseFloat(textEl.style.fontSize) || 22;
     const color  = toHex(textEl.style.color);
     const font   = (textEl.style.fontFamily || 'DM Serif Display').replace(/['"]/g,'').split(',')[0].trim();
     const align  = textEl.style.textAlign || 'center';
@@ -1403,70 +1514,203 @@ function buildTituloProps(element) {
     return wrap;
 }
 
-// ── Ajuste (brightness / contrast / saturation) ───────────────────────────────
+// ── Photo style helpers (filter + transform, mirrors ImageTransform.js pattern) ─
 function getAdjust(idx) {
     if (!adjustState[idx]) adjustState[idx] = { brightness: 100, contrast: 100, saturation: 100 };
     return adjustState[idx];
 }
-function applyAdjust(imgEl, idx) {
-    const a = getAdjust(idx);
-    imgEl.style.filter = `brightness(${a.brightness}%) contrast(${a.contrast}%) saturate(${a.saturation}%)`;
+function getTransform(idx) {
+    if (!photoTransforms[idx]) photoTransforms[idx] = { posX: 0, posY: 0, zoom: 1, rotation: 0 };
+    return photoTransforms[idx];
 }
-function applyAdjustToPhoto(idx) {
-    // Apply to scatter board cell
+// Apply filter + transform to a single <img> element
+function applyPhotoStyle(imgEl, idx) {
+    const a = getAdjust(idx);
+    const t = getTransform(idx);
+    imgEl.style.filter    = `brightness(${a.brightness}%) contrast(${a.contrast}%) saturate(${a.saturation}%)`;
+    imgEl.style.transform = `translate(${t.posX}px,${t.posY}px) scale(${t.zoom}) rotate(${t.rotation}deg)`;
+    imgEl.style.transformOrigin = 'center center';
+}
+// Legacy alias used in a few places
+const applyAdjust = applyPhotoStyle;
+
+// Apply to scatter cell img + gallery slide img
+function applyPhotoToAll(idx) {
     const cell = board.querySelector(`.craftools-grid-cell[data-photo-index="${idx}"]`);
-    if (cell) {
-        const img = cell.querySelector('img');
-        if (img) applyAdjust(img, idx);
-    }
-    // Apply to gallery slide
+    if (cell) { const img = cell.querySelector('.cell-img-layer img'); if (img) applyPhotoStyle(img, idx); }
     const slide = galleryTrack.querySelector(`.gallery-slide[data-idx="${idx}"]`);
-    if (slide) {
-        const img = slide.querySelector('img');
-        if (img) applyAdjust(img, idx);
-    }
+    if (slide) { const img = slide.querySelector('.gallery-img-area img'); if (img) applyPhotoStyle(img, idx); }
+}
+// Sync sliders in the open Ajuste sheet after a gesture
+function syncAjusteSliders(idx) {
+    const t = getTransform(idx);
+    const zs = bsBody.querySelector('#az-zoom');    if (zs) { zs.value = t.zoom;     bsBody.querySelector('#az-zoom-val').textContent = Math.round(t.zoom*100)+'%'; }
+    const rs = bsBody.querySelector('#az-rot');     if (rs) { rs.value = t.rotation; bsBody.querySelector('#az-rot-val').textContent = (t.rotation).toFixed(0)+'°'; }
+    const px = bsBody.querySelector('#az-posX');    if (px) px.value = Math.round(t.posX);
+    const py = bsBody.querySelector('#az-posY');    if (py) py.value = Math.round(t.posY);
 }
 
+// ── Pan/zoom interactions (same model as ImageTransform.js) ───────────────────
+// Attached to scatter imgWrap and gallery imgArea; enabled only when Ajuste is open.
+function attachPhotoPanZoom(container, idx) {
+    const drag = { on: false, startX: 0, startY: 0, initX: 0, initY: 0 };
+
+    container.style.cursor = '';
+
+    container.addEventListener('pointerdown', e => {
+        if (!photoAjusteActive[idx]) return;
+        drag.on = true;
+        drag.startX = e.clientX; drag.startY = e.clientY;
+        const t = getTransform(idx);
+        drag.initX = t.posX; drag.initY = t.posY;
+        e.stopPropagation();
+        container.style.cursor = 'grabbing';
+        container.setPointerCapture(e.pointerId);
+    });
+
+    container.addEventListener('pointermove', e => {
+        if (!drag.on) return;
+        const t = getTransform(idx);
+        t.posX = drag.initX + (e.clientX - drag.startX);
+        t.posY = drag.initY + (e.clientY - drag.startY);
+        applyPhotoToAll(idx);
+        syncAjusteSliders(idx);
+    });
+
+    const endDrag = e => {
+        if (!drag.on) return;
+        drag.on = false;
+        container.style.cursor = photoAjusteActive[idx] ? 'move' : '';
+        if (e) try { container.releasePointerCapture(e.pointerId); } catch {}
+    };
+    container.addEventListener('pointerup', endDrag);
+    container.addEventListener('pointercancel', endDrag);
+
+    // Scroll = zoom / Ctrl+Scroll = rotation (same as ImageTransform.js)
+    container.addEventListener('wheel', e => {
+        if (!photoAjusteActive[idx]) return;
+        e.preventDefault(); e.stopPropagation();
+        const t = getTransform(idx);
+        if (e.ctrlKey || e.metaKey) {
+            t.rotation = +(t.rotation + (e.deltaY > 0 ? -2 : 2)).toFixed(1);
+        } else {
+            t.zoom = +Math.max(0.3, Math.min(4, t.zoom + (e.deltaY > 0 ? -0.05 : 0.05))).toFixed(3);
+        }
+        applyPhotoToAll(idx);
+        syncAjusteSliders(idx);
+    }, { passive: false });
+}
+
+// ── Ajuste panel (color + transform) ─────────────────────────────────────────
 function buildAjusteProps(idx) {
     const a = getAdjust(idx);
+    const t = getTransform(idx);
     const wrap = document.createElement('div');
 
-    const makeRow = (label, key, min, max, val) => {
-        const row = document.createElement('div');
-        row.className = 'adjust-row';
-        row.innerHTML = `
-            <span class="adjust-label">${label}</span>
-            <input type="range" min="${min}" max="${max}" value="${val}" style="flex:1;accent-color:var(--accent);">
-            <span class="adjust-val">${val}</span>`;
-        const slider = row.querySelector('input');
-        const valEl  = row.querySelector('.adjust-val');
-        slider.addEventListener('input', () => {
-            a[key] = +slider.value;
-            valEl.textContent = slider.value;
-            applyAdjustToPhoto(idx);
-        });
-        return row;
+    // Enable pan/zoom gestures while this panel is open
+    photoAjusteActive[idx] = true;
+    enableAjusteCursors(idx, true);
+
+    // ── Helper: slider row ────────────────────────────────────────────────
+    const sliderRow = (label, id, valId, min, max, step, val, fmt) => {
+        const div = document.createElement('div');
+        div.className = 'adjust-row';
+        div.innerHTML = `<span class="adjust-label">${label}</span>
+            <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"
+                style="flex:1;accent-color:var(--accent);">
+            <span class="adjust-val" id="${valId}">${fmt(val)}</span>`;
+        return div;
     };
 
-    wrap.appendChild(makeRow('Brilho', 'brightness', 50, 200, a.brightness));
-    wrap.appendChild(makeRow('Contraste', 'contrast', 50, 200, a.contrast));
-    wrap.appendChild(makeRow('Saturação', 'saturation', 0, 200, a.saturation));
+    // ── Cor / Luz section ─────────────────────────────────────────────────
+    const secColor = document.createElement('div');
+    secColor.innerHTML = `<div class="prop-label" style="margin-bottom:8px;">Cor e Luz</div>`;
+    const rowB = sliderRow('Brilho',   'az-bri', 'az-bri-val', 50,  200, 1,   a.brightness, v => v+'%');
+    const rowC = sliderRow('Contraste','az-con', 'az-con-val', 50,  200, 1,   a.contrast,   v => v+'%');
+    const rowS = sliderRow('Saturação','az-sat', 'az-sat-val',  0,  200, 1,   a.saturation, v => v+'%');
+    [rowB,rowC,rowS].forEach(row => {
+        const s = row.querySelector('input'), vEl = row.querySelector('.adjust-val');
+        const keyMap = {'az-bri':'brightness','az-con':'contrast','az-sat':'saturation'};
+        s.addEventListener('input', () => { a[keyMap[s.id]] = +s.value; vEl.textContent = s.value+'%'; applyPhotoToAll(idx); });
+    });
+    secColor.appendChild(rowB); secColor.appendChild(rowC); secColor.appendChild(rowS);
+    wrap.appendChild(secColor);
+
+    // ── Separador ─────────────────────────────────────────────────────────
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:var(--border);margin:14px 0 12px;';
+    wrap.appendChild(sep);
+
+    // ── Posição e Zoom section ────────────────────────────────────────────
+    const secTransform = document.createElement('div');
+    secTransform.innerHTML = `<div class="prop-label" style="margin-bottom:6px;">Posição e Zoom
+        <span style="font-size:10px;font-weight:400;color:var(--text-secondary);margin-left:6px;">
+            (arraste a foto · scroll = zoom · ctrl+scroll = rotação)
+        </span>
+    </div>`;
+
+    const rowZ = sliderRow('Zoom',   'az-zoom','az-zoom-val', 0.3, 4,   0.05, t.zoom,     v => Math.round(v*100)+'%');
+    const rowR = sliderRow('Rotação','az-rot', 'az-rot-val', -180,180,  1,    t.rotation, v => (+v).toFixed(0)+'°');
+
+    rowZ.querySelector('input').addEventListener('input', e => {
+        t.zoom = +e.target.value; rowZ.querySelector('.adjust-val').textContent = Math.round(t.zoom*100)+'%';
+        applyPhotoToAll(idx);
+    });
+    rowR.querySelector('input').addEventListener('input', e => {
+        t.rotation = +e.target.value; rowR.querySelector('.adjust-val').textContent = (+t.rotation).toFixed(0)+'°';
+        applyPhotoToAll(idx);
+    });
+    secTransform.appendChild(rowZ);
+    secTransform.appendChild(rowR);
+
+    // posX / posY number inputs
+    const posRow = document.createElement('div');
+    posRow.className = 'adjust-row';
+    posRow.innerHTML = `
+        <span class="adjust-label">Posição</span>
+        <div style="display:flex;gap:6px;flex:1;">
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+                <label style="font-size:9px;color:var(--text-muted);text-align:center;">X</label>
+                <input type="number" id="az-posX" class="prop-input" value="${Math.round(t.posX)}" style="text-align:center;padding:4px;">
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+                <label style="font-size:9px;color:var(--text-muted);text-align:center;">Y</label>
+                <input type="number" id="az-posY" class="prop-input" value="${Math.round(t.posY)}" style="text-align:center;padding:4px;">
+            </div>
+        </div>`;
+    const updatePos = () => {
+        t.posX = +posRow.querySelector('#az-posX').value || 0;
+        t.posY = +posRow.querySelector('#az-posY').value || 0;
+        applyPhotoToAll(idx);
+    };
+    posRow.querySelector('#az-posX').addEventListener('input', updatePos);
+    posRow.querySelector('#az-posY').addEventListener('input', updatePos);
+    secTransform.appendChild(posRow);
+    wrap.appendChild(secTransform);
+
+    // ── Reset button ──────────────────────────────────────────────────────
+    const sep2 = document.createElement('div');
+    sep2.style.cssText = 'height:1px;background:var(--border);margin:14px 0 12px;';
+    wrap.appendChild(sep2);
 
     const resetBtn = document.createElement('button');
     resetBtn.className = 'adjust-reset-btn';
     resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">restart_alt</span>Restaurar padrão';
     resetBtn.addEventListener('click', () => {
-        adjustState[idx] = { brightness: 100, contrast: 100, saturation: 100 };
-        applyAdjustToPhoto(idx);
-        // Rebuild the panel
-        wrap.innerHTML = '';
-        const fresh = buildAjusteProps(idx);
-        wrap.appendChild(...fresh.childNodes);
-        // Easier: just reopen
+        adjustState[idx]    = { brightness: 100, contrast: 100, saturation: 100 };
+        photoTransforms[idx] = { posX: 0, posY: 0, zoom: 1, rotation: 0 };
+        applyPhotoToAll(idx);
         openSheet('Ajuste de foto', buildAjusteProps(idx));
     });
     wrap.appendChild(resetBtn);
     return wrap;
+}
+
+function enableAjusteCursors(idx, on) {
+    const cell = board.querySelector(`.craftools-grid-cell[data-photo-index="${idx}"] .cell-img-layer`);
+    if (cell) cell.style.cursor = on ? 'move' : '';
+    const slide = galleryTrack.querySelector(`.gallery-slide[data-idx="${idx}"] .gallery-img-area`);
+    if (slide) slide.style.cursor = on ? 'move' : '';
 }
 
 // ── Undo ──────────────────────────────────────────────────────────────────────
