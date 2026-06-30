@@ -154,7 +154,7 @@ export class PaperPatterns {
                 style="font-family:'DM Sans', sans-serif; font-size: 8px; fill:${lineColor}; opacity: 0.7;">1</text>`;
         }
 
-        return svgContent;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block; overflow:hidden; position:absolute; inset:0;">${svgContent}</svg>`;
     }
 
     // ── Métodos de Renderização de Papéis ─────────────────────────────────────

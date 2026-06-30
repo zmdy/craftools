@@ -6,6 +6,19 @@ import "./GeradorTool_Translations.js";
 
 const g = (key) => I18n.t('geradorTool.' + key);
 
+// ── Margin helpers ─────────────────────────────────────────────────────────
+const parseMarginStr = (s) => {
+    const parts = String(s || '0 0 0 0').trim().split(/\s+/).map(Number);
+    const [t = 0, r, b, l] = parts;
+    return {
+        top:    t,
+        right:  r !== undefined ? r : t,
+        bottom: b !== undefined ? b : t,
+        left:   l !== undefined ? l : (r !== undefined ? r : t),
+    };
+};
+const marginToStr = (m) => `${m.top} ${m.right} ${m.bottom} ${m.left}`;
+
 // Standard page sizes always available in the builder
 const STANDARD_SIZES = [
     { name: "A4",     size: "210,297", sizeUnit: "mm" },
@@ -30,7 +43,7 @@ export class GeradorTool {
         const panelTitle = document.getElementById('panel-title');
         const panelBody  = document.getElementById('panel-body');
 
-        if (panelTitle) panelTitle.textContent = g('panelTitle');
+        if (panelTitle) panelTitle.textContent = g('panelTitle');  // "Generator"
 
         // ── State ─────────────────────────────────────────────────────────────
         let editingId    = null;   // _id of template being edited (null = new)
@@ -38,20 +51,20 @@ export class GeradorTool {
         let selectedSize = null;
         let layoutType   = 'grid'; // 'grid' | 'strip' | 'promo'
 
-        // Grid / Strip state
+        // Grid / Strip state — margins stored as objects {top,right,bottom,left}
         let cfg = {
             cellWidth:   60,
             cellHeight:  85,
             cellGap:     2,
-            cellPadding: '3 3 20 3',
-            pageMargin:  '5 5 5 5',
+            cellPadding: { top: 3,  right: 3,  bottom: 20, left: 3 },
+            pageMargin:  { top: 5,  right: 5,  bottom: 5,  left: 5 },
             cellLines:   0,
             cellColumns: 0,
         };
 
-        // Promo Kit state
+        // Promo Kit state — cellPadding also as object
         let promoSlots = [
-            { cellWidth: 80, cellHeight: 105, cellCount: 2, cellPadding: '3 3 20 3', cellGap: 2, slotLines: 0, slotColumns: 0 },
+            { cellWidth: 80, cellHeight: 105, cellCount: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, cellGap: 2, slotLines: 0, slotColumns: 0 },
         ];
 
         // Merge standard sizes with active config sizes
@@ -72,15 +85,18 @@ export class GeradorTool {
 
             if (t.type === 'promo_kit') {
                 layoutType = 'promo';
-                promoSlots = (t.cellSlots || []).map(s => ({ ...s }));
+                promoSlots = (t.cellSlots || []).map(s => ({
+                    ...s,
+                    cellPadding: parseMarginStr(s.cellPadding),
+                }));
             } else if (t.cellLines || t.cellColumns) {
                 layoutType = 'strip';
                 cfg = {
                     cellWidth:   t.cellWidth   ?? 60,
                     cellHeight:  t.cellHeight  ?? 85,
                     cellGap:     t.cellGap     ?? 2,
-                    cellPadding: t.cellPadding ?? '3 3 3 3',
-                    pageMargin:  t.pageMargin  ?? '5 5 5 5',
+                    cellPadding: parseMarginStr(t.cellPadding ?? '3 3 3 3'),
+                    pageMargin:  parseMarginStr(t.pageMargin  ?? '5 5 5 5'),
                     cellLines:   t.cellLines   ?? 2,
                     cellColumns: t.cellColumns ?? 1,
                 };
@@ -90,8 +106,8 @@ export class GeradorTool {
                     cellWidth:   t.cellWidth   ?? 60,
                     cellHeight:  t.cellHeight  ?? 85,
                     cellGap:     t.cellGap     ?? 2,
-                    cellPadding: t.cellPadding ?? '3 3 20 3',
-                    pageMargin:  t.pageMargin  ?? '5 5 5 5',
+                    cellPadding: parseMarginStr(t.cellPadding ?? '3 3 20 3'),
+                    pageMargin:  parseMarginStr(t.pageMargin  ?? '5 5 5 5'),
                     cellLines:   0,
                     cellColumns: 0,
                 };
@@ -102,24 +118,24 @@ export class GeradorTool {
         const buildTemplateObject = () => {
             const base = {
                 name,
-                sizes: selectedSize ? [selectedSize.size] : [],
-                pageMargin: cfg.pageMargin,
+                sizes:      selectedSize ? [selectedSize.size] : [],
+                pageMargin: marginToStr(cfg.pageMargin),
                 cellGap:    parseFloat(cfg.cellGap) || 0,
             };
 
             if (layoutType === 'promo') {
                 return {
                     ...base,
-                    type:      'promo_kit',
-                    cellWidth:  0,
-                    cellHeight: 0,
+                    type:        'promo_kit',
+                    cellWidth:   0,
+                    cellHeight:  0,
                     cellPadding: '0 0 0 0',
-                    cellSlots: promoSlots.map(s => ({
-                        cellWidth:   parseFloat(s.cellWidth)   || 0,
-                        cellHeight:  parseFloat(s.cellHeight)  || 0,
-                        cellCount:   parseInt(s.cellCount)     || 1,
-                        cellPadding: s.cellPadding             || '0 0 0 0',
-                        cellGap:     parseFloat(s.cellGap)     || 0,
+                    cellSlots:   promoSlots.map(s => ({
+                        cellWidth:   parseFloat(s.cellWidth)  || 0,
+                        cellHeight:  parseFloat(s.cellHeight) || 0,
+                        cellCount:   parseInt(s.cellCount)    || 1,
+                        cellPadding: marginToStr(s.cellPadding),
+                        cellGap:     parseFloat(s.cellGap)    || 0,
                         ...(s.slotLines   ? { slotLines:   parseInt(s.slotLines)   } : {}),
                         ...(s.slotColumns ? { slotColumns: parseInt(s.slotColumns) } : {}),
                     })),
@@ -130,7 +146,7 @@ export class GeradorTool {
                 ...base,
                 cellWidth:   parseFloat(cfg.cellWidth)  || 60,
                 cellHeight:  parseFloat(cfg.cellHeight) || 85,
-                cellPadding: cfg.cellPadding || '0 0 0 0',
+                cellPadding: marginToStr(cfg.cellPadding),
             };
 
             if (layoutType === 'strip') {
@@ -178,7 +194,7 @@ export class GeradorTool {
                 `;
                 badge.innerHTML = `
                     <span class="material-symbols-outlined" style="font-size: 15px;">visibility</span>
-                    Pré-visualização
+                    ${g('previewBadge')}
                 `;
                 canvasArea.appendChild(badge);
             }
@@ -243,11 +259,34 @@ export class GeradorTool {
                         style="width:72px; text-align:right; padding:4px 6px;">
                 </div>`;
 
-            const paddingInput = (id, label, value) =>
-                `<div class="craftools-field" style="margin-bottom:8px;">
-                    <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">${label}</label>
-                    <input type="text" id="${id}" class="craftools-input" value="${value}" placeholder="T R B L"
-                        style="width:100%; padding:4px 8px; font-family:monospace; font-size:11px;">
+            // Renders 4 individual number inputs (T/R/B/L) for margin/padding fields
+            const marginInputGroup = (idPrefix, label, value) =>
+                `<div class="craftools-field" style="margin-bottom:10px;">
+                    <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:5px;">${label}</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+                        ${['top','right','bottom','left'].map(side => `
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <label style="font-size:9px; color:var(--text-muted); text-align:center; text-transform:uppercase; letter-spacing:.5px;">${g('margin' + side.charAt(0).toUpperCase() + side.slice(1))}</label>
+                            <input type="number" class="craftools-input margin-part-input" data-prefix="${idPrefix}" data-side="${side}"
+                                value="${value[side]}" min="0" max="200" step="0.5"
+                                style="padding:4px; text-align:center; width:100%;">
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+
+            // Same but for promo slot cellPadding
+            const slotMarginGroup = (slotIdx, label, value) =>
+                `<div style="margin-top:6px;">
+                    <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">${label}</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                        ${['top','right','bottom','left'].map(side => `
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <label style="font-size:9px; color:var(--text-muted); text-align:center; text-transform:uppercase; letter-spacing:.5px;">${g('margin' + side.charAt(0).toUpperCase() + side.slice(1))}</label>
+                            <input type="number" class="craftools-input slot-margin-field" data-slot="${slotIdx}" data-side="${side}"
+                                value="${value[side]}" min="0" max="200" step="0.5"
+                                style="padding:4px; text-align:center; width:100%;">
+                        </div>`).join('')}
+                    </div>
                 </div>`;
 
             if (layoutType === 'promo') {
@@ -293,11 +332,7 @@ export class GeradorTool {
                                     value="${slot.slotColumns || 0}" min="0" max="20" step="1" style="width:100%; padding:4px; margin-top:2px;" title="0 = sem subdivisão">
                             </div>
                         </div>
-                        <div>
-                            <label style="font-size:10px; color:var(--text-muted);">${g('slotPadding')}</label>
-                            <input type="text" class="craftools-input slot-field" data-slot="${i}" data-field="cellPadding"
-                                value="${slot.cellPadding}" placeholder="T R B L" style="width:100%; padding:4px; margin-top:2px; font-family:monospace; font-size:11px;">
-                        </div>
+                        ${slotMarginGroup(i, g('slotPaddingLabel'), slot.cellPadding)}
                     </div>
                 `).join('');
 
@@ -308,7 +343,7 @@ export class GeradorTool {
                     ${canAddSlot ? `<button id="gerador-add-slot" class="craftools-topbtn" style="width:100%; justify-content:center; margin-bottom:8px;">
                         <span class="material-symbols-outlined" style="font-size:14px;">add</span>${g('addSlot')}
                     </button>` : ''}
-                    ${paddingInput('cfg-pageMargin', g('pageMargin'), cfg.pageMargin)}
+                    ${marginInputGroup('cfg-pageMargin', g('pageMarginLabel'), cfg.pageMargin)}
                     ${numInput('cfg-cellGap', g('cellGap') + ' (kit)', cfg.cellGap, 0, 30, 0.5)}
                 `;
             }
@@ -317,8 +352,8 @@ export class GeradorTool {
                 ${numInput('cfg-cellWidth',  g('cellWidth'),  cfg.cellWidth,  5, 500, 0.5)}
                 ${numInput('cfg-cellHeight', g('cellHeight'), cfg.cellHeight, 5, 500, 0.5)}
                 ${numInput('cfg-cellGap',    g('cellGap'),    cfg.cellGap,    0, 30,  0.5)}
-                ${paddingInput('cfg-cellPadding', g('cellPadding'), cfg.cellPadding)}
-                ${paddingInput('cfg-pageMargin',  g('pageMargin'),  cfg.pageMargin)}
+                ${marginInputGroup('cfg-cellPadding', g('cellPaddingLabel'), cfg.cellPadding)}
+                ${marginInputGroup('cfg-pageMargin',  g('pageMarginLabel'),  cfg.pageMargin)}
             `;
 
             if (layoutType === 'strip') {
@@ -442,8 +477,8 @@ export class GeradorTool {
                 });
             });
 
-            // Numeric config inputs (grid/strip)
-            ['cfg-cellWidth','cfg-cellHeight','cfg-cellGap','cfg-cellPadding','cfg-pageMargin','cfg-cellLines','cfg-cellColumns'].forEach(id => {
+            // Numeric config inputs (grid/strip) — cellPadding/pageMargin handled separately
+            ['cfg-cellWidth','cfg-cellHeight','cfg-cellGap','cfg-cellLines','cfg-cellColumns'].forEach(id => {
                 const el = root.querySelector(`#${id}`);
                 if (!el) return;
                 el.addEventListener('input', e => {
@@ -453,7 +488,19 @@ export class GeradorTool {
                 });
             });
 
-            // Promo slot fields
+            // Individual margin inputs for cfg.cellPadding / cfg.pageMargin
+            root.querySelectorAll('.margin-part-input').forEach(el => {
+                el.addEventListener('input', e => {
+                    const prefix = e.target.dataset.prefix;
+                    const side   = e.target.dataset.side;
+                    const field  = prefix.replace('cfg-', '');
+                    if (!cfg[field] || typeof cfg[field] !== 'object') cfg[field] = { top: 0, right: 0, bottom: 0, left: 0 };
+                    cfg[field][side] = parseFloat(e.target.value) || 0;
+                    renderPreview();
+                });
+            });
+
+            // Promo slot fields (non-margin)
             root.querySelectorAll('.slot-field').forEach(el => {
                 el.addEventListener('input', e => {
                     const i     = parseInt(e.target.dataset.slot);
@@ -463,12 +510,25 @@ export class GeradorTool {
                 });
             });
 
+            // Individual margin inputs for promo slot cellPadding
+            root.querySelectorAll('.slot-margin-field').forEach(el => {
+                el.addEventListener('input', e => {
+                    const i    = parseInt(e.target.dataset.slot);
+                    const side = e.target.dataset.side;
+                    if (!promoSlots[i].cellPadding || typeof promoSlots[i].cellPadding !== 'object') {
+                        promoSlots[i].cellPadding = { top: 0, right: 0, bottom: 0, left: 0 };
+                    }
+                    promoSlots[i].cellPadding[side] = parseFloat(e.target.value) || 0;
+                    renderPreview();
+                });
+            });
+
             // Add slot
             const addSlotBtn = root.querySelector('#gerador-add-slot');
             if (addSlotBtn) {
                 addSlotBtn.addEventListener('click', () => {
                     if (promoSlots.length >= MAX_PROMO_SLOTS) return;
-                    promoSlots.push({ cellWidth: 60, cellHeight: 85, cellCount: 1, cellPadding: '3 3 20 3', cellGap: 2, slotLines: 0, slotColumns: 0 });
+                    promoSlots.push({ cellWidth: 60, cellHeight: 85, cellCount: 1, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, cellGap: 2, slotLines: 0, slotColumns: 0 });
                     renderPanel();
                 });
             }
@@ -521,8 +581,8 @@ export class GeradorTool {
                     editingId  = null;
                     name       = '';
                     layoutType = 'grid';
-                    cfg        = { cellWidth: 60, cellHeight: 85, cellGap: 2, cellPadding: '3 3 20 3', pageMargin: '5 5 5 5', cellLines: 0, cellColumns: 0 };
-                    promoSlots = [{ cellWidth: 80, cellHeight: 105, cellCount: 2, cellPadding: '3 3 20 3', cellGap: 2, slotLines: 0, slotColumns: 0 }];
+                    cfg        = { cellWidth: 60, cellHeight: 85, cellGap: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, pageMargin: { top: 5, right: 5, bottom: 5, left: 5 }, cellLines: 0, cellColumns: 0 };
+                    promoSlots = [{ cellWidth: 80, cellHeight: 105, cellCount: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, cellGap: 2, slotLines: 0, slotColumns: 0 }];
                     renderPanel();
                 });
             }
