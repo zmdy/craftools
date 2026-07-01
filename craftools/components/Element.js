@@ -247,12 +247,22 @@ export class Craftools_Element extends HTMLElement {
 
         if (this._outsideHandler) return;
         this._outsideHandler = (e) => {
-            if (!this.contains(e.target) && 
-                !e.target.closest('.craftools-ctxbar') && 
+            if (!this.contains(e.target) &&
+                !e.target.closest('.craftools-ctxbar') &&
                 !e.target.closest('.craftools-panel') &&
                 !e.target.closest('.footer-nav-area') &&
                 !e.target.closest('#mobile-mini-panel') &&
-                !e.target.closest('#mobile-mini-overlay')) {
+                !e.target.closest('#mobile-mini-overlay') &&
+                // Bottom-sheet property panels (used e.g. by photo_uploader.html's
+                // Legenda/Ajuste/Fundo sheets) and the API asset picker modal are also
+                // "part of the UI", not an outside click — without this, every pointerdown
+                // on a control inside them (font <select>, color swatch, align buttons...)
+                // was deselecting the element mid-click, which tore down and rebuilt the
+                // panel before the click could register (native <select> never opened,
+                // sliders lost drag tracking, etc).
+                !e.target.closest('#bottom-sheet') &&
+                !e.target.closest('#sheet-overlay') &&
+                !e.target.closest('#api-picker-backdrop')) {
                 this.deselect();
             }
         };
