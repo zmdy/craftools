@@ -406,6 +406,10 @@ export class CommonProperties {
         const target = this._resolveTarget(element, targetSelector);
         if (!target) return;
 
+        const isLocked = element.getAttribute('data-locked') === 'true';
+        const lockLabel = isLocked ? (I18n.t('common.locked') || 'Bloqueado') : (I18n.t('common.lock') || 'Bloquear');
+        const lockTitle = isLocked ? (I18n.t('common.unlockElement') || 'Desbloquear elemento') : (I18n.t('common.lockElement') || 'Bloquear elemento (impede mover/redimensionar)');
+
         const html = `
             <div class="ct-copypaste-bar">
                 <button id="ct-copy-styles" class="craftools-pill" type="button"
@@ -418,6 +422,10 @@ export class CommonProperties {
                     <span class="material-symbols-outlined" style="font-size:13px;">content_paste</span>
                     <span>${I18n.t('common.paste') || 'Colar'}</span>
                 </button>
+                <button id="ct-toggle-lock" class="craftools-pill ${isLocked ? 'active' : ''}" type="button" title="${lockTitle}">
+                    <span class="material-symbols-outlined" style="font-size:13px;">${isLocked ? 'lock' : 'lock_open'}</span>
+                    <span>${lockLabel}</span>
+                </button>
             </div>
         `;
 
@@ -427,6 +435,7 @@ export class CommonProperties {
 
         const btnCopy  = container.querySelector('#ct-copy-styles');
         const btnPaste = container.querySelector('#ct-paste-styles');
+        const btnLock  = container.querySelector('#ct-toggle-lock');
 
         btnCopy?.addEventListener('click', () => {
             window.__craftoolsClipboardStyle = {
@@ -461,6 +470,28 @@ export class CommonProperties {
                 element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.x + 10, clientY: rect.y + 10 }));
                 element.dispatchEvent(new PointerEvent('pointerup',   { bubbles: true }));
             }, 50);
+        });
+
+        // "Bloquear" — impede mover/redimensionar/rotacionar/excluir o elemento
+        // pela interface (ver data-locked em Element.js: _bindEvents/_syncLockUI).
+        // Desativado por padrão em todas as ferramentas; PaperTool.createElement()
+        // é a única que já cria o elemento com data-locked="true".
+        btnLock?.addEventListener('click', () => {
+            const nowLocked = element.getAttribute('data-locked') !== 'true';
+            element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+            if (typeof element._syncLockUI === 'function') element._syncLockUI();
+
+            btnLock.classList.toggle('active', nowLocked);
+            const icon = btnLock.querySelector('.material-symbols-outlined');
+            if (icon) icon.textContent = nowLocked ? 'lock' : 'lock_open';
+            const label = btnLock.querySelector('span:last-child');
+            if (label) label.textContent = nowLocked ? (I18n.t('common.locked') || 'Bloqueado') : (I18n.t('common.lock') || 'Bloquear');
+            btnLock.title = nowLocked
+                ? (I18n.t('common.unlockElement') || 'Desbloquear elemento')
+                : (I18n.t('common.lockElement') || 'Bloquear elemento (impede mover/redimensionar)');
+
+            if (config.onChange) config.onChange();
+            this._triggerChange(element);
         });
     }
 

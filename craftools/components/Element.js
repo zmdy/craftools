@@ -216,6 +216,21 @@ export class Craftools_Element extends HTMLElement {
         this._content.addEventListener('focusout', restore, { once: true });
     }
 
+    /**
+     * Aplica o estado de data-locked na UI: esconde os handles de
+     * redimensionar/rotacionar/excluir e troca o cursor do overlay de arraste.
+     * Chamado no select() (para refletir o lock ao abrir o elemento) e também
+     * pelo toggle "Bloquear" em CommonProperties.js, para que o lock/unlock
+     * tenha efeito imediato mesmo com o elemento já selecionado na tela.
+     */
+    _syncLockUI() {
+        if (!this._ctrlbar) return;
+        const isLocked = this.getAttribute('data-locked') === 'true';
+        const handles = this._ctrlbar.querySelectorAll('.rsz-handle, .rot-handle, .del-handle');
+        handles.forEach(h => h.style.display = isLocked ? 'none' : '');
+        if (this._overlay) this._overlay.style.cursor = isLocked ? 'default' : 'move';
+    }
+
     select() {
         const page = this.closest('.craftools-page');
         if (page) {
@@ -234,11 +249,7 @@ export class Craftools_Element extends HTMLElement {
         }
 
         this._ctrlbar.style.display = 'block';
-        
-        if (this.getAttribute('data-locked') === 'true') {
-            const handles = this._ctrlbar.querySelectorAll('.rsz-handle, .rot-handle, .del-handle');
-            handles.forEach(h => h.style.display = 'none');
-        }
+        this._syncLockUI();
 
         this.style.zIndex = '100';
 

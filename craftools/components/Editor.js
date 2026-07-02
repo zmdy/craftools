@@ -441,7 +441,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'papeis', 'emoji'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'emoji'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -471,13 +471,6 @@ export class Craftools_Editor extends HTMLElement {
                     el.setAttribute('x', cx - 90);
                     el.setAttribute('y', cy - 90);
                     mainPage.appendChild(el);
-                } else if (tool === 'papeis') {
-                    const { PaperTool } = await import('../tools/paper/PaperTool.js');
-                    const el = PaperTool.createElement(tool, this);
-                    mainPage.appendChild(el);
-                    setTimeout(() => {
-                        if (typeof el.select === 'function') el.select();
-                    }, 50);
                 } else if (tool === 'emoji') {
                     // For emoji, show the picker panel — user picks which emoji to add
                     const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
