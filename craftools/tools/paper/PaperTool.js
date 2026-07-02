@@ -49,9 +49,6 @@ export class PaperTool extends BaseTool {
             lineStyle: 'solid',
             lineSpacing: 8,
             lineWidth: 0.5,
-            basicOptions: {
-                dateLine: true
-            },
             margins: {
                 top: 25,
                 right: 20,
@@ -79,6 +76,11 @@ export class PaperTool extends BaseTool {
     static createElement(type, editorApp) {
         const el = document.createElement('craftools-element');
         el.setAttribute('data-craftool', 'papeis');
+        // O papel de fundo fica travado por padrão -- diferente de todas as outras
+        // ferramentas (que nascem destravadas) -- para não ser movido/redimensionado
+        // sem querer por cima da página. Ver CommonProperties.js (toggle "Bloquear")
+        // e Element.js (_syncLockUI) para o mecanismo genérico de bloqueio.
+        el.setAttribute('data-locked', 'true');
 
         // Configurações padrão de papel
         const meta = this.getDefaultMeta();
@@ -221,11 +223,6 @@ export class PaperTool extends BaseTool {
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('paperTool.lineWidth')}</span>
                 <input type="number" id="paper-line-width" min="0.1" max="5" step="0.1" class="craftools-input" style="width:100%;" value="${meta.lineWidth}">
-            </div>
-
-            <div class="ct-field" style="flex-direction:row; align-items:center; gap:6px; margin-top:8px;">
-                <input type="checkbox" id="paper-check-dateline" ${meta.basicOptions.dateLine ? 'checked' : ''} style="cursor:pointer;">
-                <span class="craftools-label" style="margin:0; cursor:pointer;" id="label-check-dateline">${I18n.t('paperTool.dateLine')}</span>
             </div>
         `;
 
@@ -428,18 +425,6 @@ export class PaperTool extends BaseTool {
         lineWidthInput.addEventListener('input', (e) => {
             meta.lineWidth = parseFloat(e.target.value) || 0.5;
             this.updatePaperSVG(element);
-        });
-
-        const checkDateLine = editorPanel.querySelector('#paper-check-dateline');
-        const labelDateLine = editorPanel.querySelector('#label-check-dateline');
-        const toggleDateLine = () => {
-            meta.basicOptions.dateLine = checkDateLine.checked;
-            this.updatePaperSVG(element);
-        };
-        checkDateLine.addEventListener('change', toggleDateLine);
-        labelDateLine.addEventListener('click', () => {
-            checkDateLine.checked = !checkDateLine.checked;
-            toggleDateLine();
         });
 
         // 5. Margens

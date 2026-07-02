@@ -72,6 +72,10 @@ export const Translations = {
             noStyleCopied: "Nenhum estilo copiado!",
             incompatibleStyleTypes: "Você só pode colar estilos entre elementos do mesmo tipo (ex: Imagem para Imagem).",
             sectionForma: "Forma (Borda, Margem...)",
+            lock: "Bloquear",
+            locked: "Bloqueado",
+            lockElement: "Bloquear elemento (impede mover/redimensionar)",
+            unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamanho & Posicionamento",
             sectionEstilo: "Estilo"
         },
@@ -178,6 +182,10 @@ export const Translations = {
             noStyleCopied: "No style copied yet!",
             incompatibleStyleTypes: "You can only paste styles between elements of the same type (e.g. Image to Image).",
             sectionForma: "Shape (Border, Margin...)",
+            lock: "Lock",
+            locked: "Locked",
+            lockElement: "Lock element (prevents moving/resizing)",
+            unlockElement: "Unlock element",
             sectionTamanho: "Size & Position",
             sectionEstilo: "Style"
         },
@@ -284,6 +292,10 @@ export const Translations = {
             noStyleCopied: "¡Ningún estilo copiado!",
             incompatibleStyleTypes: "Solo puedes pegar estilos entre elementos del mismo tipo (ej.: Imagen a Imagen).",
             sectionForma: "Forma (Borde, Margen...)",
+            lock: "Bloquear",
+            locked: "Bloqueado",
+            lockElement: "Bloquear elemento (impide mover/redimensionar)",
+            unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamaño y Posición",
             sectionEstilo: "Estilo"
         },

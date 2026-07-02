@@ -115,18 +115,6 @@ export class PaperPatterns {
             svgContent += `<line x1="${mL}" y1="0" x2="${mL}" y2="${height}" stroke="#3b82f6" stroke-width="${lWidth * 1.5}" stroke-dasharray="4,2"/>`;
         }
 
-        // 5. Linha para data no topo direito
-        if (meta.basicOptions && meta.basicOptions.dateLine && mT > 10) {
-            svgContent += `<g transform="translate(${width - mR - 65}, ${mT - 12})" style="font-family:'DM Sans', sans-serif; font-size: 8px; fill:${lineColor}; opacity: 0.85;">
-                <text x="0" y="0">DATA / DATE:</text>
-                <line x1="56" y1="2" x2="68" y2="2" stroke="${lineColor}" stroke-width="0.5"/>
-                <text x="69" y="0">/</text>
-                <line x1="74" y1="2" x2="86" y2="2" stroke="${lineColor}" stroke-width="0.5"/>
-                <text x="87" y="0">/</text>
-                <line x1="92" y1="2" x2="114" y2="2" stroke="${lineColor}" stroke-width="0.5"/>
-            </g>`;
-        }
-
         // 6. Logomarca no topo esquerdo
         if (meta.logo && meta.logo.enabled && mT > 10) {
             svgContent += `<g transform="translate(${mL}, ${mT - 14})" style="opacity: 0.6;">

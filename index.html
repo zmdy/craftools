@@ -677,21 +677,24 @@
 
             // --- PROXY DE CLIQUES E EVENTOS (PWA -> CRAFTOOLS) ---
             setTimeout(() => {
+                // Proxy só faz sentido de um elemento SEM data-tool (ex.: os botões do
+                // footer mobile, pwa-btn-*) para o elemento REAL que tem data-tool (o item
+                // da sidebar, que o Editor.js já escuta diretamente via toolBtns). As
+                // entradas pwa-sidebar-* foram removidas daqui porque cada uma apontava
+                // para SI MESMA (o único elemento que casa com '[data-tool="X"]' é o
+                // próprio item da sidebar) -- clicar nele disparava um target.click()
+                // sobre si mesmo, reprocessando os listeners uma segunda vez. Isso é o
+                // que causava a criação de 2 cópias do papel (e, de forma menos visível,
+                // duplicava título/parágrafo/imagem/álbum/qrcode/emoji também) ao clicar
+                // pelo menu lateral.
                 const toolsMap = {
                     'pwa-btn-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
                     'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
                     'pwa-btn-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
                     'pwa-btn-album': { selector: '[data-tool="album"]', type: 'album' },
                     'pwa-btn-qrcode': { selector: '[data-tool="qrcode"]', type: 'qrcode' },
-                    'pwa-sidebar-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
-                    'pwa-sidebar-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
-                    'pwa-sidebar-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
-                    'pwa-sidebar-album': { selector: '[data-tool="album"]', type: 'album' },
-                    'pwa-sidebar-qrcode': { selector: '[data-tool="qrcode"]', type: 'qrcode' },
-                    'pwa-sidebar-papeis': { selector: '[data-tool="papeis"]', type: 'papeis' },
                     'pwa-sidebar-export': { selector: '#pdf-btn', type: null },
                     'pwa-sidebar-newpage': { selector: '#new-page-btn', type: null },
-                    'pwa-sidebar-emoji': { selector: '[data-tool="emoji"]', type: 'emoji' },
                     'pwa-btn-emoji': { selector: '[data-tool="emoji"]', type: 'emoji' }
                 };
 
