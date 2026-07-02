@@ -22,10 +22,24 @@ export class PageTool {
             pageEl.classList.remove('drag-over');
 
             const toolType = e.dataTransfer.getData('ToolType');
-            
+
             if (toolType === 'album') {
                 const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
+            } else if (toolType === 'emoji') {
+                const emoji = e.dataTransfer.getData('EmojiChar');
+                if (!emoji) return;
+                const { EmojiTool } = await import('../emoji/EmojiTool.js');
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const el = EmojiTool.createElement(emoji);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 40, (rect.width / scale) - 90));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 40, (rect.height / scale) - 90));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
             } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;

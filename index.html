@@ -17,6 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
     <!-- Bootstrap 5.3.8 CSS (CDN, antes vendorizado em vendor/pwa-template/assets/css/) -->
@@ -689,7 +690,9 @@
                     'pwa-sidebar-qrcode': { selector: '[data-tool="qrcode"]', type: 'qrcode' },
                     'pwa-sidebar-papeis': { selector: '[data-tool="papeis"]', type: 'papeis' },
                     'pwa-sidebar-export': { selector: '#pdf-btn', type: null },
-                    'pwa-sidebar-newpage': { selector: '#new-page-btn', type: null }
+                    'pwa-sidebar-newpage': { selector: '#new-page-btn', type: null },
+                    'pwa-sidebar-emoji': { selector: '[data-tool="emoji"]', type: 'emoji' },
+                    'pwa-btn-emoji': { selector: '[data-tool="emoji"]', type: 'emoji' }
                 };
 
                 for (const [pwaId, info] of Object.entries(toolsMap)) {
@@ -996,6 +999,7 @@
                         <li><a href="#" id="pwa-sidebar-imagem" draggable="true" data-tool="imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
                         <li><a href="#" id="pwa-sidebar-album" draggable="true" data-tool="album"><span class="material-symbols-outlined">photo_library</span> <span data-i18n="editor.album">Álbum</span></a></li>
                         <li><a href="#" id="pwa-sidebar-qrcode" draggable="true" data-tool="qrcode"><span class="material-symbols-outlined">qr_code_2</span> <span data-i18n="editor.qrcode">QR Code</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
                     </ul>
                 </div>
                 
@@ -1052,6 +1056,12 @@
                         <button id="pwa-btn-qrcode" draggable="true" class="footer-nav-btn" data-i18n-title="editor.qrcode">
                             <span class="material-symbols-outlined">qr_code_2</span>
                             <span data-i18n="editor.qrcode">QR Code</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="pwa-btn-emoji" class="footer-nav-btn" title="Emojis" data-tool="emoji">
+                            <span style="font-family:'Noto Color Emoji',sans-serif;font-size:20px;line-height:1;display:block;">😊</span>
+                            <span>Emojis</span>
                         </button>
                     </li>
                     <li class="pwa-welcome-msg">

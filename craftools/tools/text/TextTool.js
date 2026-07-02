@@ -194,7 +194,7 @@ export class TextTool extends BaseTool {
 
         // BIND EVENTS
         fontSelect.addEventListener('change', (e) => {
-            textElement.style.fontFamily = `'${e.target.value}', sans-serif`;
+            textElement.style.fontFamily = `'${e.target.value}', 'Noto Color Emoji', sans-serif`;
             customFontInput.value = FONTS.includes(e.target.value) ? '' : e.target.value;
             syncStyles();
             // Trigger an element update (bounding box might change)
@@ -206,7 +206,7 @@ export class TextTool extends BaseTool {
         const applyCustomFont = () => {
             const fontName = customFontInput.value.trim();
             if (fontName) {
-                textElement.style.fontFamily = `'${fontName}', sans-serif`;
+                textElement.style.fontFamily = `'${fontName}', 'Noto Color Emoji', sans-serif`;
                 
                 // Adiciona ao select se não existir
                 if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === fontName.toLowerCase())) {
@@ -414,7 +414,7 @@ export class TextTool extends BaseTool {
             font-size: ${size}px;
             font-weight: ${weight};
             color: #1a1a1a;
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'DM Sans', 'Noto Color Emoji', sans-serif;
             display: block;
             width: 100%;
             height: 100%;

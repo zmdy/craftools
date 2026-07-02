@@ -324,9 +324,19 @@ export class Craftools_Editor extends HTMLElement {
 
             if (toolType === 'titulo' || toolType === 'paragrafo') {
                 this.ctxBar.show(el, TextTool.getCtxOptions(el));
-                
+
                 if (panelTitle) panelTitle.textContent = toolType === 'titulo' ? I18n.t('textTool.propsTitle') : I18n.t('textTool.propsParagraph');
                 if (panelBody) TextTool.renderPropertiesPanel(panelBody, el);
+                openPanelMenu();
+                this.activePage = null;
+            } else if (toolType === 'emoji') {
+                this.ctxBar.show(el, []);
+                if (panelTitle) panelTitle.textContent = 'Emoji';
+                if (panelBody) {
+                    import('../tools/emoji/EmojiTool.js').then(({ EmojiTool }) => {
+                        EmojiTool.renderPropertiesPanel(panelBody, el, this);
+                    });
+                }
                 openPanelMenu();
                 this.activePage = null;
             } else if (toolType === 'imagem') {
@@ -431,7 +441,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'papeis'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'papeis', 'emoji'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -468,6 +478,13 @@ export class Craftools_Editor extends HTMLElement {
                     setTimeout(() => {
                         if (typeof el.select === 'function') el.select();
                     }, 50);
+                } else if (tool === 'emoji') {
+                    // For emoji, show the picker panel — user picks which emoji to add
+                    const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
+                    if (panelTitle) panelTitle.textContent = 'Emoji';
+                    if (panelBody) EmojiTool.renderPickerPanel(panelBody, this);
+                    openPanelMenu();
+                    return; // don't fall through to placeholder removal
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');
                     const el = TextTool.createElement(tool, this);
@@ -492,9 +509,21 @@ export class Craftools_Editor extends HTMLElement {
             }
         });
 
-        // Gerador e Papeis — clique direto
+        // Gerador, Papeis e Emoji — clique direto (desktop)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '');
+            if (tool === 'emoji') {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
+                    if (panelTitle) panelTitle.textContent = 'Emoji';
+                    if (panelBody) EmojiTool.renderPickerPanel(panelBody, this);
+                    openPanelMenu();
+                });
+            }
             if (tool === 'gerador' || tool === 'papeis') {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();

@@ -7,6 +7,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <link rel="stylesheet" href="craftools/craftools.css">
 
@@ -1543,7 +1544,7 @@ function openCaptionEditor(idx) {
         if (textEl) {
             textEl.style.fontSize   = '14px';
             textEl.style.fontWeight = '500';
-            textEl.style.fontFamily = "'DM Sans', sans-serif";
+            textEl.style.fontFamily = "'DM Sans', 'Noto Color Emoji', sans-serif";
             textEl.style.color      = '#333333';
             textEl.style.textAlign  = 'center';
             textEl.textContent = '';
@@ -1819,7 +1820,7 @@ function buildTituloProps(element) {
     textInput.addEventListener('input', e => { textEl.textContent = e.target.value; notifyChange(); });
     requestAnimationFrame(() => { textInput.focus(); textInput.select(); });
 
-    wrap.querySelector('#pp-font').addEventListener('change', e => { ensureFont(e.target.value); textEl.style.fontFamily = `'${e.target.value}', sans-serif`; notifyChange(); });
+    wrap.querySelector('#pp-font').addEventListener('change', e => { ensureFont(e.target.value); textEl.style.fontFamily = `'${e.target.value}', 'Noto Color Emoji', sans-serif`; notifyChange(); });
     const sr = wrap.querySelector('#pp-size-r'), sn = wrap.querySelector('#pp-size-n');
     sr.addEventListener('input', e => { textEl.style.fontSize = e.target.value + 'px'; sn.value = e.target.value; notifyChange(); });
     sn.addEventListener('input', e => { textEl.style.fontSize = e.target.value + 'px'; sr.value = e.target.value; notifyChange(); });
