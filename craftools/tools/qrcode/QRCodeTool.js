@@ -22,7 +22,8 @@ export class QRCodeTool extends BaseTool {
             element.contentArea.style.cursor = 'move';
         }
 
-        const tooLong = QrCode.isLikelyTooLong(this.buildPayload(meta));
+        const isSpotify = meta.payloadType === 'spotify';
+        const tooLong = !isSpotify && QrCode.isLikelyTooLong(this.buildPayload(meta));
 
         const htmlConteudo = `
             <div class="ct-field">
@@ -34,6 +35,7 @@ export class QRCodeTool extends BaseTool {
                     <option value="email" ${meta.payloadType === 'email' ? 'selected' : ''}>${I18n.t('qrTool.typeEmail')}</option>
                     <option value="sms" ${meta.payloadType === 'sms' ? 'selected' : ''}>${I18n.t('qrTool.typeSms')}</option>
                     <option value="pix" ${meta.payloadType === 'pix' ? 'selected' : ''}>${I18n.t('qrTool.typePix')}</option>
+                    <option value="spotify" ${meta.payloadType === 'spotify' ? 'selected' : ''}>${I18n.t('qrTool.typeSpotify')}</option>
                 </select>
             </div>
 
@@ -41,13 +43,29 @@ export class QRCodeTool extends BaseTool {
                 ${this._renderTypeFields(meta)}
             </div>
 
-            <div id="qr-too-long-warning" style="display:${tooLong ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
+            <div id="qr-too-long-warning" style="display:${(!isSpotify && tooLong) ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
                 <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
                 <span>${I18n.t('qrTool.tooLongWarning')}</span>
             </div>
         `;
 
-        const htmlAparencia = `
+        // Spotify Code é uma imagem vinda do serviço oficial da Spotify
+        // (scannables.scdn.co) -- não tem nível de correção de erro (não é um
+        // QR), e só aceita cor de barra preta/branca (limitação da própria
+        // API deles), por isso o painel de Aparência é bem diferente nesse modo.
+        const htmlAparencia = isSpotify ? `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('qrTool.spotifyBarColor')}</span>
+                <div class="ct-field-row">
+                    <button type="button" id="qr-spotify-bar-black" class="craftools-pill ${meta.spotifyBarColor !== 'white' ? 'active' : ''}" style="flex:1; justify-content:center;">${I18n.t('qrTool.spotifyBarBlack')}</button>
+                    <button type="button" id="qr-spotify-bar-white" class="craftools-pill ${meta.spotifyBarColor === 'white' ? 'active' : ''}" style="flex:1; justify-content:center;">${I18n.t('qrTool.spotifyBarWhite')}</button>
+                </div>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('qrTool.spotifyBgColor')}</span>
+                <input type="color" id="qr-spotify-bg" class="craftools-color-swatch" value="${meta.spotifyBg}" style="width:100%;">
+            </div>
+        ` : `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('qrTool.ecLevel')}</span>
                 <select id="qr-ec-level" class="craftools-select" style="width:100%;">
@@ -80,19 +98,23 @@ export class QRCodeTool extends BaseTool {
             PanelUI.accordion('qr-aparencia', 'palette', I18n.t('qrTool.appearance') || 'Aparência', htmlAparencia);
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
+        // Spotify Code renderiza como <img>, os demais tipos como <svg> -- o
+        // seletor de borda/raio/padding/margem precisa acompanhar qual dos
+        // dois está de fato no DOM em cada modo.
+        const visualSelector = isSpotify ? 'img' : 'svg';
         this.renderCommonProperties(editorPanel, element, {
-            border: 'svg',
-            radius: 'svg',
-            padding: 'svg',
-            margin: 'svg',
+            border: visualSelector,
+            radius: visualSelector,
+            padding: visualSelector,
+            margin: visualSelector,
             zindex: true,
             onChange: () => {
-                const svg = element.contentArea.querySelector('svg');
-                if (svg) {
-                    meta.borderWidth = parseFloat(svg.style.borderWidth) || 0;
-                    meta.borderStyle = svg.style.borderStyle || 'none';
-                    meta.borderColor = svg.style.borderColor || '#000000';
-                    meta.borderRadius = svg.style.borderRadius || '0px';
+                const visual = element.contentArea.querySelector(visualSelector);
+                if (visual) {
+                    meta.borderWidth = parseFloat(visual.style.borderWidth) || 0;
+                    meta.borderStyle = visual.style.borderStyle || 'none';
+                    meta.borderColor = visual.style.borderColor || '#000000';
+                    meta.borderRadius = visual.style.borderRadius || '0px';
                 }
             }
         });
@@ -107,26 +129,29 @@ export class QRCodeTool extends BaseTool {
 
         this._bindTypeFields(editorPanel, element, meta);
 
+        // Os campos abaixo só existem no DOM quando NÃO é Spotify Code (ver
+        // htmlAparencia acima) -- os bindings do modo Spotify ficam no bloco
+        // isSpotify logo em seguida.
         const ecSelect = editorPanel.querySelector('#qr-ec-level');
-        ecSelect.onchange = () => {
+        if (ecSelect) ecSelect.onchange = () => {
             meta.ecLevel = ecSelect.value;
             this._regenerate(element);
         };
 
         const colorDark = editorPanel.querySelector('#qr-color-dark');
-        colorDark.oninput = () => {
+        if (colorDark) colorDark.oninput = () => {
             meta.darkColor = colorDark.value;
             this._regenerate(element);
         };
 
         const colorLight = editorPanel.querySelector('#qr-color-light');
-        colorLight.oninput = () => {
+        if (colorLight) colorLight.oninput = () => {
             meta.lightColor = colorLight.value;
             this._regenerate(element);
         };
 
         const bgTransparent = editorPanel.querySelector('#qr-bg-transparent');
-        bgTransparent.onchange = () => {
+        if (bgTransparent) bgTransparent.onchange = () => {
             if (bgTransparent.checked) {
                 meta.lightColor = 'transparent';
                 colorLight.disabled = true;
@@ -136,6 +161,25 @@ export class QRCodeTool extends BaseTool {
             }
             this._regenerate(element);
         };
+
+        if (isSpotify) {
+            const barBlackBtn = editorPanel.querySelector('#qr-spotify-bar-black');
+            const barWhiteBtn = editorPanel.querySelector('#qr-spotify-bar-white');
+            const setBarColor = (color) => {
+                meta.spotifyBarColor = color;
+                barBlackBtn?.classList.toggle('active', color !== 'white');
+                barWhiteBtn?.classList.toggle('active', color === 'white');
+                this._regenerate(element);
+            };
+            barBlackBtn?.addEventListener('click', () => setBarColor('black'));
+            barWhiteBtn?.addEventListener('click', () => setBarColor('white'));
+
+            const bgInput = editorPanel.querySelector('#qr-spotify-bg');
+            if (bgInput) bgInput.oninput = () => {
+                meta.spotifyBg = bgInput.value;
+                this._regenerate(element);
+            };
+        }
     }
 
     /** Gera o HTML dos campos específicos do tipo de conteúdo selecionado. */
@@ -220,6 +264,21 @@ export class QRCodeTool extends BaseTool {
                         <input type="text" id="qr-pix-message" class="craftools-input" maxlength="72" value="${this._esc(meta.pixMessage)}" style="width:100%;">
                     </div>
                 `;
+            case 'spotify': {
+                const uri = this.buildSpotifyUri(meta.spotifyInput);
+                const showInvalid = meta.spotifyInput && !uri;
+                return `
+                    <div class="craftools-field">
+                        <span class="craftools-label">${I18n.t('qrTool.spotifyLabel')}</span>
+                        <input type="text" id="qr-spotify-uri" class="craftools-input" placeholder="${I18n.t('qrTool.spotifyPlaceholder')}" value="${this._esc(meta.spotifyInput)}" style="width:100%;">
+                        <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('qrTool.spotifyHelp')}</span>
+                    </div>
+                    <div id="qr-spotify-invalid-warning" style="display:${showInvalid ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+                        <span>${I18n.t('qrTool.spotifyInvalid')}</span>
+                    </div>
+                `;
+            }
             default:
                 return `
                     <div class="craftools-field">
@@ -288,6 +347,19 @@ export class QRCodeTool extends BaseTool {
                 if (message) message.oninput = () => { meta.pixMessage = message.value; regen(); };
                 break;
             }
+            case 'spotify': {
+                const uriInput = editorPanel.querySelector('#qr-spotify-uri');
+                if (uriInput) uriInput.oninput = () => {
+                    meta.spotifyInput = uriInput.value;
+                    const warn = editorPanel.querySelector('#qr-spotify-invalid-warning');
+                    if (warn) {
+                        const parsed = this.buildSpotifyUri(meta.spotifyInput);
+                        warn.style.display = (meta.spotifyInput && !parsed) ? 'flex' : 'none';
+                    }
+                    this._regenerate(element);
+                };
+                break;
+            }
             default: {
                 const text = editorPanel.querySelector('#qr-text');
                 if (text) text.oninput = () => { meta.text = text.value; regen(); };
@@ -297,13 +369,24 @@ export class QRCodeTool extends BaseTool {
 
     static _updateWarning(editorPanel, meta) {
         const warningEl = editorPanel.querySelector('#qr-too-long-warning');
-        if (warningEl) warningEl.style.display = QrCode.isLikelyTooLong(this.buildPayload(meta)) ? 'flex' : 'none';
+        if (warningEl) warningEl.style.display = (meta.payloadType !== 'spotify' && QrCode.isLikelyTooLong(this.buildPayload(meta))) ? 'flex' : 'none';
     }
 
-    /** Reconstrói o SVG do QR Code a partir do estado atual de `_craftoolsMeta`. */
+    /** Reconstrói o QR Code (ou a imagem do Spotify Code) a partir do estado
+     *  atual de `_craftoolsMeta`. */
     static _regenerate(element) {
         const meta = element._craftoolsMeta;
         if (!meta || !element.contentArea) return;
+
+        if (meta.payloadType === 'spotify') {
+            this._regenerateSpotify(element, meta);
+            return;
+        }
+
+        // Modo normal (QR local) -- remove qualquer <img> de Spotify Code
+        // deixado por uma troca de tipo anterior.
+        const oldImg = element.contentArea.querySelector('img[data-spotify-code]');
+        if (oldImg) oldImg.remove();
 
         const payload = this.buildPayload(meta);
         const svgString = QrCode.buildSvgString(payload, {
@@ -328,6 +411,65 @@ export class QRCodeTool extends BaseTool {
         }
 
         this._triggerChange(element);
+    }
+
+    /**
+     * Renderiza o Spotify Code como <img>, vindo do serviço oficial
+     * scannables.scdn.co (Spotify) -- não é gerado localmente, precisa de
+     * internet. Mantém o mesmo <img> entre atualizações para preservar
+     * borda/raio aplicados via CommonProperties.
+     */
+    static _regenerateSpotify(element, meta) {
+        const oldSvg = element.contentArea.querySelector('svg');
+        if (oldSvg) oldSvg.remove();
+
+        const uri = this.buildSpotifyUri(meta.spotifyInput);
+        const url = uri ? this.buildSpotifyCodeUrl(uri, { bg: meta.spotifyBg, barColor: meta.spotifyBarColor }) : '';
+
+        let img = element.contentArea.querySelector('img[data-spotify-code]');
+        if (!img) {
+            img = document.createElement('img');
+            img.dataset.spotifyCode = 'true';
+            img.alt = 'Spotify Code';
+            img.style.cssText = 'width:100%;height:100%;display:block;user-select:none;pointer-events:none;object-fit:contain;';
+            element.contentArea.appendChild(img);
+        }
+
+        if (url) {
+            img.src = url;
+            img.style.opacity = '1';
+        } else {
+            img.removeAttribute('src');
+            img.style.opacity = '0.35';
+        }
+
+        this._triggerChange(element);
+    }
+
+    /**
+     * Converte um link do Spotify (open.spotify.com/..., com ou sem
+     * "intl-xx/") ou uma URI "spotify:tipo:id" já pronta no formato canônico
+     * "spotify:tipo:id". Retorna '' se não conseguir reconhecer o link/URI.
+     */
+    static buildSpotifyUri(input) {
+        if (!input) return '';
+        const raw = String(input).trim();
+        if (/^spotify:(track|album|artist|playlist|show|episode|user):[A-Za-z0-9]+$/.test(raw)) return raw;
+        const m = raw.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|album|artist|playlist|show|episode|user)\/([A-Za-z0-9]+)/i);
+        if (m) return `spotify:${m[1].toLowerCase()}:${m[2]}`;
+        return '';
+    }
+
+    /**
+     * Monta a URL da imagem do Spotify Code no serviço oficial da Spotify
+     * (scannables.scdn.co) -- não tem chave de API, é o mesmo endpoint público
+     * usado pelo botão "Compartilhar > Código" do próprio app Spotify.
+     */
+    static buildSpotifyCodeUrl(uri, { bg = '#ffffff', barColor = 'black', size = 640 } = {}) {
+        if (!uri) return '';
+        const bgClean = encodeURIComponent(String(bg).replace('#', ''));
+        const bar = (barColor === 'white') ? 'white' : 'black';
+        return `https://scannables.scdn.co/uri/plain/png/${bgClean}/${bar}/${size}/${encodeURIComponent(uri)}`;
     }
 
     static _triggerChange(element) {
@@ -370,6 +512,10 @@ export class QRCodeTool extends BaseTool {
             }
             case 'pix':
                 return this.buildPixPayload(meta);
+            case 'spotify':
+                // Não é codificado num QR local -- só usado por isLikelyTooLong
+                // (sempre curto, então nunca dispara o aviso).
+                return meta.spotifyInput || '';
             default:
                 return meta.text || '';
         }
@@ -464,6 +610,9 @@ export class QRCodeTool extends BaseTool {
             pixAmount: '',
             pixTxid: '',
             pixMessage: '',
+            spotifyInput: '',
+            spotifyBg: '#ffffff',
+            spotifyBarColor: 'black',
             ecLevel: 'M',
             darkColor: '#000000',
             lightColor: '#ffffff',

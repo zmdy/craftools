@@ -40,7 +40,7 @@ export class PageTool {
                 pageEl.appendChild(el);
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
-            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode') {
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
                 
@@ -50,8 +50,8 @@ export class PageTool {
                 const cellTarget = e.target.closest('.craftools-grid-cell');
                 const pRect = pageEl.getBoundingClientRect();
 
-                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : 120);
-                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : 40);
+                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : 120));
+                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : 40));
 
                 if (cellTarget && window.craftoolsAutoSnap !== false) {
                     const cRect = cellTarget.getBoundingClientRect();
@@ -78,6 +78,9 @@ export class PageTool {
                     } else if (toolType === 'qrcode') {
                         dropX = Math.max(10, Math.min(dropX - 90, (pRect.width / scale) - 180));
                         dropY = Math.max(10, Math.min(dropY - 90, (pRect.height / scale) - 180));
+                    } else if (toolType === 'barcode') {
+                        dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220));
+                        dropY = Math.max(10, Math.min(dropY - 50, (pRect.height / scale) - 100));
                     } else {
                         dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
                         dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
@@ -91,6 +94,9 @@ export class PageTool {
                 } else if (toolType === 'qrcode') {
                     const { QRCodeTool } = await import('../qrcode/QRCodeTool.js');
                     el = QRCodeTool.createElement(toolType, editor);
+                } else if (toolType === 'barcode') {
+                    const { BarcodeTool } = await import('../barcode/BarcodeTool.js');
+                    el = BarcodeTool.createElement(toolType, editor);
                 } else if (toolType === 'papeis') {
                     const { PaperTool } = await import('../paper/PaperTool.js');
                     el = PaperTool.createElement(toolType, editor);

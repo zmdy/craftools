@@ -361,6 +361,14 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                     this.activePage = null;
                 });
+            } else if (toolType === 'barcode') {
+                import('../tools/barcode/BarcodeTool.js').then(({ BarcodeTool }) => {
+                    this.ctxBar.show(el, BarcodeTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('barcodeTool.panelTitle') || 'Propriedades do Código de Barras';
+                    if (panelBody) BarcodeTool.renderPropertiesPanel(panelBody, el);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
             } else {
                 this.ctxBar.show(el, []);
             }
@@ -441,7 +449,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'emoji'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'emoji'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -470,6 +478,12 @@ export class Craftools_Editor extends HTMLElement {
                     const el = QRCodeTool.createElement(tool, this);
                     el.setAttribute('x', cx - 90);
                     el.setAttribute('y', cy - 90);
+                    mainPage.appendChild(el);
+                } else if (tool === 'barcode') {
+                    const { BarcodeTool } = await import('../tools/barcode/BarcodeTool.js');
+                    const el = BarcodeTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 110);
+                    el.setAttribute('y', cy - 50);
                     mainPage.appendChild(el);
                 } else if (tool === 'emoji') {
                     // For emoji, show the picker panel — user picks which emoji to add

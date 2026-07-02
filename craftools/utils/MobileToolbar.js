@@ -81,6 +81,8 @@ export class MobileToolbar {
             items = this._getTextItems(element);
         } else if (type === 'qrcode') {
             items = this._getQrItems(element);
+        } else if (type === 'barcode') {
+            items = this._getBarcodeItems(element);
         }
 
         // Botão "voltar" sempre no início
@@ -191,6 +193,35 @@ export class MobileToolbar {
             {
                 icon: 'shield', label: I18n.t('mobileToolbar.qrEcLabel'),
                 action: () => this.openMiniPanel(I18n.t('qrTool.ecLevel'), c => this._renderQrEcLevel(c, el))
+            },
+            {
+                icon: 'border_style', label: I18n.t('common.border'),
+                action: () => this.openMiniPanel(I18n.t('common.border'), c => CommonProperties.renderBorder(c, el, 'svg'))
+            },
+            {
+                icon: 'rounded_corner', label: I18n.t('mobileToolbar.radiusLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.radiusPanelTitle'), c => CommonProperties.renderBorderRadius(c, el, 'svg'))
+            },
+            {
+                icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
+                action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
+            },
+            {
+                icon: 'content_copy', label: I18n.t('common.copy'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, 'svg'))
+            },
+        ];
+    }
+
+    static _getBarcodeItems(el) {
+        return [
+            {
+                icon: 'edit_note', label: I18n.t('mobileToolbar.qrContentLabel'),
+                action: () => this.openMiniPanel(I18n.t('barcodeTool.content'), c => this._renderBarcodeContent(c, el))
+            },
+            {
+                icon: 'palette', label: I18n.t('mobileToolbar.qrColorsLabel'),
+                action: () => this.openMiniPanel(I18n.t('barcodeTool.appearance'), c => this._renderBarcodeColors(c, el))
             },
             {
                 icon: 'border_style', label: I18n.t('common.border'),
@@ -671,6 +702,111 @@ export class MobileToolbar {
                     QRCodeTool._regenerate(el);
                 };
             });
+        });
+    }
+
+    // ─── Section renders: Barcode ──────────────────────────────────────────────
+
+    static _renderBarcodeContent(container, el) {
+        import('../tools/barcode/BarcodeTool.js').then(({ BarcodeTool }) => {
+            import('../utils/BarcodeGenerator.js').then(({ BarcodeGenerator }) => {
+                const meta = el._craftoolsMeta || BarcodeTool.getDefaultMeta();
+                if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+
+                const renderInner = () => {
+                    const isEan = meta.format === 'ean13';
+                    const valid = isEan
+                        ? BarcodeGenerator.isValidEan13Text(meta.text)
+                        : BarcodeGenerator.isValidCode39Text(meta.text);
+
+                    container.innerHTML = `
+                        <div class="mmp-section">
+                            <select class="mmp-select" id="mmp-bc-format" style="margin-bottom:12px;">
+                                <option value="code39" ${!isEan ? 'selected' : ''}>${I18n.t('barcodeTool.formatCode39')}</option>
+                                <option value="ean13" ${isEan ? 'selected' : ''}>${I18n.t('barcodeTool.formatEan13')}</option>
+                            </select>
+                            <div class="mmp-field">
+                                <label>${isEan ? I18n.t('barcodeTool.textLabelEan13') : I18n.t('barcodeTool.textLabelCode39')}</label>
+                                <input type="text" id="mmp-bc-text" class="mmp-input" style="width:100%;"
+                                    placeholder="${isEan ? I18n.t('barcodeTool.textPlaceholderEan13') : I18n.t('barcodeTool.textPlaceholderCode39')}"
+                                    value="${BarcodeTool._esc(meta.text)}">
+                                <span style="font-size:11px; color:var(--text-secondary); display:block; margin-top:4px;">
+                                    ${isEan ? I18n.t('barcodeTool.textHelpEan13') : I18n.t('barcodeTool.textHelpCode39')}
+                                </span>
+                            </div>
+                            <div id="mmp-bc-invalid-warning" style="display:${(!valid && meta.text) ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444; margin-top:8px;">
+                                <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+                                <span>${isEan ? I18n.t('barcodeTool.invalidEan13') : I18n.t('barcodeTool.invalidCode39')}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    container.querySelector('#mmp-bc-format').onchange = (e) => {
+                        meta.format = e.target.value;
+                        renderInner();
+                        BarcodeTool._regenerate(el);
+                    };
+                    container.querySelector('#mmp-bc-text').oninput = (e) => {
+                        meta.text = e.target.value;
+                        const warningEl = container.querySelector('#mmp-bc-invalid-warning');
+                        if (warningEl) {
+                            const stillValid = meta.format === 'ean13'
+                                ? BarcodeGenerator.isValidEan13Text(meta.text)
+                                : BarcodeGenerator.isValidCode39Text(meta.text);
+                            warningEl.style.display = (!stillValid && meta.text) ? 'flex' : 'none';
+                        }
+                        BarcodeTool._regenerate(el);
+                    };
+                };
+                renderInner();
+            });
+        });
+    }
+
+    static _renderBarcodeColors(container, el) {
+        import('../tools/barcode/BarcodeTool.js').then(({ BarcodeTool }) => {
+            const meta = el._craftoolsMeta || BarcodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+
+            container.innerHTML = `
+                <div class="mmp-section">
+                    <div class="mmp-field mmp-grid2">
+                        <div>
+                            <label>${I18n.t('barcodeTool.colorBar')}</label>
+                            <input type="color" id="mmp-bc-bar" class="mmp-color-big" value="${meta.color}">
+                        </div>
+                        <div>
+                            <label>${I18n.t('barcodeTool.colorBackground')}</label>
+                            <input type="color" id="mmp-bc-bg" class="mmp-color-big" value="${meta.background === 'transparent' ? '#ffffff' : meta.background}" ${meta.background === 'transparent' ? 'disabled' : ''}>
+                        </div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:13px;">
+                        <input type="checkbox" id="mmp-bc-transparent" ${meta.background === 'transparent' ? 'checked' : ''}>
+                        ${I18n.t('barcodeTool.transparentBg')}
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; margin-top:6px; font-size:13px;">
+                        <input type="checkbox" id="mmp-bc-showtext" ${meta.showText ? 'checked' : ''}>
+                        ${I18n.t('barcodeTool.showText')}
+                    </label>
+                </div>
+            `;
+
+            const barInput = container.querySelector('#mmp-bc-bar');
+            const bgInput = container.querySelector('#mmp-bc-bg');
+            const transpInput = container.querySelector('#mmp-bc-transparent');
+            const showTextInput = container.querySelector('#mmp-bc-showtext');
+
+            barInput.oninput = () => { meta.color = barInput.value; BarcodeTool._regenerate(el); };
+            bgInput.oninput = () => { meta.background = bgInput.value; BarcodeTool._regenerate(el); };
+            transpInput.onchange = () => {
+                if (transpInput.checked) { meta.background = 'transparent'; bgInput.disabled = true; }
+                else { meta.background = bgInput.value || '#ffffff'; bgInput.disabled = false; }
+                BarcodeTool._regenerate(el);
+            };
+            showTextInput.onchange = () => {
+                meta.showText = showTextInput.checked;
+                BarcodeTool._regenerate(el);
+            };
         });
     }
 
