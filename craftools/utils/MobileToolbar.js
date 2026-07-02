@@ -50,6 +50,7 @@ export class MobileToolbar {
         this._activeElement = null;
         this._activeType = null;
         this.closeMiniPanel();
+        this._updateScrollReserve();
 
         const items = [
             { icon: 'title',         label: I18n.t('mobileToolbar.toolTitle'),   action: () => this._triggerTool('titulo') },
@@ -94,6 +95,10 @@ export class MobileToolbar {
         });
 
         this._renderFooterItems(items);
+        // Mantém o elemento recém-selecionado visível acima do footer, mesmo antes
+        // de qualquer mini-painel específico ser aberto (ex.: elemento perto da
+        // borda inferior da tela ficaria parcialmente atrás do footer de propriedades).
+        this._keepElementVisible();
     }
 
     // ─── Definição de itens por tipo de elemento ───────────────────────────────
@@ -264,11 +269,59 @@ export class MobileToolbar {
 
         this._miniPanel.classList.add('open');
         this._overlay.classList.add('open');
+        // O mini-painel agora ocupa mais espaço embaixo (além do footer) — recalcula
+        // a reserva e re-centraliza o elemento no espaço que sobrou visível acima dele.
+        this._keepElementVisible();
     }
 
     static closeMiniPanel() {
         this._miniPanel?.classList.remove('open');
         this._overlay?.classList.remove('open');
+        this._updateScrollReserve();
+    }
+
+    // ─── Manter elemento em foco visível (estilo canvas/Canva) ─────────────────
+    // Em vez de escurecer/cobrir a tela com um overlay enquanto uma ferramenta está
+    // aberta (o comportamento antigo do #mobile-mini-overlay), o canvas reserva o
+    // espaço ocupado pelo footer de propriedades + mini-painel via
+    // `scroll-padding-bottom` e centraliza o elemento selecionado dentro do espaço
+    // que sobra visível -- assim ele nunca fica escondido atrás da UI, e continua
+    // totalmente interativo (dá pra mover/redimensionar normalmente), igual ao
+    // comportamento no desktop.
+
+    static _getCanvasArea() {
+        return document.getElementById('canvas-area');
+    }
+
+    /** Altura (px) que o footer de propriedades + mini-painel (se aberto) ocupam
+     *  na parte de baixo da tela agora mesmo. */
+    static _currentReservePx() {
+        const footer = document.querySelector('.footer-nav-area');
+        let reserve = footer ? footer.offsetHeight : 0;
+        if (this._miniPanel?.classList.contains('open')) {
+            reserve += this._miniPanel.offsetHeight;
+        }
+        return reserve;
+    }
+
+    /** Atualiza o scroll-padding-bottom do canvas para refletir o espaço ocupado
+     *  pela UI agora (0 quando nenhum elemento está em foco). */
+    static _updateScrollReserve() {
+        const canvasArea = this._getCanvasArea();
+        if (!canvasArea) return;
+        const reserve = this._activeElement ? this._currentReservePx() + 16 : 0;
+        canvasArea.style.scrollPaddingBottom = reserve ? `${reserve}px` : '';
+    }
+
+    /** Rola o canvas para centralizar o elemento em foco no espaço visível acima
+     *  do footer/mini-painel. Chamado ao selecionar um elemento (showElementMode)
+     *  e ao abrir cada mini-painel de propriedades (openMiniPanel). */
+    static _keepElementVisible() {
+        if (!this._activeElement) return;
+        this._updateScrollReserve();
+        requestAnimationFrame(() => {
+            this._activeElement?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        });
     }
 
     // ─── Section renders: Imagem ───────────────────────────────────────────────

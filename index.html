@@ -418,19 +418,16 @@
                 color: var(--accent);
             }
             
-            /* Mini-Panel Overlay */
+            /* Mini-Panel Overlay — desativado por design. O editor mobile agora se
+               comporta como o canvas normal: o elemento em edição continua
+               totalmente visível e interativo (dá pra mover/redimensionar) enquanto
+               um painel de propriedades está aberto embaixo, em vez de escurecer/
+               bloquear a tela toda. O elemento em si continua no DOM só por
+               compatibilidade com o seletor "#mobile-mini-overlay" usado no
+               outsideHandler de Element.js. Ver MobileToolbar.js (_keepElementVisible)
+               para a lógica que mantém o elemento visível acima do footer/painel. */
             #mobile-mini-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.4);
-                z-index: 1060;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.2s ease;
-            }
-            #mobile-mini-overlay.open {
-                opacity: 1;
-                pointer-events: auto;
+                display: none;
             }
             
             /* Mini-Panel */

@@ -58,40 +58,6 @@ export const GridSizes = [
         sizes: ["210,297", "297,420"]
     },
     {
-        name: "Promo Kit (5x5, 5x7, 7x9)",
-        type: "promo_kit",
-        cellSlots: [
-            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 6, cellGap: 0, },
-            { id: "g2", cellWidth: 50, cellHeight: 70, cellPadding: "3 3 3 3", cellCount: 2, cellGap: 0, },
-            { id: "g3", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 3 3", cellCount: 2, cellGap: 0, }
-        ],
-        pageMargin: "20 15 15 15",
-        cellGap: 2,
-        sizes: ["210,297", "297,210", "297,420"]
-    },
-    {
-        name: "Promo Kit + Tirinha (5x5 + tirinha 4x12)",
-        type: "promo_kit",
-        cellSlots: [
-            { id: "strip1", cellWidth: 40, cellHeight: 120, cellPadding: "2 2 2 2", cellCount: 2, cellGap: 2, cellLines: 3, cellColumns: 1, cellSpacing: 2 },
-            { id: "g1", cellWidth: 50, cellHeight: 50, cellPadding: "3 3 3 3", cellCount: 4, cellGap: 2 }
-        ],
-        pageMargin: "20 15 15 15",
-        cellGap: 2,
-        sizes: ["210,297", "297,210", "297,420"]
-    },
-    {
-        name: "Promo Kit Aniversário (Tirinha 10x15 + Polaroids 7x9)",
-        type: "promo_kit",
-        cellSlots: [
-            { id: "strip1", cellWidth: 100, cellHeight: 150, cellPadding: "3 3 3 3", cellCount: 1, cellGap: 2, cellLines: 2, cellColumns: 2, cellSpacing: 3 },
-            { id: "g1", cellWidth: 70, cellHeight: 100, cellPadding: "3 3 23 3", cellCount: 2, cellGap: 2 }
-        ],
-        pageMargin: "20 15 15 15",
-        cellGap: 2,
-        sizes: ["210,297", "297,210", "297,420"]
-    },
-    {
         name: "Fotos 5x5 com borda",
         cellWidth: 50,
         cellHeight: 50,
