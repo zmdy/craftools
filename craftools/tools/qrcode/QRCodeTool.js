@@ -2,6 +2,8 @@ import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { QrCode } from "../../utils/QrCode.js";
 import { PanelUI } from "../../utils/PanelUI.js";
+import { VariablePanel } from "../../utils/VariablePanel.js";
+import { VariableEngine } from "../../utils/VariableEngine.js";
 import "./QRCodeTool_Translations.js";
 
 /**
@@ -23,9 +25,11 @@ export class QRCodeTool extends BaseTool {
         }
 
         const isSpotify = meta.payloadType === 'spotify';
-        const tooLong = !isSpotify && QrCode.isLikelyTooLong(this.buildPayload(meta));
+        const isBound = !!(meta.variableBinding && meta.variableBinding.type);
+        const tooLong = !isSpotify && !isBound && QrCode.isLikelyTooLong(this.buildPayload(meta));
 
         const htmlConteudo = `
+            <div id="qr-bound-notice">${isBound ? this._boundNoticeHtml() : ''}</div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('qrTool.contentType')}</span>
                 <select id="qr-type" class="craftools-select" style="width:100%;">
@@ -95,7 +99,8 @@ export class QRCodeTool extends BaseTool {
 
         editorPanel.innerHTML = 
             PanelUI.accordion('qr-conteudo', 'qr_code', I18n.t('qrTool.content') || 'Conteúdo', htmlConteudo, { open: true }) +
-            PanelUI.accordion('qr-aparencia', 'palette', I18n.t('qrTool.appearance') || 'Aparência', htmlAparencia);
+            PanelUI.accordion('qr-aparencia', 'palette', I18n.t('qrTool.appearance') || 'Aparência', htmlAparencia) +
+            PanelUI.accordion('qr-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding));
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         // Spotify Code renderiza como <img>, os demais tipos como <svg> -- o
@@ -180,6 +185,26 @@ export class QRCodeTool extends BaseTool {
                 this._regenerate(element);
             };
         }
+
+        // Texto Variável — vincula o conteúdo do QR Code a uma variável
+        // (data, sequência, número de página, link, frase da API...), que
+        // substitui o payload manual acima na Exportação de Agenda.
+        VariablePanel.bind(editorPanel, meta.variableBinding, (binding) => {
+            meta.variableBinding = binding;
+            const noticeEl = editorPanel.querySelector('#qr-bound-notice');
+            if (noticeEl) noticeEl.innerHTML = (binding && binding.type) ? this._boundNoticeHtml() : '';
+            this._updateWarning(editorPanel, meta);
+            this._regenerate(element);
+        });
+    }
+
+    static _boundNoticeHtml() {
+        return `
+            <div class="ct-field" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:6px; padding:8px; font-size:11px; color:var(--accent, #6366f1); display:flex; gap:6px; align-items:flex-start;">
+                <span class="material-symbols-outlined" style="font-size:14px;">data_object</span>
+                <span>${I18n.t('variablePanel.boundNotice')}</span>
+            </div>
+        `;
     }
 
     /** Gera o HTML dos campos específicos do tipo de conteúdo selecionado. */
@@ -369,7 +394,8 @@ export class QRCodeTool extends BaseTool {
 
     static _updateWarning(editorPanel, meta) {
         const warningEl = editorPanel.querySelector('#qr-too-long-warning');
-        if (warningEl) warningEl.style.display = (meta.payloadType !== 'spotify' && QrCode.isLikelyTooLong(this.buildPayload(meta))) ? 'flex' : 'none';
+        const isBound = !!(meta.variableBinding && meta.variableBinding.type);
+        if (warningEl) warningEl.style.display = (meta.payloadType !== 'spotify' && !isBound && QrCode.isLikelyTooLong(this.buildPayload(meta))) ? 'flex' : 'none';
     }
 
     /** Reconstrói o QR Code (ou a imagem do Spotify Code) a partir do estado
@@ -378,8 +404,25 @@ export class QRCodeTool extends BaseTool {
         const meta = element._craftoolsMeta;
         if (!meta || !element.contentArea) return;
 
+        const bound = meta.variableBinding && meta.variableBinding.type;
+        if (bound) {
+            VariableEngine.resolvePreview(meta.variableBinding).then(value => {
+                this._renderContent(element, meta, value);
+            });
+            return;
+        }
+        this._renderContent(element, meta, null);
+    }
+
+    /**
+     * @param {string|null} boundValue - quando não-nulo (elemento vinculado a
+     * uma variável), substitui o payload manual (buildPayload/spotifyInput)
+     * pelo valor resolvido da variável (preview no editor; na Exportação de
+     * Agenda o valor real por repetição é resolvido por AgendaExport.js).
+     */
+    static _renderContent(element, meta, boundValue) {
         if (meta.payloadType === 'spotify') {
-            this._regenerateSpotify(element, meta);
+            this._regenerateSpotify(element, meta, boundValue);
             return;
         }
 
@@ -388,7 +431,7 @@ export class QRCodeTool extends BaseTool {
         const oldImg = element.contentArea.querySelector('img[data-spotify-code]');
         if (oldImg) oldImg.remove();
 
-        const payload = this.buildPayload(meta);
+        const payload = boundValue !== null ? boundValue : this.buildPayload(meta);
         const svgString = QrCode.buildSvgString(payload, {
             ecLevel: meta.ecLevel,
             darkColor: meta.darkColor,
@@ -419,11 +462,12 @@ export class QRCodeTool extends BaseTool {
      * internet. Mantém o mesmo <img> entre atualizações para preservar
      * borda/raio aplicados via CommonProperties.
      */
-    static _regenerateSpotify(element, meta) {
+    static _regenerateSpotify(element, meta, boundValue) {
         const oldSvg = element.contentArea.querySelector('svg');
         if (oldSvg) oldSvg.remove();
 
-        const uri = this.buildSpotifyUri(meta.spotifyInput);
+        const rawInput = boundValue !== null && boundValue !== undefined ? boundValue : meta.spotifyInput;
+        const uri = this.buildSpotifyUri(rawInput);
         const url = uri ? this.buildSpotifyCodeUrl(uri, { bg: meta.spotifyBg, barColor: meta.spotifyBarColor }) : '';
 
         let img = element.contentArea.querySelector('img[data-spotify-code]');
@@ -619,7 +663,8 @@ export class QRCodeTool extends BaseTool {
             borderWidth: 0,
             borderStyle: 'none',
             borderColor: '#000000',
-            borderRadius: 0
+            borderRadius: 0,
+            variableBinding: null
         };
     }
 

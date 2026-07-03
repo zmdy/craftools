@@ -2,6 +2,8 @@ import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
 import { PanelUI } from "../../utils/PanelUI.js";
+import { VariablePanel } from "../../utils/VariablePanel.js";
+import { VariableEngine } from "../../utils/VariableEngine.js";
 import "./TextTool_Translations.js";
 
 const FONTS = [
@@ -105,7 +107,8 @@ export class TextTool extends BaseTool {
 
         editorPanel.innerHTML = 
             PanelUI.accordion('text-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
-            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento);
+            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento) +
+            PanelUI.accordion('text-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(element._craftoolsVariable));
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         this.renderCommonProperties(editorPanel, element, {
@@ -115,7 +118,16 @@ export class TextTool extends BaseTool {
             margin: '[contenteditable]',
             zindex: true
         });
-        
+
+        // Texto Variável — vincula o conteúdo deste elemento a uma variável
+        // (data, número sequencial, número de página, link, frase da API...)
+        // que será resolvida dinamicamente na Exportação de Agenda.
+        VariablePanel.bind(editorPanel, element._craftoolsVariable, (binding) => {
+            element._craftoolsVariable = binding;
+            this._applyVariablePreview(element, textElement, binding);
+        });
+        this._applyVariablePreview(element, textElement, element._craftoolsVariable);
+
         // Font dropdown
         const fontSelect = editorPanel.querySelector('#text-prop-font');
         const customFontInput = editorPanel.querySelector('#text-prop-custom-font');
@@ -351,6 +363,38 @@ export class TextTool extends BaseTool {
         // initial align setup
         const initialAlign = textElement.style.textAlign || 'left';
         editorPanel.querySelector(`.text-align-btn[data-align="${initialAlign}"]`)?.classList.add('active');
+    }
+
+    /**
+     * Aplica (ou remove) o estado visual de "conteúdo variável" no elemento
+     * de texto: quando vinculado a uma variável, o contenteditable fica
+     * bloqueado e mostra um preview do valor resolvido (repetição de
+     * amostra); o texto real só é definitivamente substituído no momento da
+     * Exportação de Agenda (ver AgendaExport.js).
+     */
+    static _applyVariablePreview(element, textElement, binding) {
+        if (binding && binding.type) {
+            if (element._craftoolsVariablePrevHtml === undefined && textElement.getAttribute('contenteditable') !== 'false') {
+                element._craftoolsVariablePrevHtml = textElement.innerHTML;
+            }
+            textElement.setAttribute('contenteditable', 'false');
+            textElement.style.outline = '1px dashed var(--accent, #6366f1)';
+            textElement.style.outlineOffset = '2px';
+            textElement.style.cursor = 'default';
+            textElement.textContent = I18n.t('variablePanel.previewLoading');
+            VariableEngine.resolvePreview(binding).then(val => {
+                textElement.textContent = (val && String(val).length) ? val : '—';
+            });
+        } else if (textElement.getAttribute('contenteditable') === 'false') {
+            textElement.setAttribute('contenteditable', 'true');
+            textElement.style.outline = '';
+            textElement.style.outlineOffset = '';
+            textElement.style.cursor = 'text';
+            if (element._craftoolsVariablePrevHtml !== undefined) {
+                textElement.innerHTML = element._craftoolsVariablePrevHtml;
+                delete element._craftoolsVariablePrevHtml;
+            }
+        }
     }
 
     static getCtxOptions() {

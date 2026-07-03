@@ -531,7 +531,7 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                 });
             }
-            if (tool === 'gerador' || tool === 'papeis') {
+            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda') {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
@@ -553,6 +553,14 @@ export class Craftools_Editor extends HTMLElement {
                             closeSidebar();
                             return;
                         }
+                    }
+
+                    if (tool === 'agenda') {
+                        const { AgendaExportTool } = await import('../tools/agenda/AgendaExportTool.js');
+                        openPanelMenu();
+                        this.activePage = null;
+                        AgendaExportTool.setup(this);
+                        return;
                     }
 
                     if (tool === 'gerador') {

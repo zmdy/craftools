@@ -174,6 +174,10 @@ export class MobileToolbar {
                 action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
+                icon: 'data_object', label: I18n.t('variablePanel.title'),
+                action: () => this.openMiniPanel(I18n.t('variablePanel.title'), c => this._renderTextVariable(c, el, textEl))
+            },
+            {
                 icon: 'content_copy', label: I18n.t('common.copy'),
                 action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, '[contenteditable]'))
             },
@@ -207,6 +211,10 @@ export class MobileToolbar {
                 action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
+                icon: 'data_object', label: I18n.t('variablePanel.title'),
+                action: () => this.openMiniPanel(I18n.t('variablePanel.title'), c => this._renderQrVariable(c, el))
+            },
+            {
                 icon: 'content_copy', label: I18n.t('common.copy'),
                 action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, 'svg'))
             },
@@ -234,6 +242,10 @@ export class MobileToolbar {
             {
                 icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
                 action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
+            },
+            {
+                icon: 'data_object', label: I18n.t('variablePanel.title'),
+                action: () => this.openMiniPanel(I18n.t('variablePanel.title'), c => this._renderBarcodeVariable(c, el))
             },
             {
                 icon: 'content_copy', label: I18n.t('common.copy'),
@@ -807,6 +819,51 @@ export class MobileToolbar {
                 meta.showText = showTextInput.checked;
                 BarcodeTool._regenerate(el);
             };
+        });
+    }
+
+    // ─── Section renders: Texto Variável (compartilhado) ──────────────────────
+
+    static _renderTextVariable(container, el, textEl) {
+        Promise.all([
+            import('./VariablePanel.js'),
+            import('../tools/text/TextTool.js'),
+        ]).then(([{ VariablePanel }, { TextTool }]) => {
+            container.innerHTML = VariablePanel.renderAccordionBody(el._craftoolsVariable);
+            VariablePanel.bind(container, el._craftoolsVariable, (binding) => {
+                el._craftoolsVariable = binding;
+                TextTool._applyVariablePreview(el, textEl, binding);
+            });
+        });
+    }
+
+    static _renderQrVariable(container, el) {
+        Promise.all([
+            import('./VariablePanel.js'),
+            import('../tools/qrcode/QRCodeTool.js'),
+        ]).then(([{ VariablePanel }, { QRCodeTool }]) => {
+            const meta = el._craftoolsMeta || QRCodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding);
+            VariablePanel.bind(container, meta.variableBinding, (binding) => {
+                meta.variableBinding = binding;
+                QRCodeTool._regenerate(el);
+            });
+        });
+    }
+
+    static _renderBarcodeVariable(container, el) {
+        Promise.all([
+            import('./VariablePanel.js'),
+            import('../tools/barcode/BarcodeTool.js'),
+        ]).then(([{ VariablePanel }, { BarcodeTool }]) => {
+            const meta = el._craftoolsMeta || BarcodeTool.getDefaultMeta();
+            if (!el._craftoolsMeta) el._craftoolsMeta = meta;
+            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding);
+            VariablePanel.bind(container, meta.variableBinding, (binding) => {
+                meta.variableBinding = binding;
+                BarcodeTool._regenerate(el);
+            });
         });
     }
 

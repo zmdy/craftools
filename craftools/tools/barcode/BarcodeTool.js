@@ -2,6 +2,8 @@ import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { BarcodeGenerator } from "../../utils/BarcodeGenerator.js";
 import { PanelUI } from "../../utils/PanelUI.js";
+import { VariablePanel } from "../../utils/VariablePanel.js";
+import { VariableEngine } from "../../utils/VariableEngine.js";
 import "./BarcodeTool_Translations.js";
 
 /**
@@ -23,11 +25,13 @@ export class BarcodeTool extends BaseTool {
         }
 
         const isEan = meta.format === 'ean13';
+        const isBound = !!(meta.variableBinding && meta.variableBinding.type);
         const valid = isEan
             ? BarcodeGenerator.isValidEan13Text(meta.text)
             : BarcodeGenerator.isValidCode39Text(meta.text);
 
         const htmlConteudo = `
+            <div id="bc-bound-notice">${isBound ? this._boundNoticeHtml() : ''}</div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('barcodeTool.format')}</span>
                 <select id="bc-format" class="craftools-select" style="width:100%;">
@@ -46,7 +50,7 @@ export class BarcodeTool extends BaseTool {
                 </span>
             </div>
 
-            <div id="bc-invalid-warning" style="display:${(!valid && meta.text) ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
+            <div id="bc-invalid-warning" style="display:${(!isBound && !valid && meta.text) ? 'flex' : 'none'}; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444;">
                 <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
                 <span>${isEan ? I18n.t('barcodeTool.invalidEan13') : I18n.t('barcodeTool.invalidCode39')}</span>
             </div>
@@ -75,7 +79,8 @@ export class BarcodeTool extends BaseTool {
 
         editorPanel.innerHTML =
             PanelUI.accordion('bc-conteudo', 'barcode_reader', I18n.t('barcodeTool.content') || 'Conteúdo', htmlConteudo, { open: true }) +
-            PanelUI.accordion('bc-aparencia', 'palette', I18n.t('barcodeTool.appearance') || 'Aparência', htmlAparencia);
+            PanelUI.accordion('bc-aparencia', 'palette', I18n.t('barcodeTool.appearance') || 'Aparência', htmlAparencia) +
+            PanelUI.accordion('bc-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding));
 
         this.renderCommonProperties(editorPanel, element, {
             border: 'svg',
@@ -138,15 +143,36 @@ export class BarcodeTool extends BaseTool {
             meta.showText = showText.checked;
             this._regenerate(element);
         };
+
+        // Texto Variável — vincula o conteúdo do código de barras a uma
+        // variável (data, sequência, número de página, link, frase da
+        // API...), que substitui o texto manual acima na Exportação de Agenda.
+        VariablePanel.bind(editorPanel, meta.variableBinding, (binding) => {
+            meta.variableBinding = binding;
+            const noticeEl = editorPanel.querySelector('#bc-bound-notice');
+            if (noticeEl) noticeEl.innerHTML = (binding && binding.type) ? this._boundNoticeHtml() : '';
+            this._updateWarning(editorPanel, meta);
+            this._regenerate(element);
+        });
+    }
+
+    static _boundNoticeHtml() {
+        return `
+            <div class="ct-field" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:6px; padding:8px; font-size:11px; color:var(--accent, #6366f1); display:flex; gap:6px; align-items:flex-start;">
+                <span class="material-symbols-outlined" style="font-size:14px;">data_object</span>
+                <span>${I18n.t('variablePanel.boundNotice')}</span>
+            </div>
+        `;
     }
 
     static _updateWarning(editorPanel, meta) {
         const warningEl = editorPanel.querySelector('#bc-invalid-warning');
         if (!warningEl) return;
+        const isBound = !!(meta.variableBinding && meta.variableBinding.type);
         const valid = meta.format === 'ean13'
             ? BarcodeGenerator.isValidEan13Text(meta.text)
             : BarcodeGenerator.isValidCode39Text(meta.text);
-        warningEl.style.display = (!valid && meta.text) ? 'flex' : 'none';
+        warningEl.style.display = (!isBound && !valid && meta.text) ? 'flex' : 'none';
     }
 
     /** Reconstrói o SVG a partir do estado atual de `_craftoolsMeta`. */
@@ -154,7 +180,25 @@ export class BarcodeTool extends BaseTool {
         const meta = element._craftoolsMeta;
         if (!meta || !element.contentArea) return;
 
-        const svgString = BarcodeGenerator.buildSvgString(meta.text, {
+        const bound = meta.variableBinding && meta.variableBinding.type;
+        if (bound) {
+            VariableEngine.resolvePreview(meta.variableBinding).then(value => {
+                this._renderContent(element, meta, value);
+            });
+            return;
+        }
+        this._renderContent(element, meta, null);
+    }
+
+    /**
+     * @param {string|null} boundValue - quando não-nulo (elemento vinculado a
+     * uma variável), substitui o texto manual (`meta.text`) pelo valor
+     * resolvido da variável (preview no editor; na Exportação de Agenda o
+     * valor real por repetição é resolvido por AgendaExport.js).
+     */
+    static _renderContent(element, meta, boundValue) {
+        const text = boundValue !== null ? boundValue : meta.text;
+        const svgString = BarcodeGenerator.buildSvgString(text, {
             format: meta.format,
             color: meta.color,
             background: meta.background,
@@ -207,6 +251,7 @@ export class BarcodeTool extends BaseTool {
             borderStyle: 'none',
             borderColor: '#000000',
             borderRadius: 0,
+            variableBinding: null,
         };
     }
 

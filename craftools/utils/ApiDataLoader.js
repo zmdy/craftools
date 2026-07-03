@@ -115,10 +115,41 @@ export async function loadAlbumTemplates() {
 }
 
 /**
+ * Carrega frases/textos usados pela variável "Frase da API" (Texto Variável /
+ * Exportação de Agenda). Recurso configurado no craftools_api: ?resource=phrases
+ * (endpoint local de desenvolvimento: http://127.0.0.1/craftools_api/public/v1/?resource=phrases).
+ * Sem fallback local -- se a API estiver indisponível, retorna lista vazia
+ * (a variável simplesmente não terá valor para substituir).
+ * @param {string} [resource='phrases']
+ * @returns {Promise<any[]>}
+ */
+export async function loadPhrases(resource = 'phrases') {
+    const cacheKey = `phrases:${resource}`;
+    if (_cache[cacheKey]) return _cache[cacheKey];
+
+    const apiData = await fetchResource(resource);
+    if (apiData && apiData.length > 0) {
+        _cache[cacheKey] = apiData;
+        console.info('[ApiDataLoader] Phrases carregadas da API (%d itens, resource=%s)', apiData.length, resource);
+        return apiData;
+    }
+
+    console.warn(
+        '[ApiDataLoader] Phrases: API indisponível ou sem dados (resource=%s) — retornando lista vazia ' +
+        '(não há fallback local para frases). Verifique window.CRAFTOOLS_CONFIG.apiBase.', resource
+    );
+    _cache[cacheKey] = [];
+    return [];
+}
+
+/**
  * Invalida o cache forçando nova busca na próxima chamada.
  * Útil para forçar refresh após login/upgrade de plano.
  */
 export function invalidateApiDataCache() {
     delete _cache.gridSizes;
     delete _cache.albumTemplates;
+    Object.keys(_cache).forEach(k => {
+        if (k.startsWith('phrases:')) delete _cache[k];
+    });
 }
