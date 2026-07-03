@@ -339,6 +339,16 @@ export class Craftools_Editor extends HTMLElement {
                 }
                 openPanelMenu();
                 this.activePage = null;
+            } else if (toolType === 'shape') {
+                this.ctxBar.show(el, []);
+                if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
+                if (panelBody) {
+                    import('../tools/shape/ShapeTool.js').then(({ ShapeTool }) => {
+                        ShapeTool.renderPropertiesPanel(panelBody, el, this);
+                    });
+                }
+                openPanelMenu();
+                this.activePage = null;
             } else if (toolType === 'imagem') {
                 this.ctxBar.show(el, ImageTool.getCtxOptions(el));
                 
@@ -449,7 +459,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'emoji'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'emoji', 'shape'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -492,6 +502,13 @@ export class Craftools_Editor extends HTMLElement {
                     if (panelBody) EmojiTool.renderPickerPanel(panelBody, this);
                     openPanelMenu();
                     return; // don't fall through to placeholder removal
+                } else if (tool === 'shape') {
+                    // For shape, show the picker panel — user picks which shape to add
+                    const { ShapeTool } = await import('../tools/shape/ShapeTool.js');
+                    if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
+                    if (panelBody) ShapeTool.renderPickerPanel(panelBody, this);
+                    openPanelMenu();
+                    return; // don't fall through to placeholder removal
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');
                     const el = TextTool.createElement(tool, this);
@@ -528,6 +545,18 @@ export class Craftools_Editor extends HTMLElement {
                     const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
                     if (panelTitle) panelTitle.textContent = 'Emoji';
                     if (panelBody) EmojiTool.renderPickerPanel(panelBody, this);
+                    openPanelMenu();
+                });
+            }
+            if (tool === 'shape') {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const { ShapeTool } = await import('../tools/shape/ShapeTool.js');
+                    if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
+                    if (panelBody) ShapeTool.renderPickerPanel(panelBody, this);
                     openPanelMenu();
                 });
             }

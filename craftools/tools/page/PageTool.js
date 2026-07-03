@@ -40,6 +40,20 @@ export class PageTool {
                 pageEl.appendChild(el);
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
+            } else if (toolType === 'shape') {
+                const shapeType = e.dataTransfer.getData('ShapeType');
+                if (!shapeType) return;
+                const { ShapeTool } = await import('../shape/ShapeTool.js');
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const el = ShapeTool.createElement(shapeType, editor);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 60, (rect.width / scale) - 120));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 60, (rect.height / scale) - 120));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
             } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
