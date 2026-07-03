@@ -1,5 +1,6 @@
 import { I18n } from "../settings/Translations.js";
 import { PanelUI } from "./PanelUI.js";
+import { SnapEngine } from "./SnapEngine.js";
 
 /**
  * CommonProperties — Standard accordion sections shared by all CrafTools tools.
@@ -30,11 +31,57 @@ export class CommonProperties {
      *                                     Omit / set falsy to skip that control.
      */
     static renderBaseAccordions(container, element, config = {}) {
+        // --- Alinhamento ---
+        this._appendAlinhamento(container, element, config);
+
         // --- Forma ---
         this._appendForma(container, element, config);
 
         // --- Tamanho ---
         this._appendTamanho(container, element, config);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Alinhamento — compact button bar (not an accordion)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    static _appendAlinhamento(container, element, config) {
+        const btn = (dir, icon, title) =>
+            `<button class="craftools-icon-btn ct-align-btn" data-align="${dir}" title="${title}" type="button"
+                style="flex:1; padding:5px 0; display:flex; align-items:center; justify-content:center; border-radius:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span>
+            </button>`;
+
+        const html = `
+            <div class="ct-align-bar" style="padding:8px 10px 4px;">
+                <div style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;
+                            letter-spacing:.05em; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                    <span class="material-symbols-outlined" style="font-size:12px;">align_horizontal_left</span>
+                    ${I18n.t('common.align') || 'Alinhar na página'}
+                </div>
+                <div style="display:flex; gap:4px; margin-bottom:4px;">
+                    ${btn('left',     'align_horizontal_left',   I18n.t('common.alignLeft')     || 'Alinhar à esquerda')}
+                    ${btn('center-h', 'align_horizontal_center', I18n.t('common.alignCenterH')  || 'Centralizar horizontalmente')}
+                    ${btn('right',    'align_horizontal_right',  I18n.t('common.alignRight')    || 'Alinhar à direita')}
+                </div>
+                <div style="display:flex; gap:4px;">
+                    ${btn('top',      'align_vertical_top',      I18n.t('common.alignTop')      || 'Alinhar no topo')}
+                    ${btn('center-v', 'align_vertical_center',   I18n.t('common.alignCenterV')  || 'Centralizar verticalmente')}
+                    ${btn('bottom',   'align_vertical_bottom',   I18n.t('common.alignBottom')   || 'Alinhar na base')}
+                </div>
+            </div>
+        `;
+
+        const bar = document.createElement('div');
+        bar.innerHTML = html;
+        container.appendChild(bar.firstElementChild);
+
+        container.querySelector('.ct-align-bar')?.querySelectorAll('.ct-align-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                SnapEngine.align(element, btn.dataset.align);
+                if (config.onChange) config.onChange();
+            });
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+import { SnapEngine } from '../utils/SnapEngine.js';
+
 export class Craftools_Element extends HTMLElement {
     constructor() {
         super();
@@ -323,6 +325,11 @@ export class Craftools_Element extends HTMLElement {
             this.py += (e.clientY - this.startY) / scY;
             this.startX = e.clientX;
             this.startY = e.clientY;
+
+            // Apply initial transform so getBoundingClientRect() is up-to-date
+            // before SnapEngine reads element screen position for snap calculation
+            this._applyTransform();
+            SnapEngine.snap(this); // may adjust px/py; caller re-applies transform below
         }
         else if (this.isResizing) {
             const scX = this.unitW === 'mm' ? sc * 3.7795275591 : sc;
@@ -389,6 +396,9 @@ export class Craftools_Element extends HTMLElement {
     }
 
     _handleUp(e) {
+        // Clear snap guide lines
+        SnapEngine.clear(this.closest('.craftools-page'));
+
         if (this.isDragging && window.craftoolsAutoSnap !== false && this.getAttribute('data-locked') !== 'true') {
             // Temporarily hide to find the element underneath
             this.style.visibility = 'hidden';
