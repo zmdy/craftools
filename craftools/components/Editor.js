@@ -6,6 +6,7 @@ import { QRCodeTool } from "../tools/qrcode/QRCodeTool.js";
 import { CtxBar } from "../utils/CtxBar.js";
 import { I18n } from "../settings/Translations.js";
 import { PdfExport } from "../utils/PdfExport.js";
+import { ImageExport } from "../utils/ImageExport.js";
 import { HistoryManager } from "../utils/HistoryManager.js";
 import { SessionManager } from "../utils/SessionManager.js";
 import { MobileToolbar } from "../utils/MobileToolbar.js";
@@ -644,6 +645,13 @@ export class Craftools_Editor extends HTMLElement {
             e.preventDefault();
             closeSidebar();
             PdfExport.print(this);
+        }));
+
+        // ── PNG / JPG Export ──────────────────────────────────────────────
+        document.querySelectorAll('#pwa-sidebar-png').forEach(btn => btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeSidebar();
+            ImageExport.export(this);
         }));
 
         // Initialize first page event
