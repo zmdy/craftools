@@ -666,6 +666,109 @@
         [data-theme="dark"] .footer-nav-btn:focus span {
             color: var(--accent) !important;
         }
+
+        /* ==============================================================
+           SIDEBAR — cabeçalho de marca (logo + tagline) e busca
+           ============================================================== */
+
+        /* Cabeçalho da sidebar: sem gradiente, alinhado à esquerda */
+        .craftools-panel-head.sidenav-brand-head {
+            background: var(--primary-500, #ffffff) !important;
+            background-image: none !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            padding: 16px 16px 14px !important;
+            gap: 2px;
+        }
+        .sidenav-brand-head #close-panel {
+            color: var(--text-muted, #71717a) !important;
+            background: var(--bg-input, #f4f4f5) !important;
+        }
+        .sidenav-brand-head #close-panel:hover {
+            background: var(--bg-hover, #e4e4e7) !important;
+            color: var(--text-primary, #18181b) !important;
+        }
+        .sidenav-brand {
+            display: flex;
+            align-items: center;
+        }
+        .sidenav-brand-logo-full {
+            height: 20px;
+            width: auto;
+            display: block;
+        }
+        .sidenav-brand-logo-compact {
+            display: none;
+            height: 22px;
+            width: 22px;
+        }
+        .sidenav-brand-head .panel-subtitle {
+            font-size: 11px !important;
+            color: var(--text-secondary, #71717a) !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.3px !important;
+            margin: 0 !important;
+        }
+        /* Em telas pequenas (bottom sheet mobile), economiza espaço vertical
+           trocando o logo completo + tagline pelo favicon apenas. */
+        @media (max-width: 768px) {
+            .sidenav-brand-logo-full { display: none; }
+            .sidenav-brand-logo-compact { display: block; }
+            .sidenav-brand-head .panel-subtitle { display: none; }
+            .sidenav-brand-head { padding-bottom: 10px !important; }
+        }
+
+        /* Caixa de busca de ferramentas */
+        .sidenav-search {
+            position: relative;
+            padding: 12px 14px 6px;
+        }
+        .sidenav-search .material-symbols-outlined {
+            position: absolute;
+            left: 26px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: var(--text-muted, #a1a1aa);
+            pointer-events: none;
+        }
+        .sidenav-search input {
+            width: 100%;
+            padding: 8px 10px 8px 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border, #e4e4e7);
+            background: var(--bg-input, #f4f4f5);
+            color: var(--text-primary, #18181b);
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .sidenav-search input:focus {
+            border-color: var(--accent, #f97316);
+            box-shadow: 0 0 0 3px var(--accent-subtle, #fff7ed);
+        }
+        .sidenav-nav .ct-no-results {
+            padding: 18px 15px;
+            font-size: 12px;
+            color: var(--text-muted, #a1a1aa);
+            text-align: center;
+        }
+        /* Item ativo na sidebar (ferramenta selecionada / picker aberto) */
+        .sidenav-nav li a {
+            border-radius: 8px;
+            margin: 1px 8px;
+            width: calc(100% - 16px) !important;
+        }
+        .sidenav-nav li a.active {
+            background: var(--accent-subtle, #fff7ed) !important;
+            color: var(--accent, #f97316) !important;
+            font-weight: 700 !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a.active {
+            background: rgba(249,115,22,.15) !important;
+        }
     </style>
 
     <script type="module">
@@ -907,6 +1010,11 @@
                                 const text = I18n.t(key);
                                 if (text && text !== key) el.title = text;
                             });
+                            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                                const key = el.getAttribute('data-i18n-placeholder');
+                                const text = I18n.t(key);
+                                if (text && text !== key) el.setAttribute('placeholder', text);
+                            });
                             document.documentElement.lang = htmlLangMap[window.craftoolsLang] || 'pt-BR';
                         });
                     }
@@ -917,6 +1025,40 @@
                 setInterval(applyPwaI18n, 1500);
 
 
+
+                // ── Sidebar: busca de ferramentas ───────────────────────
+                const sidenavSearchInput = document.getElementById('sidenav-search-input');
+                const sidenavList = document.getElementById('sidenav-nav-list');
+                const sidenavNoResults = document.getElementById('sidenav-no-results');
+                if (sidenavSearchInput && sidenavList) {
+                    sidenavSearchInput.addEventListener('input', () => {
+                        const q = sidenavSearchInput.value.trim().toLowerCase();
+                        const items = Array.from(sidenavList.children);
+                        const labels = [];
+                        let anyVisible = false;
+                        items.forEach(li => {
+                            if (li.classList.contains('ct-sec-label')) {
+                                labels.push(li);
+                                return;
+                            }
+                            const text = li.textContent.trim().toLowerCase();
+                            const match = !q || text.includes(q);
+                            li.classList.toggle('d-none', !match);
+                            if (match) anyVisible = true;
+                        });
+                        // Esconde rótulos de seção cujo grupo ficou sem itens visíveis
+                        labels.forEach(label => {
+                            let el = label.nextElementSibling;
+                            let hasVisible = false;
+                            while (el && !el.classList.contains('ct-sec-label')) {
+                                if (!el.classList.contains('d-none')) { hasVisible = true; break; }
+                                el = el.nextElementSibling;
+                            }
+                            label.classList.toggle('d-none', !hasVisible);
+                        });
+                        if (sidenavNoResults) sidenavNoResults.classList.toggle('d-none', anyVisible || !q);
+                    });
+                }
 
                 // ── Ctrl+Scroll = Zoom (sobrescreve o zoom nativo do browser) ──
                 window.addEventListener('wheel', (e) => {
@@ -987,19 +1129,27 @@
 
             <div class="craftools-panel-drag-indicator"></div>
             
-            <div class="craftools-panel-head sidenav-profile bg-gradient d-flex flex-column justify-content-center align-items-center px-3 py-4" style="position: relative;">
-                <button class="craftools-icon-btn d-none" id="close-panel" style="position: absolute; right: 10px; top: 10px; color: rgba(255,255,255,0.8) !important; background: rgba(255,255,255,0.2) !important;">
+            <div class="craftools-panel-head sidenav-brand-head" style="position: relative;">
+                <button class="craftools-icon-btn d-none" id="close-panel" style="position: absolute; right: 10px; top: 10px;">
                     <span class="material-symbols-outlined">close</span>
                 </button>
-                <img src="./assets/logo-craftools.svg" alt="CrafTools" style="height: 3vh; width: auto; filter: brightness(0); margin-bottom: 8px;" id="panel-logo">
-                <p class="mb-0 panel-subtitle" style="font-size: 11px; color: rgba(0,0,0,0.55); font-weight: 500; letter-spacing: 0.4px;" id="panel-title">Technology for Creativity</p>
+                <div class="sidenav-brand" id="panel-logo">
+                    <img src="./assets/logo-craftools.svg" alt="CrafTools" class="sidenav-brand-logo-full">
+                    <img src="./assets/favicon-craftools.svg" alt="CrafTools" class="sidenav-brand-logo-compact">
+                </div>
+                <p class="mb-0 panel-subtitle" id="panel-title">Tecnologia para criatividade</p>
             </div>
             
             <div class="craftools-panel-body-container" style="flex: 1; overflow-y: auto;">
                 
                 <!-- DEFAULT MENU -->
                 <div id="panel-default-menu">
-                    <ul class="sidenav-nav ps-0 mt-3">
+                    <div class="sidenav-search">
+                        <span class="material-symbols-outlined">search</span>
+                        <input type="search" id="sidenav-search-input" data-i18n-placeholder="editor.searchTools" placeholder="Buscar ferramentas...">
+                    </div>
+                    <ul class="sidenav-nav ps-0 mt-2" id="sidenav-nav-list">
+                        <li class="ct-sec-label" style="padding: 12px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px;"><span data-i18n="editor.sectionPagesFiles">Páginas e Arquivos</span></li>
                         <li><a href="#" id="pwa-sidebar-papeis" draggable="true" data-tool="papeis"><span class="material-symbols-outlined">layers</span> <span data-i18n="editor.papers2">Papéis / Temas</span></a></li>
                         <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
                         <li><a href="#" id="pwa-sidebar-gerador" data-tool="gerador"><span class="material-symbols-outlined">dashboard_customize</span> <span data-i18n="editor.generator">Gerador</span></a></li>
@@ -1008,7 +1158,7 @@
                         <li><a href="#" id="pwa-sidebar-agenda" data-tool="agenda"><span class="material-symbols-outlined">event_note</span> <span data-i18n="editor.agendaExport">Exportar Agenda</span></a></li>
                         <li><a href="#" id="pwa-sidebar-calendario" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
                         
-                        <li style="padding: 15px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--border, #e4e4e7); margin-top: 10px;"><span data-i18n="editor.tools">Ferramentas</span></li>
+                        <li class="ct-sec-label" style="padding: 15px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--border, #e4e4e7); margin-top: 10px;"><span data-i18n="editor.tools">Ferramentas</span></li>
                         <li><a href="#" id="pwa-sidebar-titulo" draggable="true" data-tool="titulo"><span class="material-symbols-outlined">title</span> <span data-i18n="editor.toolTitle">Título</span></a></li>
                         <li><a href="#" id="pwa-sidebar-paragrafo" draggable="true" data-tool="paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
                         <li><a href="#" id="pwa-sidebar-imagem" draggable="true" data-tool="imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
@@ -1018,6 +1168,7 @@
                         <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
                         <li><a href="#" id="pwa-sidebar-shape" data-tool="shape"><span class="material-symbols-outlined">category</span> <span data-i18n="shapeTool.panelTitle">Forma</span></a></li>
                     </ul>
+                    <div class="ct-no-results d-none" id="sidenav-no-results" data-i18n="editor.noToolsFound">Nenhuma ferramenta encontrada</div>
                 </div>
                 
                 <!-- DYNAMIC PROPERTIES BODY -->

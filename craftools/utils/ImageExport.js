@@ -18,14 +18,17 @@
 
 import { Notify } from './Notify.js';
 import { I18n }   from '../settings/Translations.js';
+import './ImageExport_Translations.js';
 
 const H2C_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 
-const RESOLUTIONS = [
-    { id: 'low',    scale: 1, label: 'Baixa',  hint: '1× — rápido, web/preview' },
-    { id: 'medium', scale: 2, label: 'Média',  hint: '2× — redes sociais'       },
-    { id: 'high',   scale: 3, label: 'Alta',   hint: '3× — impressão / máxima'  },
-];
+function _resolutions() {
+    return [
+        { id: 'low',    scale: 1, label: I18n.t('imageExport.resLowLabel'),    hint: I18n.t('imageExport.resLowHint') },
+        { id: 'medium', scale: 2, label: I18n.t('imageExport.resMediumLabel'), hint: I18n.t('imageExport.resMediumHint') },
+        { id: 'high',   scale: 3, label: I18n.t('imageExport.resHighLabel'),   hint: I18n.t('imageExport.resHighHint') },
+    ];
+}
 
 export class ImageExport {
 
@@ -36,12 +39,14 @@ export class ImageExport {
 
         const pages = [...editor.querySelectorAll('.craftools-page')];
         if (!pages.length) {
-            Notify.toast('Nenhuma página encontrada.', 'error');
+            Notify.toast(I18n.t('imageExport.noPagesFound'), 'error');
             return;
         }
 
         const dismissLoading = Notify.toast(
-            `Exportando ${pages.length > 1 ? pages.length + ' páginas' : 'página'}…`,
+            pages.length > 1
+                ? I18n.t('imageExport.exportingPages').replace('{n}', pages.length)
+                : I18n.t('imageExport.exportingPage'),
             'info',
             60_000
         );
@@ -76,12 +81,12 @@ export class ImageExport {
 
                 const blob = await new Promise(res => canvas.toBlob(res, mimeType, quality));
                 if (!blob) {
-                    Notify.toast(`Erro ao gerar página ${i + 1}.`, 'error');
+                    Notify.toast(I18n.t('imageExport.pageError').replace('{n}', i + 1), 'error');
                     continue;
                 }
 
                 const suffix  = pages.length > 1 ? `-p${i + 1}` : '';
-                const resLabel = RESOLUTIONS.find(r => r.scale === opts.scale)?.id || 'export';
+                const resLabel = _resolutions().find(r => r.scale === opts.scale)?.id || 'export';
                 const filename = `craftools${suffix}-${resLabel}.${opts.format}`;
 
                 this._triggerDownload(blob, filename);
@@ -92,13 +97,13 @@ export class ImageExport {
 
             Notify.toast(
                 pages.length > 1
-                    ? `${pages.length} imagens exportadas!`
-                    : 'Imagem exportada com sucesso!',
+                    ? I18n.t('imageExport.successMultiple').replace('{n}', pages.length)
+                    : I18n.t('imageExport.successSingle'),
                 'success'
             );
         } catch (err) {
             console.error('[ImageExport]', err);
-            Notify.toast('Erro ao exportar imagem. Verifique o console.', 'error');
+            Notify.toast(I18n.t('imageExport.genericError'), 'error');
         } finally {
             dismissLoading?.();
             this._showUI(editor);
@@ -131,13 +136,13 @@ export class ImageExport {
 ">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
         <span class="material-symbols-outlined" style="font-size:20px;color:var(--accent,#f97316);">image</span>
-        <span style="font-weight:700;font-size:15px;">Exportar Imagem</span>
+        <span style="font-weight:700;font-size:15px;">${I18n.t('imageExport.dialogTitle')}</span>
     </div>
 
     <!-- Formato -->
     <div style="margin-bottom:14px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-                    color:var(--text-muted,#71717a);margin-bottom:6px;">Formato</div>
+                    color:var(--text-muted,#71717a);margin-bottom:6px;">${I18n.t('imageExport.format')}</div>
         <div style="display:flex;gap:6px;">
             <button data-fmt="png" class="ie-fmt-btn" style="
                 flex:1;padding:8px 0;border-radius:8px;border:2px solid var(--accent,#f97316);
@@ -153,16 +158,16 @@ export class ImageExport {
             </button>
         </div>
         <div id="ie-fmt-hint" style="font-size:10px;color:var(--text-muted,#71717a);margin-top:5px;min-height:14px;">
-            PNG — sem perda de qualidade, suporta transparência
+            ${I18n.t('imageExport.formatHintPng')}
         </div>
     </div>
 
     <!-- Resolução -->
     <div style="margin-bottom:20px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-                    color:var(--text-muted,#71717a);margin-bottom:6px;">Resolução</div>
+                    color:var(--text-muted,#71717a);margin-bottom:6px;">${I18n.t('imageExport.resolution')}</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
-            ${RESOLUTIONS.map(r => `
+            ${_resolutions().map(r => `
             <label data-scale="${r.scale}" class="ie-res-btn" style="
                 display:flex;align-items:center;gap:10px;
                 padding:9px 12px;border-radius:8px;
@@ -189,13 +194,13 @@ export class ImageExport {
             border:1px solid var(--border,#e4e4e7);
             background:var(--bg-input,#f4f4f5);
             color:var(--text-primary,#18181b);
-            font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            font-size:13px;cursor:pointer;font-family:inherit;">${I18n.t('common.cancel')}</button>
         <button id="ie-confirm" style="
             flex:2;padding:9px 0;border-radius:8px;border:none;
             background:var(--accent,#f97316);color:#fff;
             font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
             <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-2px;">download</span>
-            Exportar
+            ${I18n.t('imageExport.exportBtn')}
         </button>
     </div>
 </div>`;
@@ -206,8 +211,8 @@ export class ImageExport {
             const fmtHint = overlay.querySelector('#ie-fmt-hint');
 
             const FORMAT_HINTS = {
-                png: 'PNG — sem perda de qualidade, suporta transparência',
-                jpg: 'JPG — arquivo menor, fundo branco (sem transparência)',
+                png: I18n.t('imageExport.formatHintPng'),
+                jpg: I18n.t('imageExport.formatHintJpg'),
             };
 
             // Format toggle

@@ -35,7 +35,11 @@ export const Translations = {
             redoTitle: "Refazer (Ctrl+Y)",
             historyIndicatorTitle: "Ações guardadas no histórico de desfazer/refazer",
             historyIndicatorDetail: "Histórico de desfazer/refazer: {c} de {m} ações guardadas (limite máximo)",
-            selectLanguage: "Selecionar Idioma"
+            selectLanguage: "Selecionar Idioma",
+            panelSubtitle: "Tecnologia para criatividade",
+            sectionPagesFiles: "Páginas e Arquivos",
+            searchTools: "Buscar ferramentas...",
+            noToolsFound: "Nenhuma ferramenta encontrada"
         },
         mediaTypes: {
             paper: "Artes impressas",
@@ -80,7 +84,14 @@ export const Translations = {
             lockElement: "Bloquear elemento (impede mover/redimensionar)",
             unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamanho & Posicionamento",
-            sectionEstilo: "Estilo"
+            sectionEstilo: "Estilo",
+            align: "Alinhar na página",
+            alignLeft: "Alinhar à esquerda",
+            alignCenterH: "Centralizar horizontalmente",
+            alignRight: "Alinhar à direita",
+            alignTop: "Alinhar no topo",
+            alignCenterV: "Centralizar verticalmente",
+            alignBottom: "Alinhar na base"
         },
         sessionRecovery: {
             title: "Sessão recuperada",
@@ -148,7 +159,11 @@ export const Translations = {
             redoTitle: "Redo (Ctrl+Y)",
             historyIndicatorTitle: "Actions saved in the undo/redo history",
             historyIndicatorDetail: "Undo/redo history: {c} of {m} actions saved (maximum limit)",
-            selectLanguage: "Select Language"
+            selectLanguage: "Select Language",
+            panelSubtitle: "Technology for Creativity",
+            sectionPagesFiles: "Pages & Files",
+            searchTools: "Search tools...",
+            noToolsFound: "No tools found"
         },
         mediaTypes: {
             paper: "Printed Arts",
@@ -193,7 +208,14 @@ export const Translations = {
             lockElement: "Lock element (prevents moving/resizing)",
             unlockElement: "Unlock element",
             sectionTamanho: "Size & Position",
-            sectionEstilo: "Style"
+            sectionEstilo: "Style",
+            align: "Align on page",
+            alignLeft: "Align left",
+            alignCenterH: "Center horizontally",
+            alignRight: "Align right",
+            alignTop: "Align top",
+            alignCenterV: "Center vertically",
+            alignBottom: "Align bottom"
         },
         sessionRecovery: {
             title: "Session recovered",
@@ -261,7 +283,11 @@ export const Translations = {
             redoTitle: "Rehacer (Ctrl+Y)",
             historyIndicatorTitle: "Acciones guardadas en el historial de deshacer/rehacer",
             historyIndicatorDetail: "Historial de deshacer/rehacer: {c} de {m} acciones guardadas (límite máximo)",
-            selectLanguage: "Seleccionar Idioma"
+            selectLanguage: "Seleccionar Idioma",
+            panelSubtitle: "Tecnología para la creatividad",
+            sectionPagesFiles: "Páginas y Archivos",
+            searchTools: "Buscar herramientas...",
+            noToolsFound: "No se encontraron herramientas"
         },
         mediaTypes: {
             paper: "Artes impresas",
@@ -306,7 +332,14 @@ export const Translations = {
             lockElement: "Bloquear elemento (impide mover/redimensionar)",
             unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamaño y Posición",
-            sectionEstilo: "Estilo"
+            sectionEstilo: "Estilo",
+            align: "Alinear en la página",
+            alignLeft: "Alinear a la izquierda",
+            alignCenterH: "Centrar horizontalmente",
+            alignRight: "Alinear a la derecha",
+            alignTop: "Alinear arriba",
+            alignCenterV: "Centrar verticalmente",
+            alignBottom: "Alinear abajo"
         },
         sessionRecovery: {
             title: "Sesión recuperada",
