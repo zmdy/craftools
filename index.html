@@ -102,21 +102,37 @@
             width: 100% !important;
         }
 
-        /* Logo com hover */
-        .logo-wrapper {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
+        /* Marca no header: fora do .container, alinhada à esquerda para bater
+           exatamente com o padding da sidebar (16px), independente do
+           max-width/centralização do Bootstrap .container. */
+        .header-brand {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 1px;
+            z-index: 2;
+            pointer-events: none;
         }
-        .logo-wrapper img {
-            height: 3vh;
+        .header-brand-logo {
+            height: 26px;
             width: auto;
-            transition: opacity 0.25s ease;
+            display: block;
         }
-        .logo-default { opacity: 1; }
-        .logo-hover   { opacity: 0; position: absolute; top: 50%; left: 0; transform: translateY(-50%); }
-        .logo-wrapper:hover .logo-default { opacity: 0; }
-        .logo-wrapper:hover .logo-hover   { opacity: 1; }
+        .header-brand-tagline {
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            color: var(--text-secondary, #71717a);
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .header-brand { display: none; }
+        }
 
         /* Painel direito: mesmo visual do sidenav-wrapper */
         .craftools-panel {
@@ -321,7 +337,7 @@
             flex-direction: column;
             position: relative;
             z-index: 10;
-            transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .sidenav-panel.panel-open {
             margin-left: 0; /* Open on desktop */
@@ -668,18 +684,19 @@
         }
 
         /* ==============================================================
-           SIDEBAR — cabeçalho de marca (logo + tagline) e busca
+           SIDEBAR — cabeçalho (título dinâmico da ferramenta) e busca
            ============================================================== */
 
-        /* Cabeçalho da sidebar: sem gradiente, alinhado à esquerda */
+        /* Cabeçalho da sidebar: a marca (logo + tagline) mora no header do
+           app agora — aqui só sobra o título dinâmico da ferramenta (quando
+           um painel de propriedades está aberto) + botão de fechar. */
         .craftools-panel-head.sidenav-brand-head {
             background: var(--primary-500, #ffffff) !important;
             background-image: none !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
             justify-content: center !important;
-            padding: 16px 16px 14px !important;
-            gap: 2px;
+            align-items: flex-start !important;
+            padding: 12px 16px !important;
+            min-height: 20px;
         }
         .sidenav-brand-head #close-panel {
             color: var(--text-muted, #71717a) !important;
@@ -689,34 +706,38 @@
             background: var(--bg-hover, #e4e4e7) !important;
             color: var(--text-primary, #18181b) !important;
         }
-        .sidenav-brand {
-            display: flex;
-            align-items: center;
-        }
-        .sidenav-brand-logo-full {
-            height: 20px;
-            width: auto;
-            display: block;
-        }
-        .sidenav-brand-logo-compact {
-            display: none;
-            height: 22px;
-            width: 22px;
-        }
         .sidenav-brand-head .panel-subtitle {
-            font-size: 11px !important;
-            color: var(--text-secondary, #71717a) !important;
-            font-weight: 500 !important;
-            letter-spacing: 0.3px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: var(--text-primary, #18181b) !important;
             margin: 0 !important;
         }
-        /* Em telas pequenas (bottom sheet mobile), economiza espaço vertical
-           trocando o logo completo + tagline pelo favicon apenas. */
+
+        /* ── Sidebar recolhida (somente ícones) — acionada pelo botão de
+           menu do rodapé no desktop. Nunca esconde a sidebar por completo;
+           só reduz para uma coluna estreita de ícones. ─────────────────── */
+        .sidenav-panel.sidenav-collapsed {
+            width: 68px !important;
+        }
+        .sidenav-panel.sidenav-collapsed .panel-subtitle,
+        .sidenav-panel.sidenav-collapsed .sidenav-search,
+        .sidenav-panel.sidenav-collapsed .ct-sec-label,
+        .sidenav-panel.sidenav-collapsed .sidenav-nav li a span:not(.material-symbols-outlined) {
+            display: none !important;
+        }
+        .sidenav-panel.sidenav-collapsed .sidenav-nav li a {
+            justify-content: center;
+            padding: 10px 0 !important;
+            margin: 1px 6px !important;
+            width: calc(100% - 12px) !important;
+        }
+        .sidenav-panel.sidenav-collapsed .craftools-panel-resize-handle {
+            display: none;
+        }
         @media (max-width: 768px) {
-            .sidenav-brand-logo-full { display: none; }
-            .sidenav-brand-logo-compact { display: block; }
-            .sidenav-brand-head .panel-subtitle { display: none; }
-            .sidenav-brand-head { padding-bottom: 10px !important; }
+            .sidenav-panel.sidenav-collapsed {
+                width: 100% !important;
+            }
         }
 
         /* Caixa de busca de ferramentas */
@@ -964,6 +985,20 @@
                     e.preventDefault();
                     const panel = document.getElementById('right-panel');
                     if (panel) {
+                        const isMobileView = window.innerWidth <= 768;
+
+                        if (!isMobileView) {
+                            // Desktop: alterna entre sidebar completa e recolhida (somente
+                            // ícones) — nunca esconde totalmente, como no mobile.
+                            const isNowCollapsed = panel.classList.toggle('sidenav-collapsed');
+                            toggleMenuIcon(!isNowCollapsed);
+                            panel.style.marginLeft = '';
+                            if (!panel.classList.contains('panel-open')) {
+                                panel.classList.add('panel-open');
+                            }
+                            return;
+                        }
+
                         const isNowOpen = panel.classList.toggle('panel-open');
                         toggleMenuIcon(isNowOpen);
 
@@ -976,9 +1011,9 @@
                             panel.style.marginLeft = '-' + panel.offsetWidth + 'px';
                         }
 
-                        // Atualiza overlay se estiver no mobile
+                        // Atualiza overlay (bottom sheet mobile)
                         const overlay = document.getElementById('sidebar-overlay');
-                        if (overlay && window.innerWidth <= 768) {
+                        if (overlay) {
                             if (isNowOpen) overlay.classList.add('visible');
                             else overlay.classList.remove('visible');
                         }
@@ -1080,16 +1115,14 @@
 <body class="is-setup-mode">
     <!-- HEADER PWA -->
     <div class="header-area" id="headerArea">
+        <!-- Marca: alinhada à esquerda, fora do .container, para bater exatamente
+             com o padding esquerdo da sidebar (independente do max-width do Bootstrap) -->
+        <div class="header-brand">
+            <img src="./assets/logo-craftools.svg" alt="CrafTools" class="header-brand-logo">
+            <span class="header-brand-tagline" data-i18n="editor.panelSubtitle">Tecnologia para criatividade</span>
+        </div>
         <div class="container">
-            <div class="header-content header-style-five position-relative d-flex align-items-center justify-content-between">
-                
-                <!-- Brand & Sidenav Toggler -->
-                <div class="d-flex align-items-center gap-3">
-                    <div class="logo-wrapper">
-                        <img src="./assets/logo-craftools.svg" alt="CrafTools Logo" class="logo-default">
-                        <img src="./assets/logo-craftools-hover.svg" alt="CrafTools Logo Hover" class="logo-hover">
-                    </div>
-                </div>
+            <div class="header-content header-style-five position-relative d-flex align-items-center justify-content-end">
 
                 <!-- Right Actions: Zoom, Dark Mode, Language -->
                 <div class="right d-flex align-items-center gap-2">
@@ -1133,11 +1166,8 @@
                 <button class="craftools-icon-btn d-none" id="close-panel" style="position: absolute; right: 10px; top: 10px;">
                     <span class="material-symbols-outlined">close</span>
                 </button>
-                <div class="sidenav-brand" id="panel-logo">
-                    <img src="./assets/logo-craftools.svg" alt="CrafTools" class="sidenav-brand-logo-full">
-                    <img src="./assets/favicon-craftools.svg" alt="CrafTools" class="sidenav-brand-logo-compact">
-                </div>
-                <p class="mb-0 panel-subtitle" id="panel-title">Tecnologia para criatividade</p>
+                <div class="d-none" id="panel-logo"></div>
+                <p class="mb-0 panel-subtitle" id="panel-title"></p>
             </div>
             
             <div class="craftools-panel-body-container" style="flex: 1; overflow-y: auto;">

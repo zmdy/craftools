@@ -241,7 +241,7 @@ export class Craftools_Editor extends HTMLElement {
             if(panelBody)   panelBody.classList.add('d-none');
             if(closePanel)  closePanel.classList.add('d-none');
             if(panelLogo)   panelLogo.classList.remove('d-none');
-            if(panelTitle)  panelTitle.textContent = I18n.t('editor.panelSubtitle');
+            if(panelTitle)  panelTitle.textContent = '';
             restoreOriginalCanvas();
         };
 
@@ -437,7 +437,7 @@ export class Craftools_Editor extends HTMLElement {
             if(panelBody) panelBody.classList.add('d-none');
             if(closePanel) closePanel.classList.add('d-none');
             if(panelLogo) panelLogo.classList.remove('d-none');
-            if(panelTitle) panelTitle.textContent = I18n.t('editor.panelSubtitle');
+            if(panelTitle) panelTitle.textContent = '';
             if(rightPanel) rightPanel.classList.remove('mobile-modal-mode');
             document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
             this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
