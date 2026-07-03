@@ -90,6 +90,12 @@ export class ImageTool extends BaseTool {
             </div>
         `;
 
+        const BLEND_MODES = [
+            'normal','multiply','screen','overlay','darken','lighten',
+            'color-dodge','color-burn','hard-light','soft-light',
+            'difference','exclusion','hue','saturation','color','luminosity',
+        ];
+
         const htmlEfeitos = `
             <div class="ct-field">
                 <div class="ct-sublabel"><span class="material-symbols-outlined">blur_on</span>${I18n.t('imageTool.bgBlur')}</div>
@@ -97,6 +103,12 @@ export class ImageTool extends BaseTool {
                     <input type="range" id="bgblur-slider" min="0" max="100" step="1" value="${meta.bgBlur || 0}" style="flex:1;">
                     <span id="bgblur-val-display" class="ct-val-badge">${meta.bgBlur || 0}px</span>
                 </div>
+            </div>
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">blender</span>${I18n.t('imageTool.blendMode') || 'Blend Mode'}</div>
+                <select id="img-blend-select" class="craftools-select">
+                    ${BLEND_MODES.map(m => `<option value="${m}" ${(meta.blendMode || 'normal') === m ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
             </div>
         `;
 
@@ -123,6 +135,12 @@ export class ImageTool extends BaseTool {
                 if (element._syncSidebar) element._syncSidebar();
             }
         });
+
+        // Apply blend mode on panel open (restores persisted state)
+        const imgEl = element.contentArea?.querySelector('img');
+        if (imgEl && meta.blendMode && meta.blendMode !== 'normal') {
+            imgEl.style.mixBlendMode = meta.blendMode;
+        }
 
         // Interaction Bindings
         const syncSliders = () => {
@@ -172,8 +190,11 @@ export class ImageTool extends BaseTool {
             meta.posY = defaults.posY;
             meta.rotation = defaults.rotation;
             meta.bgBlur = defaults.bgBlur;
+            meta.blendMode = defaults.blendMode;
             meta.objectFit = defaults.objectFit;
             FILTERS_CONFIG.forEach(f => meta.filters[f.key] = f.def);
+            const img = element.contentArea?.querySelector('img');
+            if (img) img.style.mixBlendMode = '';
             ImageTransform.applyTransform(element);
             ImageFilters.applyFilters(element);
             // Re-render the whole panel to reflect reset state (sliders, fit buttons)
@@ -259,6 +280,13 @@ export class ImageTool extends BaseTool {
                 if (element._syncSidebar) element._syncSidebar();
             };
         }
+
+        // Bind Blend Mode
+        editorPanel.querySelector('#img-blend-select')?.addEventListener('change', (e) => {
+            meta.blendMode = e.target.value;
+            const img = element.contentArea?.querySelector('img');
+            if (img) img.style.mixBlendMode = meta.blendMode === 'normal' ? '' : meta.blendMode;
+        });
 
         // ── Grid Cell background & overlay integration ─────────────────────
         const cellEl = element.closest('.craftools-grid-cell');
@@ -376,7 +404,8 @@ export class ImageTool extends BaseTool {
             posX: 0,
             posY: 0,
             rotation: 0,
-            bgBlur: 0, // Default 0 (off)
+            bgBlur: 0,
+            blendMode: 'normal',
             borderWidth: 0,
             borderStyle: 'none',
             borderColor: '#000000',
