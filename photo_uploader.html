@@ -779,6 +779,7 @@ import { PhotoUploaderState } from './craftools/utils/PhotoUploaderState.js';
 // normalmente carregadas de graça quando PageTool.js é importado, mas essa página
 // não usa PageTool, então precisamos importar o arquivo de traduções na mão.
 import './craftools/tools/page/PageTool_Translations.js';
+import './craftools/components/CtFontSelect.js';
 
 Craftools_Element.init();
 
@@ -1759,9 +1760,9 @@ function buildTituloProps(element) {
         </div>
         <div class="prop-group">
             <div class="prop-label">Fonte</div>
-            <select id="pp-font" class="prop-input prop-select">
+            <ct-font-select id="pp-font" class="prop-input prop-select">
                 ${FONTS.map(f => `<option value="${f}" ${f===font?'selected':''}>${f}</option>`).join('')}
-            </select>
+            </ct-font-select>
         </div>
         <div class="prop-group">
             <div class="prop-label">Tamanho (px)</div>

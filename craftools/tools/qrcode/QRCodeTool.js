@@ -498,9 +498,22 @@ export class QRCodeTool extends BaseTool {
     static buildSpotifyUri(input) {
         if (!input) return '';
         const raw = String(input).trim();
-        if (/^spotify:(track|album|artist|playlist|show|episode|user):[A-Za-z0-9]+$/.test(raw)) return raw;
-        const m = raw.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|album|artist|playlist|show|episode|user)\/([A-Za-z0-9]+)/i);
+
+        // Canonical simple URI: spotify:type:id (alphanumeric + hyphens/underscores)
+        if (/^spotify:(track|album|artist|playlist|show|episode|user):[A-Za-z0-9_-]+$/.test(raw)) return raw;
+
+        // Compound user-playlist URI: spotify:user:USERNAME:type:ID
+        // → normalize to spotify:type:ID (modern format)
+        const compound = raw.match(/^spotify:user:[^:]+:(track|album|playlist|show|episode|artist):([A-Za-z0-9_-]+)$/i);
+        if (compound) return `spotify:${compound[1].toLowerCase()}:${compound[2]}`;
+
+        // Any other spotify: URI with colons — pass through (API handles it)
+        if (/^spotify:[a-z]+:[A-Za-z0-9:_-]+$/i.test(raw)) return raw;
+
+        // Open Spotify URL: https://open.spotify.com/[intl-xx/]type/ID[?...]
+        const m = raw.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|album|artist|playlist|show|episode|user)\/([A-Za-z0-9_-]+)/i);
         if (m) return `spotify:${m[1].toLowerCase()}:${m[2]}`;
+
         return '';
     }
 

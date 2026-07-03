@@ -3,6 +3,7 @@ import { PanelUI } from "../../utils/PanelUI.js";
 import { Notify } from "../../utils/Notify.js";
 import { CalendarRenderer } from "../../utils/CalendarRenderer.js";
 import "./CalendarTool_Translations.js";
+import "../../components/CtFontSelect.js";
 
 const c = (key) => I18n.t('calendarTool.' + key);
 
@@ -337,7 +338,7 @@ export class CalendarTool {
                 <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
                     <div>
                         <span class="craftools-label">${c('fieldFont')}</span>
-                        <select class="craftools-select" data-part="${key}" data-field="font" style="width:100%;">${this._fontOptions(part.font)}</select>
+                        <ct-font-select class="craftools-select" data-part="${key}" data-field="font" style="width:100%;">${this._fontOptions(part.font)}</ct-font-select>
                     </div>
                     <div>
                         <span class="craftools-label">${c('fieldFontSize')}</span>

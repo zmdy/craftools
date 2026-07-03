@@ -5,6 +5,7 @@ import { PanelUI } from "../../utils/PanelUI.js";
 import { VariablePanel } from "../../utils/VariablePanel.js";
 import { VariableEngine } from "../../utils/VariableEngine.js";
 import "./TextTool_Translations.js";
+import "../../components/CtFontSelect.js";
 
 const FONTS = [
     'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster', 
@@ -61,7 +62,7 @@ export class TextTool extends BaseTool {
         const htmlTipografia = `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
-                <select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></select>
+                <ct-font-select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></ct-font-select>
                 
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <input type="text" id="text-prop-custom-font" class="craftools-input"
