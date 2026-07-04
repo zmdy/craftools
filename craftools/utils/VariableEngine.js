@@ -1,4 +1,4 @@
-import { loadPhrases, loadEmojiKitchenCombo } from "./ApiDataLoader.js";
+import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo } from "./ApiDataLoader.js";
 
 // Usado quando a lista de emojis (variável tipo "emoji") está vazia -- o
 // sistema sorteia entre este conjunto padrão em vez de não substituir nada.
@@ -79,7 +79,7 @@ export class VariableEngine {
             case 'emoji':
                 return { type, values: '', mode: 'sequential', linkedTo: '' };
             case 'apiPhrase':
-                return { type, field: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
+                return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
             case 'emojiKitchen':
                 return { type, leftEmoji: '', rightEmoji: '', linkedTo: '' };
             default:
@@ -161,7 +161,7 @@ export class VariableEngine {
      */
     static async prefetchApiResources(bindings) {
         const list = bindings || [];
-        const hasApiPhrase = list.some(b => b && b.type === 'apiPhrase');
+        const apiPhraseBindings = list.filter(b => b && b.type === 'apiPhrase');
 
         const kitchenPairs = new Set();
         list.forEach(b => {
@@ -174,12 +174,20 @@ export class VariableEngine {
 
         const cache = {};
 
-        if (hasApiPhrase) {
-            try {
-                cache.phrases = await loadPhrases('phrases');
-            } catch (_) {
-                cache.phrases = [];
-            }
+        if (apiPhraseBindings.length) {
+            // Coleção é o filtro de "1º nível" -- cada coleção distinta usada
+            // pelos vínculos apiPhrase da página tem sua própria lista de
+            // frases pré-carregada (filtro de "2º nível", autor/categoria,
+            // continua sendo aplicado depois, em _pickApiPhrase).
+            const collections = new Set(apiPhraseBindings.map(b => (b.collection || '').trim()));
+            cache.phrasesByCollection = {};
+            await Promise.all([...collections].map(async (col) => {
+                try {
+                    cache.phrasesByCollection[col] = await loadPhrases('phrases', col);
+                } catch (_) {
+                    cache.phrasesByCollection[col] = [];
+                }
+            }));
         }
 
         if (kitchenPairs.size) {
@@ -205,12 +213,13 @@ export class VariableEngine {
      * filtro" no painel de Texto Variável. Campos com valor array (ex.:
      * category) são achatados.
      * @param {string} field
+     * @param {string} [collection] - restringe às frases desta coleção (filtro de "1º nível").
      * @returns {Promise<string[]>}
      */
-    static async loadFilterOptions(field) {
+    static async loadFilterOptions(field, collection = '') {
         if (!field) return [];
         try {
-            const list = await loadPhrases('phrases');
+            const list = await loadPhrases('phrases', collection);
             const values = new Set();
             (list || []).forEach(item => {
                 if (item == null || typeof item !== 'object') return;
@@ -223,6 +232,20 @@ export class VariableEngine {
                 }
             });
             return [...values].sort((a, b) => a.localeCompare(b));
+        } catch (_) {
+            return [];
+        }
+    }
+
+    /**
+     * Carrega (com cache, via ApiDataLoader) os nomes das coleções de frases
+     * cadastradas -- usado para popular o seletor de "Coleção" (filtro de
+     * "1º nível") no painel de Texto Variável.
+     * @returns {Promise<string[]>}
+     */
+    static async loadPhraseCollectionOptions() {
+        try {
+            return await loadPhraseCollections();
         } catch (_) {
             return [];
         }
@@ -428,7 +451,8 @@ export class VariableEngine {
     // ── apiPhrase ────────────────────────────────────────────────────────────
 
     static _pickApiPhrase(binding, ctx, apiCache) {
-        let list = (apiCache && apiCache.phrases) || [];
+        const col = (binding.collection || '').trim();
+        let list = (apiCache && apiCache.phrasesByCollection && apiCache.phrasesByCollection[col]) || [];
         if (!list.length) return null;
 
         // Filtro por autor/categoria (opcional) -- restringe a lista antes

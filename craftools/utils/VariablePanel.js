@@ -303,6 +303,13 @@ export class VariablePanel {
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseFieldHelp')}</span>
             </div>
             <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseCollectionLabel')}</span>
+                <select id="var-api-collection" class="craftools-select" style="width:100%;">
+                    <option value="">${I18n.t('variablePanel.apiPhraseCollectionLoading')}</option>
+                </select>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseCollectionHelp')}</span>
+            </div>
+            <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterLabel')}</span>
                 <select id="var-api-filter-field" class="craftools-select" style="width:100%;">
                     <option value="" ${!filterField ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterNone')}</option>
@@ -327,12 +334,13 @@ export class VariablePanel {
     }
 
     static _emojiKitchenConfig(b) {
+        const hasLeft = !!(b.leftEmoji || '').trim();
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
                 <input type="text" id="var-kitchen-left" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.leftEmoji)}" maxlength="8">
             </div>
-            <div class="ct-field">
+            <div class="ct-field" id="var-kitchen-right-wrap" style="${hasLeft ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenRightLabel')}</span>
                 <input type="text" id="var-kitchen-right" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.rightEmoji)}" maxlength="8">
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
@@ -456,6 +464,7 @@ export class VariablePanel {
                 case 'apiPhrase': {
                     const fieldSelect = container.querySelector('#var-api-field-select');
                     const fieldCustom = container.querySelector('#var-api-field-custom');
+                    const collectionSelect = container.querySelector('#var-api-collection');
                     const filterFieldSelect = container.querySelector('#var-api-filter-field');
                     const filterValueWrap = container.querySelector('#var-api-filter-value-wrap');
                     const filterValueSelect = container.querySelector('#var-api-filter-value');
@@ -474,11 +483,12 @@ export class VariablePanel {
                     if (fieldCustom) fieldCustom.oninput = () => { binding.field = fieldCustom.value; notify(); };
 
                     // Popula o select de "Valor do filtro" com os valores
-                    // distintos reais (autor/categoria) vindos da API.
+                    // distintos reais (autor/categoria) vindos da API, já
+                    // restritos à coleção selecionada (filtro de "1º nível").
                     const loadFilterValues = async (selectedValue) => {
                         if (!filterValueSelect) return;
                         filterValueSelect.innerHTML = `<option value="">${I18n.t('variablePanel.apiPhraseFilterLoading')}</option>`;
-                        const values = await VariableEngine.loadFilterOptions(binding.filterField);
+                        const values = await VariableEngine.loadFilterOptions(binding.filterField, binding.collection);
                         filterValueSelect.innerHTML = values.length
                             ? values.map(v => `<option value="${this._esc(v)}" ${v === selectedValue ? 'selected' : ''}>${this._esc(v)}</option>`).join('')
                             : `<option value="">${I18n.t('variablePanel.apiPhraseFilterEmpty')}</option>`;
@@ -486,6 +496,30 @@ export class VariablePanel {
                             binding.filterValue = values[0] || '';
                             notify();
                         }
+                    };
+
+                    // Popula o select de "Coleção" (filtro de "1º nível") com
+                    // os nomes das coleções de frases cadastradas.
+                    const loadCollections = async () => {
+                        if (!collectionSelect) return;
+                        const names = await VariableEngine.loadPhraseCollectionOptions();
+                        const noneLabel = I18n.t('variablePanel.apiPhraseCollectionNone');
+                        collectionSelect.innerHTML = [`<option value="">${noneLabel}</option>`]
+                            .concat(names.map(n => `<option value="${this._esc(n)}" ${binding.collection === n ? 'selected' : ''}>${this._esc(n)}</option>`))
+                            .join('');
+                        if (binding.collection && !names.includes(binding.collection)) {
+                            binding.collection = '';
+                            notify();
+                        }
+                    };
+
+                    if (collectionSelect) collectionSelect.onchange = () => {
+                        binding.collection = collectionSelect.value;
+                        // Categorias/autores disponíveis dependem da coleção --
+                        // recarrega o "Valor do filtro" para refletir só o que
+                        // existe dentro dela.
+                        if (binding.filterField) loadFilterValues('');
+                        notify();
                     };
 
                     if (filterFieldSelect) filterFieldSelect.onchange = () => {
@@ -503,6 +537,8 @@ export class VariablePanel {
 
                     if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
 
+                    loadCollections();
+
                     // Carrega as opções do filtro já na primeira renderização
                     // se um filtro já estiver configurado (ex.: reabrindo o painel).
                     if (binding.filterField) loadFilterValues(binding.filterValue);
@@ -511,7 +547,12 @@ export class VariablePanel {
                 case 'emojiKitchen': {
                     const leftInput = container.querySelector('#var-kitchen-left');
                     const rightInput = container.querySelector('#var-kitchen-right');
-                    if (leftInput) leftInput.oninput = () => { binding.leftEmoji = leftInput.value; notify(); };
+                    const rightWrap = container.querySelector('#var-kitchen-right-wrap');
+                    if (leftInput) leftInput.oninput = () => {
+                        binding.leftEmoji = leftInput.value;
+                        if (rightWrap) rightWrap.style.display = leftInput.value.trim() ? '' : 'none';
+                        notify();
+                    };
                     if (rightInput) rightInput.oninput = () => { binding.rightEmoji = rightInput.value; notify(); };
                     break;
                 }

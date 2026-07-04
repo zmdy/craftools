@@ -125,28 +125,43 @@ export async function loadAlbumTemplates() {
  * Sem fallback local -- se a API estiver indisponível, retorna lista vazia
  * (a variável simplesmente não terá valor para substituir).
  * @param {string} [resource='phrases']
+ * @param {string} [collection] - filtro de "1º nível" (tema/conjunto); vazio/omitido = todas as coleções.
  * @returns {Promise<any[]>}
  */
-export async function loadPhrases(resource = 'phrases') {
-    const cacheKey = `phrases:${resource}`;
+export async function loadPhrases(resource = 'phrases', collection = '') {
+    const col = (collection || '').trim();
+    const cacheKey = `phrases:${resource}:${col}`;
     if (_cache[cacheKey]) return _cache[cacheKey];
 
     // limit=200 (máximo aceito pela API) -- dá uma amostra maior tanto para
     // a substituição da variável quanto para popular o filtro de
     // autor/categoria (Texto Variável) com mais opções reais.
-    const apiData = await fetchResource(resource, { limit: 200 });
+    const apiData = await fetchResource(resource, { limit: 200, collection: col });
     if (apiData && apiData.length > 0) {
         _cache[cacheKey] = apiData;
-        console.info('[ApiDataLoader] Phrases carregadas da API (%d itens, resource=%s)', apiData.length, resource);
+        console.info('[ApiDataLoader] Phrases carregadas da API (%d itens, resource=%s, collection=%s)', apiData.length, resource, col || '(todas)');
         return apiData;
     }
 
     console.warn(
-        '[ApiDataLoader] Phrases: API indisponível ou sem dados (resource=%s) — retornando lista vazia ' +
-        '(não há fallback local para frases). Verifique window.CRAFTOOLS_CONFIG.apiBase.', resource
+        '[ApiDataLoader] Phrases: API indisponível ou sem dados (resource=%s, collection=%s) — retornando lista vazia ' +
+        '(não há fallback local para frases). Verifique window.CRAFTOOLS_CONFIG.apiBase.', resource, col || '(todas)'
     );
     _cache[cacheKey] = [];
     return [];
+}
+
+/**
+ * Carrega os nomes das coleções de frases cadastradas (agrupamento por
+ * tema/conjunto) -- usado para popular o seletor de "Coleção" no painel de
+ * Texto Variável (filtro de "1º nível", combinável com autor/categoria).
+ * @returns {Promise<string[]>}
+ */
+export async function loadPhraseCollections() {
+    if (_cache.phraseCollections) return _cache.phraseCollections;
+    const data = await fetchResource('phrase-collections');
+    _cache.phraseCollections = Array.isArray(data) ? data : [];
+    return _cache.phraseCollections;
 }
 
 /**
@@ -212,6 +227,7 @@ export function invalidateApiDataCache() {
     delete _cache.gridSizes;
     delete _cache.albumTemplates;
     delete _cache.emojiKitchenSupported;
+    delete _cache.phraseCollections;
     Object.keys(_cache).forEach(k => {
         if (k.startsWith('phrases:') || k.startsWith('emojiKitchenPartners:') || k.startsWith('emojiKitchenCombo:')) delete _cache[k];
     });
