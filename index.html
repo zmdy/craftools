@@ -1009,6 +1009,37 @@
                     }, 150);
                 };
 
+                // Recolhe/expande a sidebar no desktop (modo somente ícones).
+                // Força a largura via inline !important em vez de confiar só na
+                // regra CSS .sidenav-collapsed{width:68px !important} — isso
+                // elimina qualquer resíduo da largura customizada pelo redimen-
+                // sionamento manual (arrastar a alça), que fica gravada como
+                // estilo inline (style="width:Npx") e, num primeiro carregamento
+                // com uma largura salva no localStorage, é aplicada ANTES de o
+                // usuário interagir — cenário em que o "fechar" (recolher) podia
+                // não reduzir totalmente para 68px.
+                const setSidebarCollapsed = (panel, collapsed) => {
+                    if (collapsed) {
+                        // Guarda a largura atual (ex: redimensionada) para restaurar
+                        // exatamente ao expandir de novo.
+                        const currentWidth = panel.style.width || (panel.getBoundingClientRect().width + 'px');
+                        panel.dataset.expandedWidth = currentWidth;
+                        panel.classList.add('sidenav-collapsed');
+                        panel.style.setProperty('width', '68px', 'important');
+                    } else {
+                        panel.classList.remove('sidenav-collapsed');
+                        panel.style.removeProperty('width');
+                        if (panel.dataset.expandedWidth) {
+                            panel.style.width = panel.dataset.expandedWidth;
+                        }
+                    }
+                    toggleMenuIcon(!collapsed);
+                    panel.style.marginLeft = '';
+                    if (!panel.classList.contains('panel-open')) {
+                        panel.classList.add('panel-open');
+                    }
+                };
+
                 document.getElementById('pwa-menu-toggle')?.addEventListener('click', (e) => {
                     e.preventDefault();
                     const panel = document.getElementById('right-panel');
@@ -1026,23 +1057,14 @@
                             const isToolPanelOpen = closePanelBtn && !closePanelBtn.classList.contains('d-none');
                             if (isToolPanelOpen) {
                                 closePanelBtn.click();
-                                panel.classList.add('sidenav-collapsed');
-                                toggleMenuIcon(false);
-                                panel.style.marginLeft = '';
-                                if (!panel.classList.contains('panel-open')) {
-                                    panel.classList.add('panel-open');
-                                }
+                                setSidebarCollapsed(panel, true);
                                 return;
                             }
 
                             // Desktop: alterna entre sidebar completa e recolhida (somente
                             // ícones) — nunca esconde totalmente, como no mobile.
-                            const isNowCollapsed = panel.classList.toggle('sidenav-collapsed');
-                            toggleMenuIcon(!isNowCollapsed);
-                            panel.style.marginLeft = '';
-                            if (!panel.classList.contains('panel-open')) {
-                                panel.classList.add('panel-open');
-                            }
+                            const isNowCollapsed = !panel.classList.contains('sidenav-collapsed');
+                            setSidebarCollapsed(panel, isNowCollapsed);
                             return;
                         }
 
