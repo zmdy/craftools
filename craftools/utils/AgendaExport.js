@@ -77,14 +77,28 @@ export class AgendaExport {
                     totalPages: totalOutputPages,
                     now: new Date(),
                 };
-                origEls.forEach((origEl, idx) => {
+
+                // "picks" é recriado a cada repetição -- guarda o item/valor
+                // bruto escolhido por cada variável "líder" (sem linkedTo)
+                // nesta repetição, para que variáveis "vinculadas" (Vincular
+                // a -- ver VariablePanel.js/VariableEngine.js) reaproveitem
+                // exatamente o mesmo item, com sua PRÓPRIA formatação/campo.
+                const picks = VariableEngine.newLinkRegistry();
+                const jobs = origEls.map((origEl, idx) => {
                     const cloneEl = cloneEls[idx];
-                    if (!cloneEl) return;
                     const toolType = origEl.getAttribute('data-craftool');
                     const binding = this._getBinding(origEl, toolType);
-                    if (!binding || !binding.type) return;
-                    const resolved = VariableEngine.resolve(binding, context, apiCache);
-                    this._applyResolvedValue(cloneEl, toolType, origEl, resolved);
+                    return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+                }).filter(j => j.cloneEl && j.binding && j.binding.type);
+
+                // 1ª passada: líderes (sem "Vincular a") primeiro, para que
+                // seus picks já estejam disponíveis quando a 2ª passada
+                // resolver as variáveis vinculadas a eles.
+                const leaders = jobs.filter(j => !j.binding.linkedTo);
+                const followers = jobs.filter(j => j.binding.linkedTo);
+                [...leaders, ...followers].forEach(j => {
+                    const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+                    this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
                 });
 
                 // Achata todos os <craftools-element> em divs regulares
@@ -130,17 +144,37 @@ export class AgendaExport {
     }
 
     /**
+     * Id estável (em memória) usado para casar "Vincular a" entre elementos
+     * -- normalmente já existe (atribuído pelo VariablePanel quando o
+     * usuário configura a variável), mas é criado aqui também por segurança
+     * caso o elemento nunca tenha aberto o painel de propriedades.
+     */
+    static _getVarId(el) {
+        if (!el._craftoolsVarId) el._craftoolsVarId = 'v' + Math.random().toString(36).slice(2, 9);
+        return el._craftoolsVarId;
+    }
+
+    /**
      * Aplica o valor resolvido de uma variável num clone AINDA não achatado
      * (ou seja, ainda tem <svg>/<img>/[contenteditable] reais dentro).
      * @param {HTMLElement} cloneEl  o <craftools-element> clonado
      * @param {string} toolType
      * @param {HTMLElement} origEl  o elemento original (vivo), usado para ler `_craftoolsMeta`
      * @param {string} resolved     valor já resolvido pelo VariableEngine
+     * @param {object} [binding]    o binding original -- usado só para detectar o tipo "emojiKitchen"
      */
-    static _applyResolvedValue(cloneEl, toolType, origEl, resolved) {
+    static _applyResolvedValue(cloneEl, toolType, origEl, resolved, binding) {
         if (toolType === 'titulo' || toolType === 'paragrafo') {
             const ce = cloneEl.querySelector('[contenteditable]');
-            if (ce) ce.textContent = resolved;
+            if (ce) {
+                if (binding && binding.type === 'emojiKitchen') {
+                    ce.innerHTML = resolved
+                        ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
+                        : '';
+                } else {
+                    ce.textContent = resolved;
+                }
+            }
             return;
         }
 
@@ -173,6 +207,14 @@ export class AgendaExport {
             });
             this._swapSvgContent(svg, svgString);
         }
+    }
+
+    static _escAttr(val) {
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     static _swapSvgContent(svgNode, svgString) {

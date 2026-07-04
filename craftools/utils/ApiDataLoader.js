@@ -150,13 +150,69 @@ export async function loadPhrases(resource = 'phrases') {
 }
 
 /**
- * Invalida o cache forçando nova busca na próxima chamada.
- * Útil para forçar refresh após login/upgrade de plano.
+ * Busca um recurso da /v1/ sem exigir que `data` seja um array -- usado
+ * pelo Emoji Kitchen, cujo modo "combo" devolve um objeto único (ou null).
+ * Mesmo timeout/tratamento de erro de fetchResource().
+ * @returns {Promise<any>}
  */
+async function fetchResourceRaw(resource, extraParams = {}) {
+    const base = getApiBase();
+    if (!base) return null;
+
+    const qs = Object.entries(extraParams)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('');
+    const url = `${base}/v1/?resource=${resource}${qs}`;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' },
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (json.status !== 'success') return null;
+        return json.data;
+    } catch (_) {
+        return null;
+    }
+}
+
+export async function loadEmojiKitchenSupported() {
+    if (_cache.emojiKitchenSupported) return _cache.emojiKitchenSupported;
+    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'supported' });
+    _cache.emojiKitchenSupported = Array.isArray(data) ? data : [];
+    return _cache.emojiKitchenSupported;
+}
+
+export async function loadEmojiKitchenPartners(emoji) {
+    const key = `emojiKitchenPartners:${emoji}`;
+    if (_cache[key]) return _cache[key];
+    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'partners', emoji });
+    _cache[key] = Array.isArray(data) ? data : [];
+    return _cache[key];
+}
+
+export async function loadEmojiKitchenCombo(left, right) {
+    const key = `emojiKitchenCombo:${left}|${right}`;
+    if (_cache[key] !== undefined) return _cache[key];
+    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'combo', left, right });
+    const combo = (data && data.imageUrl) ? data : null;
+    _cache[key] = combo;
+    return combo;
+}
+
 export function invalidateApiDataCache() {
     delete _cache.gridSizes;
     delete _cache.albumTemplates;
+    delete _cache.emojiKitchenSupported;
     Object.keys(_cache).forEach(k => {
-        if (k.startsWith('phrases:')) delete _cache[k];
+        if (k.startsWith('phrases:') || k.startsWith('emojiKitchenPartners:') || k.startsWith('emojiKitchenCombo:')) delete _cache[k];
     });
 }

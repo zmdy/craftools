@@ -16,6 +16,7 @@ I18n.addTranslations('variablePanel', {
         typeLink: "Link",
         typeEmoji: "Emoji",
         typeApiPhrase: "Frase da API",
+        typeEmojiKitchen: "Emoji Kitchen",
         previewLabel: "Pré-visualização",
         previewLoading: "carregando…",
         boundNotice: "O conteúdo abaixo será substituído pela variável configurada na aba \"Texto Variável\" ao exportar a Agenda.",
@@ -81,7 +82,16 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFilterEmpty: "Nenhuma opção encontrada",
         apiPhraseModeLabel: "Ordem",
         apiPhraseModeSequential: "Sequencial (uma por repetição)",
-        apiPhraseModeRandom: "Aleatória"
+        apiPhraseModeRandom: "Aleatória",
+
+        linkTargetLabel: "Vincular a",
+        linkTargetNone: "Nenhum (configurar individualmente)",
+        linkTargetNotice: "Vinculado -- este campo usará o mesmo item escolhido pela variável acima, aplicando sua própria formatação.",
+
+        emojiKitchenLeftLabel: "1º emoji",
+        emojiKitchenRightLabel: "2º emoji (opcional)",
+        emojiKitchenPlaceholder: "cole um emoji",
+        emojiKitchenRightHelp: "Deixe em branco para combinar o 1º emoji com ele mesmo."
     },
     "en": {
         title: "Variable Text",
@@ -94,6 +104,7 @@ I18n.addTranslations('variablePanel', {
         typeLink: "Link",
         typeEmoji: "Emoji",
         typeApiPhrase: "API phrase",
+        typeEmojiKitchen: "Emoji Kitchen",
         previewLabel: "Preview",
         previewLoading: "loading…",
         boundNotice: "The content below will be replaced by the variable configured in the \"Variable Text\" tab when exporting the Agenda.",
@@ -159,7 +170,16 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFilterEmpty: "No options found",
         apiPhraseModeLabel: "Order",
         apiPhraseModeSequential: "Sequential (one per repetition)",
-        apiPhraseModeRandom: "Random"
+        apiPhraseModeRandom: "Random",
+
+        linkTargetLabel: "Link to",
+        linkTargetNone: "None (set up individually)",
+        linkTargetNotice: "Linked -- this field will use the same item chosen by the variable above, applying its own formatting.",
+
+        emojiKitchenLeftLabel: "1st emoji",
+        emojiKitchenRightLabel: "2nd emoji (optional)",
+        emojiKitchenPlaceholder: "paste an emoji",
+        emojiKitchenRightHelp: "Leave blank to combine the 1st emoji with itself."
     },
     "es": {
         title: "Texto Variable",
@@ -172,6 +192,7 @@ I18n.addTranslations('variablePanel', {
         typeLink: "Enlace",
         typeEmoji: "Emoji",
         typeApiPhrase: "Frase de la API",
+        typeEmojiKitchen: "Emoji Kitchen",
         previewLabel: "Vista previa",
         previewLoading: "cargando…",
         boundNotice: "El contenido de abajo será reemplazado por la variable configurada en la pestaña \"Texto Variable\" al exportar la Agenda.",
@@ -237,6 +258,15 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFilterEmpty: "No se encontraron opciones",
         apiPhraseModeLabel: "Orden",
         apiPhraseModeSequential: "Secuencial (una por repetición)",
-        apiPhraseModeRandom: "Aleatoria"
+        apiPhraseModeRandom: "Aleatoria",
+
+        linkTargetLabel: "Vincular a",
+        linkTargetNone: "Ninguno (configurar individualmente)",
+        linkTargetNotice: "Vinculado -- este campo usará el mismo elemento elegido por la variable de arriba, aplicando su propio formato.",
+
+        emojiKitchenLeftLabel: "1er emoji",
+        emojiKitchenRightLabel: "2º emoji (opcional)",
+        emojiKitchenPlaceholder: "pegue un emoji",
+        emojiKitchenRightHelp: "Deje en blanco para combinar el 1er emoji consigo mismo."
     }
 });

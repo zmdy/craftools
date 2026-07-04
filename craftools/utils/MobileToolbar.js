@@ -829,11 +829,11 @@ export class MobileToolbar {
             import('./VariablePanel.js'),
             import('../tools/text/TextTool.js'),
         ]).then(([{ VariablePanel }, { TextTool }]) => {
-            container.innerHTML = VariablePanel.renderAccordionBody(el._craftoolsVariable);
+            container.innerHTML = VariablePanel.renderAccordionBody(el._craftoolsVariable, el);
             VariablePanel.bind(container, el._craftoolsVariable, (binding) => {
                 el._craftoolsVariable = binding;
                 TextTool._applyVariablePreview(el, textEl, binding);
-            });
+            }, el);
         });
     }
 
@@ -844,11 +844,11 @@ export class MobileToolbar {
         ]).then(([{ VariablePanel }, { QRCodeTool }]) => {
             const meta = el._craftoolsMeta || QRCodeTool.getDefaultMeta();
             if (!el._craftoolsMeta) el._craftoolsMeta = meta;
-            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding);
+            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding, el);
             VariablePanel.bind(container, meta.variableBinding, (binding) => {
                 meta.variableBinding = binding;
                 QRCodeTool._regenerate(el);
-            });
+            }, el);
         });
     }
 
@@ -859,11 +859,11 @@ export class MobileToolbar {
         ]).then(([{ VariablePanel }, { BarcodeTool }]) => {
             const meta = el._craftoolsMeta || BarcodeTool.getDefaultMeta();
             if (!el._craftoolsMeta) el._craftoolsMeta = meta;
-            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding);
+            container.innerHTML = VariablePanel.renderAccordionBody(meta.variableBinding, el);
             VariablePanel.bind(container, meta.variableBinding, (binding) => {
                 meta.variableBinding = binding;
                 BarcodeTool._regenerate(el);
-            });
+            }, el);
         });
     }
 

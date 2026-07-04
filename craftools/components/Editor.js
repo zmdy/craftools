@@ -404,6 +404,14 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                     this.activePage = null;
                 });
+            } else if (toolType === 'emojikitchen') {
+                import('../tools/emojikitchen/EmojiKitchenTool.js').then(({ EmojiKitchenTool }) => {
+                    this.ctxBar.show(el, EmojiKitchenTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('emojiKitchenTool.panelTitle') || 'Emoji Kitchen';
+                    if (panelBody) EmojiKitchenTool.renderPropertiesPanel(panelBody, el);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
             } else {
                 this.ctxBar.show(el, []);
             }
@@ -485,7 +493,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emoji', 'shape'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -526,6 +534,12 @@ export class Craftools_Editor extends HTMLElement {
                     const el = MiniCalendarTool.createElement(tool, this);
                     el.setAttribute('x', cx - 95);
                     el.setAttribute('y', cy - 105);
+                    mainPage.appendChild(el);
+                } else if (tool === 'emojikitchen') {
+                    const { EmojiKitchenTool } = await import('../tools/emojikitchen/EmojiKitchenTool.js');
+                    const el = EmojiKitchenTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 80);
+                    el.setAttribute('y', cy - 80);
                     mainPage.appendChild(el);
                 } else if (tool === 'emoji') {
                     // For emoji, show the picker panel — user picks which emoji to add
@@ -749,15 +763,6 @@ export class Craftools_Editor extends HTMLElement {
 
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                pinchStartDist = Math.hypot(dx, dy);
-                pinchStartZoom = zoomLevel;
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2 && pinchStartDist) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const dist = Math.hypot(dx, dy);

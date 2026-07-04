@@ -100,7 +100,7 @@ export class QRCodeTool extends BaseTool {
         editorPanel.innerHTML = 
             PanelUI.accordion('qr-conteudo', 'qr_code', I18n.t('qrTool.content') || 'Conteúdo', htmlConteudo, { open: true }) +
             PanelUI.accordion('qr-aparencia', 'palette', I18n.t('qrTool.appearance') || 'Aparência', htmlAparencia) +
-            PanelUI.accordion('qr-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding));
+            PanelUI.accordion('qr-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding, element));
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         // Spotify Code renderiza como <img>, os demais tipos como <svg> -- o
@@ -195,7 +195,7 @@ export class QRCodeTool extends BaseTool {
             if (noticeEl) noticeEl.innerHTML = (binding && binding.type) ? this._boundNoticeHtml() : '';
             this._updateWarning(editorPanel, meta);
             this._regenerate(element);
-        });
+        }, element);
     }
 
     static _boundNoticeHtml() {

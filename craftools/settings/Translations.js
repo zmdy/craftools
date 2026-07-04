@@ -30,6 +30,7 @@ export const Translations = {
             agendaExport: "Exportar Agenda",
             calendarTool: "Calendário",
             miniCalendar: "Mini Calendário",
+            emojiKitchen: "Emoji Kitchen",
             newPageSidebar: "Nova Página",
             papers2: "Papéis / Temas",
             undoTitle: "Desfazer (Ctrl+Z)",
@@ -155,6 +156,7 @@ export const Translations = {
             agendaExport: "Export Agenda",
             calendarTool: "Calendar",
             miniCalendar: "Mini Calendar",
+            emojiKitchen: "Emoji Kitchen",
             newPageSidebar: "New Page",
             papers2: "Papers / Themes",
             undoTitle: "Undo (Ctrl+Z)",
@@ -280,6 +282,7 @@ export const Translations = {
             agendaExport: "Exportar Agenda",
             calendarTool: "Calendario",
             miniCalendar: "Mini Calendario",
+            emojiKitchen: "Emoji Kitchen",
             newPageSidebar: "Nueva Página",
             papers2: "Papeles / Temas",
             undoTitle: "Deshacer (Ctrl+Z)",
@@ -416,6 +419,7 @@ export class I18n {
             const nav = navigator.language || '';
             let browserLang = 'pt-br';
             if (nav.startsWith('es')) browserLang = 'es';
+
             else if (nav.startsWith('en')) browserLang = 'en';
             window.craftoolsLang = browserLang;
         }

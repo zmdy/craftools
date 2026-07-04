@@ -109,7 +109,7 @@ export class TextTool extends BaseTool {
         editorPanel.innerHTML = 
             PanelUI.accordion('text-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
             PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento) +
-            PanelUI.accordion('text-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(element._craftoolsVariable));
+            PanelUI.accordion('text-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(element._craftoolsVariable, element));
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         this.renderCommonProperties(editorPanel, element, {
@@ -126,7 +126,7 @@ export class TextTool extends BaseTool {
         VariablePanel.bind(editorPanel, element._craftoolsVariable, (binding) => {
             element._craftoolsVariable = binding;
             this._applyVariablePreview(element, textElement, binding);
-        });
+        }, element);
         this._applyVariablePreview(element, textElement, element._craftoolsVariable);
 
         // Font dropdown
@@ -373,6 +373,14 @@ export class TextTool extends BaseTool {
      * amostra); o texto real só é definitivamente substituído no momento da
      * Exportação de Agenda (ver AgendaExport.js).
      */
+    static _escAttr(val) {
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     static _applyVariablePreview(element, textElement, binding) {
         if (binding && binding.type) {
             if (element._craftoolsVariablePrevHtml === undefined && textElement.getAttribute('contenteditable') !== 'false') {
@@ -384,7 +392,13 @@ export class TextTool extends BaseTool {
             textElement.style.cursor = 'default';
             textElement.textContent = I18n.t('variablePanel.previewLoading');
             VariableEngine.resolvePreview(binding).then(val => {
-                textElement.textContent = (val && String(val).length) ? val : '—';
+                if (binding.type === 'emojiKitchen') {
+                    textElement.innerHTML = val
+                        ? `<img src="${this._escAttr(val)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
+                        : '—';
+                } else {
+                    textElement.textContent = (val && String(val).length) ? val : '—';
+                }
             });
         } else if (textElement.getAttribute('contenteditable') === 'false') {
             textElement.setAttribute('contenteditable', 'true');

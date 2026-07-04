@@ -80,7 +80,7 @@ export class BarcodeTool extends BaseTool {
         editorPanel.innerHTML =
             PanelUI.accordion('bc-conteudo', 'barcode_reader', I18n.t('barcodeTool.content') || 'Conteúdo', htmlConteudo, { open: true }) +
             PanelUI.accordion('bc-aparencia', 'palette', I18n.t('barcodeTool.appearance') || 'Aparência', htmlAparencia) +
-            PanelUI.accordion('bc-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding));
+            PanelUI.accordion('bc-variavel', 'data_object', I18n.t('variablePanel.title'), VariablePanel.renderAccordionBody(meta.variableBinding, element));
 
         this.renderCommonProperties(editorPanel, element, {
             border: 'svg',
@@ -153,7 +153,7 @@ export class BarcodeTool extends BaseTool {
             if (noticeEl) noticeEl.innerHTML = (binding && binding.type) ? this._boundNoticeHtml() : '';
             this._updateWarning(editorPanel, meta);
             this._regenerate(element);
-        });
+        }, element);
     }
 
     static _boundNoticeHtml() {

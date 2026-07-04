@@ -24,7 +24,7 @@ export class VariablePanel {
 
     // ── HTML principal (select de tipo + config específica + preview) ──────
 
-    static renderAccordionBody(binding) {
+    static renderAccordionBody(binding, element) {
         const type = binding && binding.type ? binding.type : '';
         return `
             <div class="ct-field">
@@ -38,9 +38,10 @@ export class VariablePanel {
                     <option value="link" ${type === 'link' ? 'selected' : ''}>${I18n.t('variablePanel.typeLink')}</option>
                     <option value="emoji" ${type === 'emoji' ? 'selected' : ''}>${I18n.t('variablePanel.typeEmoji')}</option>
                     <option value="apiPhrase" ${type === 'apiPhrase' ? 'selected' : ''}>${I18n.t('variablePanel.typeApiPhrase')}</option>
+                    <option value="emojiKitchen" ${type === 'emojiKitchen' ? 'selected' : ''}>${I18n.t('variablePanel.typeEmojiKitchen')}</option>
                 </select>
             </div>
-            <div id="var-config">${this._renderConfig(binding)}</div>
+            <div id="var-config">${this._renderConfig(binding, element)}</div>
             <div class="ct-field" id="var-preview" style="${type ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.previewLabel')}</span>
                 <div id="var-preview-value" style="font-size:12px; padding:6px 9px; background:rgba(127,127,127,0.12); border-radius:6px; word-break:break-word; min-height:16px;">${I18n.t('variablePanel.previewLoading')}</div>
@@ -50,18 +51,104 @@ export class VariablePanel {
 
     // ── HTML de configuração específica por tipo ────────────────────────────
 
-    static _renderConfig(binding) {
+    static _renderConfig(binding, element) {
         if (!binding || !binding.type) return '';
+        const linkRow = this._renderLinkRow(binding, element);
         switch (binding.type) {
-            case 'date': return this._dateConfig(binding);
-            case 'sequenceNumber': return this._seqNumberConfig(binding);
-            case 'sequenceText': return this._seqTextConfig(binding);
-            case 'pageNumber': return this._pageNumberConfig(binding);
-            case 'link': return this._linkConfig(binding);
-            case 'emoji': return this._emojiConfig(binding);
-            case 'apiPhrase': return this._apiPhraseConfig(binding);
+            case 'date': return linkRow + this._dateConfig(binding);
+            case 'sequenceNumber': return linkRow + this._seqNumberConfig(binding);
+            case 'sequenceText': return linkRow + this._seqTextConfig(binding);
+            case 'pageNumber': return linkRow + this._pageNumberConfig(binding);
+            case 'link': return linkRow + this._linkConfig(binding);
+            case 'emoji': return linkRow + this._emojiConfig(binding);
+            case 'apiPhrase': return linkRow + this._apiPhraseConfig(binding);
+            case 'emojiKitchen': return linkRow + this._emojiKitchenConfig(binding);
             default: return '';
         }
+    }
+
+    // ── Vínculo entre variáveis ("Vincular a") ───────────────────────────────
+
+    /**
+     * Linha de UI (select) para vincular este binding a outra instância já
+     * existente NA MESMA página, do MESMO tipo, que ainda não esteja ela
+     * própria vinculada a outra (só "líderes" podem ser alvo de vínculo).
+     * Some silenciosamente se não houver nenhum candidato.
+     */
+    static _renderLinkRow(binding, element) {
+        if (!element) return '';
+        const candidates = this._findLinkCandidates(binding.type, element);
+        if (!candidates.length) return '';
+        const options = candidates.map(c =>
+            `<option value="${this._esc(c.id)}" ${binding.linkedTo === c.id ? 'selected' : ''}>${this._esc(c.label)}</option>`
+        ).join('');
+        return `
+            <div class="ct-field" id="var-link-target-wrap">
+                <span class="craftools-label">${I18n.t('variablePanel.linkTargetLabel')}</span>
+                <select id="var-link-target" class="craftools-select" style="width:100%;">
+                    <option value="">${I18n.t('variablePanel.linkTargetNone')}</option>
+                    ${options}
+                </select>
+                ${binding.linkedTo ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.linkTargetNotice')}</span>` : ''}
+            </div>
+        `;
+    }
+
+    /** Outros elementos NA MESMA página, mesmo tipo de variável, não-vinculados. */
+    static _findLinkCandidates(type, element) {
+        if (!element || !element.closest) return [];
+        const page = element.closest('.craftools-page');
+        const scope = page || document;
+        const results = [];
+        scope.querySelectorAll('craftools-element').forEach(el => {
+            if (el === element) return;
+            const toolType = el.getAttribute('data-craftool');
+            const binding = this._getElementBinding(el, toolType);
+            if (!binding || binding.type !== type || binding.linkedTo) return;
+            const id = this._ensureVarId(el);
+            results.push({ id, label: this._labelFor(el, toolType, binding) });
+        });
+        return results;
+    }
+
+    /** Lê o binding de variável já configurado num elemento (mesma lógica do AgendaExport.js). */
+    static _getElementBinding(el, toolType) {
+        if (toolType === 'titulo' || toolType === 'paragrafo') return el._craftoolsVariable || null;
+        if (toolType === 'qrcode' || toolType === 'barcode') return (el._craftoolsMeta && el._craftoolsMeta.variableBinding) || null;
+        return null;
+    }
+
+    /** Garante um id estável (só em memória, dura a sessão) para "Vincular a". */
+    static _ensureVarId(el) {
+        if (!el._craftoolsVarId) el._craftoolsVarId = 'v' + Math.random().toString(36).slice(2, 9);
+        return el._craftoolsVarId;
+    }
+
+    static _findElementById(currentEl, id) {
+        if (!id) return null;
+        const page = currentEl && currentEl.closest ? currentEl.closest('.craftools-page') : null;
+        const scope = page || document;
+        let found = null;
+        scope.querySelectorAll('craftools-element').forEach(el => {
+            if (el._craftoolsVarId === id) found = el;
+        });
+        return found;
+    }
+
+    static _labelFor(el, toolType, binding) {
+        const typeKey = 'type' + binding.type.charAt(0).toUpperCase() + binding.type.slice(1);
+        const typeLabel = I18n.t('variablePanel.' + typeKey) || binding.type;
+        let snippet = '';
+        if (toolType === 'titulo' || toolType === 'paragrafo') {
+            const ce = el.contentArea && el.contentArea.querySelector('[contenteditable]');
+            const raw = (el._craftoolsVariablePrevHtml !== undefined ? el._craftoolsVariablePrevHtml : (ce ? ce.textContent : '')) || '';
+            snippet = String(raw).replace(/<[^>]*>/g, '').trim().slice(0, 18);
+        } else if (toolType === 'qrcode') {
+            snippet = 'QR Code';
+        } else if (toolType === 'barcode') {
+            snippet = 'Barcode';
+        }
+        return snippet ? `${typeLabel} — "${snippet}"` : typeLabel;
     }
 
     static _dateFormats() {
@@ -239,14 +326,31 @@ export class VariablePanel {
         `;
     }
 
+    static _emojiKitchenConfig(b) {
+        return `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
+                <input type="text" id="var-kitchen-left" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.leftEmoji)}" maxlength="8">
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenRightLabel')}</span>
+                <input type="text" id="var-kitchen-right" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.rightEmoji)}" maxlength="8">
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
+            </div>
+        `;
+    }
+
     // ── Bind: liga os listeners e mantém preview/estado sincronizados ──────
 
     /**
      * @param {HTMLElement} container   O painel (ou mini-painel) que contém o HTML de renderAccordionBody()
      * @param {object|null} initialBinding
      * @param {Function} onChange       Chamado com (novoBinding|null) sempre que algo muda
+     * @param {HTMLElement} [element]   O <craftools-element> dono deste binding -- necessário
+     *                                  para o recurso "Vincular a" (procurar/rotular candidatos
+     *                                  na mesma página e mostrar o preview já vinculado).
      */
-    static bind(container, initialBinding, onChange) {
+    static bind(container, initialBinding, onChange, element) {
         const typeSelect = container.querySelector('#var-type');
         if (!typeSelect) return;
 
@@ -261,6 +365,24 @@ export class VariablePanel {
             }
             if (previewBox) previewBox.style.display = '';
             if (previewValue) previewValue.textContent = I18n.t('variablePanel.previewLoading');
+
+            // Se vinculado, resolve o "líder" primeiro para que o preview
+            // mostre o valor REAL que sairá na geração (mesmo item, campo
+            // próprio) em vez de um valor independente/desencontrado.
+            if (binding.linkedTo && element) {
+                const leaderEl = this._findElementById(element, binding.linkedTo);
+                const leaderBinding = leaderEl ? this._getElementBinding(leaderEl, leaderEl.getAttribute('data-craftool')) : null;
+                if (leaderBinding && leaderBinding.type === binding.type) {
+                    VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
+                        const picks = VariableEngine.newLinkRegistry();
+                        VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
+                        const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, {}, apiCache, { id: '__me__', picks });
+                        if (previewValue) previewValue.textContent = (val && String(val).length) ? val : '—';
+                    });
+                    return;
+                }
+            }
+
             VariableEngine.resolvePreview(binding).then(val => {
                 if (previewValue) previewValue.textContent = (val && String(val).length) ? val : '—';
             });
@@ -300,6 +422,7 @@ export class VariablePanel {
                     const loopInput = container.querySelector('#var-seqtext-loop');
                     if (valuesInput) valuesInput.oninput = () => { binding.values = valuesInput.value; notify(); };
                     if (loopInput) loopInput.onchange = () => { binding.loop = loopInput.checked; notify(); };
+             
                     break;
                 }
                 case 'pageNumber': {
@@ -385,19 +508,36 @@ export class VariablePanel {
                     if (binding.filterField) loadFilterValues(binding.filterValue);
                     break;
                 }
+                case 'emojiKitchen': {
+                    const leftInput = container.querySelector('#var-kitchen-left');
+                    const rightInput = container.querySelector('#var-kitchen-right');
+                    if (leftInput) leftInput.oninput = () => { binding.leftEmoji = leftInput.value; notify(); };
+                    if (rightInput) rightInput.oninput = () => { binding.rightEmoji = rightInput.value; notify(); };
+                    break;
+                }
             }
+
+            const linkSelect = container.querySelector('#var-link-target');
+            if (linkSelect) linkSelect.onchange = () => {
+                binding.linkedTo = linkSelect.value || '';
+                if (element) this._ensureVarId(element);
+                updatePreview();
+                onChange(binding);
+            };
         };
 
         typeSelect.onchange = () => {
             const newType = typeSelect.value;
             binding = newType ? VariableEngine.defaultBinding(newType) : null;
+            if (element && binding) this._ensureVarId(element);
             const configEl = container.querySelector('#var-config');
-            if (configEl) configEl.innerHTML = this._renderConfig(binding);
+            if (configEl) configEl.innerHTML = this._renderConfig(binding, element);
             bindConfigFields();
             updatePreview();
             onChange(binding);
         };
 
+        if (element && binding && binding.type) this._ensureVarId(element);
         bindConfigFields();
         updatePreview();
     }
