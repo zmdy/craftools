@@ -1,8 +1,8 @@
 import { I18n } from "../settings/Translations.js";
 
 /**
- * Traduções do painel compartilhado de "Variável" (VariablePanel.js),
- * usado dentro de Texto/Título, QRCode e Barcode.
+ * Traducoes do painel compartilhado de "Variavel" (VariablePanel.js),
+ * usado dentro de Texto/Titulo, QRCode e Barcode.
  */
 I18n.addTranslations('variablePanel', {
     "pt-br": {
@@ -61,11 +61,9 @@ I18n.addTranslations('variablePanel', {
         linkStartAtLabel: "Começar contagem em",
 
         emojiValuesLabel: "Lista de emojis",
-        emojiValuesPlaceholder: "Um ou mais, separados por vírgula ou linha\nex: 😀,😃,😄",
-        emojiValuesHelp: "Cada repetição da página usa o próximo emoji da lista.",
+        emojiValuesPlaceholder: "Cole os emojis com ou sem separador\nex: 😀😃😄 ou 😀,😃,😄",
+        emojiValuesHelp: "Pode colar os emojis colados um no outro, sem precisar separar por vírgula ou quebra de linha. Deixe em branco para sortear emojis aleatórios.",
 
-        apiPhraseResourceLabel: "Recurso da API",
-        apiPhraseResourceHelp: "Nome do recurso configurado no craftools_api (padrão: phrases).",
         apiPhraseFieldLabel: "Campo do JSON",
         apiPhraseFieldAuto: "Automático (detectar sozinho)",
         apiPhraseFieldPhrase: "Frase",
@@ -74,6 +72,13 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFieldCustom: "Personalizado...",
         apiPhraseFieldPlaceholder: "ex: texto",
         apiPhraseFieldHelp: "Escolha \"Automático\" para detectar sozinho, ou um campo específico do item da API (ex.: autor, categoria).",
+        apiPhraseFilterLabel: "Filtrar por",
+        apiPhraseFilterNone: "Nenhum (todas as frases)",
+        apiPhraseFilterAuthor: "Autor",
+        apiPhraseFilterCategory: "Categoria",
+        apiPhraseFilterValueLabel: "Valor do filtro",
+        apiPhraseFilterLoading: "carregando opções…",
+        apiPhraseFilterEmpty: "Nenhuma opção encontrada",
         apiPhraseModeLabel: "Ordem",
         apiPhraseModeSequential: "Sequencial (uma por repetição)",
         apiPhraseModeRandom: "Aleatória"
@@ -134,11 +139,9 @@ I18n.addTranslations('variablePanel', {
         linkStartAtLabel: "Start counting at",
 
         emojiValuesLabel: "Emoji list",
-        emojiValuesPlaceholder: "One or more, comma or line separated\ne.g.: 😀,😃,😄",
-        emojiValuesHelp: "Each page repetition uses the next emoji in the list.",
+        emojiValuesPlaceholder: "Paste emojis with or without separators\ne.g.: 😀😃😄 or 😀,😃,😄",
+        emojiValuesHelp: "You can paste emojis right next to each other, no need to separate them with commas or line breaks. Leave blank to pick random emojis.",
 
-        apiPhraseResourceLabel: "API resource",
-        apiPhraseResourceHelp: "Resource name configured in craftools_api (default: phrases).",
         apiPhraseFieldLabel: "JSON field",
         apiPhraseFieldAuto: "Automatic (auto-detect)",
         apiPhraseFieldPhrase: "Phrase",
@@ -147,6 +150,13 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFieldCustom: "Custom...",
         apiPhraseFieldPlaceholder: "e.g.: text",
         apiPhraseFieldHelp: "Choose \"Automatic\" to auto-detect, or a specific field from the API item (e.g.: author, category).",
+        apiPhraseFilterLabel: "Filter by",
+        apiPhraseFilterNone: "None (all phrases)",
+        apiPhraseFilterAuthor: "Author",
+        apiPhraseFilterCategory: "Category",
+        apiPhraseFilterValueLabel: "Filter value",
+        apiPhraseFilterLoading: "loading options…",
+        apiPhraseFilterEmpty: "No options found",
         apiPhraseModeLabel: "Order",
         apiPhraseModeSequential: "Sequential (one per repetition)",
         apiPhraseModeRandom: "Random"
@@ -207,11 +217,9 @@ I18n.addTranslations('variablePanel', {
         linkStartAtLabel: "Empezar conteo en",
 
         emojiValuesLabel: "Lista de emojis",
-        emojiValuesPlaceholder: "Uno o más, separados por coma o línea\nej: 😀,😃,😄",
-        emojiValuesHelp: "Cada repetición de la página usa el siguiente emoji de la lista.",
+        emojiValuesPlaceholder: "Pegue los emojis con o sin separadores\nej: 😀😃😄 o 😀,😃,😄",
+        emojiValuesHelp: "Puede pegar los emojis uno junto al otro, sin necesidad de separarlos por coma o salto de línea. Deje en blanco para elegir emojis al azar.",
 
-        apiPhraseResourceLabel: "Recurso de la API",
-        apiPhraseResourceHelp: "Nombre del recurso configurado en craftools_api (por defecto: phrases).",
         apiPhraseFieldLabel: "Campo del JSON",
         apiPhraseFieldAuto: "Automático (detectar solo)",
         apiPhraseFieldPhrase: "Frase",
@@ -220,6 +228,13 @@ I18n.addTranslations('variablePanel', {
         apiPhraseFieldCustom: "Personalizado...",
         apiPhraseFieldPlaceholder: "ej: texto",
         apiPhraseFieldHelp: "Elija \"Automático\" para detectar solo, o un campo específico del elemento de la API (ej.: autor, categoría).",
+        apiPhraseFilterLabel: "Filtrar por",
+        apiPhraseFilterNone: "Ninguno (todas las frases)",
+        apiPhraseFilterAuthor: "Autor",
+        apiPhraseFilterCategory: "Categoría",
+        apiPhraseFilterValueLabel: "Valor del filtro",
+        apiPhraseFilterLoading: "cargando opciones…",
+        apiPhraseFilterEmpty: "No se encontraron opciones",
         apiPhraseModeLabel: "Orden",
         apiPhraseModeSequential: "Secuencial (una por repetición)",
         apiPhraseModeRandom: "Aleatoria"

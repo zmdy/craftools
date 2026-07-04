@@ -201,12 +201,8 @@ export class VariablePanel {
     static _apiPhraseConfig(b) {
         const knownFields = ['', 'phrase', 'author', 'category'];
         const isCustom = !!b.field && !knownFields.includes(b.field);
+        const filterField = b.filterField || '';
         return `
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseResourceLabel')}</span>
-                <input type="text" id="var-api-resource" class="craftools-input" style="width:100%;" value="${this._esc(b.resource || 'phrases')}">
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseResourceHelp')}</span>
-            </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFieldLabel')}</span>
                 <select id="var-api-field-select" class="craftools-select" style="width:100%;">
@@ -218,6 +214,20 @@ export class VariablePanel {
                 </select>
                 <input type="text" id="var-api-field-custom" class="craftools-input" style="width:100%; margin-top:6px; ${isCustom ? '' : 'display:none;'}" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${isCustom ? this._esc(b.field) : ''}">
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseFieldHelp')}</span>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterLabel')}</span>
+                <select id="var-api-filter-field" class="craftools-select" style="width:100%;">
+                    <option value="" ${!filterField ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterNone')}</option>
+                    <option value="author" ${filterField === 'author' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterAuthor')}</option>
+                    <option value="category" ${filterField === 'category' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterCategory')}</option>
+                </select>
+            </div>
+            <div class="ct-field" id="var-api-filter-value-wrap" style="${filterField ? '' : 'display:none;'}">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterValueLabel')}</span>
+                <select id="var-api-filter-value" class="craftools-select" style="width:100%;">
+                    <option value="">${I18n.t('variablePanel.apiPhraseFilterLoading')}</option>
+                </select>
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
@@ -321,11 +331,13 @@ export class VariablePanel {
                     break;
                 }
                 case 'apiPhrase': {
-                    const resourceInput = container.querySelector('#var-api-resource');
                     const fieldSelect = container.querySelector('#var-api-field-select');
                     const fieldCustom = container.querySelector('#var-api-field-custom');
+                    const filterFieldSelect = container.querySelector('#var-api-filter-field');
+                    const filterValueWrap = container.querySelector('#var-api-filter-value-wrap');
+                    const filterValueSelect = container.querySelector('#var-api-filter-value');
                     const modeSelect = container.querySelector('#var-api-mode');
-                    if (resourceInput) resourceInput.oninput = () => { binding.resource = resourceInput.value; notify(); };
+
                     if (fieldSelect) fieldSelect.onchange = () => {
                         if (fieldSelect.value === '__custom__') {
                             if (fieldCustom) { fieldCustom.style.display = ''; fieldCustom.focus(); }
@@ -337,7 +349,40 @@ export class VariablePanel {
                         notify();
                     };
                     if (fieldCustom) fieldCustom.oninput = () => { binding.field = fieldCustom.value; notify(); };
+
+                    // Popula o select de "Valor do filtro" com os valores
+                    // distintos reais (autor/categoria) vindos da API.
+                    const loadFilterValues = async (selectedValue) => {
+                        if (!filterValueSelect) return;
+                        filterValueSelect.innerHTML = `<option value="">${I18n.t('variablePanel.apiPhraseFilterLoading')}</option>`;
+                        const values = await VariableEngine.loadFilterOptions(binding.filterField);
+                        filterValueSelect.innerHTML = values.length
+                            ? values.map(v => `<option value="${this._esc(v)}" ${v === selectedValue ? 'selected' : ''}>${this._esc(v)}</option>`).join('')
+                            : `<option value="">${I18n.t('variablePanel.apiPhraseFilterEmpty')}</option>`;
+                        if (!values.includes(binding.filterValue)) {
+                            binding.filterValue = values[0] || '';
+                            notify();
+                        }
+                    };
+
+                    if (filterFieldSelect) filterFieldSelect.onchange = () => {
+                        binding.filterField = filterFieldSelect.value;
+                        binding.filterValue = '';
+                        if (filterValueWrap) filterValueWrap.style.display = binding.filterField ? '' : 'none';
+                        if (binding.filterField) loadFilterValues('');
+                        notify();
+                    };
+
+                    if (filterValueSelect) filterValueSelect.onchange = () => {
+                        binding.filterValue = filterValueSelect.value;
+                        notify();
+                    };
+
                     if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
+
+                    // Carrega as opções do filtro já na primeira renderização
+                    // se um filtro já estiver configurado (ex.: reabrindo o painel).
+                    if (binding.filterField) loadFilterValues(binding.filterValue);
                     break;
                 }
             }

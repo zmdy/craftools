@@ -35,11 +35,15 @@ function getApiBase() {
  * @param {string} resource - ex: 'grid-sizes', 'album-templates'
  * @returns {Promise<any[]|null>}
  */
-async function fetchResource(resource) {
+async function fetchResource(resource, extraParams = {}) {
     const base = getApiBase();
     if (!base) return null;
 
-    const url = `${base}/v1/?resource=${resource}`;
+    const qs = Object.entries(extraParams)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('');
+    const url = `${base}/v1/?resource=${resource}${qs}`;
 
     try {
         const controller = new AbortController();
@@ -127,7 +131,10 @@ export async function loadPhrases(resource = 'phrases') {
     const cacheKey = `phrases:${resource}`;
     if (_cache[cacheKey]) return _cache[cacheKey];
 
-    const apiData = await fetchResource(resource);
+    // limit=200 (máximo aceito pela API) -- dá uma amostra maior tanto para
+    // a substituição da variável quanto para popular o filtro de
+    // autor/categoria (Texto Variável) com mais opções reais.
+    const apiData = await fetchResource(resource, { limit: 200 });
     if (apiData && apiData.length > 0) {
         _cache[cacheKey] = apiData;
         console.info('[ApiDataLoader] Phrases carregadas da API (%d itens, resource=%s)', apiData.length, resource);

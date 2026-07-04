@@ -1,5 +1,14 @@
 import { loadPhrases } from "./ApiDataLoader.js";
 
+// Usado quando a lista de emojis (variável tipo "emoji") está vazia -- o
+// sistema sorteia entre este conjunto padrão em vez de não substituir nada.
+const DEFAULT_EMOJI_POOL = [
+    '😀', '😁', '😂', '😃', '😄', '😅', '😆', '🥰', '😍', '😘',
+    '😋', '😜', '🤩', '🥳', '😎', '🤠', '😇', '🙂', '😉', '😊',
+    '🤣', '😺', '😻', '🥹', '🤗', '🙌', '👍', '👏', '✨', '🎉',
+    '❤️', '💛', '💚', '💙', '💜', '🔥', '🌟', '⭐', '🌈', '🍀',
+];
+
 /**
  * VariableEngine
  *
@@ -50,9 +59,9 @@ export class VariableEngine {
             case 'link':
                 return { type, url: '', appendIndex: false, startAt: 1 };
             case 'emoji':
-                return { type, values: '😀', mode: 'sequential' };
+                return { type, values: '', mode: 'sequential' };
             case 'apiPhrase':
-                return { type, resource: 'phrases', field: '', mode: 'sequential' };
+                return { type, field: '', filterField: '', filterValue: '', mode: 'sequential' };
             default:
                 return null;
         }
@@ -113,20 +122,43 @@ export class VariableEngine {
      * @returns {Promise<object>} { [resource]: any[] }
      */
     static async prefetchApiResources(bindings) {
-        const resources = [...new Set(
-            (bindings || [])
-                .filter(b => b && b.type === 'apiPhrase')
-                .map(b => (b.resource || 'phrases').trim() || 'phrases')
-        )];
-        const cache = {};
-        for (const resource of resources) {
-            try {
-                cache[resource] = await loadPhrases(resource);
-            } catch (_) {
-                cache[resource] = [];
-            }
+        const hasApiPhrase = (bindings || []).some(b => b && b.type === 'apiPhrase');
+        if (!hasApiPhrase) return {};
+        try {
+            return { phrases: await loadPhrases('phrases') };
+        } catch (_) {
+            return { phrases: [] };
         }
-        return cache;
+    }
+
+    /**
+     * Carrega (com cache, via loadPhrases) e retorna os valores distintos de
+     * um campo (ex.: "author" ou "category") encontrados nas frases da API,
+     * ordenados alfabeticamente -- usado para popular o seletor de "Valor do
+     * filtro" no painel de Texto Variável. Campos com valor array (ex.:
+     * category) são achatados.
+     * @param {string} field
+     * @returns {Promise<string[]>}
+     */
+    static async loadFilterOptions(field) {
+        if (!field) return [];
+        try {
+            const list = await loadPhrases('phrases');
+            const values = new Set();
+            (list || []).forEach(item => {
+                if (item == null || typeof item !== 'object') return;
+                const val = item[field];
+                if (val == null) return;
+                if (Array.isArray(val)) {
+                    val.forEach(v => { if (v != null && String(v).trim()) values.add(String(v)); });
+                } else if (String(val).trim()) {
+                    values.add(String(val));
+                }
+            });
+            return [...values].sort((a, b) => a.localeCompare(b));
+        } catch (_) {
+            return [];
+        }
     }
 
     // ── Resolvers individuais ────────────────────────────────────────────────
@@ -223,16 +255,70 @@ export class VariableEngine {
     }
 
     static _resolveEmoji(binding, ctx) {
-        const values = this._parseValuesList(binding.values);
-        if (!values.length) return '';
+        const values = this._parseEmojiList(binding.values);
+        if (!values.length) {
+            // Lista vazia -- sorteia (aleatório de verdade, não determinístico)
+            // entre um conjunto padrão de emojis, em vez de não substituir nada.
+            return DEFAULT_EMOJI_POOL[Math.floor(Math.random() * DEFAULT_EMOJI_POOL.length)];
+        }
         if (binding.mode === 'random') return values[this._pseudoRandomIndex(ctx.repetitionIndex, values.length)];
         return values[ctx.repetitionIndex % values.length];
     }
 
+    /**
+     * Quebra a caixa de "Lista de Emojis" em emojis individuais. Aceita tanto
+     * o formato antigo (separados por vírgula/quebra de linha) quanto emojis
+     * colados um no outro sem nenhum separador (ex.: "😀😁😂😃") -- primeiro
+     * separa por vírgula/linha (compatibilidade), depois quebra cada pedaço
+     * em "grapheme clusters" (via Intl.Segmenter, que entende corretamente
+     * emojis compostos por múltiplos code points: tons de pele, sequências
+     * ZWJ, bandeiras, variation selectors etc. como 1 emoji só).
+     * @param {string} raw
+     * @returns {string[]}
+     */
+    static _parseEmojiList(raw) {
+        const str = String(raw || '').trim();
+        if (!str) return [];
+
+        const pieces = str.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
+        const out = [];
+
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+            const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+            for (const piece of pieces) {
+                for (const { segment } of segmenter.segment(piece)) {
+                    if (segment && segment.trim()) out.push(segment);
+                }
+            }
+        } else {
+            // Fallback sem Intl.Segmenter (navegadores muito antigos): regex
+            // Unicode-aware que cobre emoji + modificador de tom de pele +
+            // sequências ZWJ + variation selector.
+            const re = /\p{Extended_Pictographic}(?:\u{FE0F})?(?:\u{200D}\p{Extended_Pictographic}(?:\u{FE0F})?)*|\S/gu;
+            for (const piece of pieces) {
+                const matches = piece.match(re) || [];
+                out.push(...matches);
+            }
+        }
+
+        return out;
+    }
+
     static _resolveApiPhrase(binding, ctx, apiCache) {
-        const resource = (binding.resource || 'phrases').trim() || 'phrases';
-        const list = (apiCache && apiCache[resource]) || [];
+        let list = (apiCache && apiCache.phrases) || [];
         if (!list.length) return '';
+
+        // Filtro por autor/categoria (opcional) -- restringe a lista antes
+        // de escolher o item pelo índice sequencial/aleatório.
+        if (binding.filterField && binding.filterValue) {
+            list = list.filter(item => {
+                if (item == null || typeof item !== 'object') return false;
+                const val = item[binding.filterField];
+                if (Array.isArray(val)) return val.map(String).includes(binding.filterValue);
+                return val != null && String(val) === binding.filterValue;
+            });
+            if (!list.length) return '';
+        }
 
         const idx = ctx.repetitionIndex;
         // Nota: no modo aleatório, o índice é derivado deterministicamente de
