@@ -21,7 +21,7 @@ const k = (key) => I18n.t('emojiKitchenTool.' + key);
 export class EmojiKitchenTool extends BaseTool {
 
     static getDefaultMeta() {
-        return { leftEmoji: '😀', rightEmoji: '', imageUrl: '' };
+        return { leftEmoji: '😀', rightEmoji: '', rightMode: 'manual', imageUrl: '' };
     }
 
     static getCtxOptions() {
@@ -88,9 +88,14 @@ export class EmojiKitchenTool extends BaseTool {
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${k('rightLabel')}</span>
-                <select id="ek-right-select" class="craftools-select" style="width:100%;">
-                    <option value="">${k('rightLoading')}</option>
-                </select>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <select id="ek-right-select" class="craftools-select" style="width:100%;">
+                        <option value="">${k('rightLoading')}</option>
+                    </select>
+                    <button type="button" id="ek-reroll-btn" class="craftools-icon-btn" title="${this._esc(k('rerollTitle'))}" style="display:none; flex-shrink:0;">
+                        <span class="material-symbols-outlined">casino</span>
+                    </button>
+                </div>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${k('rightHelp')}</span>
             </div>
         `;
@@ -106,37 +111,85 @@ export class EmojiKitchenTool extends BaseTool {
 
         const leftInput = editorPanel.querySelector('#ek-left');
         const rightSelect = editorPanel.querySelector('#ek-right-select');
+        const rerollBtn = editorPanel.querySelector('#ek-reroll-btn');
+
+        let currentPartners = [];
+
+        const renderRightOptions = () => {
+            if (!rightSelect) return;
+            const isRandom = meta.rightMode === 'random';
+            const options = [
+                `<option value="">${k('rightSelf')}</option>`,
+                `<option value="__random__" ${isRandom ? 'selected' : ''}>${k('rightRandom')}</option>`,
+            ].concat(currentPartners.map(p =>
+                `<option value="${this._esc(p)}" ${(!isRandom && meta.rightEmoji === p) ? 'selected' : ''}>${this._esc(p)}</option>`
+            ));
+            rightSelect.innerHTML = options.join('');
+            if (!isRandom && !meta.rightEmoji) {
+                rightSelect.value = '';
+            }
+            if (rerollBtn) rerollBtn.style.display = isRandom ? 'flex' : 'none';
+        };
+
+        // Sorteia um parceiro aleatório entre TODAS as combinações reais do
+        // emoji 1 (incluindo a opção "combinar com ele mesmo" no sorteio).
+        const pickRandom = () => {
+            const pool = [''].concat(currentPartners);
+            meta.rightEmoji = pool[Math.floor(Math.random() * pool.length)];
+            meta.rightMode = 'random';
+            renderRightOptions();
+            this._resolveAndRender(element);
+        };
 
         const loadPartners = async () => {
             if (!rightSelect) return;
             const left = (meta.leftEmoji || '').trim();
             if (!left) {
+                currentPartners = [];
                 rightSelect.innerHTML = `<option value="">${k('rightNone')}</option>`;
+                if (rerollBtn) rerollBtn.style.display = 'none';
                 return;
             }
             rightSelect.innerHTML = `<option value="">${k('rightLoading')}</option>`;
             const partners = await loadEmojiKitchenPartners(left);
-            const options = [`<option value="">${k('rightSelf')}</option>`]
-                .concat(partners
-                    .filter(p => p !== left)
-                    .map(p => `<option value="${this._esc(p)}" ${meta.rightEmoji === p ? 'selected' : ''}>${this._esc(p)}</option>`));
-            rightSelect.innerHTML = options.join('');
-            if (meta.rightEmoji && !partners.includes(meta.rightEmoji)) {
+            currentPartners = partners.filter(p => p !== left);
+
+            if (meta.rightMode === 'random') {
+                // Reafirma o sorteio já feito (ou sorteia de novo se o combo
+                // salvo não existir mais para este emoji 1).
+                const pool = [''].concat(currentPartners);
+                if (!pool.includes(meta.rightEmoji)) {
+                    meta.rightEmoji = pool[Math.floor(Math.random() * pool.length)];
+                }
+                renderRightOptions();
+                return;
+            }
+
+            if (meta.rightEmoji && !currentPartners.includes(meta.rightEmoji)) {
                 meta.rightEmoji = '';
             }
+            renderRightOptions();
         };
 
         if (leftInput) leftInput.oninput = () => {
             meta.leftEmoji = leftInput.value;
             meta.rightEmoji = '';
-            loadPartners();
-            this._resolveAndRender(element);
+            meta.rightMode = 'manual';
+            loadPartners().then(() => this._resolveAndRender(element));
         };
 
         if (rightSelect) rightSelect.onchange = () => {
-            meta.rightEmoji = rightSelect.value;
-            this._resolveAndRender(element);
+            if (rightSelect.value === '__random__') {
+                pickRandom();
+            } else {
+                meta.rightMode = 'manual';
+                meta.rightEmoji = rightSelect.value;
+                renderRightOptions();
+                this._resolveAndRender(element);
+            }
         };
+
+        if (rerollBtn) rerollBtn.onclick = () => pickRandom();
 
         loadPartners();
     }

@@ -10,6 +10,8 @@ I18n.addTranslations('emojiKitchenTool', {
         rightLoading: "carregando combinações…",
         rightNone: "Escolha o 1º emoji primeiro",
         rightSelf: "Nenhum (combinar com ele mesmo)",
+        rightRandom: "🎲 Aleatório",
+        rerollTitle: "Sortear novamente",
         rightHelp: "Só aparecem aqui combinações que realmente existem no catálogo."
     },
     "en": {
@@ -21,6 +23,8 @@ I18n.addTranslations('emojiKitchenTool', {
         rightLoading: "loading combinations…",
         rightNone: "Choose the 1st emoji first",
         rightSelf: "None (combine with itself)",
+        rightRandom: "🎲 Random",
+        rerollTitle: "Reroll",
         rightHelp: "Only combinations that actually exist in the catalog show up here."
     },
     "es": {
@@ -32,6 +36,8 @@ I18n.addTranslations('emojiKitchenTool', {
         rightLoading: "cargando combinaciones…",
         rightNone: "Elija primero el 1er emoji",
         rightSelf: "Ninguno (combinar consigo mismo)",
+        rightRandom: "🎲 Aleatorio",
+        rerollTitle: "Sortear de nuevo",
         rightHelp: "Aquí solo aparecen combinaciones que realmente existen en el catálogo."
     }
 });
