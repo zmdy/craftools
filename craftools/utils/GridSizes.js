@@ -62,7 +62,7 @@ export const GridSizes = [
         cellWidth: 50,
         cellHeight: 50,
         cellPadding: "3 3 3 3", 
-        pageMargin: "20 5 15 5", 
+        pageMargin: "17.5 5 17.5 5", 
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
@@ -71,7 +71,7 @@ export const GridSizes = [
         cellWidth: 50,
         cellHeight: 50,
         cellPadding: "0 0 0 0", 
-        pageMargin: "20 5 15 5", 
+        pageMargin: "17.5 5 17.5 5", 
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
@@ -80,7 +80,7 @@ export const GridSizes = [
         cellWidth: 50,
         cellHeight: 70,
         cellPadding: "3 3 3 3", 
-        pageMargin: "10 5 5 5", 
+        pageMargin: "7.5 5 7.5 5", 
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
@@ -89,7 +89,7 @@ export const GridSizes = [
         cellWidth: 50,
         cellHeight: 70,
         cellPadding: "0 0 0 0", 
-        pageMargin: "10 5 5 5", 
+        pageMargin: "7.5 5 7.5 5", 
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
@@ -98,7 +98,7 @@ export const GridSizes = [
         cellWidth: 50,
         cellHeight: 70,
         cellPadding: "3 3 18 3", 
-        pageMargin: "10 5 5 5", 
+        pageMargin: "7.5 5 7.5 5", 
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", , "297,420", ] 
     },
@@ -180,7 +180,7 @@ export const GridSizes = [
         cellWidth: 50,       // largura total da stripe
         cellHeight: 150,     // altura total da stripe
         cellPadding: "3 3 3 3",
-        pageMargin: "20 5 15 5",
+        pageMargin: "17.5 5 17.5 5",
         cellGap: 0,
         sizes: ["105,148", "148,210", "210,297", "297,210", "297,420"],
         cellLines: 3,        // 3 fotos verticalmente dentro da stripe
@@ -192,7 +192,7 @@ export const GridSizes = [
         cellWidth: 100,      // largura total da stripe
         cellHeight: 150,     // altura total da stripe
         cellPadding: "3 3 3 3",
-        pageMargin: "20 5 15 5",
+        pageMargin: "17.5 5 17.5 5",
         cellGap: 0,
         sizes: ["148,210", "210,297", "297,210", "297,420"],
         cellLines: 2,        // 2 fotos verticalmente dentro da stripe
