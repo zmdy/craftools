@@ -213,6 +213,7 @@ export class Craftools_Editor extends HTMLElement {
         const openSidebar = () => {
             if(sidebar) {
                 sidebar.classList.add('panel-open');
+                sidebar.classList.remove('sidenav-collapsed');
                 if (isMobile()) sidebar.classList.add('mobile-modal-mode');
             }
             overlay.classList.add('visible');
@@ -316,7 +317,10 @@ export class Craftools_Editor extends HTMLElement {
                 if(panelBody) panelBody.classList.remove('d-none');
                 if(closePanel) closePanel.classList.remove('d-none');
                 if(panelLogo) panelLogo.classList.add('d-none');
-                if(rightPanel) rightPanel.classList.add('panel-open');
+                if(rightPanel) {
+                    rightPanel.classList.add('panel-open');
+                    rightPanel.classList.remove('sidenav-collapsed');
+                }
                 const menuIcon = document.getElementById('pwa-menu-icon');
                 if(menuIcon && menuIcon.textContent !== 'close') {
                     menuIcon.textContent = 'close';
@@ -424,6 +428,7 @@ export class Craftools_Editor extends HTMLElement {
             if(panelLogo) panelLogo.classList.add('d-none');
             if(rightPanel) {
                 rightPanel.classList.add('panel-open');
+                rightPanel.classList.remove('sidenav-collapsed');
                 if (isMobile()) rightPanel.classList.add('mobile-modal-mode');
             }
             const menuIcon = document.getElementById('pwa-menu-icon');
