@@ -340,10 +340,13 @@ export class GeradorTool {
                 const { autoCenterToggle = false } = opts;
                 const isAuto = autoCenterToggle && !!cfg.autoCenter;
                 const toggleHtml = autoCenterToggle ? `
-                    <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; cursor:pointer;">
-                        <span style="font-size:11px; color:var(--text-secondary);">${g('autoCenterLabel')}</span>
-                        <input type="checkbox" id="cfg-autocenter" ${isAuto ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px;">
-                    </label>` : '';
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span class="craftools-label" style="margin:0; font-size:11px; color:var(--text-secondary);">${g('autoCenterLabel')}</span>
+                        <button type="button" class="craftools-pill gerador-autocenter-btn ${isAuto ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:14px;">center_focus_strong</span>
+                            ${isAuto ? g('enabled') : g('disabled')}
+                        </button>
+                    </div>` : '';
                 return `<div class="craftools-field" style="margin-bottom:10px;">
                     <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:5px;">${label}</label>
                     ${toggleHtml}
@@ -586,10 +589,10 @@ export class GeradorTool {
             });
 
             // Auto-center margins toggle
-            const autoCenterCheckbox = root.querySelector('#cfg-autocenter');
-            if (autoCenterCheckbox) {
-                autoCenterCheckbox.addEventListener('change', e => {
-                    cfg.autoCenter = e.target.checked;
+            const autoCenterBtn = root.querySelector('.gerador-autocenter-btn');
+            if (autoCenterBtn) {
+                autoCenterBtn.addEventListener('click', () => {
+                    cfg.autoCenter = !cfg.autoCenter;
                     renderPanel();
                 });
             }

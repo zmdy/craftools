@@ -715,15 +715,43 @@
 
         /* ── Sidebar recolhida (somente ícones) — acionada pelo botão de
            menu do rodapé no desktop. Nunca esconde a sidebar por completo;
-           só reduz para uma coluna estreita de ícones. ─────────────────── */
+           só reduz para uma coluna estreita de ícones. Os elementos que
+           desaparecem no modo recolhido encolhem/desaparecem suavemente
+           (opacity + max-height/max-width) em vez de sumir de repente via
+           display:none — evita o "salto"/quebra visual durante a transição
+           de largura do painel. Usa :last-child (não a classe do ícone) para
+           identificar o rótulo de texto, já que nem todo ícone usa a fonte
+           material-symbols-outlined (ex: o emoji 😊 da ferramenta Emojis). */
         .sidenav-panel.sidenav-collapsed {
             width: 68px !important;
         }
+        .sidenav-panel .panel-subtitle,
+        .sidenav-panel .sidenav-search,
+        .sidenav-panel .ct-sec-label {
+            transition: opacity 0.18s ease, max-height 0.22s ease, padding 0.22s ease, margin 0.22s ease;
+            overflow: hidden;
+        }
         .sidenav-panel.sidenav-collapsed .panel-subtitle,
         .sidenav-panel.sidenav-collapsed .sidenav-search,
-        .sidenav-panel.sidenav-collapsed .ct-sec-label,
-        .sidenav-panel.sidenav-collapsed .sidenav-nav li a span:not(.material-symbols-outlined) {
-            display: none !important;
+        .sidenav-panel.sidenav-collapsed .ct-sec-label {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border: none !important;
+            pointer-events: none;
+        }
+        .sidenav-panel .sidenav-nav li a span:last-child {
+            transition: opacity 0.18s ease, max-width 0.22s ease;
+            max-width: 160px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .sidenav-panel.sidenav-collapsed .sidenav-nav li a span:last-child {
+            opacity: 0;
+            max-width: 0;
         }
         .sidenav-panel.sidenav-collapsed .sidenav-nav li a {
             justify-content: center;
