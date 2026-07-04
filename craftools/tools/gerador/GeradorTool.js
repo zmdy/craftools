@@ -18,6 +18,58 @@ const parseMarginStr = (s) => {
     };
 };
 const marginToStr = (m) => `${m.top} ${m.right} ${m.bottom} ${m.left}`;
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+// ── Auto-center helpers ──────────────────────────────────────────────────────
+// Calcula o tamanho "natural" que o conteúdo (grade ou kit) ocupa quando
+// encaixado no maior número possível de células/blocos, ignorando margens —
+// usado para centralizar automaticamente a página (margens simétricas).
+const computeGridContentBounds = (cellWidth, cellHeight, cellGap, docW, docH) => {
+    const gap = parseFloat(cellGap) || 0;
+    const cW  = parseFloat(cellWidth)  || 1;
+    const cH  = parseFloat(cellHeight) || 1;
+    const cols = Math.max(1, Math.floor((docW + gap) / (cW + gap)));
+    const rows = Math.max(1, Math.floor((docH + gap) / (cH + gap)));
+    return {
+        width:  cols * cW + (cols > 1 ? (cols - 1) * gap : 0),
+        height: rows * cH + (rows > 1 ? (rows - 1) * gap : 0),
+    };
+};
+
+const computePromoContentBounds = (promoSlots, kitGap, docW) => {
+    const gap = parseFloat(kitGap) || 0;
+    let curX = 0, curY = 0, shelfH = 0, maxRowWidth = 0;
+
+    (promoSlots || []).forEach(slot => {
+        const slotGap = slot.cellGap !== undefined ? (parseFloat(slot.cellGap) || 0) : gap;
+        const cW = parseFloat(slot.cellWidth)  || 1;
+        const cH = parseFloat(slot.cellHeight) || 1;
+        let cols, rows;
+        if (slot.slotColumns && slot.slotLines) {
+            cols = slot.slotColumns;
+            rows = slot.slotLines;
+        } else {
+            const Kmax = Math.floor((docW + slotGap) / (cW + slotGap)) || 1;
+            cols = Math.min(slot.cellCount || 1, Kmax);
+            rows = Math.ceil((slot.cellCount || 1) / cols);
+        }
+        const blockW = cols * cW + (cols > 1 ? (cols - 1) * slotGap : 0);
+        const blockH = rows * cH + (rows > 1 ? (rows - 1) * slotGap : 0);
+
+        if (curX + blockW > docW && curX > 0) {
+            maxRowWidth = Math.max(maxRowWidth, curX - gap);
+            curX = 0; curY += shelfH + gap; shelfH = 0;
+        }
+        curX += blockW + gap;
+        shelfH = Math.max(shelfH, blockH);
+    });
+    maxRowWidth = Math.max(maxRowWidth, curX - gap);
+
+    return {
+        width:  Math.max(0, maxRowWidth),
+        height: Math.max(0, curY + shelfH),
+    };
+};
 
 // Standard page sizes always available in the builder
 const STANDARD_SIZES = [
@@ -60,6 +112,7 @@ export class GeradorTool {
             pageMargin:  { top: 5,  right: 5,  bottom: 5,  left: 5 },
             cellLines:   0,
             cellColumns: 0,
+            autoCenter:  false,
         };
 
         // Promo Kit state — cellPadding also as object
@@ -89,6 +142,11 @@ export class GeradorTool {
                     ...s,
                     cellPadding: parseMarginStr(s.cellPadding),
                 }));
+                cfg = {
+                    ...cfg,
+                    pageMargin:  parseMarginStr(t.pageMargin ?? '5 5 5 5'),
+                    autoCenter:  !!t.autoCenterMargin,
+                };
             } else if (t.cellLines || t.cellColumns) {
                 layoutType = 'strip';
                 cfg = {
@@ -99,6 +157,7 @@ export class GeradorTool {
                     pageMargin:  parseMarginStr(t.pageMargin  ?? '5 5 5 5'),
                     cellLines:   t.cellLines   ?? 2,
                     cellColumns: t.cellColumns ?? 1,
+                    autoCenter:  !!t.autoCenterMargin,
                 };
             } else {
                 layoutType = 'grid';
@@ -110,6 +169,7 @@ export class GeradorTool {
                     pageMargin:  parseMarginStr(t.pageMargin  ?? '5 5 5 5'),
                     cellLines:   0,
                     cellColumns: 0,
+                    autoCenter:  !!t.autoCenterMargin,
                 };
             }
         };
@@ -121,6 +181,7 @@ export class GeradorTool {
                 sizes:      selectedSize ? [selectedSize.size] : [],
                 pageMargin: marginToStr(cfg.pageMargin),
                 cellGap:    parseFloat(cfg.cellGap) || 0,
+                autoCenterMargin: !!cfg.autoCenter,
             };
 
             if (layoutType === 'promo') {
@@ -204,6 +265,18 @@ export class GeradorTool {
                 return;
             }
 
+            if (cfg.autoCenter) {
+                const parts = String(selectedSize.size || '210,297').split(',').map(Number);
+                const docW  = parts[0] || 210;
+                const docH  = parts[1] || 297;
+                const bounds = layoutType === 'promo'
+                    ? computePromoContentBounds(promoSlots, cfg.cellGap, docW)
+                    : computeGridContentBounds(cfg.cellWidth, cfg.cellHeight, cfg.cellGap, docW, docH);
+                const mLR = Math.max(0, round2((docW - bounds.width)  / 2));
+                const mTB = Math.max(0, round2((docH - bounds.height) / 2));
+                cfg.pageMargin = { top: mTB, right: mLR, bottom: mTB, left: mLR };
+            }
+
             const tmpl = buildTemplateObject();
             const svgHtml = AlbumPreviewSVG.build(tmpl, selectedSize, { maxW: 2000, maxH: 2000 });
             mainPage.innerHTML = svgHtml;
@@ -259,20 +332,32 @@ export class GeradorTool {
                         style="width:72px; text-align:right; padding:4px 6px;">
                 </div>`;
 
-            // Renders 4 individual number inputs (T/R/B/L) for margin/padding fields
-            const marginInputGroup = (idPrefix, label, value) =>
-                `<div class="craftools-field" style="margin-bottom:10px;">
+            // Renders 4 individual number inputs (T/R/B/L) for margin/padding fields.
+            // When `autoCenterToggle` is true, also renders the "Centralizar
+            // Automaticamente" switch above the inputs; while active, the inputs
+            // become readonly (margins are computed, not manually editable).
+            const marginInputGroup = (idPrefix, label, value, opts = {}) => {
+                const { autoCenterToggle = false } = opts;
+                const isAuto = autoCenterToggle && !!cfg.autoCenter;
+                const toggleHtml = autoCenterToggle ? `
+                    <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; cursor:pointer;">
+                        <span style="font-size:11px; color:var(--text-secondary);">${g('autoCenterLabel')}</span>
+                        <input type="checkbox" id="cfg-autocenter" ${isAuto ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px;">
+                    </label>` : '';
+                return `<div class="craftools-field" style="margin-bottom:10px;">
                     <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:5px;">${label}</label>
+                    ${toggleHtml}
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
                         ${['top','right','bottom','left'].map(side => `
                         <div style="display:flex; flex-direction:column; gap:2px;">
                             <label style="font-size:9px; color:var(--text-muted); text-align:center; text-transform:uppercase; letter-spacing:.5px;">${g('margin' + side.charAt(0).toUpperCase() + side.slice(1))}</label>
                             <input type="number" class="craftools-input margin-part-input" data-prefix="${idPrefix}" data-side="${side}"
-                                value="${value[side]}" min="0" max="200" step="0.5"
-                                style="padding:4px; text-align:center; width:100%;">
+                                value="${value[side]}" min="0" max="200" step="0.5" ${isAuto ? 'readonly' : ''}
+                                style="padding:4px; text-align:center; width:100%; ${isAuto ? 'opacity:.6; cursor:not-allowed; background:var(--bg-disabled,var(--bg-input,#27272a));' : ''}">
                         </div>`).join('')}
                     </div>
                 </div>`;
+            };
 
             // Same but for promo slot cellPadding
             const slotMarginGroup = (slotIdx, label, value) =>
@@ -343,7 +428,7 @@ export class GeradorTool {
                     ${canAddSlot ? `<button id="gerador-add-slot" class="craftools-topbtn" style="width:100%; justify-content:center; margin-bottom:8px;">
                         <span class="material-symbols-outlined" style="font-size:14px;">add</span>${g('addSlot')}
                     </button>` : ''}
-                    ${marginInputGroup('cfg-pageMargin', g('pageMarginLabel'), cfg.pageMargin)}
+                    ${marginInputGroup('cfg-pageMargin', g('pageMarginLabel'), cfg.pageMargin, { autoCenterToggle: true })}
                     ${numInput('cfg-cellGap', g('cellGap') + ' (kit)', cfg.cellGap, 0, 30, 0.5)}
                 `;
             }
@@ -353,7 +438,7 @@ export class GeradorTool {
                 ${numInput('cfg-cellHeight', g('cellHeight'), cfg.cellHeight, 5, 500, 0.5)}
                 ${numInput('cfg-cellGap',    g('cellGap'),    cfg.cellGap,    0, 30,  0.5)}
                 ${marginInputGroup('cfg-cellPadding', g('cellPaddingLabel'), cfg.cellPadding)}
-                ${marginInputGroup('cfg-pageMargin',  g('pageMarginLabel'),  cfg.pageMargin)}
+                ${marginInputGroup('cfg-pageMargin',  g('pageMarginLabel'),  cfg.pageMargin, { autoCenterToggle: true })}
             `;
 
             if (layoutType === 'strip') {
@@ -500,6 +585,15 @@ export class GeradorTool {
                 });
             });
 
+            // Auto-center margins toggle
+            const autoCenterCheckbox = root.querySelector('#cfg-autocenter');
+            if (autoCenterCheckbox) {
+                autoCenterCheckbox.addEventListener('change', e => {
+                    cfg.autoCenter = e.target.checked;
+                    renderPanel();
+                });
+            }
+
             // Promo slot fields (non-margin)
             root.querySelectorAll('.slot-field').forEach(el => {
                 el.addEventListener('input', e => {
@@ -581,7 +675,7 @@ export class GeradorTool {
                     editingId  = null;
                     name       = '';
                     layoutType = 'grid';
-                    cfg        = { cellWidth: 60, cellHeight: 85, cellGap: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, pageMargin: { top: 5, right: 5, bottom: 5, left: 5 }, cellLines: 0, cellColumns: 0 };
+                    cfg        = { cellWidth: 60, cellHeight: 85, cellGap: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, pageMargin: { top: 5, right: 5, bottom: 5, left: 5 }, cellLines: 0, cellColumns: 0, autoCenter: false };
                     promoSlots = [{ cellWidth: 80, cellHeight: 105, cellCount: 2, cellPadding: { top: 3, right: 3, bottom: 20, left: 3 }, cellGap: 2, slotLines: 0, slotColumns: 0 }];
                     renderPanel();
                 });

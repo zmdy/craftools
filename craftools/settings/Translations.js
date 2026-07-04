@@ -10,7 +10,7 @@ export const Translations = {
         },
         editor: {
             newPage: "Nova Pág",
-            generator: "Gerador",
+            generator: "Gerador de Modelos de Álbum",
             toolTitle: "Título",
             text: "Texto",
             image: "Imagem",
@@ -134,7 +134,7 @@ export const Translations = {
         },
         editor: {
             newPage: "New Page",
-            generator: "Generator",
+            generator: "Album Template Generator",
             toolTitle: "Title",
             text: "Text",
             image: "Image",
@@ -258,7 +258,7 @@ export const Translations = {
         },
         editor: {
             newPage: "Nueva Pág.",
-            generator: "Generador",
+            generator: "Generador de Plantillas de Álbum",
             toolTitle: "Título",
             text: "Texto",
             image: "Imagen",

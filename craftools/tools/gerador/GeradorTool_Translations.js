@@ -2,7 +2,7 @@ import { I18n } from "../../settings/Translations.js";
 
 I18n.addTranslations('geradorTool', {
     "pt-br": {
-        panelTitle:      "Generator",
+        panelTitle:      "Gerador de Modelos de Álbum",
         sectionName:     "Identidade do Template",
         namePlaceholder: "Ex: Kit Polaroid A4",
         nameLabel:       "Nome do Template",
@@ -17,6 +17,7 @@ I18n.addTranslations('geradorTool', {
         cellGap:         "Gap entre células (mm)",
         cellPaddingLabel: "Padding interno (mm)",
         pageMarginLabel:  "Margens da página (mm)",
+        autoCenterLabel: "Centralizar Automaticamente",
         slotPaddingLabel: "Padding do slot (mm)",
         marginTop:       "Cima",
         marginRight:     "Direita",
@@ -50,7 +51,7 @@ I18n.addTranslations('geradorTool', {
         previewBadge:    "Pré-visualização",
     },
     "en": {
-        panelTitle:      "Generator",
+        panelTitle:      "Album Template Generator",
         sectionName:     "Template Identity",
         namePlaceholder: "e.g. Polaroid Kit A4",
         nameLabel:       "Template Name",
@@ -65,6 +66,7 @@ I18n.addTranslations('geradorTool', {
         cellGap:         "Cell Gap (mm)",
         cellPaddingLabel: "Inner Padding (mm)",
         pageMarginLabel:  "Page Margins (mm)",
+        autoCenterLabel: "Auto-Center",
         slotPaddingLabel: "Slot Padding (mm)",
         marginTop:       "Top",
         marginRight:     "Right",
@@ -98,7 +100,7 @@ I18n.addTranslations('geradorTool', {
         previewBadge:    "Preview",
     },
     "es": {
-        panelTitle:      "Generator",
+        panelTitle:      "Generador de Plantillas de Álbum",
         sectionName:     "Identidad del Template",
         namePlaceholder: "Ej: Kit Polaroid A4",
         nameLabel:       "Nombre del Template",
@@ -113,6 +115,7 @@ I18n.addTranslations('geradorTool', {
         cellGap:         "Espacio entre celdas (mm)",
         cellPaddingLabel: "Padding interno (mm)",
         pageMarginLabel:  "Márgenes de página (mm)",
+        autoCenterLabel: "Centrar Automáticamente",
         slotPaddingLabel: "Padding del slot (mm)",
         marginTop:       "Arriba",
         marginRight:     "Derecha",
