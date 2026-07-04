@@ -373,7 +373,16 @@ export class CalendarTool {
             rows.push(this._renderPartRow('moonPhases', c('styleMoonPhases'), t.moonPhases, {}));
         }
 
-        const borderRow = `
+        return `
+            ${rows.join('')}
+            ${this._renderBorderRow(t)}
+        `;
+    }
+
+    // Linha "Borda / fundo do card" -- extraída como método próprio para ser
+    // reaproveitada também pelo MiniCalendarTool.js (mesma engine de tema).
+    static _renderBorderRow(t) {
+        return `
             <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:8px; margin-bottom:8px;">
                 <div style="font-weight:600; font-size:11px; margin-bottom:6px;">${c('styleCellBorder')}</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
@@ -399,11 +408,6 @@ export class CalendarTool {
                     </div>
                 </div>
             </div>
-        `;
-
-        return `
-            ${rows.join('')}
-            ${borderRow}
         `;
     }
 

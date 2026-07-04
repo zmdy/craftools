@@ -36,6 +36,7 @@ export class VariablePanel {
                     <option value="sequenceText" ${type === 'sequenceText' ? 'selected' : ''}>${I18n.t('variablePanel.typeSequenceText')}</option>
                     <option value="pageNumber" ${type === 'pageNumber' ? 'selected' : ''}>${I18n.t('variablePanel.typePageNumber')}</option>
                     <option value="link" ${type === 'link' ? 'selected' : ''}>${I18n.t('variablePanel.typeLink')}</option>
+                    <option value="emoji" ${type === 'emoji' ? 'selected' : ''}>${I18n.t('variablePanel.typeEmoji')}</option>
                     <option value="apiPhrase" ${type === 'apiPhrase' ? 'selected' : ''}>${I18n.t('variablePanel.typeApiPhrase')}</option>
                 </select>
             </div>
@@ -57,6 +58,7 @@ export class VariablePanel {
             case 'sequenceText': return this._seqTextConfig(binding);
             case 'pageNumber': return this._pageNumberConfig(binding);
             case 'link': return this._linkConfig(binding);
+            case 'emoji': return this._emojiConfig(binding);
             case 'apiPhrase': return this._apiPhraseConfig(binding);
             default: return '';
         }
@@ -179,7 +181,26 @@ export class VariablePanel {
         `;
     }
 
+    static _emojiConfig(b) {
+        return `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.emojiValuesLabel')}</span>
+                <textarea id="var-emoji-values" class="craftools-input" rows="2" placeholder="${this._esc(I18n.t('variablePanel.emojiValuesPlaceholder'))}" style="width:100%; resize:vertical; font-family:'Noto Color Emoji', sans-serif; font-size:16px;">${this._esc(b.values)}</textarea>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiValuesHelp')}</span>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
+                <select id="var-emoji-mode" class="craftools-select" style="width:100%;">
+                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeSequential')}</option>
+                    <option value="random" ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeRandom')}</option>
+                </select>
+            </div>
+        `;
+    }
+
     static _apiPhraseConfig(b) {
+        const knownFields = ['', 'phrase', 'author', 'category'];
+        const isCustom = !!b.field && !knownFields.includes(b.field);
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseResourceLabel')}</span>
@@ -188,7 +209,14 @@ export class VariablePanel {
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFieldLabel')}</span>
-                <input type="text" id="var-api-field" class="craftools-input" style="width:100%;" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${this._esc(b.field)}">
+                <select id="var-api-field-select" class="craftools-select" style="width:100%;">
+                    <option value="" ${!isCustom && !b.field ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldAuto')}</option>
+                    <option value="phrase" ${b.field === 'phrase' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldPhrase')}</option>
+                    <option value="author" ${b.field === 'author' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldAuthor')}</option>
+                    <option value="category" ${b.field === 'category' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldCategory')}</option>
+                    <option value="__custom__" ${isCustom ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldCustom')}</option>
+                </select>
+                <input type="text" id="var-api-field-custom" class="craftools-input" style="width:100%; margin-top:6px; ${isCustom ? '' : 'display:none;'}" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${isCustom ? this._esc(b.field) : ''}">
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseFieldHelp')}</span>
             </div>
             <div class="ct-field">
@@ -285,12 +313,30 @@ export class VariablePanel {
                     if (startAtInput) startAtInput.oninput = () => { binding.startAt = startAtInput.value; notify(); };
                     break;
                 }
+                case 'emoji': {
+                    const valuesInput = container.querySelector('#var-emoji-values');
+                    const modeSelect = container.querySelector('#var-emoji-mode');
+                    if (valuesInput) valuesInput.oninput = () => { binding.values = valuesInput.value; notify(); };
+                    if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
+                    break;
+                }
                 case 'apiPhrase': {
                     const resourceInput = container.querySelector('#var-api-resource');
-                    const fieldInput = container.querySelector('#var-api-field');
+                    const fieldSelect = container.querySelector('#var-api-field-select');
+                    const fieldCustom = container.querySelector('#var-api-field-custom');
                     const modeSelect = container.querySelector('#var-api-mode');
                     if (resourceInput) resourceInput.oninput = () => { binding.resource = resourceInput.value; notify(); };
-                    if (fieldInput) fieldInput.oninput = () => { binding.field = fieldInput.value; notify(); };
+                    if (fieldSelect) fieldSelect.onchange = () => {
+                        if (fieldSelect.value === '__custom__') {
+                            if (fieldCustom) { fieldCustom.style.display = ''; fieldCustom.focus(); }
+                            binding.field = fieldCustom ? fieldCustom.value : '';
+                        } else {
+                            if (fieldCustom) fieldCustom.style.display = 'none';
+                            binding.field = fieldSelect.value;
+                        }
+                        notify();
+                    };
+                    if (fieldCustom) fieldCustom.oninput = () => { binding.field = fieldCustom.value; notify(); };
                     if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
                     break;
                 }

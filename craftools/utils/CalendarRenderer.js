@@ -74,6 +74,17 @@ export class CalendarRenderer {
     static buildCardHtml(year, month, options = {}) {
         const model = options.model === 'completo' ? 'completo' : 'simples';
         const t = this.mergeTheme(options.theme);
+        // `parts` permite montar só pedaços do card (usado pelo
+        // MiniCalendarTool.js) -- por padrão, mantém o comportamento normal
+        // dos modelos "simples"/"completo" (CalendarTool.js, geração de
+        // páginas), sem precisar passar `parts` explicitamente.
+        const parts = Object.assign({
+            header: true,
+            week: true,
+            days: true,
+            holidaysBox: true,
+            moonBox: model === 'completo',
+        }, options.parts || {});
 
         const firstDay = new Date(year, month - 1, 1);
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -96,22 +107,22 @@ export class CalendarRenderer {
             cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight};">${day}</span>`;
         }
 
-        const daysGridHtml = `
+        const daysGridHtml = parts.days ? `
             <div class="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); font-family:'${this._esc(t.dayNumbers.font)}', sans-serif; font-size:${t.dayNumbers.fontSize}pt; line-height:1.25; flex:1; row-gap:${t.dayNumbers.rowGap || 0}px;">
                 ${cells}
             </div>
-        `;
+        ` : '';
 
         // ── Legenda de feriados ──────────────────────────────────────────
-        const holidaysHtml = holidays.length
+        const holidaysHtml = (parts.holidaysBox && holidays.length)
             ? `<div class="cal-holidays" style="color:${this._esc(t.holidays.color)}; font-family:'${this._esc(t.holidays.font)}', sans-serif; font-size:${t.holidays.fontSize}pt; text-align:center; line-height:1.3; padding:1px 2px;">
                 ${holidays.map(h => `${String(h.day).padStart(2, '0')}. ${this._esc(h.name)}`).join(' &nbsp;&nbsp; ')}
                </div>`
             : '';
 
-        // ── Fases da lua (modelo completo) ───────────────────────────────
+        // ── Fases da lua ──────────────────────────────────────────────────
         let moonHtml = '';
-        if (model === 'completo') {
+        if (parts.moonBox) {
             const phases = MoonPhases.getMoonPhasesForMonth(year, month);
             if (phases.length) {
                 moonHtml = `
@@ -122,14 +133,20 @@ export class CalendarRenderer {
             }
         }
 
-        return `
-            <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(t.cellBg)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
+        const titleBarHtml = parts.header ? `
                 <div class="cal-title-bar" style="background:${this._esc(t.titleBar.bg)}; color:${this._esc(t.titleBar.color)}; font-family:'${this._esc(t.titleBar.font)}', sans-serif; font-weight:${t.titleBar.fontWeight}; font-size:${t.titleBar.fontSize}pt; text-align:center; padding:2px 0; letter-spacing:0.3px;">
                     ${MONTH_NAMES_PT[month - 1]} ${year}
-                </div>
+                </div>` : '';
+
+        const weekHeaderHtml = parts.week ? `
                 <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt;">
                     ${WEEKDAY_LETTERS_PT.map(l => `<span style="flex:1; text-align:center; padding:1px 0;">${l}</span>`).join('')}
-                </div>
+                </div>` : '';
+
+        return `
+            <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(t.cellBg)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
+                ${titleBarHtml}
+                ${weekHeaderHtml}
                 ${daysGridHtml}
                 ${holidaysHtml}
                 ${moonHtml}
