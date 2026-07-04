@@ -12,11 +12,6 @@ const MONTH_NAMES_PT = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-// ── Modos de exibição ────────────────────────────────────────────────────
-// Cada modo escolhe quais partes do card (CalendarRenderer.buildCardHtml)
-// são montadas -- da tabela de dias isolada até o calendário completo com
-// fases da lua. Mesma engine usada pela ferramenta "Calendário" (geração
-// de páginas inteiras), só que aqui monta 1 elemento arrastável só.
 const DISPLAY_MODES = [
     { id: 'diasSemana',  labelKey: 'modeDiasSemana',  parts: { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false } },
     { id: 'calendario',  labelKey: 'modeCalendario',  parts: { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false } },
@@ -27,17 +22,6 @@ const DISPLAY_MODES = [
     { id: 'completo2',   labelKey: 'modeCompleto2',   parts: { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  } },
 ];
 
-/**
- * MiniCalendarTool
- *
- * Ferramenta "Mini Calendário" — ao contrário de CalendarTool.js (que assume
- * o painel inteiro e gera páginas cheias de folhas), esta é um elemento
- * arrastável comum (como QRCode/Barcode): 1 mês só, num card que o usuário
- * posiciona/redimensiona livremente na página. Reaproveita CalendarRenderer
- * (mesmo motor visual) e os controles de estilo granular de CalendarTool.js
- * (_renderPartRow/_fontOptions), mantendo a mesma aparência entre as duas
- * ferramentas.
- */
 export class MiniCalendarTool extends BaseTool {
 
     static getDefaultMeta() {
@@ -54,19 +38,22 @@ export class MiniCalendarTool extends BaseTool {
         return DISPLAY_MODES.find(d => d.id === meta.displayMode) || DISPLAY_MODES[5];
     }
 
-    static _renderCard(element) {
-        const meta = element._craftoolsMeta;
-        if (!meta || !element.contentArea) return;
-
+    static _buildCard(meta) {
         const mode = this._currentMode(meta);
         const card = CalendarRenderer.buildCardElement(meta.year, meta.month, {
             theme: meta.theme,
             parts: mode.parts,
         });
         card.style.userSelect = 'none';
+        return card;
+    }
+
+    static _renderCard(element) {
+        const meta = element._craftoolsMeta;
+        if (!meta || !element.contentArea) return;
 
         element.contentArea.innerHTML = '';
-        element.contentArea.appendChild(card);
+        element.contentArea.appendChild(this._buildCard(meta));
 
         this._triggerChange(element);
     }
@@ -88,7 +75,7 @@ export class MiniCalendarTool extends BaseTool {
         el.setAttribute('data-craftool', 'minicalendario');
 
         el._craftoolsMeta = this.getDefaultMeta();
-        this._renderCard(el);
+        el.appendChild(this._buildCard(el._craftoolsMeta));
 
         return el;
     }
@@ -125,8 +112,6 @@ export class MiniCalendarTool extends BaseTool {
             </div>
         `;
 
-        // Reaproveita os mesmos controles granulares de estilo do CalendarTool
-        // (_renderPartRow), já que ambas as ferramentas usam CalendarRenderer.
         const t = meta.theme;
         const htmlEstilo = [
             CalendarTool._renderPartRow('titleBar', I18n.t('calendarTool.styleTitleBar'), t.titleBar, { showBg: true }),
@@ -144,13 +129,8 @@ export class MiniCalendarTool extends BaseTool {
             PanelUI.accordion('minical-conteudo', 'calendar_month', m('content'), htmlConteudo, { open: true }) +
             PanelUI.accordion('minical-estilo', 'palette', I18n.t('calendarTool.tabStyle'), htmlEstilo);
 
-        // Só Tamanho/Posição/Z-Index -- borda/raio/padding/margem ficam de
-        // fora de propósito (o card já tem seu próprio controle de borda via
-        // "styleCellBorder" acima, evitando dois controles disputando o
-        // mesmo estilo inline).
         this.renderCommonProperties(editorPanel, element, { zindex: true });
 
-        // --- Bindings ---
         editorPanel.querySelectorAll('.minical-mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 meta.displayMode = btn.dataset.mode;
