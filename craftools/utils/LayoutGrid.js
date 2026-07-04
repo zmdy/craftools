@@ -113,6 +113,10 @@ export class Craftools_LayoutGrid {
             grid.dataset.borderWidth = '1';
             grid.dataset.borderStyle = 'dashed';
             grid.dataset.borderColor = '#cccccc';
+            // Marca a origem do grid (usado por PageTool.js para decidir qual
+            // painel reabrir ao clicar na página — Álbum ou outra ferramenta
+            // que também gera .craftools-grid-container, como o Calendário).
+            grid.dataset.gridSource = 'album';
 
             if (isPromo) {
                 grid.style.cssText = `

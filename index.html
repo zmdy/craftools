@@ -91,10 +91,18 @@
 
         /* O canvas precisa ocupar todo o espaço do app-content */
         .page-content-wrapper {
-            height: calc(100vh - 112px) !important;
-            margin-top: 50px !important;
+            height: calc(100vh - 126px) !important;
+            margin-top: 64px !important;
             overflow: hidden;
             position: relative;
+        }
+
+        /* Header com mais respiro vertical (padding superior/inferior maior) —
+           o template base usa altura fixa de 50px; aumentamos para 64px (o
+           conteúdo continua centralizado verticalmente via align-items:center). */
+        .header-area,
+        .header-content {
+            height: 64px !important;
         }
         
         #wrapper, .craftools-app {
@@ -119,7 +127,7 @@
             pointer-events: none;
         }
         .header-brand-logo {
-            height: 26px;
+            height: 22px;
             width: auto;
             display: block;
         }
@@ -131,7 +139,10 @@
             white-space: nowrap;
         }
         @media (max-width: 768px) {
-            .header-brand { display: none; }
+            /* No mobile mantém só a logo (compacta) visível; a tagline some
+               para não disputar espaço com os ícones do header. */
+            .header-brand-tagline { display: none; }
+            .header-brand-logo { height: 18px; }
         }
 
         /* Painel direito: mesmo visual do sidenav-wrapper */
@@ -1222,7 +1233,7 @@
     </div>
 
     <!-- MAIN LAYOUT WRAPPER (PANEL + CANVAS) -->
-    <div class="main-layout-wrapper d-flex" style="height: calc(100vh - 112px); margin-top: 50px; overflow: hidden; position: relative; width: 100%;">
+    <div class="main-layout-wrapper d-flex" style="height: calc(100vh - 126px); margin-top: 64px; overflow: hidden; position: relative; width: 100%;">
         
         <!-- LEFT PANEL (Menu & Properties) -->
         <div class="craftools-panel sidenav-panel" id="right-panel">
@@ -1261,7 +1272,7 @@
                         <li><a href="#" id="pwa-sidebar-paragrafo" draggable="true" data-tool="paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
                         <li><a href="#" id="pwa-sidebar-imagem" draggable="true" data-tool="imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
                         <li><a href="#" id="pwa-sidebar-album" draggable="true" data-tool="album"><span class="material-symbols-outlined">photo_library</span> <span data-i18n="editor.album">Álbum</span></a></li>
-                        <li><a href="#" id="pwa-sidebar-calendario" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-calendario" draggable="true" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
                         <li><a href="#" id="pwa-sidebar-qrcode" draggable="true" data-tool="qrcode"><span class="material-symbols-outlined">qr_code_2</span> <span data-i18n="editor.qrcode">QR Code</span></a></li>
                         <li><a href="#" id="pwa-sidebar-barcode" draggable="true" data-tool="barcode"><span class="material-symbols-outlined">barcode_reader</span> <span data-i18n="editor.barcode">Código de Barras</span></a></li>
                         <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>

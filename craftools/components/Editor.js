@@ -203,6 +203,18 @@ export class Craftools_Editor extends HTMLElement {
         const sidebar = document.getElementById('right-panel');
         const overlay = this.querySelector('#sidebar-overlay');
 
+        // Estado padrão da sidebar no desktop: recolhida (somente ícones) logo
+        // na primeira renderização do editor — nunca fica totalmente escondida
+        // nem totalmente expandida sem interação do usuário. Sem isso, a
+        // sidebar ficava sem nenhuma classe (nem panel-open, nem
+        // sidenav-collapsed) até o primeiro clique, o que podia deixá-la num
+        // estado intermediário/quebrado dependendo de estilos herdados.
+        if (sidebar && !isMobile() && !sidebar.classList.contains('panel-open')) {
+            sidebar.classList.add('panel-open', 'sidenav-collapsed');
+            const menuIcon = document.getElementById('pwa-menu-icon');
+            if (menuIcon) menuIcon.textContent = 'menu';
+        }
+
         if (window.innerWidth <= 768) {
             mobileMenuBtn.style.display = 'flex';
         }
@@ -566,7 +578,7 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                 });
             }
-            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario') {
+            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario' || tool === 'album') {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
@@ -595,6 +607,18 @@ export class Craftools_Editor extends HTMLElement {
                         openPanelMenu();
                         this.activePage = null;
                         AgendaExportTool.setup(this);
+                        return;
+                    }
+
+                    if (tool === 'album') {
+                        // Abre o painel do Álbum na página ativa (ou na primeira
+                        // página do documento), igual ao clique na sidebar das
+                        // demais ferramentas de página inteira (Gerador/Agenda/
+                        // Calendário). O arrastar-e-soltar já funcionava (drop
+                        // handler em PageTool.js).
+                        const { AlbumTool } = await import('../tools/album/AlbumTool.js');
+                        const targetPage = this.activePage || this.querySelector('.craftools-page');
+                        if (targetPage) AlbumTool.setup(this, targetPage);
                         return;
                     }
 

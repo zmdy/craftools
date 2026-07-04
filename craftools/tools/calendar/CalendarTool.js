@@ -335,6 +335,13 @@ export class CalendarTool {
                         <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="${opts.secondColorField}" value="${part[opts.secondColorField]}" style="width:100%;">
                     </div>
                 ` : ''}
+                ${opts.numberField ? `
+                    <div class="ct-field" style="margin-bottom:6px;">
+                        <span class="craftools-label">${opts.numberFieldLabel}</span>
+                        <input type="number" class="craftools-input" data-part="${key}" data-field="${opts.numberField}"
+                            value="${part[opts.numberField] ?? 0}" min="${opts.numberFieldMin ?? 0}" max="${opts.numberFieldMax ?? 10}" step="${opts.numberFieldStep ?? 0.5}" style="width:100%;">
+                    </div>
+                ` : ''}
                 <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
                     <div>
                         <span class="craftools-label">${c('fieldFont')}</span>
@@ -354,7 +361,10 @@ export class CalendarTool {
         const rows = [
             this._renderPartRow('titleBar', c('styleTitleBar'), t.titleBar, { showBg: true }),
             this._renderPartRow('weekHeader', c('styleWeekHeader'), t.weekHeader, { showBg: true }),
-            this._renderPartRow('dayNumbers', c('styleDayNumbers'), t.dayNumbers, { secondColorField: 'sundayColor', secondColorLabel: c('fieldSundayColor') }),
+            this._renderPartRow('dayNumbers', c('styleDayNumbers'), t.dayNumbers, {
+                secondColorField: 'sundayColor', secondColorLabel: c('fieldSundayColor'),
+                numberField: 'rowGap', numberFieldLabel: c('fieldRowGap'), numberFieldMin: 0, numberFieldMax: 8, numberFieldStep: 0.5,
+            }),
             this._renderPartRow('holidays', c('styleHolidays'), t.holidays, {}),
         ];
         if (state.model === 'completo') {
@@ -505,6 +515,9 @@ export class CalendarTool {
 
             const grid = document.createElement('div');
             grid.className = 'craftools-grid-container';
+            // Marca a origem do grid — PageTool.js usa isso para reabrir o
+            // painel do Calendário (em vez do Álbum) ao clicar na página.
+            grid.dataset.gridSource = 'calendario';
             grid.style.cssText = `
                 position:absolute; top:${preset.margin}mm; right:${preset.margin}mm; bottom:${preset.margin}mm; left:${preset.margin}mm;
                 display:grid; grid-template-columns:repeat(${preset.cols}, ${preset.cellWidth}mm); grid-auto-rows:${preset.cellHeight}mm;

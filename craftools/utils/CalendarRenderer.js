@@ -38,7 +38,7 @@ export class CalendarRenderer {
         return {
             titleBar: { bg: '#e11d2e', color: '#ffffff', font: 'DM Sans', fontWeight: 700, fontSize: 7 },
             weekHeader: { bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5 },
-            dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5 },
+            dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0 },
             holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2 },
             moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2 },
             cellBg: '#ffffff',
@@ -97,7 +97,7 @@ export class CalendarRenderer {
         }
 
         const daysGridHtml = `
-            <div class="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); font-family:'${this._esc(t.dayNumbers.font)}', sans-serif; font-size:${t.dayNumbers.fontSize}pt; line-height:1.25; flex:1;">
+            <div class="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); font-family:'${this._esc(t.dayNumbers.font)}', sans-serif; font-size:${t.dayNumbers.fontSize}pt; line-height:1.25; flex:1; row-gap:${t.dayNumbers.rowGap || 0}px;">
                 ${cells}
             </div>
         `;

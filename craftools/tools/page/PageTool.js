@@ -26,6 +26,9 @@ export class PageTool {
             if (toolType === 'album') {
                 const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
+            } else if (toolType === 'calendario') {
+                const { CalendarTool } = await import('../calendar/CalendarTool.js');
+                CalendarTool.setup(editor);
             } else if (toolType === 'emoji') {
                 const emoji = e.dataTransfer.getData('EmojiChar');
                 if (!emoji) return;
@@ -182,8 +185,16 @@ export class PageTool {
             if (isPageClick) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                 
-                // Check if page has an album
-                if (pageEl.querySelector('.craftools-grid-container')) {
+                // Check if page has a grid (Álbum ou outra ferramenta que também
+                // gera .craftools-grid-container, como o Calendário) — usa a
+                // marca gridSource para decidir qual painel reabrir.
+                const gridContainer = pageEl.querySelector('.craftools-grid-container');
+                if (gridContainer) {
+                    if (gridContainer.dataset.gridSource === 'calendario') {
+                        const { CalendarTool } = await import('../calendar/CalendarTool.js');
+                        CalendarTool.setup(editor);
+                        return;
+                    }
                     const { AlbumTool } = await import('../album/AlbumTool.js');
                     AlbumTool.setup(editor, pageEl);
                     return;
