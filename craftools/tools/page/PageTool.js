@@ -57,18 +57,18 @@ export class PageTool {
                 pageEl.appendChild(el);
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
-            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode') {
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode' || toolType === 'minicalendario') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
-                
+
                 let dropX, dropY;
                 let targetContainer = pageEl;
-                
+
                 const cellTarget = e.target.closest('.craftools-grid-cell');
                 const pRect = pageEl.getBoundingClientRect();
 
-                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : 120));
-                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : 40));
+                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : (toolType === 'minicalendario' ? 190 : 120)));
+                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : (toolType === 'minicalendario' ? 210 : 40)));
 
                 if (cellTarget && window.craftoolsAutoSnap !== false) {
                     const cRect = cellTarget.getBoundingClientRect();
@@ -98,6 +98,9 @@ export class PageTool {
                     } else if (toolType === 'barcode') {
                         dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220));
                         dropY = Math.max(10, Math.min(dropY - 50, (pRect.height / scale) - 100));
+                    } else if (toolType === 'minicalendario') {
+                        dropX = Math.max(10, Math.min(dropX - 95, (pRect.width / scale) - 190));
+                        dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210));
                     } else {
                         dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
                         dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
@@ -114,6 +117,9 @@ export class PageTool {
                 } else if (toolType === 'barcode') {
                     const { BarcodeTool } = await import('../barcode/BarcodeTool.js');
                     el = BarcodeTool.createElement(toolType, editor);
+                } else if (toolType === 'minicalendario') {
+                    const { MiniCalendarTool } = await import('../minicalendar/MiniCalendarTool.js');
+                    el = MiniCalendarTool.createElement(toolType, editor);
                 } else if (toolType === 'papeis') {
                     const { PaperTool } = await import('../paper/PaperTool.js');
                     el = PaperTool.createElement(toolType, editor);

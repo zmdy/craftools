@@ -29,7 +29,7 @@ import { loadPhrases } from "./ApiDataLoader.js";
  */
 export class VariableEngine {
 
-    static TYPES = ['date', 'sequenceNumber', 'sequenceText', 'pageNumber', 'link', 'apiPhrase'];
+    static TYPES = ['date', 'sequenceNumber', 'sequenceText', 'pageNumber', 'link', 'emoji', 'apiPhrase'];
 
     // ── Bindings padrão por tipo ─────────────────────────────────────────────
 
@@ -49,6 +49,8 @@ export class VariableEngine {
                 return { type, startAt: 1, format: 'n' };
             case 'link':
                 return { type, url: '', appendIndex: false, startAt: 1 };
+            case 'emoji':
+                return { type, values: '😀', mode: 'sequential' };
             case 'apiPhrase':
                 return { type, resource: 'phrases', field: '', mode: 'sequential' };
             default:
@@ -78,6 +80,7 @@ export class VariableEngine {
             case 'sequenceText': return this._resolveSequenceText(binding, ctx);
             case 'pageNumber': return this._resolvePageNumber(binding, ctx);
             case 'link': return this._resolveLink(binding, ctx);
+            case 'emoji': return this._resolveEmoji(binding, ctx);
             case 'apiPhrase': return this._resolveApiPhrase(binding, ctx, apiCache);
             default: return '';
         }
@@ -219,24 +222,41 @@ export class VariableEngine {
         return url;
     }
 
+    static _resolveEmoji(binding, ctx) {
+        const values = this._parseValuesList(binding.values);
+        if (!values.length) return '';
+        if (binding.mode === 'random') return values[this._pseudoRandomIndex(ctx.repetitionIndex, values.length)];
+        return values[ctx.repetitionIndex % values.length];
+    }
+
     static _resolveApiPhrase(binding, ctx, apiCache) {
         const resource = (binding.resource || 'phrases').trim() || 'phrases';
         const list = (apiCache && apiCache[resource]) || [];
         if (!list.length) return '';
 
         const idx = ctx.repetitionIndex;
+        // Nota: no modo aleatório, o índice é derivado deterministicamente de
+        // `repetitionIndex` (em vez de Math.random() puro) -- assim, duas
+        // variáveis diferentes vinculadas ao MESMO recurso (ex.: uma no campo
+        // "Frase" e outra no campo "Autor") sempre sorteiam o MESMO item da
+        // lista na mesma repetição, mantendo o par frase/autor consistente.
         const item = binding.mode === 'random'
-            ? list[Math.floor(Math.random() * list.length)]
+            ? list[this._pseudoRandomIndex(idx, list.length)]
             : list[idx % list.length];
 
         if (item == null) return '';
         if (typeof item === 'string') return item;
         if (typeof item === 'number') return String(item);
 
-        // Objeto -- tenta o campo configurado pelo usuário, senão tenta
-        // as chaves mais comuns usadas por APIs de frases.
+        // Objeto -- tenta o campo configurado pelo usuário (ex.: phrase,
+        // author, category), senão tenta as chaves mais comuns usadas por
+        // APIs de frases. Campos que sejam array (ex.: category: [...]) são
+        // unidos com vírgula.
         const field = (binding.field || '').trim();
-        if (field && item[field] != null) return String(item[field]);
+        if (field && item[field] != null) {
+            const val = item[field];
+            return Array.isArray(val) ? val.join(', ') : String(val);
+        }
 
         const guessKeys = ['phrase', 'text', 'frase', 'texto', 'title', 'name', 'value'];
         for (const key of guessKeys) {
@@ -245,5 +265,15 @@ export class VariableEngine {
 
         const firstStringKey = Object.keys(item).find(k => typeof item[k] === 'string');
         return firstStringKey ? String(item[firstStringKey]) : '';
+    }
+
+    /** Índice pseudo-aleatório determinístico (mesmo `seed` -> mesmo resultado sempre). */
+    static _pseudoRandomIndex(seed, length) {
+        if (!length || length <= 0) return 0;
+        let h = (seed + 0x9e3779b9) | 0;
+        h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+        h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+        h = (h ^ (h >>> 16)) >>> 0;
+        return h % length;
     }
 }
