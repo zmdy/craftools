@@ -275,6 +275,21 @@ export class GeradorTool {
                 const mLR = Math.max(0, round2((docW - bounds.width)  / 2));
                 const mTB = Math.max(0, round2((docH - bounds.height) / 2));
                 cfg.pageMargin = { top: mTB, right: mLR, bottom: mTB, left: mLR };
+
+                // Reflete os valores recalculados nos campos (readonly) de margem
+                // imediatamente, sem um re-render completo do painel — assim o
+                // usuário vê a margem se ajustar em tempo real conforme muda o
+                // tamanho da célula/gap/página, mesmo sem re-renderizar o campo
+                // que ele está editando (evita perder o foco do input).
+                const root = panelBody.querySelector('#gerador-root');
+                if (root) {
+                    root.querySelectorAll('.margin-part-input[data-prefix="cfg-pageMargin"]').forEach(el => {
+                        const side = el.dataset.side;
+                        if (side && cfg.pageMargin[side] !== undefined) {
+                            el.value = cfg.pageMargin[side];
+                        }
+                    });
+                }
             }
 
             const tmpl = buildTemplateObject();

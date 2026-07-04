@@ -1016,6 +1016,25 @@
                         const isMobileView = window.innerWidth <= 768;
 
                         if (!isMobileView) {
+                            // Se houver uma ferramenta/elemento selecionado com o painel de
+                            // propriedades aberto, o botão do rodapé deve primeiro fechar
+                            // esse painel (desativando a seleção na página) e só então
+                            // recolher a sidebar para o modo somente ícones — evita que o
+                            // conteúdo do painel de propriedades (não preparado para o modo
+                            // recolhido) fique cortado/quebrado dentro dos 68px.
+                            const closePanelBtn = document.getElementById('close-panel');
+                            const isToolPanelOpen = closePanelBtn && !closePanelBtn.classList.contains('d-none');
+                            if (isToolPanelOpen) {
+                                closePanelBtn.click();
+                                panel.classList.add('sidenav-collapsed');
+                                toggleMenuIcon(false);
+                                panel.style.marginLeft = '';
+                                if (!panel.classList.contains('panel-open')) {
+                                    panel.classList.add('panel-open');
+                                }
+                                return;
+                            }
+
                             // Desktop: alterna entre sidebar completa e recolhida (somente
                             // ícones) — nunca esconde totalmente, como no mobile.
                             const isNowCollapsed = panel.classList.toggle('sidenav-collapsed');
@@ -1214,13 +1233,13 @@
                         <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> <span data-i18n="editor.exportPdf">Exportar PDF</span></a></li>
                         <li><a href="#" id="pwa-sidebar-png"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.exportPng">Exportar PNG/JPG</span></a></li>
                         <li><a href="#" id="pwa-sidebar-agenda" data-tool="agenda"><span class="material-symbols-outlined">event_note</span> <span data-i18n="editor.agendaExport">Exportar Agenda</span></a></li>
-                        <li><a href="#" id="pwa-sidebar-calendario" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
-                        
+
                         <li class="ct-sec-label" style="padding: 15px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--border, #e4e4e7); margin-top: 10px;"><span data-i18n="editor.tools">Ferramentas</span></li>
                         <li><a href="#" id="pwa-sidebar-titulo" draggable="true" data-tool="titulo"><span class="material-symbols-outlined">title</span> <span data-i18n="editor.toolTitle">Título</span></a></li>
                         <li><a href="#" id="pwa-sidebar-paragrafo" draggable="true" data-tool="paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
                         <li><a href="#" id="pwa-sidebar-imagem" draggable="true" data-tool="imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
                         <li><a href="#" id="pwa-sidebar-album" draggable="true" data-tool="album"><span class="material-symbols-outlined">photo_library</span> <span data-i18n="editor.album">Álbum</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-calendario" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
                         <li><a href="#" id="pwa-sidebar-qrcode" draggable="true" data-tool="qrcode"><span class="material-symbols-outlined">qr_code_2</span> <span data-i18n="editor.qrcode">QR Code</span></a></li>
                         <li><a href="#" id="pwa-sidebar-barcode" draggable="true" data-tool="barcode"><span class="material-symbols-outlined">barcode_reader</span> <span data-i18n="editor.barcode">Código de Barras</span></a></li>
                         <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
