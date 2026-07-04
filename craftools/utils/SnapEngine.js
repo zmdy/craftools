@@ -18,7 +18,7 @@
  *   with any zoom level without extra math.
  */
 
-const SNAP_THRESHOLD = 8;  // screen pixels within which a snap activates
+const SNAP_THRESHOLD = 4;  // screen pixels within which a snap activates (força sutil -- captura só bem perto da guia, evita "prender" o elemento)
 const GUIDE_COLOR    = 'rgba(249,115,22,0.9)';
 const OVERLAY_ID     = 'ct-snap-overlay';
 const MM_PX          = 3.7795275591; // CSS pixels per mm at 96dpi
