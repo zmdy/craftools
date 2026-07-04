@@ -541,10 +541,11 @@ export class Craftools_Editor extends HTMLElement {
             });
         });
 
-        // Restore canvas when clicking any tool other than gerador
+        // Restore canvas when clicking any tool other than gerador/calendario
+        // (ambos assumem #main-page como área de prévia ao vivo).
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '').replace('pwa-btn-', '');
-            if (tool !== 'gerador') {
+            if (tool !== 'gerador' && tool !== 'calendario') {
                 btn.addEventListener('click', () => {
                     restoreOriginalCanvas();
                 });

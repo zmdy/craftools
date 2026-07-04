@@ -80,6 +80,10 @@ export class CalendarTool {
 
         const currentPreset = () => GRID_PRESETS.find(p => p.id === state.gridId) || GRID_PRESETS[0];
 
+        // Prévia ao vivo na página principal (igual ao Gerador de Álbum,
+        // inclusive a badge flutuante) -- chamada sempre que algo no painel muda.
+        const updatePreview = () => this._renderCanvasPreview(editor, state, currentPreset());
+
         const renderPanel = () => {
             const sectionModel = this._renderModelSection(state);
             const sectionLayout = this._renderLayoutSection(state);
@@ -99,6 +103,7 @@ export class CalendarTool {
 
             PanelUI.bindAccordions(panelBody);
             bindEvents();
+            updatePreview();
         };
 
         const bindEvents = () => {
@@ -138,33 +143,32 @@ export class CalendarTool {
             if (startMonthSel) startMonthSel.addEventListener('change', () => {
                 state.startMonth = parseInt(startMonthSel.value, 10);
                 this._refreshGenerateSummary(root, state, currentPreset());
+                updatePreview();
             });
             if (startYearInput) startYearInput.addEventListener('input', () => {
                 state.startYear = parseInt(startYearInput.value, 10) || state.startYear;
                 this._refreshGenerateSummary(root, state, currentPreset());
+                updatePreview();
             });
             if (endMonthSel) endMonthSel.addEventListener('change', () => {
                 state.endMonth = parseInt(endMonthSel.value, 10);
                 this._refreshGenerateSummary(root, state, currentPreset());
+                updatePreview();
             });
             if (endYearInput) endYearInput.addEventListener('input', () => {
                 state.endYear = parseInt(endYearInput.value, 10) || state.endYear;
                 this._refreshGenerateSummary(root, state, currentPreset());
+                updatePreview();
             });
             if (sheetCountInput) sheetCountInput.addEventListener('input', () => {
                 state.sheetCount = Math.max(1, parseInt(sheetCountInput.value, 10) || 1);
                 this._refreshGenerateSummary(root, state, currentPreset());
+                updatePreview();
             });
 
             // ── Estilo (delegação: todos os inputs com data-part/data-field) ──
-            const stylePreview = root.querySelector('#cal-style-preview');
-            const refreshPreview = () => {
-                if (!stylePreview) return;
-                stylePreview.innerHTML = '';
-                const card = CalendarRenderer.buildCardElement(state.startYear, state.startMonth, { model: state.model, theme: state.theme });
-                stylePreview.appendChild(card);
-            };
-
+            // A prévia agora é mostrada em tempo real na página (updatePreview),
+            // não mais num card isolado no sidebar.
             root.querySelectorAll('[data-part][data-field]').forEach(input => {
                 const evt = (input.tagName === 'SELECT' || input.type === 'color' || input.type === 'number') ? 'input' : 'change';
                 input.addEventListener(evt, () => {
@@ -178,11 +182,9 @@ export class CalendarTool {
                     } else if (state.theme[part]) {
                         state.theme[part][field] = value;
                     }
-                    refreshPreview();
+                    updatePreview();
                 });
             });
-
-            refreshPreview();
 
             // ── Gerar ─────────────────────────────────────────────────────
             const generateBtn = root.querySelector('#cal-generate-btn');
@@ -400,10 +402,6 @@ export class CalendarTool {
         `;
 
         return `
-            <div class="ct-field">
-                <span class="craftools-label">${c('stylePreviewLabel')}</span>
-                <div id="cal-style-preview" style="width:100%; aspect-ratio:1/1; max-width:220px; margin:0 auto 12px;"></div>
-            </div>
             ${rows.join('')}
             ${borderRow}
         `;
@@ -495,12 +493,108 @@ export class CalendarTool {
         return sheets;
     }
 
+    // Constrói o elemento <div class="craftools-grid-container"> de uma
+    // folha -- reaproveitado tanto pela geração real de páginas quanto pela
+    // prévia ao vivo na página (mesma marcação/CSS nos dois casos).
+    static _buildSheetGridElement(sheet, preset, state) {
+        const grid = document.createElement('div');
+        grid.className = 'craftools-grid-container';
+        // Marca a origem do grid — PageTool.js usa isso para reabrir o
+        // painel do Calendário (em vez do Álbum) ao clicar na página.
+        grid.dataset.gridSource = 'calendario';
+        grid.style.cssText = `
+            position:absolute; top:${preset.margin}mm; right:${preset.margin}mm; bottom:${preset.margin}mm; left:${preset.margin}mm;
+            display:grid; grid-template-columns:repeat(${preset.cols}, ${preset.cellWidth}mm); grid-auto-rows:${preset.cellHeight}mm;
+            gap:0mm; box-sizing:border-box;
+        `;
+
+        sheet.forEach(slot => {
+            const cell = document.createElement('div');
+            cell.className = 'craftools-grid-cell';
+            cell.style.cssText = `width:${preset.cellWidth}mm; height:${preset.cellHeight}mm; box-sizing:border-box; position:relative; overflow:hidden;`;
+            if (slot) {
+                const card = CalendarRenderer.buildCardElement(slot.year, slot.month, { model: state.model, theme: state.theme });
+                cell.appendChild(card);
+            }
+            grid.appendChild(cell);
+        });
+
+        return grid;
+    }
+
+    // ── Prévia ao vivo na página principal ──────────────────────────────
+    //
+    // Assim como o Gerador de Álbum, o painel Calendário assume a página
+    // principal (#main-page) como área de prévia enquanto está aberto,
+    // mostrando a mesma badge flutuante e restaurando o conteúdo original
+    // ao trocar de ferramenta (via Editor.js -> restoreOriginalCanvas()).
+    static _renderCanvasPreview(editor, state, preset) {
+        const canvasArea = document.getElementById('canvas-area');
+        const pagesWrapper = document.getElementById('pages-wrapper');
+        const mainPage = document.getElementById('main-page');
+        if (!canvasArea || !mainPage) return;
+
+        if (pagesWrapper) pagesWrapper.style.display = '';
+
+        // Guarda o conteúdo original da página só na primeira vez (mesma
+        // lógica do GeradorTool.js) -- é restaurado ao trocar de ferramenta.
+        if (editor._savedPageHtml === undefined) {
+            editor._savedPageHtml = mainPage.innerHTML;
+        }
+
+        let badge = document.getElementById('gerador-canvas-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.id = 'gerador-canvas-badge';
+            badge.style.cssText = `
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                background: #f97316;
+                color: #fff;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 6px 14px;
+                border-radius: 30px;
+                z-index: 100;
+                box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                pointer-events: none;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                animation: pageIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            `;
+            badge.innerHTML = `
+                <span class="material-symbols-outlined" style="font-size: 15px;">visibility</span>
+                ${c('stylePreviewLabel')}
+            `;
+            canvasArea.appendChild(badge);
+        }
+
+        const plan = this._buildSheetPlan(state, preset);
+        const sheet = plan && plan.length ? plan[0] : null;
+
+        mainPage.innerHTML = '';
+        if (sheet) {
+            mainPage.appendChild(this._buildSheetGridElement(sheet, preset, state));
+        }
+    }
+
     // ── Geração real das páginas ──────────────────────────────────────────
 
     static async _generate(editor, sheets, preset, state) {
         const { PageTool } = await import('../page/PageTool.js');
         const pagesWrapper = editor.querySelector('#pages-wrapper');
         if (!pagesWrapper) return;
+
+        // Restaura a página principal (que estava mostrando a prévia ao
+        // vivo) antes de adicionar as folhas reais geradas -- senão a
+        // primeira página do documento ficaria presa exibindo a prévia.
+        if (typeof editor.restoreOriginalCanvas === 'function') {
+            editor.restoreOriginalCanvas();
+        }
 
         for (let s = 0; s < sheets.length; s++) {
             PageTool.addNewPage(editor);
@@ -512,29 +606,7 @@ export class CalendarTool {
             page.style.background = '#ffffff';
             page.style.position = 'relative';
             page.innerHTML = '';
-
-            const grid = document.createElement('div');
-            grid.className = 'craftools-grid-container';
-            // Marca a origem do grid — PageTool.js usa isso para reabrir o
-            // painel do Calendário (em vez do Álbum) ao clicar na página.
-            grid.dataset.gridSource = 'calendario';
-            grid.style.cssText = `
-                position:absolute; top:${preset.margin}mm; right:${preset.margin}mm; bottom:${preset.margin}mm; left:${preset.margin}mm;
-                display:grid; grid-template-columns:repeat(${preset.cols}, ${preset.cellWidth}mm); grid-auto-rows:${preset.cellHeight}mm;
-                gap:0mm; box-sizing:border-box;
-            `;
-            page.appendChild(grid);
-
-            sheets[s].forEach(slot => {
-                const cell = document.createElement('div');
-                cell.className = 'craftools-grid-cell';
-                cell.style.cssText = `width:${preset.cellWidth}mm; height:${preset.cellHeight}mm; box-sizing:border-box; position:relative; overflow:hidden;`;
-                if (slot) {
-                    const card = CalendarRenderer.buildCardElement(slot.year, slot.month, { model: state.model, theme: state.theme });
-                    cell.appendChild(card);
-                }
-                grid.appendChild(cell);
-            });
+            page.appendChild(this._buildSheetGridElement(sheets[s], preset, state));
         }
 
         document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
