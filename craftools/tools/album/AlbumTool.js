@@ -578,6 +578,7 @@ export class AlbumTool extends BaseTool {
         if(panelLogo) panelLogo.classList.add('d-none');
         if(rightPanel) {
             rightPanel.classList.add('panel-open');
+            rightPanel.classList.remove('sidenav-collapsed');
             if (window.innerWidth <= 768) rightPanel.classList.add('mobile-modal-mode');
         }
         const menuIcon = document.getElementById('pwa-menu-icon');
