@@ -354,6 +354,35 @@ export class CalendarTool {
                         <input type="number" class="craftools-input" data-part="${key}" data-field="fontSize" value="${part.fontSize}" step="0.5" min="2" max="30" style="width:100%;">
                     </div>
                 </div>
+                ${opts.innerBorder ? this._renderInnerBorderFields(key, part) : ''}
+            </div>
+        `;
+    }
+
+    // Sub-bloco reaproveitável: bordas internas (grade) do cabeçalho dos
+    // dias da semana e/ou dos números dos dias -- opt-in via
+    // opts.innerBorder em _renderPartRow. Largura 0 = desligado (padrão).
+    static _renderInnerBorderFields(key, part) {
+        return `
+            <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7);">
+                <div style="font-weight:600; font-size:10px; margin-bottom:6px; color:var(--text-secondary);">${c('fieldInnerBorder')}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
+                    <div>
+                        <span class="craftools-label">${c('fieldBorderWidth')}</span>
+                        <input type="number" class="craftools-input" data-part="${key}" data-field="innerBorderWidth"
+                            value="${part.innerBorderWidth ?? 0}" min="0" max="5" step="0.5" style="width:100%;">
+                    </div>
+                    <div>
+                        <span class="craftools-label">${c('fieldBorderColor')}</span>
+                        <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="innerBorderColor" value="${part.innerBorderColor || '#cccccc'}" style="width:100%;">
+                    </div>
+                </div>
+                <div>
+                    <span class="craftools-label">${c('fieldBorderStyle')}</span>
+                    <select class="craftools-select" data-part="${key}" data-field="innerBorderStyle" style="width:100%;">
+                        ${['solid', 'dashed', 'dotted'].map(s => `<option value="${s}" ${(part.innerBorderStyle || 'solid') === s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
             </div>
         `;
     }
@@ -362,10 +391,11 @@ export class CalendarTool {
         const t = state.theme;
         const rows = [
             this._renderPartRow('titleBar', c('styleTitleBar'), t.titleBar, { showBg: true }),
-            this._renderPartRow('weekHeader', c('styleWeekHeader'), t.weekHeader, { showBg: true }),
+            this._renderPartRow('weekHeader', c('styleWeekHeader'), t.weekHeader, { showBg: true, innerBorder: true }),
             this._renderPartRow('dayNumbers', c('styleDayNumbers'), t.dayNumbers, {
                 secondColorField: 'sundayColor', secondColorLabel: c('fieldSundayColor'),
                 numberField: 'rowGap', numberFieldLabel: c('fieldRowGap'), numberFieldMin: 0, numberFieldMax: 8, numberFieldStep: 0.5,
+                innerBorder: true,
             }),
             this._renderPartRow('holidays', c('styleHolidays'), t.holidays, {}),
         ];

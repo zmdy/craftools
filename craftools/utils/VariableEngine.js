@@ -1,4 +1,19 @@
 import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners } from "./ApiDataLoader.js";
+import { CalendarRenderer } from "./CalendarRenderer.js";
+
+// Mesmos "parts" do MiniCalendarTool.js (duplicado aqui de propósito -- é um
+// arquivo de tool que importa BaseTool/etc., não deveria ser importado por um
+// utilitário "core" como este). Usado pela variável tipo "miniCalendar" para
+// montar o mesmo card (CalendarRenderer) com o recorte de partes escolhido.
+const MINI_CALENDAR_PARTS = {
+    diasSemana:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
+    calendario:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
+    header:      { header: true,  week: false, days: false, holidaysBox: false, moonBox: false },
+    holidaysBox: { header: false, week: false, days: false, holidaysBox: true,  moonBox: false },
+    moonBox:     { header: false, week: false, days: false, holidaysBox: false, moonBox: true  },
+    completo1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
+    completo2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
+};
 
 // Usado quando a lista de emojis (variável tipo "emoji") está vazia -- o
 // sistema sorteia entre este conjunto padrão em vez de não substituir nada.
@@ -56,7 +71,7 @@ const DEFAULT_EMOJI_POOL = [
  */
 export class VariableEngine {
 
-    static TYPES = ['date', 'sequenceNumber', 'sequenceText', 'pageNumber', 'link', 'emoji', 'apiPhrase', 'emojiKitchen'];
+    static TYPES = ['date', 'sequenceNumber', 'sequenceText', 'pageNumber', 'link', 'emoji', 'apiPhrase', 'emojiKitchen', 'miniCalendar'];
 
     // ── Bindings padrão por tipo ─────────────────────────────────────────────
 
@@ -82,6 +97,8 @@ export class VariableEngine {
                 return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
             case 'emojiKitchen':
                 return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
+            case 'miniCalendar':
+                return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'completo1', linkedTo: '' };
             default:
                 return null;
         }
@@ -288,6 +305,7 @@ export class VariableEngine {
             case 'emoji': return this._pickEmoji(binding, ctx);
             case 'apiPhrase': return this._pickApiPhrase(binding, ctx, apiCache);
             case 'emojiKitchen': return this._pickEmojiKitchen(binding, ctx, apiCache);
+            case 'miniCalendar': return this._pickMiniCalendar(binding, ctx);
             default: return null;
         }
     }
@@ -304,6 +322,7 @@ export class VariableEngine {
             case 'emoji': return pick == null ? '' : String(pick);
             case 'apiPhrase': return this._formatApiPhrase(pick, binding);
             case 'emojiKitchen': return (pick && pick.url) ? pick.url : '';
+            case 'miniCalendar': return pick ? this._formatMiniCalendar(pick) : '';
             default: return '';
         }
     }
@@ -409,7 +428,7 @@ export class VariableEngine {
     static _pickLink(binding, ctx) {
         if (!binding.appendIndex) return null;
         const start = parseInt(binding.startAt, 10) || 1;
-        art + ctx.repetitionIndex;
+        return start + ctx.repetitionIndex;
     }
 
     static _formatLink(pick, binding) {
@@ -562,6 +581,41 @@ export class VariableEngine {
         const key = `${left}|${right}`;
         const url = (apiCache && apiCache.emojiKitchenCombos && apiCache.emojiKitchenCombos[key]) || '';
         return { leftEmoji: left, rightEmoji: right, url };
+    }
+
+    // ── miniCalendar ─────────────────────────────────────────────────────────
+
+    /**
+     * Mini calendário como variável: no modo "fixed", sempre mostra o mesmo
+     * mês/ano configurado. No modo "sequentialMonthly", avança 1 mês por
+     * repetição a partir do mês/ano configurado (ex.: útil numa Agenda com
+     * 1 repetição por mês, cada uma mostrando o mini-calendário do PRÓXIMO
+     * mês ou de um mês relativo à página).
+     */
+    static _pickMiniCalendar(binding, ctx) {
+        let year = parseInt(binding.year, 10) || new Date().getFullYear();
+        let month = parseInt(binding.month, 10) || (new Date().getMonth() + 1);
+        if (binding.mode === 'sequentialMonthly') {
+            month += ctx.repetitionIndex;
+            while (month > 12) { month -= 12; year += 1; }
+            while (month < 1) { month += 12; year -= 1; }
+        }
+        const displayMode = MINI_CALENDAR_PARTS[binding.displayMode] ? binding.displayMode : 'completo1';
+        return { year, month, displayMode };
+    }
+
+    /**
+     * Formata o pick de miniCalendar como o HTML completo do card (mesmo
+     * motor -- CalendarRenderer -- usado pela MiniCalendarTool.js e pelo
+     * CalendarTool.js), já com o recorte de partes (`displayMode`) aplicado.
+     * Ao contrário dos outros tipos, o "valor" aqui NÃO é texto simples nem
+     * uma URL -- é um bloco de HTML (com estilo inline), que quem consome
+     * (TextTool.js/AgendaExport.js) deve inserir via innerHTML, nunca
+     * textContent.
+     */
+    static _formatMiniCalendar(pick) {
+        const parts = MINI_CALENDAR_PARTS[pick.displayMode] || MINI_CALENDAR_PARTS.completo1;
+        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts });
     }
 
     /** Índice pseudo-aleatório determinístico (mesmo `seed` -> mesmo resultado sempre). */

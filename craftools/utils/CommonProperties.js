@@ -321,22 +321,30 @@ export class CommonProperties {
         const currentY  = Math.round(parseFloat(elStyle.top)    || parseFloat(element.getAttribute('y'))  || 0);
         const currentZ  = parseInt(elStyle.zIndex) || 2;
 
+        const autoFitOn = config.autoFitText ? (element._craftoolsAutoResize !== false) : false;
+
         const bodyHtml = `
             <!-- Size -->
             <div class="ct-field">
                 <div class="ct-sublabel"><span class="material-symbols-outlined">aspect_ratio</span>${I18n.t('common.size') || 'Tamanho'}</div>
+                ${config.autoFitText ? `
+                <label class="ct-field-row" style="gap:6px; align-items:center; cursor:pointer; margin-bottom:6px;">
+                    <input type="checkbox" id="ct-autofit-text" ${autoFitOn ? 'checked' : ''}>
+                    <span style="font-size:11px; color:var(--text-secondary);">${I18n.t('common.autoFitText') || 'Ajustar tamanho automaticamente ao texto'}</span>
+                </label>
+                ` : ''}
                 <div class="ct-field-grid2">
                     <div style="display:flex;flex-direction:column;gap:3px;">
                         <span style="font-size:9px;color:var(--text-muted);">W</span>
                         <div class="ct-field-row" style="gap:4px;">
-                            <input type="number" id="ct-sz-w" class="craftools-input" value="${currentW}" min="10" style="text-align:center;padding:4px;">
+                            <input type="number" id="ct-sz-w" class="craftools-input" value="${currentW}" min="10" style="text-align:center;padding:4px;" ${autoFitOn ? 'disabled' : ''}>
                             <span style="font-size:10px;color:var(--text-muted);">px</span>
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:3px;">
                         <span style="font-size:9px;color:var(--text-muted);">H</span>
                         <div class="ct-field-row" style="gap:4px;">
-                            <input type="number" id="ct-sz-h" class="craftools-input" value="${currentH}" min="10" style="text-align:center;padding:4px;">
+                            <input type="number" id="ct-sz-h" class="craftools-input" value="${currentH}" min="10" style="text-align:center;padding:4px;" ${autoFitOn ? 'disabled' : ''}>
                             <span style="font-size:10px;color:var(--text-muted);">px</span>
                         </div>
                     </div>
@@ -403,6 +411,21 @@ export class CommonProperties {
         });
         hInput?.addEventListener('input', () => {
             element.style.height = hInput.value + 'px';
+            if (config.onChange) config.onChange();
+            this._triggerChange(element);
+        });
+
+        // Ajuste automático ao texto (só existe quando o tool passa
+        // config.autoFitText -- hoje só o TextTool/Título/Parágrafo).
+        // Liga/desliga `element._craftoolsAutoResize` (padrão: true/ligado
+        // quando ainda não definido) e trava os campos W/H manuais enquanto
+        // ligado, já que nesse modo o tamanho é recalculado a cada tecla.
+        const autoFitCheckbox = acc.querySelector('#ct-autofit-text');
+        autoFitCheckbox?.addEventListener('change', () => {
+            element._craftoolsAutoResize = autoFitCheckbox.checked;
+            if (wInput) wInput.disabled = autoFitCheckbox.checked;
+            if (hInput) hInput.disabled = autoFitCheckbox.checked;
+            if (config.onAutoFitToggle) config.onAutoFitToggle(autoFitCheckbox.checked);
             if (config.onChange) config.onChange();
             this._triggerChange(element);
         });

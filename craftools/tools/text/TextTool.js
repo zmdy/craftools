@@ -117,7 +117,11 @@ export class TextTool extends BaseTool {
             radius: '[contenteditable]',
             padding: '[contenteditable]',
             margin: '[contenteditable]',
-            zindex: true
+            zindex: true,
+            autoFitText: true,
+            onAutoFitToggle: (checked) => {
+                if (checked) this._applyAutoSize(element, textElement);
+            }
         });
 
         // Texto Variável — vincula o conteúdo deste elemento a uma variável
@@ -128,6 +132,15 @@ export class TextTool extends BaseTool {
             this._applyVariablePreview(element, textElement, binding);
         }, element);
         this._applyVariablePreview(element, textElement, element._craftoolsVariable);
+        this._applyAutoSize(element, textElement);
+
+        // Ajusta automaticamente o tamanho do elemento conforme o texto é
+        // digitado (quando o ajuste automático está ativo).
+        textElement.addEventListener('input', () => {
+            this._applyAutoSize(element, textElement);
+            const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
+            element.dispatchEvent(event);
+        });
 
         // Font dropdown
         const fontSelect = editorPanel.querySelector('#text-prop-font');
@@ -210,6 +223,7 @@ export class TextTool extends BaseTool {
             textElement.style.fontFamily = `'${e.target.value}', 'Noto Color Emoji', sans-serif`;
             customFontInput.value = FONTS.includes(e.target.value) ? '' : e.target.value;
             syncStyles();
+            this._applyAutoSize(element, textElement);
             // Trigger an element update (bounding box might change)
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
@@ -233,6 +247,7 @@ export class TextTool extends BaseTool {
                     fontSelect.value = [...fontSelect.options].find(opt => opt.value.toLowerCase() === fontName.toLowerCase()).value;
                 }
                 syncStyles();
+                this._applyAutoSize(element, textElement);
 
                 const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
                 element.dispatchEvent(event);
@@ -344,6 +359,7 @@ export class TextTool extends BaseTool {
             sizeRange.value = val;
             sizeNum.value = val;
             syncStyles();
+            this._applyAutoSize(element, textElement);
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
         };
@@ -396,9 +412,15 @@ export class TextTool extends BaseTool {
                     textElement.innerHTML = val
                         ? `<img src="${this._escAttr(val)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
                         : '—';
+                } else if (binding.type === 'miniCalendar') {
+                    // Ao contrário dos outros tipos, o valor aqui já É um
+                    // bloco de HTML (o card do mini-calendário, com estilo
+                    // inline) -- insere direto via innerHTML, não como texto.
+                    textElement.innerHTML = val || '—';
                 } else {
                     textElement.textContent = (val && String(val).length) ? val : '—';
                 }
+                this._applyAutoSize(element, textElement);
             });
         } else if (textElement.getAttribute('contenteditable') === 'false') {
             textElement.setAttribute('contenteditable', 'true');
@@ -412,40 +434,107 @@ export class TextTool extends BaseTool {
         }
     }
 
+    /**
+     * Mede o tamanho "natural" (intrínseco) do textElement — a largura/altura
+     * que ele ocuparia sem estar restrito a 100% do elemento pai — trocando
+     * temporariamente width/height para max-content e lendo
+     * getBoundingClientRect(). Inclui a margem computada, já que
+     * getBoundingClientRect() não a contabiliza (margem fica fora da border-box).
+     */
+    static _measureNaturalSize(textElement) {
+        const prevWidth = textElement.style.width;
+        const prevHeight = textElement.style.height;
+        const prevMaxWidth = textElement.style.maxWidth;
+        const prevMaxHeight = textElement.style.maxHeight;
+
+        textElement.style.maxWidth = 'none';
+        textElement.style.maxHeight = 'none';
+        textElement.style.width = 'max-content';
+        textElement.style.height = 'max-content';
+
+        const rect = textElement.getBoundingClientRect();
+        const cs = getComputedStyle(textElement);
+        const marginW = (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0);
+        const marginH = (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+
+        textElement.style.width = prevWidth;
+        textElement.style.height = prevHeight;
+        textElement.style.maxWidth = prevMaxWidth;
+        textElement.style.maxHeight = prevMaxHeight;
+
+        return {
+            width: Math.ceil(rect.width + marginW),
+            height: Math.ceil(rect.height + marginH)
+        };
+    }
+
+    /**
+     * Redimensiona o craftools-element para caber exatamente o texto atual,
+     * respeitando o toggle "Ajustar tamanho automaticamente" (ativo por
+     * padrão -- só é ignorado quando o usuário desliga explicitamente).
+     * Atualiza também os campos W/H do painel de Tamanho, se estiverem
+     * visíveis, para refletir o novo tamanho.
+     */
+    static _applyAutoSize(element, textElement) {
+        if (element._craftoolsAutoResize === false) return;
+        if (!textElement || !textElement.isConnected) return;
+
+        const { width, height } = this._measureNaturalSize(textElement);
+        const newW = Math.max(10, width);
+        const newH = Math.max(10, height);
+
+        element.style.width = newW + 'px';
+        element.style.height = newH + 'px';
+        element.setAttribute('w', newW);
+        element.setAttribute('h', newH);
+
+        const wInput = document.getElementById('ct-sz-w');
+        const hInput = document.getElementById('ct-sz-h');
+        if (wInput) wInput.value = newW;
+        if (hInput) hInput.value = newH;
+    }
+
+    /**
+     * Aplica bold/italic/underline. Em texto normal (editável), formata a
+     * seleção via execCommand (comportamento original). Quando o elemento
+     * está vinculado a uma variável, o texto real vira contenteditable=false
+     * (mostra um preview, ver _applyVariablePreview) e não há seleção de
+     * texto para formatar -- nesse caso alterna o estilo do elemento inteiro,
+     * que continua valendo para o valor resolvido na Exportação de Agenda.
+     */
+    static _toggleCtxStyle(element, cssProp, onValue, offValue) {
+        const text = element.contentArea.querySelector('[contenteditable]');
+        if (!text) return;
+        if (text.getAttribute('contenteditable') === 'false') {
+            text.style[cssProp] = (text.style[cssProp] === onValue) ? offValue : onValue;
+            this._applyAutoSize(element, text);
+            const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
+            element.dispatchEvent(event);
+        } else {
+            text.focus();
+            document.execCommand(cssProp === 'fontWeight' ? 'bold' : cssProp === 'fontStyle' ? 'italic' : 'underline');
+            this._applyAutoSize(element, text);
+            const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
+            element.dispatchEvent(event);
+        }
+    }
+
     static getCtxOptions() {
         return [
             {
                 icon: 'format_bold',
                 label: I18n.t('textTool.bold'),
-                command: (element) => {
-                    const text = element.contentArea.querySelector('[contenteditable]');
-                    if (text) {
-                        text.focus();
-                        document.execCommand('bold');
-                    }
-                }
+                command: (element) => this._toggleCtxStyle(element, 'fontWeight', 'bold', 'normal')
             },
             {
                 icon: 'format_italic',
                 label: I18n.t('textTool.italic'),
-                command: (element) => {
-                    const text = element.contentArea.querySelector('[contenteditable]');
-                    if (text) {
-                        text.focus();
-                        document.execCommand('italic');
-                    }
-                }
+                command: (element) => this._toggleCtxStyle(element, 'fontStyle', 'italic', 'normal')
             },
             {
                 icon: 'format_underlined',
                 label: I18n.t('textTool.underline'),
-                command: (element) => {
-                    const text = element.contentArea.querySelector('[contenteditable]');
-                    if (text) {
-                        text.focus();
-                        document.execCommand('underline');
-                    }
-                }
+                command: (element) => this._toggleCtxStyle(element, 'textDecoration', 'underline', 'none')
             }
         ];
     }

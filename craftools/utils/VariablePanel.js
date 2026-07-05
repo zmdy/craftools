@@ -1,6 +1,13 @@
 import { I18n } from "../settings/Translations.js";
 import { VariableEngine } from "./VariableEngine.js";
 import "./VariablePanel_Translations.js";
+// Reaproveita os textos de "O que exibir" (modos de recorte do card) já
+// definidos para a ferramenta Mini Calendário -- importado incondicionalmente
+// aqui (em vez de depender do import dinâmico feito só quando o usuário
+// arrasta a ferramenta) para garantir que as traduções existam mesmo quando
+// o Mini Calendário é usado só como Texto Variável, sem nunca ter sido
+// arrastado como elemento.
+import "../tools/minicalendar/MiniCalendarTool_Translations.js";
 
 /**
  * VariablePanel
@@ -39,6 +46,7 @@ export class VariablePanel {
                     <option value="emoji" ${type === 'emoji' ? 'selected' : ''}>${I18n.t('variablePanel.typeEmoji')}</option>
                     <option value="apiPhrase" ${type === 'apiPhrase' ? 'selected' : ''}>${I18n.t('variablePanel.typeApiPhrase')}</option>
                     <option value="emojiKitchen" ${type === 'emojiKitchen' ? 'selected' : ''}>${I18n.t('variablePanel.typeEmojiKitchen')}</option>
+                    <option value="miniCalendar" ${type === 'miniCalendar' ? 'selected' : ''}>${I18n.t('variablePanel.typeMiniCalendar')}</option>
                 </select>
             </div>
             <div id="var-config">${this._renderConfig(binding, element)}</div>
@@ -63,6 +71,7 @@ export class VariablePanel {
             case 'emoji': return linkRow + this._emojiConfig(binding);
             case 'apiPhrase': return linkRow + this._apiPhraseConfig(binding);
             case 'emojiKitchen': return linkRow + this._emojiKitchenConfig(binding);
+            case 'miniCalendar': return linkRow + this._miniCalendarConfig(binding);
             default: return '';
         }
     }
@@ -356,6 +365,46 @@ export class VariablePanel {
         `;
     }
 
+    // Mesmos nomes de mês usados no seletor "Mês/ano" do CalendarTool.js
+    // (hardcoded em pt-br ali também -- não há chave de i18n para nomes de
+    // mês no projeto ainda).
+    static _monthNamesPt() {
+        return ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    }
+
+    static _miniCalendarConfig(b) {
+        const monthOptions = this._monthNamesPt().map((name, i) => `<option value="${i + 1}" ${b.month === i + 1 ? 'selected' : ''}>${name}</option>`).join('');
+        return `
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.miniCalendarModeLabel')}</span>
+                <select id="var-minical-mode" class="craftools-select" style="width:100%;">
+                    <option value="fixed" ${b.mode !== 'sequentialMonthly' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarModeFixed')}</option>
+                    <option value="sequentialMonthly" ${b.mode === 'sequentialMonthly' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarModeSequential')}</option>
+                </select>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.miniCalendarModeHelp')}</span>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.miniCalendarMonthYearLabel')}</span>
+                <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
+                    <select id="var-minical-month" class="craftools-select">${monthOptions}</select>
+                    <input type="number" id="var-minical-year" class="craftools-input" value="${b.year ?? new Date().getFullYear()}" min="1900" max="2200">
+                </div>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.miniCalendarDisplayModeLabel')}</span>
+                <select id="var-minical-displaymode" class="craftools-select" style="width:100%;">
+                    <option value="diasSemana" ${b.displayMode === 'diasSemana' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeDiasSemana')}</option>
+                    <option value="calendario" ${b.displayMode === 'calendario' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCalendario')}</option>
+                    <option value="header" ${b.displayMode === 'header' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHeader')}</option>
+                    <option value="holidaysBox" ${b.displayMode === 'holidaysBox' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHolidaysBox')}</option>
+                    <option value="moonBox" ${b.displayMode === 'moonBox' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeMoonBox')}</option>
+                    <option value="completo1" ${b.displayMode === 'completo1' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCompleto1')}</option>
+                    <option value="completo2" ${b.displayMode === 'completo2' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCompleto2')}</option>
+                </select>
+            </div>
+        `;
+    }
+
     // ── Bind: liga os listeners e mantém preview/estado sincronizados ──────
 
     /**
@@ -383,11 +432,15 @@ export class VariablePanel {
             if (previewValue) previewValue.textContent = I18n.t('variablePanel.previewLoading');
 
             // emojiKitchen resolve para uma URL de imagem, não texto -- mostra
-            // a imagem em si no preview em vez do link cru.
+            // a imagem em si no preview em vez do link cru. miniCalendar
+            // resolve para um bloco de HTML (o card inteiro) -- mostra
+            // renderizado (via innerHTML) em vez do markup cru.
             const renderPreviewValue = (val) => {
                 if (!previewValue) return;
                 if (binding.type === 'emojiKitchen' && val) {
                     previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
+                } else if (binding.type === 'miniCalendar' && val) {
+                    previewValue.innerHTML = `<div style="width:120px; height:135px; margin:0 auto;">${val}</div>`;
                 } else {
                     previewValue.textContent = (val && String(val).length) ? val : '—';
                 }
@@ -578,6 +631,17 @@ export class VariablePanel {
                     };
                     if (rightInput) rightInput.oninput = () => { binding.rightEmoji = rightInput.value; notify(); };
                     if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
+                    break;
+                }
+                case 'miniCalendar': {
+                    const modeSelect = container.querySelector('#var-minical-mode');
+                    const monthSelect = container.querySelector('#var-minical-month');
+                    const yearInput = container.querySelector('#var-minical-year');
+                    const displayModeSelect = container.querySelector('#var-minical-displaymode');
+                    if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
+                    if (monthSelect) monthSelect.onchange = () => { binding.month = parseInt(monthSelect.value, 10); notify(); };
+                    if (yearInput) yearInput.oninput = () => { binding.year = parseInt(yearInput.value, 10) || binding.year; notify(); };
+                    if (displayModeSelect) displayModeSelect.onchange = () => { binding.displayMode = displayModeSelect.value; notify(); };
                     break;
                 }
             }

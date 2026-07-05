@@ -171,6 +171,10 @@ export class AgendaExport {
                     ce.innerHTML = resolved
                         ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
                         : '';
+                } else if (binding && binding.type === 'miniCalendar') {
+                    // O valor resolvido já é o HTML completo do card (ver
+                    // VariableEngine._formatMiniCalendar) -- insere direto.
+                    ce.innerHTML = resolved || '';
                 } else {
                     ce.textContent = resolved;
                 }

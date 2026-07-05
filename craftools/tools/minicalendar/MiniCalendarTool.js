@@ -115,10 +115,11 @@ export class MiniCalendarTool extends BaseTool {
         const t = meta.theme;
         const htmlEstilo = [
             CalendarTool._renderPartRow('titleBar', I18n.t('calendarTool.styleTitleBar'), t.titleBar, { showBg: true }),
-            CalendarTool._renderPartRow('weekHeader', I18n.t('calendarTool.styleWeekHeader'), t.weekHeader, { showBg: true }),
+            CalendarTool._renderPartRow('weekHeader', I18n.t('calendarTool.styleWeekHeader'), t.weekHeader, { showBg: true, innerBorder: true }),
             CalendarTool._renderPartRow('dayNumbers', I18n.t('calendarTool.styleDayNumbers'), t.dayNumbers, {
                 secondColorField: 'sundayColor', secondColorLabel: I18n.t('calendarTool.fieldSundayColor'),
                 numberField: 'rowGap', numberFieldLabel: I18n.t('calendarTool.fieldRowGap'), numberFieldMin: 0, numberFieldMax: 8, numberFieldStep: 0.5,
+                innerBorder: true,
             }),
             CalendarTool._renderPartRow('holidays', I18n.t('calendarTool.styleHolidays'), t.holidays, {}),
             CalendarTool._renderPartRow('moonPhases', I18n.t('calendarTool.styleMoonPhases'), t.moonPhases, {}),

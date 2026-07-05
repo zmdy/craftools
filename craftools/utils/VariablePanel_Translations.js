@@ -17,6 +17,7 @@ I18n.addTranslations('variablePanel', {
         typeEmoji: "Emoji",
         typeApiPhrase: "Frase da API",
         typeEmojiKitchen: "Emoji Kitchen",
+        typeMiniCalendar: "Mini Calendário",
         previewLabel: "Pré-visualização",
         previewLoading: "carregando…",
         boundNotice: "O conteúdo abaixo será substituído pela variável configurada na aba \"Texto Variável\" ao exportar a Agenda.",
@@ -99,7 +100,14 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenModeLabel: "Ordem",
         emojiKitchenModeSequential: "Sequencial (uma por repetição)",
         emojiKitchenModeRandom: "Aleatória",
-        emojiKitchenModeHelp: "Só tem efeito quando o 2º emoji está em branco -- decide como percorrer todas as combinações reais do 1º emoji."
+        emojiKitchenModeHelp: "Só tem efeito quando o 2º emoji está em branco -- decide como percorrer todas as combinações reais do 1º emoji.",
+
+        miniCalendarModeLabel: "Modo",
+        miniCalendarModeFixed: "Fixo (sempre o mesmo mês)",
+        miniCalendarModeSequential: "Sequencial (avança 1 mês por repetição)",
+        miniCalendarModeHelp: "No modo sequencial, cada repetição da página mostra o mês seguinte, a partir do mês/ano configurado.",
+        miniCalendarMonthYearLabel: "Mês / Ano inicial",
+        miniCalendarDisplayModeLabel: "O que exibir"
     },
     "en": {
         title: "Variable Text",
@@ -113,6 +121,7 @@ I18n.addTranslations('variablePanel', {
         typeEmoji: "Emoji",
         typeApiPhrase: "API phrase",
         typeEmojiKitchen: "Emoji Kitchen",
+        typeMiniCalendar: "Mini Calendar",
         previewLabel: "Preview",
         previewLoading: "loading…",
         boundNotice: "The content below will be replaced by the variable configured in the \"Variable Text\" tab when exporting the Agenda.",
@@ -195,7 +204,14 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenModeLabel: "Order",
         emojiKitchenModeSequential: "Sequential (one per repetition)",
         emojiKitchenModeRandom: "Random",
-        emojiKitchenModeHelp: "Only takes effect when the 2nd emoji is blank -- decides how to cycle through all the real combinations of the 1st emoji."
+        emojiKitchenModeHelp: "Only takes effect when the 2nd emoji is blank -- decides how to cycle through all the real combinations of the 1st emoji.",
+
+        miniCalendarModeLabel: "Mode",
+        miniCalendarModeFixed: "Fixed (always the same month)",
+        miniCalendarModeSequential: "Sequential (advances 1 month per repetition)",
+        miniCalendarModeHelp: "In sequential mode, each repetition of the page shows the next month, starting from the configured month/year.",
+        miniCalendarMonthYearLabel: "Starting month / year",
+        miniCalendarDisplayModeLabel: "What to show"
     },
     "es": {
         title: "Texto Variable",
@@ -209,6 +225,7 @@ I18n.addTranslations('variablePanel', {
         typeEmoji: "Emoji",
         typeApiPhrase: "Frase de la API",
         typeEmojiKitchen: "Emoji Kitchen",
+        typeMiniCalendar: "Mini Calendario",
         previewLabel: "Vista previa",
         previewLoading: "cargando…",
         boundNotice: "El contenido de abajo será reemplazado por la variable configurada en la pestaña \"Texto Variable\" al exportar la Agenda.",
@@ -291,6 +308,13 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenModeLabel: "Orden",
         emojiKitchenModeSequential: "Secuencial (uno por repetición)",
         emojiKitchenModeRandom: "Aleatorio",
-        emojiKitchenModeHelp: "Solo tiene efecto cuando el 2º emoji está en blanco -- decide cómo recorrer todas las combinaciones reales del 1er emoji."
+        emojiKitchenModeHelp: "Solo tiene efecto cuando el 2º emoji está en blanco -- decide cómo recorrer todas las combinaciones reales del 1er emoji.",
+
+        miniCalendarModeLabel: "Modo",
+        miniCalendarModeFixed: "Fijo (siempre el mismo mes)",
+        miniCalendarModeSequential: "Secuencial (avanza 1 mes por repetición)",
+        miniCalendarModeHelp: "En modo secuencial, cada repetición de la página muestra el mes siguiente, a partir del mes/año configurado.",
+        miniCalendarMonthYearLabel: "Mes / Año inicial",
+        miniCalendarDisplayModeLabel: "Qué mostrar"
     }
 });

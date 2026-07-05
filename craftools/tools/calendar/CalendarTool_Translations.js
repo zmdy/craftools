@@ -55,6 +55,7 @@ I18n.addTranslations('calendarTool', {
         fieldBorderStyle: "Estilo da borda",
         fieldBorderColor: "Cor da borda",
         fieldCellBg: "Fundo do card",
+        fieldInnerBorder: "Bordas internas (grade)",
 
         generateSummary: "Total de folhas que serão geradas",
         generateIntro: "As páginas serão adicionadas ao final do documento atual, prontas para ajustar e exportar como PDF.",
@@ -115,6 +116,7 @@ I18n.addTranslations('calendarTool', {
         fieldBorderStyle: "Border style",
         fieldBorderColor: "Border color",
         fieldCellBg: "Card background",
+        fieldInnerBorder: "Inner borders (grid)",
 
         generateSummary: "Total sheets that will be generated",
         generateIntro: "Pages will be appended to the end of the current document, ready to adjust and export as PDF.",
@@ -175,6 +177,7 @@ I18n.addTranslations('calendarTool', {
         fieldBorderStyle: "Estilo del borde",
         fieldBorderColor: "Color del borde",
         fieldCellBg: "Fondo de la tarjeta",
+        fieldInnerBorder: "Bordes internos (cuadrícula)",
 
         generateSummary: "Total de hojas que se generarán",
         generateIntro: "Las páginas se agregarán al final del documento actual, listas para ajustar y exportar como PDF.",

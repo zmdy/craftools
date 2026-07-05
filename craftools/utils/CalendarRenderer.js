@@ -37,8 +37,14 @@ export class CalendarRenderer {
     static defaultTheme() {
         return {
             titleBar: { bg: '#e11d2e', color: '#ffffff', font: 'DM Sans', fontWeight: 700, fontSize: 7 },
-            weekHeader: { bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5 },
-            dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0 },
+            // innerBorder* aqui cria divisórias verticais entre as letras dos
+            // dias da semana (imitando a grade de um calendário impresso).
+            // Largura 0 (padrão) = sem divisórias, comportamento original.
+            weekHeader: { bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#ffffff' },
+            // innerBorder* aqui desenha uma grade entre as células de número
+            // do dia (linhas horizontais e verticais). Largura 0 (padrão) =
+            // sem grade, comportamento original.
+            dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc' },
             holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2 },
             moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2 },
             cellBg: '#ffffff',
@@ -94,9 +100,15 @@ export class CalendarRenderer {
         const holidayByDay = new Map(holidays.map(h => [h.day, h.name]));
 
         // ── Grade de dias (grid 7 colunas) ───────────────────────────────
+        // Bordas internas (opcionais, padrão desligado): quando
+        // dayNumbers.innerBorderWidth > 0, desenha uma grade completa entre
+        // as células de dia, imitando a grade de um calendário impresso.
+        const dayCellBorder = (t.dayNumbers.innerBorderWidth > 0)
+            ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
+            : '';
         let cells = '';
         for (let i = 0; i < startWeekday; i++) {
-            cells += `<span style="display:block;"></span>`;
+            cells += `<span style="display:block; ${dayCellBorder}"></span>`;
         }
         for (let day = 1; day <= daysInMonth; day++) {
             const weekday = (startWeekday + day - 1) % 7;
@@ -104,7 +116,7 @@ export class CalendarRenderer {
             const isHoliday = holidayByDay.has(day);
             const color = (isSunday || isHoliday) ? t.dayNumbers.sundayColor : t.dayNumbers.color;
             const weight = (isSunday || isHoliday) ? '700' : '400';
-            cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight};">${day}</span>`;
+            cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight}; ${dayCellBorder}">${day}</span>`;
         }
 
         const daysGridHtml = parts.days ? `
@@ -138,9 +150,18 @@ export class CalendarRenderer {
                     ${MONTH_NAMES_PT[month - 1]} ${year}
                 </div>` : '';
 
+        // Divisórias verticais opcionais entre as letras dos dias da semana
+        // (padrão desligado -- innerBorderWidth = 0). A última coluna não
+        // recebe borda direita para não duplicar com a borda externa do card.
         const weekHeaderHtml = parts.week ? `
                 <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt;">
-                    ${WEEKDAY_LETTERS_PT.map(l => `<span style="flex:1; text-align:center; padding:1px 0;">${l}</span>`).join('')}
+                    ${WEEKDAY_LETTERS_PT.map((l, i) => {
+                        const isLast = i === WEEKDAY_LETTERS_PT.length - 1;
+                        const border = (t.weekHeader.innerBorderWidth > 0 && !isLast)
+                            ? `border-right:${t.weekHeader.innerBorderWidth}px ${this._esc(t.weekHeader.innerBorderStyle)} ${this._esc(t.weekHeader.innerBorderColor)}; box-sizing:border-box;`
+                            : '';
+                        return `<span style="flex:1; text-align:center; padding:1px 0; ${border}">${l}</span>`;
+                    }).join('')}
                 </div>` : '';
 
         return `
