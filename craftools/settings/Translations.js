@@ -31,6 +31,7 @@ export const Translations = {
             calendarTool: "Calendário",
             miniCalendar: "Mini Calendário",
             emojiKitchen: "Emoji Kitchen",
+            variableContent: "Conteúdo Variável",
             newPageSidebar: "Nova Página",
             papers2: "Papéis / Temas",
             undoTitle: "Desfazer (Ctrl+Z)",
@@ -72,6 +73,8 @@ export const Translations = {
             right: "Direita",
             bottom: "Base",
             left: "Esquerda",
+            size: "Tamanho",
+            position: "Posição",
             zindex: "Camada (Z-Index)",
             copyStyles: "Copiar Estilos",
             pasteStyles: "Colar Estilos",
@@ -87,6 +90,8 @@ export const Translations = {
             unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamanho & Posicionamento",
             autoFitText: "Ajustar tamanho automaticamente ao texto",
+            enabled: "Ativado",
+            disabled: "Desativado",
             sectionEstilo: "Estilo",
             align: "Alinhar na página",
             alignLeft: "Alinhar à esquerda",
@@ -158,6 +163,7 @@ export const Translations = {
             calendarTool: "Calendar",
             miniCalendar: "Mini Calendar",
             emojiKitchen: "Emoji Kitchen",
+            variableContent: "Variable Content",
             newPageSidebar: "New Page",
             papers2: "Papers / Themes",
             undoTitle: "Undo (Ctrl+Z)",
@@ -199,6 +205,8 @@ export const Translations = {
             right: "Right",
             bottom: "Bottom",
             left: "Left",
+            size: "Size",
+            position: "Position",
             zindex: "Layer (Z-Index)",
             copyStyles: "Copy Styles",
             pasteStyles: "Paste Styles",
@@ -214,6 +222,8 @@ export const Translations = {
             unlockElement: "Unlock element",
             sectionTamanho: "Size & Position",
             autoFitText: "Automatically resize to fit text",
+            enabled: "Enabled",
+            disabled: "Disabled",
             sectionEstilo: "Style",
             align: "Align on page",
             alignLeft: "Align left",
@@ -285,6 +295,7 @@ export const Translations = {
             calendarTool: "Calendario",
             miniCalendar: "Mini Calendario",
             emojiKitchen: "Emoji Kitchen",
+            variableContent: "Contenido Variable",
             newPageSidebar: "Nueva Página",
             papers2: "Papeles / Temas",
             undoTitle: "Deshacer (Ctrl+Z)",
@@ -326,6 +337,8 @@ export const Translations = {
             right: "Derecha",
             bottom: "Abajo",
             left: "Izquierda",
+            size: "Tamaño",
+            position: "Posición",
             zindex: "Capa (Z-Index)",
             copyStyles: "Copiar Estilos",
             pasteStyles: "Pegar Estilos",
@@ -341,6 +354,8 @@ export const Translations = {
             unlockElement: "Desbloquear elemento",
             sectionTamanho: "Tamaño y Posición",
             autoFitText: "Ajustar tamaño automáticamente al texto",
+            enabled: "Activado",
+            disabled: "Desactivado",
             sectionEstilo: "Estilo",
             align: "Alinear en la página",
             alignLeft: "Alinear a la izquierda",
@@ -408,23 +423,4 @@ export class I18n {
             if (translation && translation[key]) {
                 translation = translation[key];
             } else {
-                return path; // Fallback to path if not found
-            }
-        }
-        return translation;
-    }
-
-    static init() {
-        const savedLang = localStorage.getItem('craftools-lang');
-        if (savedLang) {
-            window.craftoolsLang = savedLang;
-        } else {
-            const nav = navigator.language || '';
-            let browserLang = 'pt-br';
-            if (nav.startsWith('es')) browserLang = 'es';
-
-            else if (nav.startsWith('en')) browserLang = 'en';
-            window.craftoolsLang = browserLang;
-        }
-    }
-}
+                return path;

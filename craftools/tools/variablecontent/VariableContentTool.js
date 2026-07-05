@@ -3,23 +3,22 @@ import { BaseTool } from "../BaseTool.js";
 import { CommonProperties } from "../../utils/CommonProperties.js";
 import { PanelUI } from "../../utils/PanelUI.js";
 import { AutoFitText } from "../../utils/AutoFitText.js";
-import "./TextTool_Translations.js";
+import { VariablePanel } from "../../utils/VariablePanel.js";
+import { VariableEngine } from "../../utils/VariableEngine.js";
+import "./VariableContentTool_Translations.js";
 import "../../components/CtFontSelect.js";
 
 const FONTS = [
-    'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster', 
+    'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster',
     'Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Impact',
     'Parisienne', 'Dancing Script', 'Quicksand', 'Quintessential', 'Grenze Gotisch'
 ];
 
-/**
- * Carrega fontes do Google Fonts dinamicamente para exibição no editor.
- */
 const loadGoogleFonts = (fonts) => {
     const googleFonts = fonts.filter(f => ![
         'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Impact'
     ].includes(f));
-    
+
     if (googleFonts.length > 0) {
         const linkId = 'craftools-dynamic-fonts';
         let link = document.getElementById(linkId);
@@ -34,10 +33,26 @@ const loadGoogleFonts = (fonts) => {
     }
 };
 
-export class TextTool extends BaseTool {
+/**
+ * VariableContentTool ("Conteúdo Variável")
+ *
+ * Ferramenta dedicada exclusivamente a mostrar o valor resolvido de uma
+ * variável (data, número sequencial, frase da API, Emoji Kitchen, Mini
+ * Calendário etc. -- ver VariableEngine.js) na página, sem edição manual de
+ * texto. Antes essa configuração vivia dentro de Título/Parágrafo
+ * (TextTool.js); foi extraída para cá para que Texto/Título voltem a ser
+ * ferramentas puramente estáticas, e todo o fluxo de "Texto Variável" fique
+ * concentrado num único lugar.
+ *
+ * O nó interno é sempre `contenteditable="false"` (nunca digitado à mão) --
+ * o atributo continua presente só para que os seletores `[contenteditable]`
+ * já usados por CommonProperties.js/AgendaExport.js continuem funcionando
+ * sem modificação.
+ */
+export class VariableContentTool extends BaseTool {
     static renderPropertiesPanel(editorPanel, element) {
         const textElement = element.contentArea.querySelector('[contenteditable]');
-        if(!textElement) return;
+        if (!textElement) return;
 
         const syncStyles = () => {
             const lid = element.getAttribute('data-linked-id');
@@ -52,7 +67,6 @@ export class TextTool extends BaseTool {
             }
         };
 
-        // Current properties extracted from DOM style
         const currentColor = CommonProperties._rgbToHex(textElement.style.color || '#1a1a1a');
         let currentFont = textElement.style.fontFamily || 'DM Sans';
         currentFont = currentFont.replace(/['"]/g, '').split(',')[0].trim();
@@ -61,35 +75,35 @@ export class TextTool extends BaseTool {
         const htmlTipografia = `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
-                <ct-font-select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></ct-font-select>
-                
+                <ct-font-select id="vc-prop-font" class="craftools-select" style="margin-bottom: 4px;"></ct-font-select>
+
                 <div style="display: flex; gap: 6px; align-items: center;">
-                    <input type="text" id="text-prop-custom-font" class="craftools-input"
+                    <input type="text" id="vc-prop-custom-font" class="craftools-input"
                         placeholder="${I18n.t('textTool.localFontPlaceholder')}"
                         style="flex: 1; padding: 6px 9px; font-size: 11px;">
-                    <button class="craftools-pill" id="text-prop-load-local" title="${I18n.t('textTool.listLocalFontsTitle')}" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                    <button class="craftools-pill" id="vc-prop-load-local" title="${I18n.t('textTool.listLocalFontsTitle')}" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
                         <span class="material-symbols-outlined" style="font-size: 14px;">desktop_windows</span> PC
                     </button>
-                    <button class="craftools-pill" id="text-prop-upload-font-btn" title="Upload" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
+                    <button class="craftools-pill" id="vc-prop-upload-font-btn" title="Upload" style="padding: 6px 8px; display: flex; align-items: center; gap: 3px;">
                         <span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span>
                     </button>
-                    <input type="file" id="text-prop-font-file" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
+                    <input type="file" id="vc-prop-font-file" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
                 </div>
             </div>
-            
+
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.color') || 'Cor'}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="color" class="craftools-color-swatch" id="text-prop-color" value="${currentColor}">
+                    <input type="color" class="craftools-color-swatch" id="vc-prop-color" value="${currentColor}">
                     <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('textTool.chooseColor') || 'Escolha a cor'}</span>
                 </div>
             </div>
-            
+
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.size') || 'Tamanho'}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="text-prop-size-range" min="8" max="200" step="1" style="flex:1;" value="${currentSize}">
-                    <input type="number" class="craftools-input" id="text-prop-size-num" style="width: 55px; text-align: center;" value="${currentSize}">
+                    <input type="range" id="vc-prop-size-range" min="8" max="200" step="1" style="flex:1;" value="${currentSize}">
+                    <input type="number" class="craftools-input" id="vc-prop-size-num" style="width: 55px; text-align: center;" value="${currentSize}">
                 </div>
             </div>
         `;
@@ -97,19 +111,22 @@ export class TextTool extends BaseTool {
         const htmlAlinhamento = `
             <div class="ct-field">
                 <div style="display: flex; gap: 4px;">
-                    <button class="craftools-pill text-align-btn" data-align="left" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_left</span></button>
-                    <button class="craftools-pill text-align-btn" data-align="center" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_center</span></button>
-                    <button class="craftools-pill text-align-btn" data-align="right" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_right</span></button>
-                    <button class="craftools-pill text-align-btn" data-align="justify" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_justify</span></button>
+                    <button class="craftools-pill vc-align-btn" data-align="left" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_left</span></button>
+                    <button class="craftools-pill vc-align-btn" data-align="center" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_center</span></button>
+                    <button class="craftools-pill vc-align-btn" data-align="right" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_right</span></button>
+                    <button class="craftools-pill vc-align-btn" data-align="justify" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_justify</span></button>
                 </div>
             </div>
         `;
 
+        // Acordeão "Conteúdo Variável" primeiro e já aberto -- é a razão de
+        // existir desta ferramenta -- seguido de Tipografia/Alinhamento
+        // (para quando o valor resolvido é texto simples).
         editorPanel.innerHTML =
-            PanelUI.accordion('text-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
-            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento);
+            PanelUI.accordion('vc-variavel', 'data_object', I18n.t('variableContentTool.panelTitle') || 'Conteúdo Variável', VariablePanel.renderAccordionBody(element._craftoolsVariable, element), { open: true }) +
+            PanelUI.accordion('vc-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia) +
+            PanelUI.accordion('vc-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento);
 
-        // Render Common Properties (Inherited from BaseTool now handles it all)
         this.renderCommonProperties(editorPanel, element, {
             border: '[contenteditable]',
             radius: '[contenteditable]',
@@ -122,34 +139,30 @@ export class TextTool extends BaseTool {
             }
         });
 
+        // Vínculo de variável -- o coração desta ferramenta.
+        VariablePanel.bind(editorPanel, element._craftoolsVariable, (binding) => {
+            element._craftoolsVariable = binding;
+            this._applyVariablePreview(element, textElement, binding);
+        }, element);
+        this._applyVariablePreview(element, textElement, element._craftoolsVariable);
         AutoFitText.applyAutoSize(element, textElement);
 
-        // Ajusta automaticamente o tamanho do elemento conforme o texto é
-        // digitado (quando o ajuste automático está ativo).
-        textElement.addEventListener('input', () => {
-            AutoFitText.applyAutoSize(element, textElement);
-            const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
-            element.dispatchEvent(event);
-        });
-
         // Font dropdown
-        const fontSelect = editorPanel.querySelector('#text-prop-font');
-        const customFontInput = editorPanel.querySelector('#text-prop-custom-font');
+        const fontSelect = editorPanel.querySelector('#vc-prop-font');
+        const customFontInput = editorPanel.querySelector('#vc-prop-custom-font');
 
-        // Function to populate font select dropdown with standard and local fonts
         const populateFontSelect = (selectedFont) => {
             fontSelect.innerHTML = '';
-            
+
             FONTS.forEach(font => {
                 const option = document.createElement('option');
                 option.value = font;
                 option.textContent = font;
                 option.style.fontFamily = `'${font}', sans-serif`;
-                if(font === selectedFont) option.selected = true;
+                if (font === selectedFont) option.selected = true;
                 fontSelect.appendChild(option);
             });
 
-            // Load saved local fonts from localStorage
             let savedLocalFonts = [];
             try {
                 const stored = localStorage.getItem('craftools-local-fonts');
@@ -167,13 +180,12 @@ export class TextTool extends BaseTool {
                         option.value = font;
                         option.textContent = font;
                         option.style.fontFamily = `'${font}', sans-serif`;
-                        if(font === selectedFont) option.selected = true;
+                        if (font === selectedFont) option.selected = true;
                         fontSelect.appendChild(option);
                     }
                 });
             }
-            
-            // Adiciona fontes do IndexedDB
+
             if (window.__craftoolsCustomFonts) {
                 Object.keys(window.__craftoolsCustomFonts).forEach(font => {
                     if (![...fontSelect.options].some(opt => opt.value === font)) {
@@ -181,13 +193,12 @@ export class TextTool extends BaseTool {
                         option.value = font;
                         option.textContent = font;
                         option.style.fontFamily = `'${font}', sans-serif`;
-                        if(font === selectedFont) option.selected = true;
+                        if (font === selectedFont) option.selected = true;
                         fontSelect.appendChild(option);
                     }
                 });
             }
 
-            // Adiciona a fonte atual se for externa e não estiver na lista
             if (selectedFont && !FONTS.includes(selectedFont) && !savedLocalFonts.includes(selectedFont) && (!window.__craftoolsCustomFonts || !window.__craftoolsCustomFonts[selectedFont])) {
                 const option = document.createElement('option');
                 option.value = selectedFont;
@@ -198,34 +209,27 @@ export class TextTool extends BaseTool {
             }
         };
 
-        // Carrega as fontes do Google Fonts para a página
         loadGoogleFonts(FONTS);
-        
-        // Inicializa o dropdown
         populateFontSelect(currentFont);
 
         if (currentFont && !FONTS.includes(currentFont)) {
             customFontInput.value = currentFont;
         }
 
-        // BIND EVENTS
         fontSelect.addEventListener('change', (e) => {
             textElement.style.fontFamily = `'${e.target.value}', 'Noto Color Emoji', sans-serif`;
             customFontInput.value = FONTS.includes(e.target.value) ? '' : e.target.value;
             syncStyles();
             AutoFitText.applyAutoSize(element, textElement);
-            // Trigger an element update (bounding box might change)
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
             element.dispatchEvent(event);
         });
 
-        // Eventos para busca de fonte customizada
         const applyCustomFont = () => {
             const fontName = customFontInput.value.trim();
             if (fontName) {
                 textElement.style.fontFamily = `'${fontName}', 'Noto Color Emoji', sans-serif`;
-                
-                // Adiciona ao select se não existir
+
                 if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === fontName.toLowerCase())) {
                     const option = document.createElement('option');
                     option.value = fontName;
@@ -251,37 +255,32 @@ export class TextTool extends BaseTool {
             }
         });
 
-        // Botão para carregar fontes locais do PC
-        const localBtn = editorPanel.querySelector('#text-prop-load-local');
+        const localBtn = editorPanel.querySelector('#vc-prop-load-local');
         localBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const fontAccessApi = navigator.queryLocalFonts || window.queryLocalFonts;
             if (!fontAccessApi) {
                 alert(I18n.t('textTool.localFontsUnsupported'));
                 return;
             }
-            
+
             try {
                 localBtn.disabled = true;
                 localBtn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size: 14px;">progress_activity</span>';
-                
+
                 const localFonts = await fontAccessApi();
-                
-                // Extrai famílias únicas
                 const families = [...new Set(localFonts.map(f => f.family))].sort();
-                
-                // Salva no localStorage sobrescrevendo a lista anterior
+
                 try {
                     localStorage.setItem('craftools-local-fonts', JSON.stringify(families));
                 } catch (storeErr) {
                     console.error("Erro ao salvar fontes no localStorage", storeErr);
                 }
 
-                // Atualiza o select com as novas fontes mantendo a fonte atual selecionada
                 populateFontSelect(fontSelect.value);
-                
+
                 alert(I18n.t('textTool.localFontsLoaded').replace('{n}', families.length));
                 localBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> PC';
             } catch (err) {
@@ -292,28 +291,26 @@ export class TextTool extends BaseTool {
             }
         });
 
-        // Botão de upload
-        const uploadBtn = editorPanel.querySelector('#text-prop-upload-font-btn');
-        const fileInput = editorPanel.querySelector('#text-prop-font-file');
+        const uploadBtn = editorPanel.querySelector('#vc-prop-upload-font-btn');
+        const fileInput = editorPanel.querySelector('#vc-prop-font-file');
         if (uploadBtn && fileInput) {
             uploadBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 uploadBtn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size: 14px;">progress_activity</span>';
-                
+
                 try {
                     const fontName = file.name.replace(/\.[^/.]+$/, "");
                     const buffer = await file.arrayBuffer();
                     const fontFace = new FontFace(fontName, buffer);
                     const loadedFace = await fontFace.load();
                     document.fonts.add(loadedFace);
-                    
+
                     window.__craftoolsCustomFonts = window.__craftoolsCustomFonts || {};
                     window.__craftoolsCustomFonts[fontName] = true;
-                    
-                    // Save to IndexedDB
+
                     const req = indexedDB.open('CraftoolsFonts', 1);
                     req.onupgradeneeded = (ev) => {
                         const db = ev.target.result;
@@ -324,26 +321,25 @@ export class TextTool extends BaseTool {
                         const tx = db.transaction('fonts', 'readwrite');
                         tx.objectStore('fonts').put(buffer, fontName);
                     };
-                    
+
                     populateFontSelect(fontName);
                     fontSelect.dispatchEvent(new Event('change'));
-                } catch(err) {
+                } catch (err) {
                     alert('Erro ao carregar fonte: ' + err.message);
                 }
                 uploadBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span>';
             });
         }
 
-
-        const colorInput = editorPanel.querySelector('#text-prop-color');
+        const colorInput = editorPanel.querySelector('#vc-prop-color');
         colorInput.addEventListener('input', (e) => {
             textElement.style.color = e.target.value;
             syncStyles();
         });
 
-        const sizeRange = editorPanel.querySelector('#text-prop-size-range');
-        const sizeNum = editorPanel.querySelector('#text-prop-size-num');
-        
+        const sizeRange = editorPanel.querySelector('#vc-prop-size-range');
+        const sizeNum = editorPanel.querySelector('#vc-prop-size-num');
+
         const updateSize = (val) => {
             textElement.style.fontSize = val + 'px';
             sizeRange.value = val;
@@ -357,7 +353,7 @@ export class TextTool extends BaseTool {
         sizeRange.addEventListener('input', (e) => updateSize(e.target.value));
         sizeNum.addEventListener('input', (e) => updateSize(e.target.value));
 
-        const alignBtns = editorPanel.querySelectorAll('.text-align-btn');
+        const alignBtns = editorPanel.querySelectorAll('.vc-align-btn');
         alignBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 alignBtns.forEach(b => b.classList.remove('active'));
@@ -367,22 +363,55 @@ export class TextTool extends BaseTool {
             });
         });
 
-        // initial align setup
         const initialAlign = textElement.style.textAlign || 'left';
-        editorPanel.querySelector(`.text-align-btn[data-align="${initialAlign}"]`)?.classList.add('active');
+        editorPanel.querySelector(`.vc-align-btn[data-align="${initialAlign}"]`)?.classList.add('active');
+    }
+
+    static _escAttr(val) {
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     /**
-     * Aplica bold/italic/underline formatando a seleção via execCommand.
-     * (Texto/Título são sempre editáveis -- desde que o vínculo a variáveis
-     * foi movido para a ferramenta separada "Conteúdo Variável", ver
-     * VariableContentTool.js -- não há mais um estado "bloqueado" aqui.)
+     * Resolve e mostra o valor da variável configurada -- imagem para
+     * emojiKitchen/miniCalendar (via innerHTML), texto simples para os
+     * demais tipos. Sem binding, mostra um texto de espaço reservado
+     * convidando a configurar uma variável.
+     */
+    static _applyVariablePreview(element, textElement, binding) {
+        if (binding && binding.type) {
+            textElement.textContent = I18n.t('variablePanel.previewLoading');
+            VariableEngine.resolvePreview(binding).then(val => {
+                if (binding.type === 'emojiKitchen') {
+                    textElement.innerHTML = val
+                        ? `<img src="${this._escAttr(val)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
+                        : '—';
+                } else if (binding.type === 'miniCalendar') {
+                    // O valor aqui já é o HTML completo do card -- insere
+                    // direto via innerHTML, não como texto.
+                    textElement.innerHTML = val || '—';
+                } else {
+                    textElement.textContent = (val && String(val).length) ? val : '—';
+                }
+                AutoFitText.applyAutoSize(element, textElement);
+            });
+        } else {
+            textElement.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
+        }
+    }
+
+    /**
+     * Aplica bold/italic/underline alternando o estilo do elemento inteiro
+     * (não há seleção de texto para formatar, já que o conteúdo nunca é
+     * digitado à mão -- é sempre o resultado resolvido de uma variável).
      */
     static _toggleCtxStyle(element, cssProp, onValue, offValue) {
         const text = element.contentArea.querySelector('[contenteditable]');
         if (!text) return;
-        text.focus();
-        document.execCommand(cssProp === 'fontWeight' ? 'bold' : cssProp === 'fontStyle' ? 'italic' : 'underline');
+        text.style[cssProp] = (text.style[cssProp] === onValue) ? offValue : onValue;
         AutoFitText.applyAutoSize(element, text);
         const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
         element.dispatchEvent(event);
@@ -409,27 +438,19 @@ export class TextTool extends BaseTool {
     }
 
     static createElement(type, editorApp) {
-        let tag = 'p', size = 16, weight = 400, text = 'Editar texto...', w = 200, h = 40;
-        
-        if (type === 'titulo') {
-            tag = 'h1'; size = 48; weight = 700; w = 300; h = 70;
-        } else if (type === 'paragrafo') {
-            tag = 'p'; size = 16; weight = 400; w = 200; h = 40;
-        }
-
         const el = document.createElement('craftools-element');
         el.setAttribute('x', '50');
         el.setAttribute('y', '50');
-        el.setAttribute('w', w);
-        el.setAttribute('h', h);
-        el.setAttribute('data-craftool', type);
+        el.setAttribute('w', '220');
+        el.setAttribute('h', '50');
+        el.setAttribute('data-craftool', 'conteudovariavel');
 
-        const content = document.createElement(tag);
-        content.setAttribute('contenteditable', 'true');
+        const content = document.createElement('div');
+        content.setAttribute('contenteditable', 'false');
         content.setAttribute('spellcheck', 'false');
         content.style.cssText = `
-            font-size: ${size}px;
-            font-weight: ${weight};
+            font-size: 16px;
+            font-weight: 400;
             color: #1a1a1a;
             font-family: 'DM Sans', 'Noto Color Emoji', sans-serif;
             display: block;
@@ -437,16 +458,16 @@ export class TextTool extends BaseTool {
             height: 100%;
             white-space: pre-wrap;
             word-break: break-word;
-            cursor: text;
+            cursor: default;
             line-height: 1.3;
             margin: 0;
-            outline: none;
+            outline: 1px dashed var(--accent, #6366f1);
+            outline-offset: 2px;
         `;
-        content.innerHTML = text;
+        content.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
 
         el.appendChild(content);
 
         return el;
     }
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        

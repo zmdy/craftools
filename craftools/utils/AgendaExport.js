@@ -138,7 +138,7 @@ export class AgendaExport {
 
     static _getBinding(el, toolType) {
         const type = toolType || el.getAttribute('data-craftool');
-        if (type === 'titulo' || type === 'paragrafo') return el._craftoolsVariable || null;
+        if (type === 'conteudovariavel') return el._craftoolsVariable || null;
         if (type === 'qrcode' || type === 'barcode') return (el._craftoolsMeta && el._craftoolsMeta.variableBinding) || null;
         return null;
     }
@@ -164,7 +164,7 @@ export class AgendaExport {
      * @param {object} [binding]    o binding original -- usado só para detectar o tipo "emojiKitchen"
      */
     static _applyResolvedValue(cloneEl, toolType, origEl, resolved, binding) {
-        if (toolType === 'titulo' || toolType === 'paragrafo') {
+        if (toolType === 'conteudovariavel') {
             const ce = cloneEl.querySelector('[contenteditable]');
             if (ce) {
                 if (binding && binding.type === 'emojiKitchen') {
@@ -239,3 +239,4 @@ export class AgendaExport {
         else img.removeAttribute('src');
     }
 }
+                                

@@ -79,6 +79,8 @@ export class MobileToolbar {
             items = this._getImageItems(element);
         } else if (type === 'titulo' || type === 'paragrafo') {
             items = this._getTextItems(element);
+        } else if (type === 'conteudovariavel') {
+            items = this._getVariableContentItems(element);
         } else if (type === 'qrcode') {
             items = this._getQrItems(element);
         } else if (type === 'barcode') {
@@ -174,8 +176,46 @@ export class MobileToolbar {
                 action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
+                icon: 'content_copy', label: I18n.t('common.copy'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.copyPastePanelTitle'), c => this._renderCopyPaste(c, el, '[contenteditable]'))
+            },
+        ];
+    }
+
+    static _getVariableContentItems(el) {
+        const textEl = el.contentArea?.querySelector('[contenteditable]');
+        return [
+            {
                 icon: 'data_object', label: I18n.t('variablePanel.title'),
                 action: () => this.openMiniPanel(I18n.t('variablePanel.title'), c => this._renderTextVariable(c, el, textEl))
+            },
+            {
+                icon: 'font_download', label: I18n.t('textTool.font'),
+                action: () => this.openMiniPanel(I18n.t('textTool.font'), c => this._renderTextFont(c, el, textEl))
+            },
+            {
+                icon: 'format_size', label: I18n.t('textTool.size'),
+                action: () => this.openMiniPanel(I18n.t('textTool.size'), c => this._renderTextSize(c, el, textEl))
+            },
+            {
+                icon: 'palette', label: I18n.t('mobileToolbar.colorLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.textColorPanelTitle'), c => this._renderTextColor(c, el, textEl))
+            },
+            {
+                icon: 'format_align_left', label: I18n.t('mobileToolbar.alignLabel'),
+                action: () => this.openMiniPanel(I18n.t('textTool.align'), c => this._renderTextAlign(c, el, textEl))
+            },
+            {
+                icon: 'border_style', label: I18n.t('common.border'),
+                action: () => this.openMiniPanel(I18n.t('common.border'), c => CommonProperties.renderBorder(c, el, '[contenteditable]'))
+            },
+            {
+                icon: 'padding', label: I18n.t('mobileToolbar.paddingLabel'),
+                action: () => this.openMiniPanel(I18n.t('mobileToolbar.paddingPanelTitle'), c => CommonProperties.renderPadding(c, el, '[contenteditable]'))
+            },
+            {
+                icon: 'layers', label: I18n.t('mobileToolbar.layerLabel'),
+                action: () => this.openMiniPanel(I18n.t('common.zindex'), c => CommonProperties.renderZIndex(c, el))
             },
             {
                 icon: 'content_copy', label: I18n.t('common.copy'),
@@ -822,17 +862,17 @@ export class MobileToolbar {
         });
     }
 
-    // ─── Section renders: Texto Variável (compartilhado) ──────────────────────
+    // ─── Section renders: Conteúdo Variável ────────────────────────────────────
 
     static _renderTextVariable(container, el, textEl) {
         Promise.all([
             import('./VariablePanel.js'),
-            import('../tools/text/TextTool.js'),
-        ]).then(([{ VariablePanel }, { TextTool }]) => {
+            import('../tools/variablecontent/VariableContentTool.js'),
+        ]).then(([{ VariablePanel }, { VariableContentTool }]) => {
             container.innerHTML = VariablePanel.renderAccordionBody(el._craftoolsVariable, el);
             VariablePanel.bind(container, el._craftoolsVariable, (binding) => {
                 el._craftoolsVariable = binding;
-                TextTool._applyVariablePreview(el, textEl, binding);
+                VariableContentTool._applyVariablePreview(el, textEl, binding);
             }, el);
         });
     }
@@ -899,62 +939,4 @@ export class MobileToolbar {
         };
     }
 
-    // ─── Ações do modo ferramenta ──────────────────────────────────────────────
-
-    static _triggerTool(type) {
-        const mainPage = this._editor?.querySelector('.craftools-page');
-        if (!mainPage) return;
-
-        if (type === 'album') {
-            // Para álbum: abre o step-by-step modal
-            this._openAlbumModal();
-            return;
-        }
-
-        const rect = mainPage.getBoundingClientRect();
-        const cx = rect.width / 2;
-        const cy = rect.height / 2;
-
-        if (type === 'imagem') {
-            import('../tools/image/ImageTool.js').then(({ ImageTool }) => {
-                const el = ImageTool.createElement(type, this._editor);
-                el.setAttribute('x', cx - 100);
-                el.setAttribute('y', cy - 100);
-                mainPage.appendChild(el);
-            });
-        } else if (type === 'qrcode') {
-            import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
-                const el = QRCodeTool.createElement(type, this._editor);
-                el.setAttribute('x', cx - 90);
-                el.setAttribute('y', cy - 90);
-                mainPage.appendChild(el);
-            });
-        } else {
-            import('../tools/text/TextTool.js').then(({ TextTool }) => {
-                const el = TextTool.createElement(type, this._editor);
-                el.setAttribute('x', cx - 100);
-                el.setAttribute('y', cy - 30);
-                mainPage.appendChild(el);
-            });
-        }
-    }
-
-    static _triggerAction(action) {
-        // Delega para os botões sidebar existentes (sem duplicar lógica)
-        const map = {
-            newpage: '#pwa-sidebar-newpage',
-            export:  '#pwa-sidebar-export',
-            papeis:  '#pwa-sidebar-papeis',
-        };
-        document.querySelector(map[action])?.click();
-    }
-
-    // ─── AlbumTool — modal step-by-step ───────────────────────────────────────
-
-    static _openAlbumModal() {
-        import('../tools/album/AlbumTool.js').then(({ AlbumTool }) => {
-            const mainPage = this._editor?.querySelector('.craftools-page');
-            if (mainPage) AlbumTool.setup(this._editor, mainPage);
-        });
-    }
-}
+    // ─── Ações do modo ferramenta ────────────────────────────────────────────

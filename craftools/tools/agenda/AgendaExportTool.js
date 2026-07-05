@@ -261,7 +261,7 @@ export class AgendaExportTool {
         page.querySelectorAll('craftools-element').forEach(el => {
             const toolType = el.getAttribute('data-craftool');
             let binding = null;
-            if (toolType === 'titulo' || toolType === 'paragrafo') {
+            if (toolType === 'conteudovariavel') {
                 binding = el._craftoolsVariable || null;
             } else if (toolType === 'qrcode' || toolType === 'barcode') {
                 binding = el._craftoolsMeta?.variableBinding || null;
@@ -273,8 +273,7 @@ export class AgendaExportTool {
 
     static _toolTypeLabel(toolType) {
         const map = {
-            titulo: I18n.t('editor.toolTitle'),
-            paragrafo: I18n.t('editor.text'),
+            conteudovariavel: I18n.t('editor.variableContent'),
             qrcode: I18n.t('editor.qrcode'),
             barcode: I18n.t('editor.barcode'),
         };
@@ -300,3 +299,4 @@ export class AgendaExportTool {
             .replace(/>/g, '&gt;');
     }
 }
+                                                 

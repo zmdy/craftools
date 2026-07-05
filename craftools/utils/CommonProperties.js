@@ -328,10 +328,13 @@ export class CommonProperties {
             <div class="ct-field">
                 <div class="ct-sublabel"><span class="material-symbols-outlined">aspect_ratio</span>${I18n.t('common.size') || 'Tamanho'}</div>
                 ${config.autoFitText ? `
-                <label class="ct-field-row" style="gap:6px; align-items:center; cursor:pointer; margin-bottom:6px;">
-                    <input type="checkbox" id="ct-autofit-text" ${autoFitOn ? 'checked' : ''}>
-                    <span style="font-size:11px; color:var(--text-secondary);">${I18n.t('common.autoFitText') || 'Ajustar tamanho automaticamente ao texto'}</span>
-                </label>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
+                    <span class="craftools-label" style="margin:0;">${I18n.t('common.autoFitText') || 'Ajustar tamanho automaticamente ao texto'}</span>
+                    <button type="button" class="craftools-pill ct-autofit-btn ${autoFitOn ? 'active' : ''}" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">aspect_ratio</span>
+                        ${autoFitOn ? (I18n.t('common.enabled') || 'Ativado') : (I18n.t('common.disabled') || 'Desativado')}
+                    </button>
+                </div>
                 ` : ''}
                 <div class="ct-field-grid2">
                     <div style="display:flex;flex-direction:column;gap:3px;">
@@ -416,16 +419,23 @@ export class CommonProperties {
         });
 
         // Ajuste automático ao texto (só existe quando o tool passa
-        // config.autoFitText -- hoje só o TextTool/Título/Parágrafo).
-        // Liga/desliga `element._craftoolsAutoResize` (padrão: true/ligado
-        // quando ainda não definido) e trava os campos W/H manuais enquanto
-        // ligado, já que nesse modo o tamanho é recalculado a cada tecla.
-        const autoFitCheckbox = acc.querySelector('#ct-autofit-text');
-        autoFitCheckbox?.addEventListener('change', () => {
-            element._craftoolsAutoResize = autoFitCheckbox.checked;
-            if (wInput) wInput.disabled = autoFitCheckbox.checked;
-            if (hInput) hInput.disabled = autoFitCheckbox.checked;
-            if (config.onAutoFitToggle) config.onAutoFitToggle(autoFitCheckbox.checked);
+        // config.autoFitText -- hoje TextTool/Título/Parágrafo e
+        // VariableContentTool/Conteúdo Variável). Liga/desliga
+        // `element._craftoolsAutoResize` (padrão: true/ligado quando ainda
+        // não definido) e trava os campos W/H manuais enquanto ligado, já
+        // que nesse modo o tamanho é recalculado automaticamente. Mesmo
+        // padrão visual de toggle "Ativado/Desativado" usado em outras
+        // ferramentas (ex.: AlbumTool.js -- alinhamento automático/ajuste
+        // inteligente), em vez de um checkbox nativo.
+        const autoFitBtn = acc.querySelector('.ct-autofit-btn');
+        autoFitBtn?.addEventListener('click', () => {
+            const nowOn = element._craftoolsAutoResize === false; // estava desligado -> liga
+            element._craftoolsAutoResize = nowOn;
+            autoFitBtn.classList.toggle('active', nowOn);
+            autoFitBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">aspect_ratio</span>${nowOn ? (I18n.t('common.enabled') || 'Ativado') : (I18n.t('common.disabled') || 'Desativado')}`;
+            if (wInput) wInput.disabled = nowOn;
+            if (hInput) hInput.disabled = nowOn;
+            if (config.onAutoFitToggle) config.onAutoFitToggle(nowOn);
             if (config.onChange) config.onChange();
             this._triggerChange(element);
         });
@@ -599,28 +609,4 @@ export class CommonProperties {
         return element.contentArea?.querySelector(selector) || element.querySelector(selector) || null;
     }
 
-    static _triggerChange(element) {
-        element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
-    }
-
-    static _toastError(msg) {
-        import('./Notify.js').then(({ Notify }) => Notify.toast(msg, 'error'));
-    }
-
-    static _getUnit(val) {
-        if (!val) return 'px';
-        return val.toString().replace(/[0-9.-]/g, '').trim() || 'px';
-    }
-
-    static _rgbToHex(rgb) {
-        if (!rgb) return '#000000';
-        if (rgb === 'white') return '#ffffff';
-        if (rgb === 'black') return '#000000';
-        if (rgb === 'transparent') return '#ffffff';
-        if (!rgb.startsWith('rgb')) return rgb;
-        const parts = rgb.match(/\d+/g);
-        if (!parts) return rgb;
-        const hex = x => ('0' + parseInt(x).toString(16)).slice(-2);
-        return '#' + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
-    }
-}
+    static _triggerC

@@ -412,6 +412,14 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                     this.activePage = null;
                 });
+            } else if (toolType === 'conteudovariavel') {
+                import('../tools/variablecontent/VariableContentTool.js').then(({ VariableContentTool }) => {
+                    this.ctxBar.show(el, VariableContentTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('variableContentTool.propsTitle') || 'Conteúdo Variável';
+                    if (panelBody) VariableContentTool.renderPropertiesPanel(panelBody, el);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
             } else {
                 this.ctxBar.show(el, []);
             }
@@ -493,7 +501,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape', 'conteudovariavel'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -555,6 +563,12 @@ export class Craftools_Editor extends HTMLElement {
                     if (panelBody) ShapeTool.renderPickerPanel(panelBody, this);
                     openPanelMenu();
                     return; // don't fall through to placeholder removal
+                } else if (tool === 'conteudovariavel') {
+                    const { VariableContentTool } = await import('../tools/variablecontent/VariableContentTool.js');
+                    const el = VariableContentTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 110);
+                    el.setAttribute('y', cy - 25);
+                    mainPage.appendChild(el);
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');
                     const el = TextTool.createElement(tool, this);
@@ -756,26 +770,4 @@ export class Craftools_Editor extends HTMLElement {
             updateZoom();
         });
 
-        // ── Pinch-to-zoom (mobile) ─────────────────────────────────────────
-        const canvas = this.querySelector('#canvas-area');
-        let pinchStartDist = null;
-        let pinchStartZoom = 1.0;
-
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                const dist = Math.hypot(dx, dy);
-                const scale = dist / pinchStartDist;
-                zoomLevel = Math.min(3.0, Math.max(0.2, pinchStartZoom * scale));
-                updateZoom();
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', () => {
-            if (pinchStartDist) pinchStartDist = null;
-        }, { passive: true });
-    }
-
-    static init() { customElements.define("craftools-editor", Craftools_Editor) }
-}
+        // ── Pinch-to-zoom

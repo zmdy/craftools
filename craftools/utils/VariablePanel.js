@@ -122,7 +122,7 @@ export class VariablePanel {
 
     /** Lê o binding de variável já configurado num elemento (mesma lógica do AgendaExport.js). */
     static _getElementBinding(el, toolType) {
-        if (toolType === 'titulo' || toolType === 'paragrafo') return el._craftoolsVariable || null;
+        if (toolType === 'conteudovariavel') return el._craftoolsVariable || null;
         if (toolType === 'qrcode' || toolType === 'barcode') return (el._craftoolsMeta && el._craftoolsMeta.variableBinding) || null;
         return null;
     }
@@ -148,7 +148,7 @@ export class VariablePanel {
         const typeKey = 'type' + binding.type.charAt(0).toUpperCase() + binding.type.slice(1);
         const typeLabel = I18n.t('variablePanel.' + typeKey) || binding.type;
         let snippet = '';
-        if (toolType === 'titulo' || toolType === 'paragrafo') {
+        if (toolType === 'conteudovariavel') {
             const ce = el.contentArea && el.contentArea.querySelector('[contenteditable]');
             const raw = (el._craftoolsVariablePrevHtml !== undefined ? el._craftoolsVariablePrevHtml : (ce ? ce.textContent : '')) || '';
             snippet = String(raw).replace(/<[^>]*>/g, '').trim().slice(0, 18);
@@ -679,3 +679,4 @@ export class VariablePanel {
             .replace(/"/g, '&quot;');
     }
 }
+                                    

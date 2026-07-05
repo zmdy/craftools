@@ -57,7 +57,7 @@ export class PageTool {
                 pageEl.appendChild(el);
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
-            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode' || toolType === 'minicalendario' || toolType === 'emojikitchen') {
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode' || toolType === 'minicalendario' || toolType === 'emojikitchen' || toolType === 'conteudovariavel') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
 
@@ -67,8 +67,8 @@ export class PageTool {
                 const cellTarget = e.target.closest('.craftools-grid-cell');
                 const pRect = pageEl.getBoundingClientRect();
 
-                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : (toolType === 'minicalendario' ? 190 : (toolType === 'emojikitchen' ? 160 : 120))));
-                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : (toolType === 'minicalendario' ? 210 : (toolType === 'emojikitchen' ? 160 : 40))));
+                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : (toolType === 'minicalendario' ? 190 : (toolType === 'emojikitchen' ? 160 : (toolType === 'conteudovariavel' ? 220 : 120)))));
+                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : (toolType === 'minicalendario' ? 210 : (toolType === 'emojikitchen' ? 160 : (toolType === 'conteudovariavel' ? 50 : 40)))));
 
                 if (cellTarget && window.craftoolsAutoSnap !== false) {
                     const cRect = cellTarget.getBoundingClientRect();
@@ -104,6 +104,9 @@ export class PageTool {
                     } else if (toolType === 'emojikitchen') {
                         dropX = Math.max(10, Math.min(dropX - 80, (pRect.width / scale) - 160));
                         dropY = Math.max(10, Math.min(dropY - 80, (pRect.height / scale) - 160));
+                    } else if (toolType === 'conteudovariavel') {
+                        dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220));
+                        dropY = Math.max(10, Math.min(dropY - 25, (pRect.height / scale) - 50));
                     } else {
                         dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
                         dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
@@ -126,6 +129,9 @@ export class PageTool {
                 } else if (toolType === 'emojikitchen') {
                     const { EmojiKitchenTool } = await import('../emojikitchen/EmojiKitchenTool.js');
                     el = EmojiKitchenTool.createElement(toolType, editor);
+                } else if (toolType === 'conteudovariavel') {
+                    const { VariableContentTool } = await import('../variablecontent/VariableContentTool.js');
+                    el = VariableContentTool.createElement(toolType, editor);
                 } else if (toolType === 'papeis') {
                     const { PaperTool } = await import('../paper/PaperTool.js');
                     el = PaperTool.createElement(toolType, editor);
@@ -454,16 +460,4 @@ export class PageTool {
         clone.id = 'page-' + Date.now();
         
         // Remove os componentes filhos da página inteiramente mas mantém a sua forma
-        clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
-        
-        // Acoplar os eventos para poder clicar na nova página localmente
-        this.attachPageEvents(editor, clone);
-        pagesWrapper.appendChild(clone);
-        
-        // Notify history system
-        document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
-        
-        // Scrollar automaticamente para a página nova de forma suave
-        pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
-    }
-}
+        clone.innerHTML = `<div style="display: flex; align-items: center; ju
