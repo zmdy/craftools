@@ -345,6 +345,14 @@ export class VariablePanel {
                 <input type="text" id="var-kitchen-right" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.rightEmoji)}" maxlength="8">
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
             </div>
+            <div class="ct-field" id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
+                <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenModeLabel')}</span>
+                <select id="var-kitchen-mode" class="craftools-select" style="width:100%;">
+                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.emojiKitchenModeSequential')}</option>
+                    <option value="random" ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.emojiKitchenModeRandom')}</option>
+                </select>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenModeHelp')}</span>
+            </div>
         `;
     }
 
@@ -374,6 +382,17 @@ export class VariablePanel {
             if (previewBox) previewBox.style.display = '';
             if (previewValue) previewValue.textContent = I18n.t('variablePanel.previewLoading');
 
+            // emojiKitchen resolve para uma URL de imagem, não texto -- mostra
+            // a imagem em si no preview em vez do link cru.
+            const renderPreviewValue = (val) => {
+                if (!previewValue) return;
+                if (binding.type === 'emojiKitchen' && val) {
+                    previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
+                } else {
+                    previewValue.textContent = (val && String(val).length) ? val : '—';
+                }
+            };
+
             // Se vinculado, resolve o "líder" primeiro para que o preview
             // mostre o valor REAL que sairá na geração (mesmo item, campo
             // próprio) em vez de um valor independente/desencontrado.
@@ -385,14 +404,14 @@ export class VariablePanel {
                         const picks = VariableEngine.newLinkRegistry();
                         VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
                         const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, {}, apiCache, { id: '__me__', picks });
-                        if (previewValue) previewValue.textContent = (val && String(val).length) ? val : '—';
+                        renderPreviewValue(val);
                     });
                     return;
                 }
             }
 
             VariableEngine.resolvePreview(binding).then(val => {
-                if (previewValue) previewValue.textContent = (val && String(val).length) ? val : '—';
+                renderPreviewValue(val);
             });
         };
 
@@ -548,12 +567,17 @@ export class VariablePanel {
                     const leftInput = container.querySelector('#var-kitchen-left');
                     const rightInput = container.querySelector('#var-kitchen-right');
                     const rightWrap = container.querySelector('#var-kitchen-right-wrap');
+                    const modeWrap = container.querySelector('#var-kitchen-mode-wrap');
+                    const modeSelect = container.querySelector('#var-kitchen-mode');
                     if (leftInput) leftInput.oninput = () => {
                         binding.leftEmoji = leftInput.value;
-                        if (rightWrap) rightWrap.style.display = leftInput.value.trim() ? '' : 'none';
+                        const hasLeft = !!leftInput.value.trim();
+                        if (rightWrap) rightWrap.style.display = hasLeft ? '' : 'none';
+                        if (modeWrap) modeWrap.style.display = hasLeft ? '' : 'none';
                         notify();
                     };
                     if (rightInput) rightInput.oninput = () => { binding.rightEmoji = rightInput.value; notify(); };
+                    if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
                     break;
                 }
             }

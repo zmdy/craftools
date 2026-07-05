@@ -95,7 +95,11 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenLeftLabel: "1º emoji",
         emojiKitchenRightLabel: "2º emoji (opcional)",
         emojiKitchenPlaceholder: "cole um emoji",
-        emojiKitchenRightHelp: "Deixe em branco para combinar o 1º emoji com ele mesmo."
+        emojiKitchenRightHelp: "Deixe em branco para combinar o 1º emoji com ele mesmo.",
+        emojiKitchenModeLabel: "Ordem",
+        emojiKitchenModeSequential: "Sequencial (uma por repetição)",
+        emojiKitchenModeRandom: "Aleatória",
+        emojiKitchenModeHelp: "Só tem efeito quando o 2º emoji está em branco -- decide como percorrer todas as combinações reais do 1º emoji."
     },
     "en": {
         title: "Variable Text",
@@ -187,7 +191,11 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenLeftLabel: "1st emoji",
         emojiKitchenRightLabel: "2nd emoji (optional)",
         emojiKitchenPlaceholder: "paste an emoji",
-        emojiKitchenRightHelp: "Leave blank to combine the 1st emoji with itself."
+        emojiKitchenRightHelp: "Leave blank to combine the 1st emoji with itself.",
+        emojiKitchenModeLabel: "Order",
+        emojiKitchenModeSequential: "Sequential (one per repetition)",
+        emojiKitchenModeRandom: "Random",
+        emojiKitchenModeHelp: "Only takes effect when the 2nd emoji is blank -- decides how to cycle through all the real combinations of the 1st emoji."
     },
     "es": {
         title: "Texto Variable",
@@ -279,6 +287,10 @@ I18n.addTranslations('variablePanel', {
         emojiKitchenLeftLabel: "1er emoji",
         emojiKitchenRightLabel: "2º emoji (opcional)",
         emojiKitchenPlaceholder: "pegue un emoji",
-        emojiKitchenRightHelp: "Deje en blanco para combinar el 1er emoji consigo mismo."
+        emojiKitchenRightHelp: "Deje en blanco para combinar el 1er emoji consigo mismo.",
+        emojiKitchenModeLabel: "Orden",
+        emojiKitchenModeSequential: "Secuencial (uno por repetición)",
+        emojiKitchenModeRandom: "Aleatorio",
+        emojiKitchenModeHelp: "Solo tiene efecto cuando el 2º emoji está en blanco -- decide cómo recorrer todas las combinaciones reales del 1er emoji."
     }
 });
