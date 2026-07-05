@@ -1,4 +1,4 @@
-import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo } from "./ApiDataLoader.js";
+import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners } from "./ApiDataLoader.js";
 
 // Usado quando a lista de emojis (variável tipo "emoji") está vazia -- o
 // sistema sorteia entre este conjunto padrão em vez de não substituir nada.
@@ -81,7 +81,7 @@ export class VariableEngine {
             case 'apiPhrase':
                 return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
             case 'emojiKitchen':
-                return { type, leftEmoji: '', rightEmoji: '', linkedTo: '' };
+                return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
             default:
                 return null;
         }
@@ -164,11 +164,19 @@ export class VariableEngine {
         const apiPhraseBindings = list.filter(b => b && b.type === 'apiPhrase');
 
         const kitchenPairs = new Set();
+        // Emoji Kitchen com 2º emoji vazio: variável -- percorre (sequencial
+        // ou aleatório, via `mode`, igual à variável "Frase da API"/"Emoji")
+        // TODAS as combinações reais do 1º emoji, não só um par fixo.
+        const kitchenVariableLefts = new Set();
         list.forEach(b => {
             if (b && b.type === 'emojiKitchen' && (b.leftEmoji || '').trim()) {
                 const left = b.leftEmoji.trim();
-                const right = (b.rightEmoji || '').trim() || left;
-                kitchenPairs.add(`${left}|${right}`);
+                const right = (b.rightEmoji || '').trim();
+                if (right) {
+                    kitchenPairs.add(`${left}|${right}`);
+                } else {
+                    kitchenVariableLefts.add(left);
+                }
             }
         });
 
@@ -187,6 +195,23 @@ export class VariableEngine {
                 } catch (_) {
                     cache.phrasesByCollection[col] = [];
                 }
+            }));
+        }
+
+        if (kitchenVariableLefts.size) {
+            cache.emojiKitchenPartnersList = {};
+            await Promise.all([...kitchenVariableLefts].map(async (left) => {
+                let partners = [];
+                try {
+                    partners = (await loadEmojiKitchenPartners(left)).filter(p => p !== left);
+                } catch (_) {
+                    partners = [];
+                }
+                cache.emojiKitchenPartnersList[left] = partners;
+                // Garante que a URL de cada combo do pool (self + parceiros)
+                // seja pré-carregada junto, no mesmo lote abaixo.
+                kitchenPairs.add(`${left}|${left}`);
+                partners.forEach(p => kitchenPairs.add(`${left}|${p}`));
             }));
         }
 
@@ -509,14 +534,31 @@ export class VariableEngine {
     // ── emojiKitchen ─────────────────────────────────────────────────────────
 
     /**
-     * Combo do Emoji Kitchen não varia por repetição (é um par fixo escolhido
-     * no painel) -- o "pick" aqui é só a URL já resolvida via prefetch
-     * (ver prefetchApiResources), guardada em cache por "esquerda|direita".
+     * Combo do Emoji Kitchen. Se o 2º emoji estiver definido no painel, o par
+     * é fixo (não varia por repetição) -- comportamento original. Se o 2º
+     * emoji estiver vazio, é "variável": percorre TODAS as combinações reais
+     * do 1º emoji (parceiros + a opção "consigo mesmo"), avançando por
+     * repetição de acordo com `mode` (sequencial/aleatório), igual às
+     * variáveis "Emoji" e "Frase da API". A URL final vem sempre do cache
+     * pré-carregado em prefetchApiResources(), por "esquerda|direita".
      */
     static _pickEmojiKitchen(binding, ctx, apiCache) {
         const left = (binding.leftEmoji || '').trim();
         if (!left) return null;
-        const right = (binding.rightEmoji || '').trim() || left;
+        const rightFixed = (binding.rightEmoji || '').trim();
+
+        let right;
+        if (rightFixed) {
+            right = rightFixed;
+        } else {
+            const partners = (apiCache && apiCache.emojiKitchenPartnersList && apiCache.emojiKitchenPartnersList[left]) || [];
+            const pool = [left, ...partners]; // pool[0] = "consigo mesmo"
+            const idx = ctx.repetitionIndex;
+            right = binding.mode === 'random'
+                ? pool[this._pseudoRandomIndex(idx, pool.length)]
+                : pool[idx % pool.length];
+        }
+
         const key = `${left}|${right}`;
         const url = (apiCache && apiCache.emojiKitchenCombos && apiCache.emojiKitchenCombos[key]) || '';
         return { leftEmoji: left, rightEmoji: right, url };
