@@ -423,4 +423,23 @@ export class I18n {
             if (translation && translation[key]) {
                 translation = translation[key];
             } else {
-                return path;
+                return path; // Fallback to path if not found
+            }
+        }
+        return translation;
+    }
+
+    static init() {
+        const savedLang = localStorage.getItem('craftools-lang');
+        if (savedLang) {
+            window.craftoolsLang = savedLang;
+        } else {
+            const nav = navigator.language || '';
+            let browserLang = 'pt-br';
+            if (nav.startsWith('es')) browserLang = 'es';
+
+            else if (nav.startsWith('en')) browserLang = 'en';
+            window.craftoolsLang = browserLang;
+        }
+    }
+}

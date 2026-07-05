@@ -239,4 +239,3 @@ export class AgendaExport {
         else img.removeAttribute('src');
     }
 }
-                                

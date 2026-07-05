@@ -770,4 +770,26 @@ export class Craftools_Editor extends HTMLElement {
             updateZoom();
         });
 
-        // ── Pinch-to-zoom
+        // ── Pinch-to-zoom (mobile) ─────────────────────────────────────────
+        const canvas = this.querySelector('#canvas-area');
+        let pinchStartDist = null;
+        let pinchStartZoom = 1.0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.hypot(dx, dy);
+                const scale = dist / pinchStartDist;
+                zoomLevel = Math.min(3.0, Math.max(0.2, pinchStartZoom * scale));
+                updateZoom();
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+            if (pinchStartDist) pinchStartDist = null;
+        }, { passive: true });
+    }
+
+    static init() { customElements.define("craftools-editor", Craftools_Editor) }
+}

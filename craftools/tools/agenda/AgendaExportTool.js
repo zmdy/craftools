@@ -299,4 +299,3 @@ export class AgendaExportTool {
             .replace(/>/g, '&gt;');
     }
 }
-                                                 

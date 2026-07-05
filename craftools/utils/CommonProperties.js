@@ -609,4 +609,28 @@ export class CommonProperties {
         return element.contentArea?.querySelector(selector) || element.querySelector(selector) || null;
     }
 
-    static _triggerC
+    static _triggerChange(element) {
+        element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+    }
+
+    static _toastError(msg) {
+        import('./Notify.js').then(({ Notify }) => Notify.toast(msg, 'error'));
+    }
+
+    static _getUnit(val) {
+        if (!val) return 'px';
+        return val.toString().replace(/[0-9.-]/g, '').trim() || 'px';
+    }
+
+    static _rgbToHex(rgb) {
+        if (!rgb) return '#000000';
+        if (rgb === 'white') return '#ffffff';
+        if (rgb === 'black') return '#000000';
+        if (rgb === 'transparent') return '#ffffff';
+        if (!rgb.startsWith('rgb')) return rgb;
+        const parts = rgb.match(/\d+/g);
+        if (!parts) return rgb;
+        const hex = x => ('0' + parseInt(x).toString(16)).slice(-2);
+        return '#' + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
+    }
+}

@@ -460,4 +460,16 @@ export class PageTool {
         clone.id = 'page-' + Date.now();
         
         // Remove os componentes filhos da página inteiramente mas mantém a sua forma
-        clone.innerHTML = `<div style="display: flex; align-items: center; ju
+        clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
+        
+        // Acoplar os eventos para poder clicar na nova página localmente
+        this.attachPageEvents(editor, clone);
+        pagesWrapper.appendChild(clone);
+        
+        // Notify history system
+        document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
+        
+        // Scrollar automaticamente para a página nova de forma suave
+        pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
+    }
+}

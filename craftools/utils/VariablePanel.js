@@ -679,4 +679,3 @@ export class VariablePanel {
             .replace(/"/g, '&quot;');
     }
 }
-                                    
