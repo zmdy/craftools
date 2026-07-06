@@ -72,17 +72,18 @@ async function fetchResource(resource, extraParams = {}) {
 export async function loadGridSizes() {
     if (_cache.gridSizes) return _cache.gridSizes;
 
+    // API data and local GridSizes.js are ALWAYS merged — API first, then local.
+    // The local file is never discarded even when the API responds successfully.
     const apiData = await fetchResource('grid-sizes');
-    let base;
+    let apiItems = [];
     if (apiData && apiData.length > 0) {
         console.info('[ApiDataLoader] GridSizes carregados da API (%d itens)', apiData.length);
-        base = apiData;
+        apiItems = apiData;
     } else {
         console.warn(
-            '[ApiDataLoader] API indisponível ou sem dados — usando GridSizes.js local como fallback. ' +
+            '[ApiDataLoader] API indisponível ou sem dados — apenas GridSizes.js local será usado. ' +
             'Verifique window.CRAFTOOLS_CONFIG.apiBase (configurado no index.html) e se a craftools_api está no ar.'
         );
-        base = [...GridSizesFallback];
     }
 
     // Append user-created templates (from localStorage) after built-in ones
@@ -91,7 +92,8 @@ export async function loadGridSizes() {
         console.info('[ApiDataLoader] %d template(s) do usuário carregados do localStorage.', userTemplates.length);
     }
 
-    _cache.gridSizes = [...base, ...userTemplates];
+    // Final order: API items → local fallback → user templates
+    _cache.gridSizes = [...apiItems, ...GridSizesFallback, ...userTemplates];
     return _cache.gridSizes;
 }
 

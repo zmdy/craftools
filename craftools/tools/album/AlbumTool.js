@@ -48,6 +48,27 @@ export class AlbumTool extends BaseTool {
 
         if (availableSizes.length > 0) selectedSize = availableSizes[0];
 
+        // ── Template normalizer ───────────────────────────────────────────
+        // The API may return numeric or missing values for fields that the local
+        // GridSizes.js always provides as strings. This function sanitises an
+        // entry before any rendering/calc logic touches it.
+        const normalizeTemplate = (t) => {
+            const toSpaceStr = (val, fallback = '0 0 0 0') => {
+                if (typeof val === 'string' && val.trim()) return val;
+                if (typeof val === 'number') return `${val} ${val} ${val} ${val}`;
+                return fallback;
+            };
+            return {
+                ...t,
+                pageMargin:  toSpaceStr(t.pageMargin,  '5 5 5 5'),
+                cellPadding: toSpaceStr(t.cellPadding, '3 3 3 3'),
+                cellGap:     typeof t.cellGap  === 'number' ? t.cellGap  : 0,
+                cellWidth:   typeof t.cellWidth  === 'number' ? t.cellWidth  : 50,
+                cellHeight:  typeof t.cellHeight === 'number' ? t.cellHeight : 50,
+                sizes:       Array.isArray(t.sizes) ? t.sizes : [],
+            };
+        };
+
         // ── Helpers ────────────────────────────────────────────────────────
         const calcPerPage = (template, size) => {
             if (template.type === 'promo_kit') {
@@ -80,7 +101,18 @@ export class AlbumTool extends BaseTool {
         // GridSizes vêm da API (com fallback para o arquivo local GridSizes.js)
         const gridSizes = await loadGridSizes();
         const renderPanel = () => {
-            const matchingTemplates = gridSizes.filter(t => selectedSize ? t.sizes.includes(selectedSize.size) : false);
+            // Templates with empty/missing sizes array are universal (compatible with all page sizes).
+            // Only filter by size when the template explicitly declares supported sizes.
+            // normalizeTemplate() sanitises API entries that may have numeric/missing fields.
+            const matchingTemplates = gridSizes
+                .filter(t => {
+                    if (!selectedSize) return false;
+                    const sizes = Array.isArray(t.sizes) ? t.sizes : [];
+                    if (sizes.length === 0) return true; // universal template
+                    return sizes.includes(selectedSize.size);
+                })
+                .map(normalizeTemplate);
+
 
             const sizeHtml = availableSizes.map((s, idx) =>
                 `<button class="craftools-pill size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${idx}">${s.name}</button>`
