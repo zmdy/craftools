@@ -265,10 +265,17 @@ export class GeradorTool {
                 return;
             }
 
+            const parts = String(selectedSize.size || '210,297').split(',').map(Number);
+            const docW  = parts[0] || 210;
+            const docH  = parts[1] || 297;
+            const unit  = selectedSize.sizeUnit || 'mm';
+
+            // Resize the actual canvas page to reflect the selected size
+            mainPage.style.width = docW + unit;
+            mainPage.style.height = docH + unit;
+            mainPage.style.minHeight = docH + unit;
+
             if (cfg.autoCenter) {
-                const parts = String(selectedSize.size || '210,297').split(',').map(Number);
-                const docW  = parts[0] || 210;
-                const docH  = parts[1] || 297;
                 const bounds = layoutType === 'promo'
                     ? computePromoContentBounds(promoSlots, cfg.cellGap, docW)
                     : computeGridContentBounds(cfg.cellWidth, cfg.cellHeight, cfg.cellGap, docW, docH);

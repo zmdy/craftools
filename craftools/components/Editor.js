@@ -189,7 +189,11 @@ export class Craftools_Editor extends HTMLElement {
             const mainPage = document.getElementById('main-page');
             if (mainPage && this._savedPageHtml !== undefined) {
                 mainPage.innerHTML = this._savedPageHtml;
+                if (this._savedPageCssText !== undefined) {
+                    mainPage.style.cssText = this._savedPageCssText;
+                }
                 delete this._savedPageHtml;
+                delete this._savedPageCssText;
             }
             const badge = document.getElementById('gerador-canvas-badge');
             if (badge) badge.remove();
@@ -679,6 +683,7 @@ export class Craftools_Editor extends HTMLElement {
                         const mainPage = document.getElementById('main-page');
                         if (mainPage && this._savedPageHtml === undefined) {
                             this._savedPageHtml = mainPage.innerHTML;
+                            this._savedPageCssText = mainPage.style.cssText;
                         }
                         
                         openPanelMenu();
