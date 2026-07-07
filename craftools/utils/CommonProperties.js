@@ -321,7 +321,7 @@ export class CommonProperties {
         const currentY  = Math.round(parseFloat(elStyle.top)    || parseFloat(element.getAttribute('y'))  || 0);
         const currentZ  = parseInt(elStyle.zIndex) || 2;
 
-        const autoFitOn = config.autoFitText ? (element._craftoolsAutoResize !== false) : false;
+        const autoFitOn = config.autoFitText ? (element._craftoolsAutoResize === true) : false;
 
         const bodyHtml = `
             <!-- Size -->
