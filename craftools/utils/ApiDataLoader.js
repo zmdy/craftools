@@ -29,6 +29,24 @@ function getApiBase() {
         : null;
 }
 
+let _activeRequests = 0;
+const _requestQueue = [];
+
+async function queuedFetch(url, options) {
+    if (_activeRequests >= 3) {
+        await new Promise(resolve => _requestQueue.push(resolve));
+    }
+    _activeRequests++;
+    try {
+        return await fetch(url, options);
+    } finally {
+        _activeRequests--;
+        if (_requestQueue.length > 0) {
+            _requestQueue.shift()();
+        }
+    }
+}
+
 /**
  * Busca um recurso da /v1/ com timeout de 4 segundos.
  * Retorna null em caso de qualquer falha.
@@ -49,7 +67,7 @@ async function fetchResource(resource, extraParams = {}) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 4000);
 
-        const res = await fetch(url, {
+        const res = await queuedFetch(url, {
             signal: controller.signal,
             headers: { 'Accept': 'application/json' },
         });
@@ -186,7 +204,7 @@ async function fetchResourceRaw(resource, extraParams = {}) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 4000);
 
-        const res = await fetch(url, {
+        const res = await queuedFetch(url, {
             signal: controller.signal,
             headers: { 'Accept': 'application/json' },
         });
@@ -201,28 +219,30 @@ async function fetchResourceRaw(resource, extraParams = {}) {
     }
 }
 
-export async function loadEmojiKitchenSupported() {
+export function loadEmojiKitchenSupported() {
     if (_cache.emojiKitchenSupported) return _cache.emojiKitchenSupported;
-    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'supported' });
-    _cache.emojiKitchenSupported = Array.isArray(data) ? data : [];
+    _cache.emojiKitchenSupported = fetchResourceRaw('emoji-kitchen', { mode: 'supported' }).then(data => {
+        return Array.isArray(data) ? data : [];
+    });
     return _cache.emojiKitchenSupported;
 }
 
-export async function loadEmojiKitchenPartners(emoji) {
+export function loadEmojiKitchenPartners(emoji) {
     const key = `emojiKitchenPartners:${emoji}`;
     if (_cache[key]) return _cache[key];
-    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'partners', emoji });
-    _cache[key] = Array.isArray(data) ? data : [];
+    _cache[key] = fetchResourceRaw('emoji-kitchen', { mode: 'partners', emoji }).then(data => {
+        return Array.isArray(data) ? data : [];
+    });
     return _cache[key];
 }
 
-export async function loadEmojiKitchenCombo(left, right) {
+export function loadEmojiKitchenCombo(left, right) {
     const key = `emojiKitchenCombo:${left}|${right}`;
     if (_cache[key] !== undefined) return _cache[key];
-    const data = await fetchResourceRaw('emoji-kitchen', { mode: 'combo', left, right });
-    const combo = (data && data.imageUrl) ? data : null;
-    _cache[key] = combo;
-    return combo;
+    _cache[key] = fetchResourceRaw('emoji-kitchen', { mode: 'combo', left, right }).then(data => {
+        return (data && data.imageUrl) ? data : null;
+    });
+    return _cache[key];
 }
 
 export function invalidateApiDataCache() {

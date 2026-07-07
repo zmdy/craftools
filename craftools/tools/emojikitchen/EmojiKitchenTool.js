@@ -1,7 +1,7 @@
 import { I18n } from "../../settings/Translations.js";
 import { BaseTool } from "../BaseTool.js";
 import { PanelUI } from "../../utils/PanelUI.js";
-import { loadEmojiKitchenCombo, loadEmojiKitchenPartners } from "../../utils/ApiDataLoader.js";
+import { loadEmojiKitchenCombo, loadEmojiKitchenPartners, loadEmojiKitchenSupported } from "../../utils/ApiDataLoader.js";
 import "./EmojiKitchenTool_Translations.js";
 
 const k = (key) => I18n.t('emojiKitchenTool.' + key);
@@ -21,7 +21,7 @@ const k = (key) => I18n.t('emojiKitchenTool.' + key);
 export class EmojiKitchenTool extends BaseTool {
 
     static getDefaultMeta() {
-        return { leftEmoji: '😀', rightEmoji: '', rightMode: 'manual', imageUrl: '' };
+        return { leftEmoji: '', rightEmoji: '', rightMode: 'manual', imageUrl: '' };
     }
 
     static getCtxOptions() {
@@ -61,7 +61,18 @@ export class EmojiKitchenTool extends BaseTool {
 
     static async _resolveAndRender(element) {
         const meta = element._craftoolsMeta;
-        if (!meta || !(meta.leftEmoji || '').trim()) return;
+        if (!meta) return;
+        
+        // Se ainda não tem emoji principal, sorteia um dos suportados
+        if (!(meta.leftEmoji || '').trim()) {
+            const supported = await loadEmojiKitchenSupported();
+            if (supported && supported.length > 0) {
+                meta.leftEmoji = supported[Math.floor(Math.random() * supported.length)];
+            } else {
+                meta.leftEmoji = '😀'; // fallback
+            }
+        }
+        
         const left = meta.leftEmoji.trim();
         const right = (meta.rightEmoji || '').trim() || left;
         const combo = await loadEmojiKitchenCombo(left, right);

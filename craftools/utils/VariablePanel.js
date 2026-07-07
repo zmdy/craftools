@@ -1,5 +1,6 @@
 import { I18n } from "../settings/Translations.js";
 import { VariableEngine } from "./VariableEngine.js";
+import { loadEmojiKitchenPartners } from "./ApiDataLoader.js";
 import "./VariablePanel_Translations.js";
 // Reaproveita os textos de "O que exibir" (modos de recorte do card) já
 // definidos para a ferramenta Mini Calendário -- importado incondicionalmente
@@ -351,7 +352,9 @@ export class VariablePanel {
             </div>
             <div class="ct-field" id="var-kitchen-right-wrap" style="${hasLeft ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenRightLabel')}</span>
-                <input type="text" id="var-kitchen-right" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.rightEmoji)}" maxlength="8">
+                <select id="var-kitchen-right" class="craftools-select" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;">
+                    <option value="">${I18n.t('variablePanel.previewLoading')}</option>
+                </select>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
             </div>
             <div class="ct-field" id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
@@ -618,18 +621,52 @@ export class VariablePanel {
                 }
                 case 'emojiKitchen': {
                     const leftInput = container.querySelector('#var-kitchen-left');
-                    const rightInput = container.querySelector('#var-kitchen-right');
+                    const rightSelect = container.querySelector('#var-kitchen-right');
                     const rightWrap = container.querySelector('#var-kitchen-right-wrap');
                     const modeWrap = container.querySelector('#var-kitchen-mode-wrap');
                     const modeSelect = container.querySelector('#var-kitchen-mode');
-                    if (leftInput) leftInput.oninput = () => {
-                        binding.leftEmoji = leftInput.value;
-                        const hasLeft = !!leftInput.value.trim();
-                        if (rightWrap) rightWrap.style.display = hasLeft ? '' : 'none';
-                        if (modeWrap) modeWrap.style.display = hasLeft ? '' : 'none';
-                        notify();
+
+                    let currentPartners = [];
+
+                    const renderRightOptions = () => {
+                        if (!rightSelect) return;
+                        const opts = [`<option value="">${I18n.t('variablePanel.emojiKitchenRightSelf') || 'Combinar com ele mesmo'}</option>`]
+                            .concat(currentPartners.map(p => `<option value="${this._esc(p)}" ${(binding.rightEmoji === p) ? 'selected' : ''}>${this._esc(p)}</option>`));
+                        rightSelect.innerHTML = opts.join('');
+                        if (binding.rightEmoji && !currentPartners.includes(binding.rightEmoji)) {
+                            binding.rightEmoji = '';
+                        }
                     };
-                    if (rightInput) rightInput.oninput = () => { binding.rightEmoji = rightInput.value; notify(); };
+
+                    const loadPartners = async () => {
+                        const left = (binding.leftEmoji || '').trim();
+                        if (!left || !rightSelect) return;
+                        rightSelect.innerHTML = `<option value="">${I18n.t('variablePanel.previewLoading')}</option>`;
+                        const partners = await loadEmojiKitchenPartners(left);
+                        currentPartners = partners.filter(p => p !== left);
+                        renderRightOptions();
+                    };
+
+                    if (leftInput) {
+                        leftInput.oninput = () => {
+                            binding.leftEmoji = leftInput.value;
+                            binding.rightEmoji = '';
+                            const hasLeft = !!leftInput.value.trim();
+                            if (rightWrap) rightWrap.style.display = hasLeft ? '' : 'none';
+                            if (modeWrap) modeWrap.style.display = hasLeft ? '' : 'none';
+                            notify();
+                            loadPartners();
+                        };
+                        // Populate right partners immediately if there's already a leftEmoji
+                        loadPartners();
+                    }
+
+                    if (rightSelect) {
+                        rightSelect.onchange = () => {
+                            binding.rightEmoji = rightSelect.value;
+                            notify();
+                        };
+                    }
                     if (modeSelect) modeSelect.onchange = () => { binding.mode = modeSelect.value; notify(); };
                     break;
                 }
