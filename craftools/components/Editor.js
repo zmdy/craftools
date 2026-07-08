@@ -240,24 +240,29 @@ export class Craftools_Editor extends HTMLElement {
         };
         const closeSidebar = () => {
             if(sidebar) {
-                sidebar.classList.remove('panel-open');
+                if (isMobile()) {
+                    // Mobile: esconde a sidebar completamente (ela é um modal/overlay)
+                    sidebar.classList.remove('panel-open');
+                } else {
+                    // Desktop: nunca esconde totalmente — recolhe para modo somente-ícones
+                    sidebar.classList.add('panel-open', 'sidenav-collapsed');
+                    sidebar.style.marginLeft = '';
+                }
                 sidebar.classList.remove('mobile-modal-mode');
             }
             overlay.classList.remove('visible');
             const menuIcon = document.getElementById('pwa-menu-icon');
-            if(menuIcon && menuIcon.textContent !== 'menu') {
-                menuIcon.textContent = 'menu';
+            if(menuIcon) {
+                menuIcon.textContent = isMobile() ? 'menu' : 'menu';
             }
             // Também reseta o estado interno do painel (ex: painel de propriedades aberto)
             const defaultMenu = document.getElementById('panel-default-menu');
             const panelBody  = document.getElementById('panel-body');
             const closePanel = document.getElementById('close-panel');
-            const panelLogo  = document.getElementById('panel-logo');
             const panelTitle = document.getElementById('panel-title');
             if(defaultMenu) defaultMenu.classList.remove('d-none');
             if(panelBody)   panelBody.classList.add('d-none');
             if(closePanel)  closePanel.classList.add('d-none');
-            if(panelLogo)   panelLogo.classList.remove('d-none');
             if(panelTitle)  panelTitle.textContent = '';
             restoreOriginalCanvas();
         };
@@ -322,8 +327,7 @@ export class Craftools_Editor extends HTMLElement {
             const panelBody = document.getElementById('panel-body');
             const defaultMenu = document.getElementById('panel-default-menu');
             const closePanel = document.getElementById('close-panel');
-            const panelLogo = document.getElementById('panel-logo');
-            
+
             const openPanelMenu = () => {
                 if (isMobile()) {
                     MobileToolbar.showElementMode(el, toolType);
@@ -332,7 +336,6 @@ export class Craftools_Editor extends HTMLElement {
                 if(defaultMenu) defaultMenu.classList.add('d-none');
                 if(panelBody) panelBody.classList.remove('d-none');
                 if(closePanel) closePanel.classList.remove('d-none');
-                if(panelLogo) panelLogo.classList.add('d-none');
                 if(rightPanel) {
                     rightPanel.classList.add('panel-open');
                     rightPanel.classList.remove('sidenav-collapsed');
@@ -459,13 +462,11 @@ export class Craftools_Editor extends HTMLElement {
         const closePanel = document.getElementById('close-panel');
         const panelBody = document.getElementById('panel-body');
         const defaultMenu = document.getElementById('panel-default-menu');
-        const panelLogo = document.getElementById('panel-logo');
-        
+
         const openPanelMenu = () => {
             if(defaultMenu) defaultMenu.classList.add('d-none');
             if(panelBody) panelBody.classList.remove('d-none');
             if(closePanel) closePanel.classList.remove('d-none');
-            if(panelLogo) panelLogo.classList.add('d-none');
             if(rightPanel) {
                 rightPanel.classList.add('panel-open');
                 rightPanel.classList.remove('sidenav-collapsed');
@@ -481,7 +482,6 @@ export class Craftools_Editor extends HTMLElement {
             if(defaultMenu) defaultMenu.classList.remove('d-none');
             if(panelBody) panelBody.classList.add('d-none');
             if(closePanel) closePanel.classList.add('d-none');
-            if(panelLogo) panelLogo.classList.remove('d-none');
             if(panelTitle) panelTitle.textContent = '';
             if(rightPanel) rightPanel.classList.remove('mobile-modal-mode');
             document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
@@ -692,12 +692,11 @@ export class Craftools_Editor extends HTMLElement {
                         return;
                     }
 
-                    // Fallback (outros)
+                    // Fallback (outros) — apenas abre o painel com mensagem; não fecha a sidebar
                     if (panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
                     if (panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
                     openPanelMenu();
                     this.activePage = null;
-                    closeSidebar();
                 });
             }
         });
