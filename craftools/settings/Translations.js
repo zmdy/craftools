@@ -43,7 +43,9 @@ export const Translations = {
             sectionPagesFiles: "Páginas e Arquivos",
             searchTools: "Buscar ferramentas...",
             noToolsFound: "Nenhuma ferramenta encontrada",
-            imageSlicer: "Fatiador de Imagem"
+            imageSlicer: "Fatiador de Imagem",
+            curvedText: "Texto em Curva",
+            stamp: "Carimbo / Selo"
         },
         mediaTypes: {
             paper: "Artes impressas",
@@ -176,7 +178,9 @@ export const Translations = {
             sectionPagesFiles: "Pages & Files",
             searchTools: "Search tools...",
             noToolsFound: "No tools found",
-            imageSlicer: "Image Slicer"
+            imageSlicer: "Image Slicer",
+            curvedText: "Curved Text",
+            stamp: "Stamp / Seal"
         },
         mediaTypes: {
             paper: "Printed Arts",
@@ -309,7 +313,9 @@ export const Translations = {
             sectionPagesFiles: "Páginas y Archivos",
             searchTools: "Buscar herramientas...",
             noToolsFound: "No se encontraron herramientas",
-            imageSlicer: "Cortador de Imagen"
+            imageSlicer: "Cortador de Imagen",
+            curvedText: "Texto Curvo",
+            stamp: "Sello / Timbre"
         },
         mediaTypes: {
             paper: "Artes impresas",
