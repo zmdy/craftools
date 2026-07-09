@@ -186,6 +186,11 @@ export class Craftools_Editor extends HTMLElement {
         const isMobile = () => window.innerWidth <= 768;
         
         const restoreOriginalCanvas = () => {
+            // Generic tool cleanup hook — e.g. ImageSlicerTool preview overlay
+            if (typeof this._toolCleanup === 'function') {
+                this._toolCleanup();
+                delete this._toolCleanup;
+            }
             const mainPage = document.getElementById('main-page');
             if (mainPage && this._savedPageHtml !== undefined) {
                 mainPage.innerHTML = this._savedPageHtml;
@@ -625,7 +630,7 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                 });
             }
-            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario' || tool === 'album') {
+            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario' || tool === 'album' || tool === 'fatiador') {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
@@ -679,16 +684,24 @@ export class Craftools_Editor extends HTMLElement {
 
                     if (tool === 'gerador') {
                         const { GeradorTool } = await import('../tools/gerador/GeradorTool.js');
-                        
+
                         const mainPage = document.getElementById('main-page');
                         if (mainPage && this._savedPageHtml === undefined) {
                             this._savedPageHtml = mainPage.innerHTML;
                             this._savedPageCssText = mainPage.style.cssText;
                         }
-                        
+
                         openPanelMenu();
                         this.activePage = null;
                         GeradorTool.setup(this);
+                        return;
+                    }
+
+                    if (tool === 'fatiador') {
+                        const { ImageSlicerTool } = await import('../tools/imageslicer/ImageSlicerTool.js');
+                        openPanelMenu();
+                        this.activePage = null;
+                        ImageSlicerTool.setup(this);
                         return;
                     }
 

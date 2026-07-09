@@ -42,7 +42,8 @@ export const Translations = {
             panelSubtitle: "Tecnologia para criatividade",
             sectionPagesFiles: "Páginas e Arquivos",
             searchTools: "Buscar ferramentas...",
-            noToolsFound: "Nenhuma ferramenta encontrada"
+            noToolsFound: "Nenhuma ferramenta encontrada",
+            imageSlicer: "Fatiador de Imagem"
         },
         mediaTypes: {
             paper: "Artes impressas",
@@ -174,7 +175,8 @@ export const Translations = {
             panelSubtitle: "Technology for Creativity",
             sectionPagesFiles: "Pages & Files",
             searchTools: "Search tools...",
-            noToolsFound: "No tools found"
+            noToolsFound: "No tools found",
+            imageSlicer: "Image Slicer"
         },
         mediaTypes: {
             paper: "Printed Arts",
@@ -306,7 +308,8 @@ export const Translations = {
             panelSubtitle: "Tecnología para la creatividad",
             sectionPagesFiles: "Páginas y Archivos",
             searchTools: "Buscar herramientas...",
-            noToolsFound: "No se encontraron herramientas"
+            noToolsFound: "No se encontraron herramientas",
+            imageSlicer: "Cortador de Imagen"
         },
         mediaTypes: {
             paper: "Artes impresas",
