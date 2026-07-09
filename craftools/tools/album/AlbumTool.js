@@ -20,7 +20,6 @@ export class AlbumTool extends BaseTool {
         const panelBody = document.getElementById('panel-body');
         const defaultMenu = document.getElementById('panel-default-menu');
         const closePanel = document.getElementById('close-panel');
-        const panelLogo = document.getElementById('panel-logo');
 
         if (panelTitle) panelTitle.textContent = I18n.t('albumTool.panelTitle');
         editor.activePage = pageEl;
@@ -565,10 +564,16 @@ export class AlbumTool extends BaseTool {
                     if(defaultMenu) defaultMenu.classList.remove('d-none');
                     if(panelBody) panelBody.classList.add('d-none');
                     if(closePanel) closePanel.classList.add('d-none');
-                    if(panelLogo) panelLogo.classList.remove('d-none');
                     if(panelTitle) panelTitle.textContent = '';
                     if(rightPanel) {
-                        rightPanel.classList.remove('panel-open');
+                        if (window.innerWidth <= 768) {
+                            // Mobile: esconde a sidebar (era um modal)
+                            rightPanel.classList.remove('panel-open');
+                        } else {
+                            // Desktop: recolhe para modo somente ícones
+                            rightPanel.classList.add('sidenav-collapsed');
+                            rightPanel.style.marginLeft = '';
+                        }
                         rightPanel.classList.remove('mobile-modal-mode');
                     }
                     // Mobile: fecha o overlay ao processar o álbum
@@ -607,7 +612,6 @@ export class AlbumTool extends BaseTool {
         if(defaultMenu) defaultMenu.classList.add('d-none');
         if(panelBody) panelBody.classList.remove('d-none');
         if(closePanel) closePanel.classList.remove('d-none');
-        if(panelLogo) panelLogo.classList.add('d-none');
         if(rightPanel) {
             rightPanel.classList.add('panel-open');
             rightPanel.classList.remove('sidenav-collapsed');

@@ -304,7 +304,7 @@ export class ImageTool extends BaseTool {
                 cellAccWrapper.innerHTML = `
                     <button class="ct-accordion-header" type="button" data-toggle-accordion="img-cell-bg">
                         <span class="ct-accordion-icon">
-                            <span class="material-symbols-outlined">background_2</span>
+                            <span class="material-symbols-outlined">texture</span>
                         </span>
                         <span class="ct-accordion-title">${I18n.t('cellPanel.bgOverlayHeader') || 'Fundo & Overlay'}</span>
                         <span class="ct-accordion-chevron">

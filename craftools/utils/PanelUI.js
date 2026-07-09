@@ -59,7 +59,13 @@ export class PanelUI {
      *   contains [data-toggle-accordion] buttons)
      */
     static bindAccordions(container) {
-        container.querySelectorAll('[data-toggle-accordion]').forEach(btn => {
+        // :not([data-accordion-bound]) evita duplo-bind quando bindAccordions é chamado
+        // mais de uma vez no mesmo container (ex: ImageTool adiciona o accordion
+        // "Fundo & Overlay" de forma assíncrona e chama bindAccordions novamente).
+        // Sem esse guard, cada clique disparava dois listeners — o accordion abria
+        // e fechava instantaneamente, parecendo que não funcionava.
+        container.querySelectorAll('[data-toggle-accordion]:not([data-accordion-bound])').forEach(btn => {
+            btn.dataset.accordionBound = '1';
             btn.addEventListener('click', () => {
                 const id = btn.dataset.toggleAccordion;
                 const accordion = container.querySelector(`.ct-accordion[data-accordion-id="${id}"]`);

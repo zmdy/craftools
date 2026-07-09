@@ -52,36 +52,38 @@ export class CommonProperties {
                 <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span>
             </button>`;
 
-        const html = `
-            <div class="ct-align-bar" style="padding:8px 10px 4px;">
-                <div style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;
-                            letter-spacing:.05em; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-                    <span class="material-symbols-outlined" style="font-size:12px;">align_horizontal_left</span>
-                    ${I18n.t('common.align') || 'Alinhar na página'}
-                </div>
+        const contentHtml = `
+            <div style="padding:4px 10px 8px;">
                 <div style="display:flex; gap:4px; margin-bottom:4px;">
-                    ${btn('left',     'align_horizontal_left',   I18n.t('common.alignLeft')     || 'Alinhar à esquerda')}
-                    ${btn('center-h', 'align_horizontal_center', I18n.t('common.alignCenterH')  || 'Centralizar horizontalmente')}
-                    ${btn('right',    'align_horizontal_right',  I18n.t('common.alignRight')    || 'Alinhar à direita')}
+                    ${btn('left',     'align_horizontal_left',   I18n.t('common.alignLeft')    || 'Alinhar à esquerda')}
+                    ${btn('center-h', 'align_horizontal_center', I18n.t('common.alignCenterH') || 'Centralizar horizontalmente')}
+                    ${btn('right',    'align_horizontal_right',  I18n.t('common.alignRight')   || 'Alinhar à direita')}
                 </div>
                 <div style="display:flex; gap:4px;">
-                    ${btn('top',      'align_vertical_top',      I18n.t('common.alignTop')      || 'Alinhar no topo')}
-                    ${btn('center-v', 'align_vertical_center',   I18n.t('common.alignCenterV')  || 'Centralizar verticalmente')}
-                    ${btn('bottom',   'align_vertical_bottom',   I18n.t('common.alignBottom')   || 'Alinhar na base')}
+                    ${btn('top',      'align_vertical_top',      I18n.t('common.alignTop')     || 'Alinhar no topo')}
+                    ${btn('center-v', 'align_vertical_center',   I18n.t('common.alignCenterV') || 'Centralizar verticalmente')}
+                    ${btn('bottom',   'align_vertical_bottom',   I18n.t('common.alignBottom')  || 'Alinhar na base')}
                 </div>
             </div>
         `;
 
-        const bar = document.createElement('div');
-        bar.innerHTML = html;
-        container.appendChild(bar.firstElementChild);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = PanelUI.accordion(
+            'ct-align',
+            'align_horizontal_left',
+            I18n.t('common.align') || 'Alinhar na página',
+            contentHtml
+        );
+        container.appendChild(wrapper.firstElementChild);
 
-        container.querySelector('.ct-align-bar')?.querySelectorAll('.ct-align-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                SnapEngine.align(element, btn.dataset.align);
-                if (config.onChange) config.onChange();
+        container.querySelector('[data-accordion-id="ct-align"]')
+            ?.querySelectorAll('.ct-align-btn')
+            .forEach(b => {
+                b.addEventListener('click', () => {
+                    SnapEngine.align(element, b.dataset.align);
+                    if (config.onChange) config.onChange();
+                });
             });
-        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
