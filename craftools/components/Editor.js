@@ -432,6 +432,22 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                     this.activePage = null;
                 });
+            } else if (toolType === 'textocurvo') {
+                import('../tools/textocurvo/TextoCurvoTool.js').then(({ TextoCurvoTool }) => {
+                    this.ctxBar.show(el, TextoCurvoTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('textoCurvo.panelTitle') || 'Texto em Curva';
+                    if (panelBody) TextoCurvoTool.renderPropertiesPanel(panelBody, el, this);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
+            } else if (toolType === 'carimbo') {
+                import('../tools/carimbo/CarimboTool.js').then(({ CarimboTool }) => {
+                    this.ctxBar.show(el, CarimboTool.getCtxOptions(el));
+                    if (panelTitle) panelTitle.textContent = I18n.t('carimbo.panelTitle') || 'Carimbo / Selo';
+                    if (panelBody) CarimboTool.renderPropertiesPanel(panelBody, el, this);
+                    openPanelMenu();
+                    this.activePage = null;
+                });
             } else {
                 this.ctxBar.show(el, []);
             }
@@ -510,7 +526,7 @@ export class Craftools_Editor extends HTMLElement {
         // Mobile: tap to add (places tool in center of first visible page)
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool;
-            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape', 'conteudovariavel'].includes(tool)) return;
+            if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape', 'conteudovariavel', 'textocurvo', 'carimbo'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
                 if (!isMobile()) return; // Desktop usa drag, não clique
@@ -578,6 +594,18 @@ export class Craftools_Editor extends HTMLElement {
                     el.setAttribute('x', cx - 110);
                     el.setAttribute('y', cy - 25);
                     mainPage.appendChild(el);
+                } else if (tool === 'textocurvo') {
+                    const { TextoCurvoTool } = await import('../tools/textocurvo/TextoCurvoTool.js');
+                    const el = TextoCurvoTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 80);
+                    el.setAttribute('y', cy - 80);
+                    mainPage.appendChild(el);
+                } else if (tool === 'carimbo') {
+                    const { CarimboTool } = await import('../tools/carimbo/CarimboTool.js');
+                    const el = CarimboTool.createElement(tool, this);
+                    el.setAttribute('x', cx - 80);
+                    el.setAttribute('y', cy - 80);
+                    mainPage.appendChild(el);
                 } else {
                     const { TextTool } = await import('../tools/text/TextTool.js');
                     const el = TextTool.createElement(tool, this);
@@ -630,7 +658,7 @@ export class Craftools_Editor extends HTMLElement {
                     openPanelMenu();
                 });
             }
-            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario' || tool === 'album' || tool === 'fatiador') {
+            if (tool === 'gerador' || tool === 'papeis' || tool === 'agenda' || tool === 'calendario' || tool === 'album' || tool === 'fatiador' || tool === 'textocurvo' || tool === 'carimbo') {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
@@ -702,6 +730,30 @@ export class Craftools_Editor extends HTMLElement {
                         openPanelMenu();
                         this.activePage = null;
                         ImageSlicerTool.setup(this);
+                        return;
+                    }
+
+                    if (tool === 'textocurvo') {
+                        if (isMobile()) return; // mobile handled by tap-to-add above
+                        const { TextoCurvoTool } = await import('../tools/textocurvo/TextoCurvoTool.js');
+                        const targetPage = this.activePage || this.querySelector('.craftools-page');
+                        if (targetPage) {
+                            const el = TextoCurvoTool.createElement('textocurvo', this);
+                            targetPage.appendChild(el);
+                            closeSidebar();
+                        }
+                        return;
+                    }
+
+                    if (tool === 'carimbo') {
+                        if (isMobile()) return; // mobile handled by tap-to-add above
+                        const { CarimboTool } = await import('../tools/carimbo/CarimboTool.js');
+                        const targetPage = this.activePage || this.querySelector('.craftools-page');
+                        if (targetPage) {
+                            const el = CarimboTool.createElement('carimbo', this);
+                            targetPage.appendChild(el);
+                            closeSidebar();
+                        }
                         return;
                     }
 

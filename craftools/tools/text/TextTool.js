@@ -53,16 +53,24 @@ export class TextTool extends BaseTool {
         };
 
         // Current properties extracted from DOM style
-        const currentColor = CommonProperties._rgbToHex(textElement.style.color || '#1a1a1a');
+        const isGradient = textElement.style.webkitTextFillColor === 'transparent';
+        const currentColor = isGradient ? '#1a1a1a' : CommonProperties._rgbToHex(textElement.style.color || '#1a1a1a');
         let currentFont = textElement.style.fontFamily || 'DM Sans';
         currentFont = currentFont.replace(/['"]/g, '').split(',')[0].trim();
         const currentSize = parseFloat(textElement.style.fontSize) || 16;
+
+        // Parse gradient colors from existing background if present
+        let gradFrom = '#f97316', gradTo = '#ec4899', gradAngle = 90;
+        if (isGradient && textElement.style.background) {
+            const m = textElement.style.background.match(/linear-gradient\((\d+)deg,\s*(#[\da-fA-F]+),\s*(#[\da-fA-F]+)\)/);
+            if (m) { gradAngle = Number(m[1]); gradFrom = m[2]; gradTo = m[3]; }
+        }
 
         const htmlTipografia = `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
                 <ct-font-select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></ct-font-select>
-                
+
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <input type="text" id="text-prop-custom-font" class="craftools-input"
                         placeholder="${I18n.t('textTool.localFontPlaceholder')}"
@@ -76,20 +84,64 @@ export class TextTool extends BaseTool {
                     <input type="file" id="text-prop-font-file" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
                 </div>
             </div>
-            
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('textTool.color') || 'Cor'}</span>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="color" class="craftools-color-swatch" id="text-prop-color" value="${currentColor}">
-                    <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('textTool.chooseColor') || 'Escolha a cor'}</span>
-                </div>
-            </div>
-            
+
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.size') || 'Tamanho'}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <input type="range" id="text-prop-size-range" min="8" max="200" step="1" style="flex:1;" value="${currentSize}">
                     <input type="number" class="craftools-input" id="text-prop-size-num" style="width: 55px; text-align: center;" value="${currentSize}">
+                </div>
+            </div>
+        `;
+
+        const htmlCor = `
+            <div class="ct-field">
+                <!-- Solid / Gradient toggle -->
+                <div style="display:flex;gap:5px;margin-bottom:10px;">
+                    <button id="tp-mode-solid" style="
+                        flex:1;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px;font-family:inherit;
+                        border:2px solid ${!isGradient ? 'var(--accent,#f97316)' : 'var(--border,#e4e4e7)'};
+                        background:${!isGradient ? 'rgba(249,115,22,.07)' : 'var(--bg-input,#f4f4f5)'};
+                        color:var(--text);font-weight:600;">
+                        ${I18n.t('textTool.solidColor') || 'Sólida'}
+                    </button>
+                    <button id="tp-mode-grad" style="
+                        flex:1;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px;font-family:inherit;
+                        border:2px solid ${isGradient ? 'var(--accent,#f97316)' : 'var(--border,#e4e4e7)'};
+                        background:${isGradient ? 'rgba(249,115,22,.07)' : 'var(--bg-input,#f4f4f5)'};
+                        color:var(--text);font-weight:600;">
+                        ${I18n.t('textTool.gradient') || 'Gradiente'}
+                    </button>
+                </div>
+
+                <!-- Solid color panel -->
+                <div id="tp-solid-panel" style="display:${isGradient ? 'none' : 'flex'};align-items:center;gap:8px;">
+                    <input type="color" class="craftools-color-swatch" id="text-prop-color" value="${currentColor}">
+                    <span style="font-size:12px;color:var(--text-secondary)">${I18n.t('textTool.chooseColor') || 'Escolha a cor'}</span>
+                </div>
+
+                <!-- Gradient panel -->
+                <div id="tp-grad-panel" style="display:${!isGradient ? 'none' : 'flex'};flex-direction:column;gap:8px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${I18n.t('textTool.gradientFrom') || 'Cor inicial'}</div>
+                            <input type="color" class="craftools-color-swatch" id="tp-grad-from" value="${gradFrom}" style="width:100%;height:32px;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${I18n.t('textTool.gradientTo') || 'Cor final'}</div>
+                            <input type="color" class="craftools-color-swatch" id="tp-grad-to" value="${gradTo}" style="width:100%;height:32px;">
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${I18n.t('textTool.gradientAngle') || 'Ângulo'}: <span id="tp-grad-angle-val">${gradAngle}</span>°</div>
+                        <input type="range" id="tp-grad-angle" min="0" max="360" step="5" value="${gradAngle}"
+                               style="width:100%;accent-color:var(--accent);">
+                    </div>
+                    <!-- Live preview bar -->
+                    <div id="tp-grad-preview" style="
+                        height:12px;border-radius:6px;
+                        background:linear-gradient(${gradAngle}deg,${gradFrom},${gradTo});
+                    "></div>
                 </div>
             </div>
         `;
@@ -106,8 +158,9 @@ export class TextTool extends BaseTool {
         `;
 
         editorPanel.innerHTML =
-            PanelUI.accordion('text-tipo', 'text_fields', I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
-            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento', htmlAlinhamento);
+            PanelUI.accordion('text-tipo',  'text_fields',       I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
+            PanelUI.accordion('text-cor',   'palette',           I18n.t('textTool.color') || 'Cor',             htmlCor,        { open: true }) +
+            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento',     htmlAlinhamento);
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         this.renderCommonProperties(editorPanel, element, {
@@ -335,11 +388,80 @@ export class TextTool extends BaseTool {
         }
 
 
-        const colorInput = editorPanel.querySelector('#text-prop-color');
-        colorInput.addEventListener('input', (e) => {
-            textElement.style.color = e.target.value;
+        // ── Gradient helpers ────────────────────────────────────────────────
+        const applyGradient = (from, to, angle) => {
+            textElement.style.background = `linear-gradient(${angle}deg, ${from}, ${to})`;
+            textElement.style.webkitBackgroundClip = 'text';
+            textElement.style.backgroundClip = 'text';
+            textElement.style.webkitTextFillColor = 'transparent';
+            textElement.style.color = 'transparent';
+            const preview = editorPanel.querySelector('#tp-grad-preview');
+            if (preview) preview.style.background = `linear-gradient(${angle}deg,${from},${to})`;
             syncStyles();
+        };
+
+        const applySolid = (color) => {
+            textElement.style.background = '';
+            textElement.style.webkitBackgroundClip = '';
+            textElement.style.backgroundClip = '';
+            textElement.style.webkitTextFillColor = '';
+            textElement.style.color = color;
+            syncStyles();
+        };
+
+        // Solid/Gradient mode toggle
+        const tpModeSolid = editorPanel.querySelector('#tp-mode-solid');
+        const tpModeGrad  = editorPanel.querySelector('#tp-mode-grad');
+        const tpSolidPnl  = editorPanel.querySelector('#tp-solid-panel');
+        const tpGradPnl   = editorPanel.querySelector('#tp-grad-panel');
+
+        const activateMode = (mode) => {
+            const solidActive = mode === 'solid';
+            tpModeSolid.style.borderColor = solidActive ? 'var(--accent,#f97316)' : 'var(--border,#e4e4e7)';
+            tpModeSolid.style.background  = solidActive ? 'rgba(249,115,22,.07)'  : 'var(--bg-input,#f4f4f5)';
+            tpModeGrad.style.borderColor  = !solidActive ? 'var(--accent,#f97316)' : 'var(--border,#e4e4e7)';
+            tpModeGrad.style.background   = !solidActive ? 'rgba(249,115,22,.07)'  : 'var(--bg-input,#f4f4f5)';
+            tpSolidPnl.style.display = solidActive ? 'flex'   : 'none';
+            tpGradPnl.style.display  = !solidActive ? 'flex'  : 'none';
+        };
+
+        tpModeSolid?.addEventListener('click', () => {
+            activateMode('solid');
+            const colorInput = editorPanel.querySelector('#text-prop-color');
+            applySolid(colorInput?.value || '#1a1a1a');
         });
+
+        tpModeGrad?.addEventListener('click', () => {
+            activateMode('gradient');
+            const from  = editorPanel.querySelector('#tp-grad-from')?.value  || gradFrom;
+            const to    = editorPanel.querySelector('#tp-grad-to')?.value    || gradTo;
+            const angle = editorPanel.querySelector('#tp-grad-angle')?.value || gradAngle;
+            applyGradient(from, to, Number(angle));
+        });
+
+        // Solid color
+        const colorInput = editorPanel.querySelector('#text-prop-color');
+        colorInput?.addEventListener('input', (e) => {
+            applySolid(e.target.value);
+        });
+
+        // Gradient controls
+        const gradFromInput  = editorPanel.querySelector('#tp-grad-from');
+        const gradToInput    = editorPanel.querySelector('#tp-grad-to');
+        const gradAngleInput = editorPanel.querySelector('#tp-grad-angle');
+        const gradAngleVal   = editorPanel.querySelector('#tp-grad-angle-val');
+
+        const updateGrad = () => {
+            const from  = gradFromInput?.value  || gradFrom;
+            const to    = gradToInput?.value    || gradTo;
+            const angle = Number(gradAngleInput?.value ?? gradAngle);
+            if (gradAngleVal) gradAngleVal.textContent = angle;
+            applyGradient(from, to, angle);
+        };
+
+        gradFromInput?.addEventListener('input', updateGrad);
+        gradToInput?.addEventListener('input', updateGrad);
+        gradAngleInput?.addEventListener('input', updateGrad);
 
         const sizeRange = editorPanel.querySelector('#text-prop-size-range');
         const sizeNum = editorPanel.querySelector('#text-prop-size-num');

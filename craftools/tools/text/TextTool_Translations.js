@@ -20,7 +20,12 @@ I18n.addTranslations('textTool', {
         listLocalFontsTitle: "Listar fontes instaladas no PC",
         localFontsUnsupported: "Acesso a fontes locais não é suportado pelo seu navegador atual. Use o campo ao lado para digitar o nome da fonte instalada.",
         localFontsLoaded: "{n} fontes locais carregadas com sucesso na lista!",
-        localFontsError: "Permissão para listar fontes locais negada ou erro ao acessar:"
+        localFontsError: "Permissão para listar fontes locais negada ou erro ao acessar:",
+        gradient: "Gradiente",
+        solidColor: "Cor sólida",
+        gradientFrom: "Cor inicial",
+        gradientTo: "Cor final",
+        gradientAngle: "Ângulo"
     },
     "en": {
         propsTitle: "Title Properties",
@@ -41,7 +46,12 @@ I18n.addTranslations('textTool', {
         listLocalFontsTitle: "List fonts installed on this device",
         localFontsUnsupported: "Local font access is not supported by your current browser. Use the field next to it to type the installed font's name.",
         localFontsLoaded: "{n} local fonts successfully loaded into the list!",
-        localFontsError: "Permission to list local fonts was denied or an error occurred:"
+        localFontsError: "Permission to list local fonts was denied or an error occurred:",
+        gradient: "Gradient",
+        solidColor: "Solid color",
+        gradientFrom: "Start color",
+        gradientTo: "End color",
+        gradientAngle: "Angle"
     },
     "es": {
         propsTitle: "Propiedades del Título",
@@ -62,6 +72,11 @@ I18n.addTranslations('textTool', {
         listLocalFontsTitle: "Listar fuentes instaladas en el equipo",
         localFontsUnsupported: "El acceso a fuentes locales no es compatible con tu navegador actual. Usa el campo de al lado para escribir el nombre de la fuente instalada.",
         localFontsLoaded: "¡{n} fuentes locales cargadas correctamente en la lista!",
-        localFontsError: "Permiso para listar fuentes locales denegado o error al acceder:"
+        localFontsError: "Permiso para listar fuentes locales denegado o error al acceder:",
+        gradient: "Degradado",
+        solidColor: "Color sólido",
+        gradientFrom: "Color inicial",
+        gradientTo: "Color final",
+        gradientAngle: "Ángulo"
     }
 });
