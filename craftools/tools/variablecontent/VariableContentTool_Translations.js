@@ -1,9 +1,9 @@
 import { I18n } from "../../settings/Translations.js";
 
 /**
- * Traduções da ferramenta "Conteúdo Variável" (VariableContentTool.js).
- * Labels de fonte/cor/tamanho/alinhamento reaproveitam as chaves de
- * "textTool.*" (mesmo texto usado por Título/Parágrafo) para não duplicar.
+ * Translations for the "Variable Content" tool (VariableContentTool.js).
+ * Font/colour/size/alignment labels reuse "textTool.*" keys (same text as
+ * Title/Paragraph) to avoid duplication.
  */
 I18n.addTranslations('variableContentTool', {
     "pt-br": {

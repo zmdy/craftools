@@ -1,7 +1,7 @@
 import { I18n } from "../../settings/Translations.js";
 
 /**
- * Traduções da ferramenta "Mini Calendário" (MiniCalendarTool.js).
+ * Translations for the "Mini Calendar" tool (MiniCalendarTool.js).
  */
 I18n.addTranslations('miniCalendarTool', {
     "pt-br": {

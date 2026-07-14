@@ -1,10 +1,10 @@
 import { I18n } from "../../settings/Translations.js";
 
 /**
- * Traduções da ferramenta de Ícones (IconTool.js).
- * Os nomes/categorias dos ícones em si (ver utils/icons/MaterialSymbolsPack.js)
- * ficam só em pt-br, no mesmo padrão das categorias de EmojiTool.js -- são
- * dados de conteúdo, não texto de interface.
+ * Translations for the Icons tool (IconTool.js).
+ * The icon names/categories themselves (see utils/icons/MaterialSymbolsPack.js)
+ * are kept in pt-br only, following the same pattern as EmojiTool.js categories
+ * — they are content data, not interface text.
  */
 I18n.addTranslations('iconTool', {
     "pt-br": {
