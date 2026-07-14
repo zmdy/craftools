@@ -162,23 +162,10 @@ export class ImageTool extends BaseTool {
 
              this._applyBgBlur(element);
 
-             // Propagate to linked elements (Business Card mode)
-             if (element._linkedElements) {
-                 element._linkedElements.forEach(sibling => {
-                     if (sibling !== element) {
-                         ImageTransform.applyTransform(sibling);
-                         ImageFilters.applyFilters(sibling);
-                         // Apply borders and radius to siblings
-                         const siblingImg = sibling.contentArea.querySelector('img');
-                         if (siblingImg) {
-                             siblingImg.style.borderWidth = meta.borderWidth + 'px';
-                             siblingImg.style.borderStyle = meta.borderStyle;
-                             siblingImg.style.borderColor = meta.borderColor;
-                             siblingImg.style.borderRadius = meta.borderRadius + 'px';
-                         }
-                     }
-                 });
-             }
+             // Propagate to linked elements (Business Card mode) -- covers
+             // both the Álbum wizard's shared _linkedElements array and the
+             // data-linked-id clones created by PageTool.js's drag&drop.
+             this._propagateToSiblings(element, meta);
         };
         element._syncSidebar = syncSliders;
 
@@ -197,6 +184,7 @@ export class ImageTool extends BaseTool {
             if (img) img.style.mixBlendMode = '';
             ImageTransform.applyTransform(element);
             ImageFilters.applyFilters(element);
+            this._propagateToSiblings(element, meta);
             // Re-render the whole panel to reflect reset state (sliders, fit buttons)
             this.renderPropertiesPanel(editorPanel, element);
         };
@@ -212,6 +200,9 @@ export class ImageTool extends BaseTool {
                     meta.src = ev.target.result;
                     const img = element.contentArea.querySelector('img');
                     if (img) img.src = meta.src;
+                    const blurBg = element.querySelector('.craftools-element-blur-bg');
+                    if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
+                    this._propagateToSiblings(element, meta);
                 };
                 reader.readAsDataURL(file);
             }
@@ -286,6 +277,7 @@ export class ImageTool extends BaseTool {
             meta.blendMode = e.target.value;
             const img = element.contentArea?.querySelector('img');
             if (img) img.style.mixBlendMode = meta.blendMode === 'normal' ? '' : meta.blendMode;
+            if (element._syncSidebar) element._syncSidebar();
         });
 
         // ── Grid Cell background & overlay integration ─────────────────────
@@ -364,6 +356,62 @@ export class ImageTool extends BaseTool {
         blurBg.style.filter = `blur(${meta.bgBlur}px)`;
     }
 
+    /**
+     * Retorna os outros elementos de imagem "irmãos" vinculados a este --
+     * usado para manter foto/ajustes sincronizados entre todas as células
+     * no modo Cartão de Visita (Álbum).
+     *
+     * Dois mecanismos de vínculo existem no sistema:
+     *  1) `element._linkedElements` -- array compartilhado, atribuído pelo
+     *     assistente de Álbum (AlbumTool.js) quando várias fotos são
+     *     enviadas de uma vez; os elementos já compartilham o mesmo objeto
+     *     `_craftoolsMeta` por referência.
+     *  2) `data-linked-id` -- atributo DOM atribuído pelo PageTool.js
+     *     (Business Card Cloning Logic) quando UMA ferramenta é arrastada
+     *     para dentro de uma célula do grid modo "card"; o elemento é
+     *     clonado (cloneNode) para as demais células, mas cloneNode NÃO
+     *     copia propriedades JS como `_craftoolsMeta` -- cada clone acaba
+     *     com seu próprio objeto de meta, desconectado dos demais, por
+     *     isso a sincronização abaixo precisa também copiar os VALORES do
+     *     meta (não só reaplicar a mesma referência).
+     */
+    static _getLinkedSiblings(element) {
+        if (Array.isArray(element._linkedElements)) {
+            return element._linkedElements.filter(el => el !== element);
+        }
+        const lid = element.getAttribute('data-linked-id');
+        if (!lid) return [];
+        return [...document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`)]
+            .filter(el => el !== element);
+    }
+
+    /** Copia o estado atual do meta para um elemento irmão (a menos que já
+     *  seja o mesmo objeto compartilhado) e reaplica no DOM dele. */
+    static _pushMetaToSibling(sibling, meta) {
+        if (sibling._craftoolsMeta !== meta) {
+            if (!sibling._craftoolsMeta) sibling._craftoolsMeta = this.getDefaultMeta();
+            Object.assign(sibling._craftoolsMeta, meta, { filters: { ...meta.filters } });
+        }
+        const sMeta = sibling._craftoolsMeta;
+        const img = sibling.contentArea?.querySelector('img');
+        if (img) {
+            if (img.getAttribute('src') !== meta.src) img.src = meta.src;
+            img.style.mixBlendMode = (sMeta.blendMode && sMeta.blendMode !== 'normal') ? sMeta.blendMode : '';
+            img.style.borderWidth = (sMeta.borderWidth || 0) + 'px';
+            img.style.borderStyle = sMeta.borderStyle || 'none';
+            img.style.borderColor = sMeta.borderColor || '#000000';
+            img.style.borderRadius = (sMeta.borderRadius || 0) + 'px';
+        }
+        ImageTransform.applyTransform(sibling);
+        ImageFilters.applyFilters(sibling);
+        this._applyBgBlur(sibling);
+    }
+
+    /** Propaga o meta atual para todos os elementos irmãos vinculados. */
+    static _propagateToSiblings(element, meta) {
+        this._getLinkedSiblings(element).forEach(sibling => this._pushMetaToSibling(sibling, meta));
+    }
+
     static getCtxOptions() {
         return [
             {
@@ -386,6 +434,11 @@ export class ImageTool extends BaseTool {
                                  // Atualiza fundo desfocado se existir
                                  const blurBg = element.querySelector('.craftools-element-blur-bg');
                                  if (blurBg) blurBg.style.backgroundImage = `url(${e.target.result})`;
+
+                                 // Propaga para os demais elementos vinculados (modo
+                                 // Cartão de Visita) mesmo quando o painel de
+                                 // propriedades nunca foi aberto para este elemento.
+                                 this._propagateToSiblings(element, element._craftoolsMeta);
                             };
                             reader.readAsDataURL(file);
                         }

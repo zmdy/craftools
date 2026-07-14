@@ -166,12 +166,23 @@ export class Craftools_Element extends HTMLElement {
 
         this._ctrlbar.querySelector('.del-handle')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            
-            const event = new CustomEvent('craftools-element-delete', { bubbles: true, detail: { element: this } });
-            this.dispatchEvent(event);
 
-            this.deselect();
-            this.remove();
+            // Elementos "vinculados" (clonados automaticamente em todas as
+            // células no modo Cartão de Visita -- ver PageTool.js, Business
+            // Card Cloning Logic) compartilham o mesmo data-linked-id.
+            // Excluir um deles deve excluir todos, senão os clones ficam
+            // "fantasmas" nas outras células.
+            const lid = this.getAttribute('data-linked-id');
+            const toRemove = lid
+                ? [...document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`)]
+                : [this];
+
+            toRemove.forEach(el => {
+                const event = new CustomEvent('craftools-element-delete', { bubbles: true, detail: { element: el } });
+                el.dispatchEvent(event);
+                el.deselect();
+                el.remove();
+            });
         });
     }
 
