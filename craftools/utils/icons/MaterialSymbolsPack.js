@@ -1,22 +1,21 @@
 import { IconLibrary } from "../IconLibrary.js";
 
 /**
- * MaterialSymbolsPack — pack padrão de ícones da ferramenta "Ícones".
+ * MaterialSymbolsPack — default icon pack for the "Icons" tool.
  *
- * Dados extraídos do pacote oficial @material-symbols/svg-400 (Apache-2.0),
- * estilo "outlined", peso 400 — o mesmo desenho da fonte Material Symbols
- * Outlined já usada em toda a UI do CrafTools (ver index.html), mas aqui
- * como <path> de verdade (SVG vetorial), não glifo de fonte — permitindo
- * recolorir/traçar/redimensionar como qualquer outro shape do editor.
+ * Data extracted from the official @material-symbols/svg-400 package
+ * (Apache-2.0), "outlined" style, weight 400 — the same design as the
+ * Material Symbols Outlined font already used throughout the CrafTools UI
+ * (see index.html), but here as real <path> elements (vector SVG), not font
+ * glyphs — allowing recolouring, stroking, and resizing like any other shape.
  *
- * viewBox 0 -960 960 960 é a convenção do Material Symbols (ver comentário
- * em cada ícone do repositório oficial google/material-design-icons).
+ * viewBox 0 -960 960 960 is the Material Symbols convention (see the comment
+ * on each icon in the official google/material-design-icons repository).
  *
- * Este é o pack "default" registrado no IconLibrary — outros packs (ex:
- * Lucide, Heroicons, ou um pack de upload próprio do usuário) podem ser
- * adicionados depois como novos arquivos que chamam
- * IconLibrary.registerPack(...) da mesma forma, sem tocar neste arquivo
- * nem em IconTool.js.
+ * This is the "default" pack registered in IconLibrary — additional packs
+ * (e.g. Lucide, Heroicons, or a user-uploaded pack) can be added later as
+ * new files that call IconLibrary.registerPack(...) in the same way, without
+ * touching this file or IconTool.js.
  */
 
 export const MATERIAL_SYMBOLS_CATEGORIES = [

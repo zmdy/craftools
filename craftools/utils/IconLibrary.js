@@ -1,41 +1,40 @@
 /**
  * IconLibrary
  *
- * Registro central de "packs" de ícones vetoriais (SVG) usados pela
- * ferramenta Ícones (tools/icon/IconTool.js).
+ * Central registry for SVG icon packs used by the Icon tool
+ * (tools/icon/IconTool.js).
  *
- * Cada pack é um conjunto nomeado de ícones vindo de uma fonte diferente
- * (Material Symbols por padrão -- ver utils/icons/MaterialSymbolsPack.js --
- * mas o desenho permite registrar quantos packs quiser depois: Lucide,
- * Heroicons, um pack de upload próprio do usuário, etc.) sem precisar
- * alterar este arquivo nem o IconTool.js -- basta o novo arquivo do pack
- * chamar `IconLibrary.registerPack(id, { label, viewBox, categories, icons })`
- * no import.
+ * Each pack is a named collection of icons from a different source
+ * (Material Symbols by default — see utils/icons/MaterialSymbolsPack.js —
+ * but the design allows registering any number of additional packs: Lucide,
+ * Heroicons, a user-uploaded pack, etc.) without modifying this file or
+ * IconTool.js — just have the new pack file call
+ * `IconLibrary.registerPack(id, { label, viewBox, categories, icons })` on import.
  *
- * Formato esperado de cada pack:
+ * Expected pack format:
  *   {
- *     label: 'Material Symbols',           // nome exibido na aba do picker
- *     viewBox: '0 -960 960 960',           // viewBox compartilhado por todos os ícones do pack
- *     categories: [{ id, label }, ...],    // categorias para as abas internas do picker
+ *     label: 'Material Symbols',           // name shown on the picker tab
+ *     viewBox: '0 -960 960 960',           // shared viewBox for all icons in the pack
+ *     categories: [{ id, label }, ...],    // categories for the inner picker tabs
  *     icons: [
  *       { id, category, label, keywords: [...], paths: ['M...', ...] },
  *       ...
  *     ],
  *   }
  *
- * `paths` é sempre um array (mesmo quando o ícone tem 1 único <path>) para
- * já suportar, sem mudança de formato, ícones com múltiplos subpaths (ex:
- * um pack diferente que precise de mais de um <path> por desenho).
+ * `paths` is always an array (even when the icon has only one <path>) so that
+ * multi-subpath icons (e.g. a pack that needs more than one <path> per glyph)
+ * are supported without any format change.
  */
 export class IconLibrary {
     static _packs = new Map();
 
-    /** Registra (ou substitui) um pack de ícones sob o id informado. */
+    /** Registers (or replaces) an icon pack under the given id. */
     static registerPack(id, pack) {
         this._packs.set(id, { id, ...pack });
     }
 
-    /** Lista todos os packs registrados, na ordem de registro. */
+    /** Returns all registered packs in registration order. */
     static getPacks() {
         return [...this._packs.values()];
     }
@@ -51,10 +50,10 @@ export class IconLibrary {
     }
 
     /**
-     * Busca ícones por palavra-chave (label ou keywords), dentro de um pack
-     * específico ou em todos os packs registrados.
+     * Searches icons by keyword (label or keywords array), within a specific
+     * pack or across all registered packs.
      * @param {string} query
-     * @param {string|null} packId  Se omitido/null, busca em todos os packs.
+     * @param {string|null} packId  If omitted/null, searches all packs.
      * @returns {Array<{packId, icon}>}
      */
     static search(query, packId = null) {
@@ -75,7 +74,7 @@ export class IconLibrary {
         return results;
     }
 
-    /** Ícones de uma categoria específica dentro de um pack. */
+    /** Icons belonging to a specific category within a pack. */
     static byCategory(packId, categoryId) {
         const pack = this.getPack(packId);
         if (!pack) return [];
@@ -83,9 +82,9 @@ export class IconLibrary {
     }
 
     /**
-     * Gera a string SVG completa de um ícone, com fill/stroke aplicados --
-     * mesmo papel do ShapeGenerator.buildSvgString, mas lendo os paths de
-     * um ícone já catalogado em vez de gerar geometria procedural.
+     * Returns the full SVG string for an icon with fill/stroke applied —
+     * same role as ShapeGenerator.buildSvgString, but reading paths from a
+     * catalogued icon rather than generating procedural geometry.
      */
     static buildSvgString(packId, iconId, meta = {}) {
         const pack = this.getPack(packId);
@@ -103,14 +102,14 @@ export class IconLibrary {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this._esc(pack.viewBox)}" preserveAspectRatio="xMidYMid meet"><g fill="${this._esc(fillColor)}" ${strokeAttrs} stroke-linejoin="round">${pathsHtml}</g></svg>`;
     }
 
-    /** Igual a buildSvgString, mas retorna um SVGElement já pronto para anexar ao DOM. */
+    /** Same as buildSvgString, but returns an SVGElement ready to append to the DOM. */
     static buildSvgElement(packId, iconId, meta = {}) {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = this.buildSvgString(packId, iconId, meta);
         return wrapper.firstElementChild;
     }
 
-    /** Meta padrão para um novo elemento de ícone. */
+    /** Default meta for a new icon element. */
     static defaultMeta(packId, iconId) {
         return { packId, iconId, fillColor: '#1a1a1a', strokeColor: '#000000', strokeWidth: 0 };
     }

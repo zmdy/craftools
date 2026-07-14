@@ -167,11 +167,11 @@ export class Craftools_Element extends HTMLElement {
         this._ctrlbar.querySelector('.del-handle')?.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // Elementos "vinculados" (clonados automaticamente em todas as
-            // células no modo Cartão de Visita -- ver PageTool.js, Business
-            // Card Cloning Logic) compartilham o mesmo data-linked-id.
-            // Excluir um deles deve excluir todos, senão os clones ficam
-            // "fantasmas" nas outras células.
+            // "Linked" elements (automatically cloned into all cells in
+            // Business Card mode — see PageTool.js, Business Card Cloning Logic)
+            // share the same data-linked-id.
+            // Deleting one must delete all of them, otherwise the clones become
+            // "ghost" elements in the other cells.
             const lid = this.getAttribute('data-linked-id');
             const toRemove = lid
                 ? [...document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`)]
@@ -230,11 +230,11 @@ export class Craftools_Element extends HTMLElement {
     }
 
     /**
-     * Aplica o estado de data-locked na UI: esconde os handles de
-     * redimensionar/rotacionar/excluir e troca o cursor do overlay de arraste.
-     * Chamado no select() (para refletir o lock ao abrir o elemento) e também
-     * pelo toggle "Bloquear" em CommonProperties.js, para que o lock/unlock
-     * tenha efeito imediato mesmo com o elemento já selecionado na tela.
+     * Applies the data-locked state to the UI: hides the resize/rotate/delete
+     * handles and changes the drag overlay cursor.
+     * Called in select() (to reflect the lock when the element is opened) and
+     * also by the "Lock" toggle in CommonProperties.js, so that lock/unlock
+     * takes effect immediately even when the element is already selected.
      */
     _syncLockUI() {
         if (!this._ctrlbar) return;

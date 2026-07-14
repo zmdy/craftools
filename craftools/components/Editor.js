@@ -78,7 +78,7 @@ export class Craftools_Editor extends HTMLElement {
                 <main class="craftools-canvas" id="canvas-area">
                     <div class="craftools-pages" id="pages-wrapper">
                         <section class="craftools-page" style="width: ${dimWidth}; min-height: ${dimHeight}; background: white;" id="main-page">
-                             <!-- Página Vazia -->
+                             <!-- Empty Page -->
                              <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">
                              </div>
                         </section>
@@ -212,12 +212,12 @@ export class Craftools_Editor extends HTMLElement {
         const sidebar = document.getElementById('right-panel');
         const overlay = this.querySelector('#sidebar-overlay');
 
-        // Estado padrão da sidebar no desktop: recolhida (somente ícones) logo
-        // na primeira renderização do editor — nunca fica totalmente escondida
-        // nem totalmente expandida sem interação do usuário. Sem isso, a
-        // sidebar ficava sem nenhuma classe (nem panel-open, nem
-        // sidenav-collapsed) até o primeiro clique, o que podia deixá-la num
-        // estado intermediário/quebrado dependendo de estilos herdados.
+        // Default sidebar state on desktop: collapsed (icons only) right from
+        // the first editor render — never fully hidden nor fully expanded
+        // without user interaction. Without this, the sidebar had no class
+        // (neither panel-open nor sidenav-collapsed) until the first click,
+        // which could leave it in a broken/intermediate state depending on
+        // inherited styles.
         if (sidebar && !isMobile() && !sidebar.classList.contains('panel-open')) {
             sidebar.classList.add('panel-open', 'sidenav-collapsed');
             const menuIcon = document.getElementById('pwa-menu-icon');
@@ -246,10 +246,10 @@ export class Craftools_Editor extends HTMLElement {
         const closeSidebar = () => {
             if(sidebar) {
                 if (isMobile()) {
-                    // Mobile: esconde a sidebar completamente (ela é um modal/overlay)
+                    // Mobile: hide the sidebar completely (it is a modal/overlay)
                     sidebar.classList.remove('panel-open');
                 } else {
-                    // Desktop: nunca esconde totalmente — recolhe para modo somente-ícones
+                    // Desktop: never fully hide — collapse to icon-only mode
                     sidebar.classList.add('panel-open', 'sidenav-collapsed');
                     sidebar.style.marginLeft = '';
                 }
@@ -260,7 +260,7 @@ export class Craftools_Editor extends HTMLElement {
             if(menuIcon) {
                 menuIcon.textContent = isMobile() ? 'menu' : 'menu';
             }
-            // Também reseta o estado interno do painel (ex: painel de propriedades aberto)
+            // Also reset the panel's internal state (e.g. an open properties panel)
             const defaultMenu = document.getElementById('panel-default-menu');
             const panelBody  = document.getElementById('panel-body');
             const closePanel = document.getElementById('close-panel');
@@ -284,7 +284,7 @@ export class Craftools_Editor extends HTMLElement {
 
         const resizeHandle = document.getElementById('panel-resize-handle');
         if (resizeHandle && sidebar) {
-            // Restaura a largura salva (CSS mobile com !important sobrepõe isso quando necessário)
+            // Restore saved width (mobile CSS with !important overrides this when needed)
             const savedWidth = parseInt(localStorage.getItem(PANEL_WIDTH_KEY), 10);
             if (!isNaN(savedWidth) && savedWidth >= PANEL_MIN_W && savedWidth <= PANEL_MAX_W) {
                 sidebar.style.width = savedWidth + 'px';
@@ -405,7 +405,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'papeis') {
                 import('../tools/paper/PaperTool.js').then(({ PaperTool }) => {
                     this.ctxBar.show(el, PaperTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('paperTool.panelTitle') || 'Propriedades de Papel';
+                    if (panelTitle) panelTitle.textContent = I18n.t('paperTool.panelTitle') || 'Paper Properties';
                     if (panelBody) PaperTool.renderPropertiesPanel(panelBody, el);
                     openPanelMenu();
                     this.activePage = null;
@@ -413,7 +413,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'barcode') {
                 import('../tools/barcode/BarcodeTool.js').then(({ BarcodeTool }) => {
                     this.ctxBar.show(el, BarcodeTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('barcodeTool.panelTitle') || 'Propriedades do Código de Barras';
+                    if (panelTitle) panelTitle.textContent = I18n.t('barcodeTool.panelTitle') || 'Barcode Properties';
                     if (panelBody) BarcodeTool.renderPropertiesPanel(panelBody, el);
                     openPanelMenu();
                     this.activePage = null;
@@ -421,7 +421,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'minicalendario') {
                 import('../tools/minicalendar/MiniCalendarTool.js').then(({ MiniCalendarTool }) => {
                     this.ctxBar.show(el, MiniCalendarTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('miniCalendarTool.panelTitle') || 'Mini Calendário';
+                    if (panelTitle) panelTitle.textContent = I18n.t('miniCalendarTool.panelTitle') || 'Mini Calendar';
                     if (panelBody) MiniCalendarTool.renderPropertiesPanel(panelBody, el);
                     openPanelMenu();
                     this.activePage = null;
@@ -437,7 +437,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'conteudovariavel') {
                 import('../tools/variablecontent/VariableContentTool.js').then(({ VariableContentTool }) => {
                     this.ctxBar.show(el, VariableContentTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('variableContentTool.propsTitle') || 'Conteúdo Variável';
+                    if (panelTitle) panelTitle.textContent = I18n.t('variableContentTool.propsTitle') || 'Variable Content';
                     if (panelBody) VariableContentTool.renderPropertiesPanel(panelBody, el);
                     openPanelMenu();
                     this.activePage = null;
@@ -445,7 +445,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'textocurvo') {
                 import('../tools/textocurvo/TextoCurvoTool.js').then(({ TextoCurvoTool }) => {
                     this.ctxBar.show(el, TextoCurvoTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('textoCurvo.panelTitle') || 'Texto em Curva';
+                    if (panelTitle) panelTitle.textContent = I18n.t('textoCurvo.panelTitle') || 'Curved Text';
                     if (panelBody) TextoCurvoTool.renderPropertiesPanel(panelBody, el, this);
                     openPanelMenu();
                     this.activePage = null;
@@ -453,7 +453,7 @@ export class Craftools_Editor extends HTMLElement {
             } else if (toolType === 'carimbo') {
                 import('../tools/carimbo/CarimboTool.js').then(({ CarimboTool }) => {
                     this.ctxBar.show(el, CarimboTool.getCtxOptions(el));
-                    if (panelTitle) panelTitle.textContent = I18n.t('carimbo.panelTitle') || 'Carimbo / Selo';
+                    if (panelTitle) panelTitle.textContent = I18n.t('carimbo.panelTitle') || 'Stamp / Seal';
                     if (panelBody) CarimboTool.renderPropertiesPanel(panelBody, el, this);
                     openPanelMenu();
                     this.activePage = null;
@@ -539,7 +539,7 @@ export class Craftools_Editor extends HTMLElement {
             if (!['titulo', 'paragrafo', 'imagem', 'album', 'qrcode', 'barcode', 'minicalendario', 'emojikitchen', 'emoji', 'shape', 'conteudovariavel', 'textocurvo', 'carimbo', 'icone'].includes(tool)) return;
 
             btn.addEventListener('click', async () => {
-                if (!isMobile()) return; // Desktop usa drag, não clique
+                if (!isMobile()) return; // Desktop uses drag-and-drop, not click
 
                 closeSidebar();
 
@@ -638,7 +638,7 @@ export class Craftools_Editor extends HTMLElement {
         });
 
         // Restore canvas when clicking any tool other than gerador/calendario
-        // (ambos assumem #main-page como área de prévia ao vivo).
+        // (both treat #main-page as the live preview area).
         toolBtns.forEach(btn => {
             const tool = btn.dataset.tool || btn.id.replace('pwa-sidebar-', '').replace('pwa-btn-', '');
             if (tool !== 'gerador' && tool !== 'calendario') {
@@ -694,7 +694,7 @@ export class Craftools_Editor extends HTMLElement {
                     btn.classList.add('active');
 
                     if (tool === 'papeis') {
-                        // Encontra a página ativa
+                        // Find the active page
                         const page = this.querySelector('.craftools-page') || document.querySelector('.craftools-page');
                         if (page) {
                             let paperEl = page.querySelector('craftools-element[data-craftool="papeis"]');
@@ -720,11 +720,10 @@ export class Craftools_Editor extends HTMLElement {
                     }
 
                     if (tool === 'album') {
-                        // Abre o painel do Álbum na página ativa (ou na primeira
-                        // página do documento), igual ao clique na sidebar das
-                        // demais ferramentas de página inteira (Gerador/Agenda/
-                        // Calendário). O arrastar-e-soltar já funcionava (drop
-                        // handler em PageTool.js).
+                        // Open the Album panel on the active page (or the first
+                        // page of the document), just like clicking the sidebar
+                        // for other full-page tools (Generator/Agenda/Calendar).
+                        // Drag-and-drop already worked (drop handler in PageTool.js).
                         const { AlbumTool } = await import('../tools/album/AlbumTool.js');
                         const targetPage = this.activePage || this.querySelector('.craftools-page');
                         if (targetPage) AlbumTool.setup(this, targetPage);
@@ -786,7 +785,7 @@ export class Craftools_Editor extends HTMLElement {
                         return;
                     }
 
-                    // Fallback (outros) — apenas abre o painel com mensagem; não fecha a sidebar
+                    // Fallback (others) — just open the panel with a message; do not close the sidebar
                     if (panelTitle) panelTitle.textContent = btn.title || I18n.t('editor.papers');
                     if (panelBody) panelBody.innerHTML = `<div style="padding: 14px;"><p style="font-size: 12px; color: var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
                     openPanelMenu();
@@ -801,7 +800,7 @@ export class Craftools_Editor extends HTMLElement {
             });
         }
 
-        // ── Nova Página ────────────────────────────────────────────────────
+        // ── New Page ───────────────────────────────────────────────────────
         const newPageBtns = document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage');
         this.activePage = null;
         newPageBtns.forEach(btn => btn.addEventListener('click', (e) => {
