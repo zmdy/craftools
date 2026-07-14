@@ -57,6 +57,21 @@ export class PageTool {
                 pageEl.appendChild(el);
                 const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
                 if (placeholder) placeholder.remove();
+            } else if (toolType === 'icone') {
+                const iconPackId = e.dataTransfer.getData('IconPackId');
+                const iconId = e.dataTransfer.getData('IconId');
+                if (!iconPackId || !iconId) return;
+                const { IconTool } = await import('../icon/IconTool.js');
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const el = IconTool.createElement(iconPackId, iconId, editor);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 50, (rect.width / scale) - 100));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 50, (rect.height / scale) - 100));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
             } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode' || toolType === 'minicalendario' || toolType === 'emojikitchen' || toolType === 'conteudovariavel') {
                 const rect = pageEl.getBoundingClientRect();
                 let scale = window.craftoolsZoomLevel || 1;
