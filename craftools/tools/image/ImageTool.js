@@ -34,7 +34,7 @@ export class ImageTool extends BaseTool {
             </div>
         `).join('');
 
-        const htmlFonte = `
+        const htmlSource = `
             <div class="ct-field">
                 <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">
                     <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span> ${I18n.t('imageTool.uploadPhoto')}
@@ -52,7 +52,7 @@ export class ImageTool extends BaseTool {
             </div>
         `;
 
-        const htmlTransformacao = `
+        const htmlTransform = `
             <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
                 <button id="img-reset-btn" class="craftools-pill" style="font-size: 10px; color: var(--accent); padding: 4px 8px;">
                     <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> ${I18n.t('imageTool.reset')}
@@ -76,7 +76,7 @@ export class ImageTool extends BaseTool {
             </div>
 
             <div class="ct-field">
-                <div class="ct-sublabel"><span class="material-symbols-outlined">open_with</span>${I18n.t('imageTool.position') || 'Posição na Máscara'}</div>
+                <div class="ct-sublabel"><span class="material-symbols-outlined">open_with</span>${I18n.t('imageTool.position') || 'Position in Mask'}</div>
                 <div class="ct-field-grid2">
                     <div style="display:flex;flex-direction:column;gap:3px;">
                         <span style="font-size:9px;color:var(--text-muted);">X</span>
@@ -96,7 +96,7 @@ export class ImageTool extends BaseTool {
             'difference','exclusion','hue','saturation','color','luminosity',
         ];
 
-        const htmlEfeitos = `
+        const htmlEffects = `
             <div class="ct-field">
                 <div class="ct-sublabel"><span class="material-symbols-outlined">blur_on</span>${I18n.t('imageTool.bgBlur')}</div>
                 <div class="ct-field-row">
@@ -113,10 +113,10 @@ export class ImageTool extends BaseTool {
         `;
 
         editorPanel.innerHTML = 
-            PanelUI.accordion('img-fonte', 'photo_camera', I18n.t('imageTool.source') || 'Fonte', htmlFonte, { open: true }) +
-            PanelUI.accordion('img-transform', 'transform', I18n.t('imageTool.transform') || 'Transformação', htmlTransformacao) +
+            PanelUI.accordion('img-fonte', 'photo_camera', I18n.t('imageTool.source') || 'Source', htmlSource, { open: true }) +
+            PanelUI.accordion('img-transform', 'transform', I18n.t('imageTool.transform') || 'Transform', htmlTransform) +
             PanelUI.accordion('img-filters', 'auto_fix_high', I18n.t('imageTool.cssFilters'), filtersHtml) +
-            PanelUI.accordion('img-efeitos', 'magic_button', I18n.t('imageTool.effects') || 'Efeitos', htmlEfeitos);
+            PanelUI.accordion('img-efeitos', 'magic_button', I18n.t('imageTool.effects') || 'Effects', htmlEffects);
 
         
         // Render Common Properties (Inherited)
@@ -289,8 +289,8 @@ export class ImageTool extends BaseTool {
             cellAccWrapper.dataset.accordionId = 'img-cell-bg';
             editorPanel.appendChild(cellAccWrapper);
 
-            // Import dinâmico para evitar dependências circulares
-            // (também garante que as traduções de CellPanel estejam carregadas)
+            // Dynamic import to avoid circular dependencies
+            // (also ensures CellPanel translations are loaded)
             import('../album/CellPanel.js').then(({ CellPanel }) => {
                 // Render the accordion header now that translations are available
                 cellAccWrapper.innerHTML = `
@@ -357,23 +357,22 @@ export class ImageTool extends BaseTool {
     }
 
     /**
-     * Retorna os outros elementos de imagem "irmãos" vinculados a este --
-     * usado para manter foto/ajustes sincronizados entre todas as células
-     * no modo Cartão de Visita (Álbum).
+     * Returns the other image elements "siblings" linked to this one —
+     * used to keep photo/adjustments synchronised across all cells in
+     * Album (Business Card) mode.
      *
-     * Dois mecanismos de vínculo existem no sistema:
-     *  1) `element._linkedElements` -- array compartilhado, atribuído pelo
-     *     assistente de Álbum (AlbumTool.js) quando várias fotos são
-     *     enviadas de uma vez; os elementos já compartilham o mesmo objeto
-     *     `_craftoolsMeta` por referência.
-     *  2) `data-linked-id` -- atributo DOM atribuído pelo PageTool.js
-     *     (Business Card Cloning Logic) quando UMA ferramenta é arrastada
-     *     para dentro de uma célula do grid modo "card"; o elemento é
-     *     clonado (cloneNode) para as demais células, mas cloneNode NÃO
-     *     copia propriedades JS como `_craftoolsMeta` -- cada clone acaba
-     *     com seu próprio objeto de meta, desconectado dos demais, por
-     *     isso a sincronização abaixo precisa também copiar os VALORES do
-     *     meta (não só reaplicar a mesma referência).
+     * Two linking mechanisms exist in the system:
+     *  1) `element._linkedElements` — shared array assigned by the Album
+     *     wizard (AlbumTool.js) when multiple photos are uploaded at once;
+     *     the elements already share the same `_craftoolsMeta` object by
+     *     reference.
+     *  2) `data-linked-id` — DOM attribute assigned by PageTool.js
+     *     (Business Card Cloning Logic) when ONE tool is dragged into a
+     *     grid cell in "card" mode; the element is cloned (cloneNode) to
+     *     the other cells, but cloneNode does NOT copy JS properties such as
+     *     `_craftoolsMeta` — each clone ends up with its own meta object,
+     *     disconnected from the others, so the sync below must also copy the
+     *     VALUES of meta (not just re-apply the same reference).
      */
     static _getLinkedSiblings(element) {
         if (Array.isArray(element._linkedElements)) {
@@ -385,8 +384,8 @@ export class ImageTool extends BaseTool {
             .filter(el => el !== element);
     }
 
-    /** Copia o estado atual do meta para um elemento irmão (a menos que já
-     *  seja o mesmo objeto compartilhado) e reaplica no DOM dele. */
+    /** Copies the current meta state to a sibling element (unless it is
+     *  already the same shared object) and re-applies it to the sibling's DOM. */
     static _pushMetaToSibling(sibling, meta) {
         if (sibling._craftoolsMeta !== meta) {
             if (!sibling._craftoolsMeta) sibling._craftoolsMeta = this.getDefaultMeta();
@@ -407,7 +406,7 @@ export class ImageTool extends BaseTool {
         this._applyBgBlur(sibling);
     }
 
-    /** Propaga o meta atual para todos os elementos irmãos vinculados. */
+    /** Propagates the current meta to all linked sibling elements. */
     static _propagateToSiblings(element, meta) {
         this._getLinkedSiblings(element).forEach(sibling => this._pushMetaToSibling(sibling, meta));
     }
@@ -431,13 +430,13 @@ export class ImageTool extends BaseTool {
                                 const img = element.contentArea.querySelector('img');
                                 if (img) img.src = e.target.result;
 
-                                 // Atualiza fundo desfocado se existir
+                                 // Update blurred background if present
                                  const blurBg = element.querySelector('.craftools-element-blur-bg');
                                  if (blurBg) blurBg.style.backgroundImage = `url(${e.target.result})`;
 
-                                 // Propaga para os demais elementos vinculados (modo
-                                 // Cartão de Visita) mesmo quando o painel de
-                                 // propriedades nunca foi aberto para este elemento.
+                                 // Propagate to other linked elements (Business Card
+                                 // mode) even when the properties panel was never
+                                 // opened for this element.
                                  this._propagateToSiblings(element, element._craftoolsMeta);
                             };
                             reader.readAsDataURL(file);

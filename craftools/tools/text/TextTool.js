@@ -13,7 +13,7 @@ const FONTS = [
 ];
 
 /**
- * Carrega fontes do Google Fonts dinamicamente para exibição no editor.
+ * Dynamically loads Google Fonts for display in the editor.
  */
 const loadGoogleFonts = (fonts) => {
     const googleFonts = fonts.filter(f => ![
@@ -66,7 +66,7 @@ export class TextTool extends BaseTool {
             if (m) { gradAngle = Number(m[1]); gradFrom = m[2]; gradTo = m[3]; }
         }
 
-        const htmlTipografia = `
+        const htmlTypography = `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('textTool.font') || 'Fonte'}</span>
                 <ct-font-select id="text-prop-font" class="craftools-select" style="margin-bottom: 4px;"></ct-font-select>
@@ -94,7 +94,7 @@ export class TextTool extends BaseTool {
             </div>
         `;
 
-        const htmlCor = `
+        const htmlColor = `
             <div class="ct-field">
                 <!-- Solid / Gradient toggle -->
                 <div style="display:flex;gap:5px;margin-bottom:10px;">
@@ -103,7 +103,7 @@ export class TextTool extends BaseTool {
                         border:2px solid ${!isGradient ? 'var(--accent,#f97316)' : 'var(--border,#e4e4e7)'};
                         background:${!isGradient ? 'rgba(249,115,22,.07)' : 'var(--bg-input,#f4f4f5)'};
                         color:var(--text);font-weight:600;">
-                        ${I18n.t('textTool.solidColor') || 'Sólida'}
+                        ${I18n.t('textTool.solidColor') || 'Solid color'}
                     </button>
                     <button id="tp-mode-grad" style="
                         flex:1;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px;font-family:inherit;
@@ -133,7 +133,7 @@ export class TextTool extends BaseTool {
                         </div>
                     </div>
                     <div>
-                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${I18n.t('textTool.gradientAngle') || 'Ângulo'}: <span id="tp-grad-angle-val">${gradAngle}</span>°</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${I18n.t('textTool.gradientAngle') || 'Angle'}: <span id="tp-grad-angle-val">${gradAngle}</span>°</div>
                         <input type="range" id="tp-grad-angle" min="0" max="360" step="5" value="${gradAngle}"
                                style="width:100%;accent-color:var(--accent);">
                     </div>
@@ -146,7 +146,7 @@ export class TextTool extends BaseTool {
             </div>
         `;
 
-        const htmlAlinhamento = `
+        const htmlAlignment = `
             <div class="ct-field">
                 <div style="display: flex; gap: 4px;">
                     <button class="craftools-pill text-align-btn" data-align="left" style="flex:1;justify-content:center;"><span class="material-symbols-outlined" style="font-size:14px;">format_align_left</span></button>
@@ -158,9 +158,9 @@ export class TextTool extends BaseTool {
         `;
 
         editorPanel.innerHTML =
-            PanelUI.accordion('text-tipo',  'text_fields',       I18n.t('textTool.typography') || 'Tipografia', htmlTipografia, { open: true }) +
-            PanelUI.accordion('text-cor',   'palette',           I18n.t('textTool.color') || 'Cor',             htmlCor,        { open: true }) +
-            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alinhamento',     htmlAlinhamento);
+            PanelUI.accordion('text-tipo',  'text_fields',       I18n.t('textTool.typography') || 'Typography', htmlTypography, { open: true }) +
+            PanelUI.accordion('text-cor',   'palette',           I18n.t('textTool.color') || 'Color',           htmlColor,       { open: true }) +
+            PanelUI.accordion('text-align', 'format_align_left', I18n.t('textTool.align') || 'Alignment',       htmlAlignment);
 
         // Render Common Properties (Inherited from BaseTool now handles it all)
         this.renderCommonProperties(editorPanel, element, {
@@ -177,8 +177,8 @@ export class TextTool extends BaseTool {
 
         AutoFitText.applyAutoSize(element, textElement);
 
-        // Ajusta automaticamente o tamanho do elemento conforme o texto é
-        // digitado (quando o ajuste automático está ativo).
+        // Automatically adjusts element size as text is typed
+        // (when auto-fit is active).
         textElement.addEventListener('input', () => {
             AutoFitText.applyAutoSize(element, textElement);
             const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } });
@@ -240,7 +240,7 @@ export class TextTool extends BaseTool {
                 });
             }
 
-            // Adiciona a fonte atual se for externa e não estiver na lista
+            // Add the current font if it is external and not already in the list
             if (selectedFont && !FONTS.includes(selectedFont) && !savedLocalFonts.includes(selectedFont) && (!window.__craftoolsCustomFonts || !window.__craftoolsCustomFonts[selectedFont])) {
                 const option = document.createElement('option');
                 option.value = selectedFont;
@@ -251,10 +251,10 @@ export class TextTool extends BaseTool {
             }
         };
 
-        // Carrega as fontes do Google Fonts para a página
+        // Load Google Fonts for the page
         loadGoogleFonts(FONTS);
         
-        // Inicializa o dropdown
+        // Initialise the dropdown
         populateFontSelect(currentFont);
 
         if (currentFont && !FONTS.includes(currentFont)) {
@@ -272,13 +272,13 @@ export class TextTool extends BaseTool {
             element.dispatchEvent(event);
         });
 
-        // Eventos para busca de fonte customizada
+        // Events for custom font lookup
         const applyCustomFont = () => {
             const fontName = customFontInput.value.trim();
             if (fontName) {
                 textElement.style.fontFamily = `'${fontName}', 'Noto Color Emoji', sans-serif`;
                 
-                // Adiciona ao select se não existir
+                // Add to the select if not already present
                 if (![...fontSelect.options].some(opt => opt.value.toLowerCase() === fontName.toLowerCase())) {
                     const option = document.createElement('option');
                     option.value = fontName;
@@ -304,7 +304,7 @@ export class TextTool extends BaseTool {
             }
         });
 
-        // Botão para carregar fontes locais do PC
+        // Button to load local fonts from the device
         const localBtn = editorPanel.querySelector('#text-prop-load-local');
         localBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -322,17 +322,17 @@ export class TextTool extends BaseTool {
                 
                 const localFonts = await fontAccessApi();
                 
-                // Extrai famílias únicas
+                // Extract unique font families
                 const families = [...new Set(localFonts.map(f => f.family))].sort();
                 
-                // Salva no localStorage sobrescrevendo a lista anterior
+                // Save to localStorage, overwriting the previous list
                 try {
                     localStorage.setItem('craftools-local-fonts', JSON.stringify(families));
                 } catch (storeErr) {
-                    console.error("Erro ao salvar fontes no localStorage", storeErr);
+                    console.error("Error saving fonts to localStorage", storeErr);
                 }
 
-                // Atualiza o select com as novas fontes mantendo a fonte atual selecionada
+                // Update the select with new fonts, keeping the current font selected
                 populateFontSelect(fontSelect.value);
                 
                 alert(I18n.t('textTool.localFontsLoaded').replace('{n}', families.length));
@@ -345,7 +345,7 @@ export class TextTool extends BaseTool {
             }
         });
 
-        // Botão de upload
+        // Upload button
         const uploadBtn = editorPanel.querySelector('#text-prop-upload-font-btn');
         const fileInput = editorPanel.querySelector('#text-prop-font-file');
         if (uploadBtn && fileInput) {
@@ -495,10 +495,10 @@ export class TextTool extends BaseTool {
     }
 
     /**
-     * Aplica bold/italic/underline formatando a seleção via execCommand.
-     * (Texto/Título são sempre editáveis -- desde que o vínculo a variáveis
-     * foi movido para a ferramenta separada "Conteúdo Variável", ver
-     * VariableContentTool.js -- não há mais um estado "bloqueado" aqui.)
+     * Applies bold/italic/underline by formatting the selection via execCommand.
+     * (Text/Title elements are always editable — since variable binding was
+     * moved to the separate "Variable Content" tool, see VariableContentTool.js
+     * — there is no longer a "locked" state here.)
      */
     static _toggleCtxStyle(element, cssProp, onValue, offValue) {
         const text = element.contentArea.querySelector('[contenteditable]');

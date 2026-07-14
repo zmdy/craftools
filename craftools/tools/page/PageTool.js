@@ -150,7 +150,7 @@ export class PageTool {
                 } else if (toolType === 'papeis') {
                     const { PaperTool } = await import('../paper/PaperTool.js');
                     el = PaperTool.createElement(toolType, editor);
-                    // O papel cobre a página inteira, então alinhamos em 0, 0
+                    // Paper covers the entire page, so we position it at 0, 0
                     dropX = 0;
                     dropY = 0;
                 } else {
@@ -218,9 +218,9 @@ export class PageTool {
             if (isPageClick) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                 
-                // Check if page has a grid (Álbum ou outra ferramenta que também
-                // gera .craftools-grid-container, como o Calendário) — usa a
-                // marca gridSource para decidir qual painel reabrir.
+                // Check if page has a grid (Album or another tool that also
+                // generates .craftools-grid-container, such as Calendar) — uses
+                // the gridSource marker to decide which panel to reopen.
                 const gridContainer = pageEl.querySelector('.craftools-grid-container');
                 if (gridContainer) {
                     if (gridContainer.dataset.gridSource === 'calendario') {
@@ -268,7 +268,7 @@ export class PageTool {
                 const currentColor = CommonProperties._rgbToHex(pageEl.style.backgroundColor || '#ffffff');
 
                 if (panelBody) {
-                    const htmlTamanho = `
+                    const htmlSize = `
                         <div class="ct-field">
                             <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
@@ -289,7 +289,7 @@ export class PageTool {
                         </div>
                     `;
 
-                    const htmlFundo = `
+                    const htmlBackground = `
                         <div class="ct-field">
                             <span class="craftools-label">${I18n.t('pageTool.background')}</span>
                             <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
@@ -317,7 +317,7 @@ export class PageTool {
                         </div>
                     `;
 
-                    const htmlAcoes = `
+                    const htmlActions = `
                         <div class="ct-danger-section">
                             <button class="craftools-danger-btn" id="delete-page-btn" style="width:100%; justify-content:center; gap:6px;">
                                 <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ${I18n.t('pageTool.deletePage')}
@@ -325,10 +325,10 @@ export class PageTool {
                         </div>
                     `;
 
-                    panelBody.innerHTML = 
-                        PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Tamanho', htmlTamanho, { open: true }) +
-                        PanelUI.accordion('page-fundo', 'palette', I18n.t('pageTool.background') || 'Fundo', htmlFundo) +
-                        PanelUI.accordion('page-acoes', 'warning', I18n.t('pageTool.actions') || 'Ações', htmlAcoes);
+                    panelBody.innerHTML =
+                        PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
+                        PanelUI.accordion('page-fundo', 'palette', I18n.t('pageTool.background') || 'Background', htmlBackground) +
+                        PanelUI.accordion('page-acoes', 'warning', I18n.t('pageTool.actions') || 'Actions', htmlActions);
                         
                     PanelUI.bindAccordions(panelBody);
                 }
@@ -470,21 +470,21 @@ export class PageTool {
         const pagesWrapper = editor.querySelector('#pages-wrapper');
         const lastPage = pagesWrapper.querySelector('.craftools-page:last-child');
         
-        // Clona a última página para manter a dimensão local
+        // Clone the last page to preserve local dimensions
         const clone = lastPage.cloneNode(true);
         clone.id = 'page-' + Date.now();
         
-        // Remove os componentes filhos da página inteiramente mas mantém a sua forma
+        // Remove child components entirely but keep the page shape
         clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
         
-        // Acoplar os eventos para poder clicar na nova página localmente
+        // Attach events so the new page can be clicked locally
         this.attachPageEvents(editor, clone);
         pagesWrapper.appendChild(clone);
         
         // Notify history system
         document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
         
-        // Scrollar automaticamente para a página nova de forma suave
+        // Smoothly scroll to the newly added page
         pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
     }
 }

@@ -7,18 +7,18 @@ import "../../utils/icons/MaterialSymbolsPack.js";
 
 /**
  * IconTool
- * Ferramenta de ícones vetoriais (SVG) para o editor CrafTools.
+ * Vector icon (SVG) tool for the CrafTools editor.
  *
- * Os ícones em si vêm de "packs" registrados em IconLibrary.js (ver
- * utils/IconLibrary.js) -- por padrão, utils/icons/MaterialSymbolsPack.js.
- * Este arquivo só monta o seletor (picker, com abas de pack/categoria e
- * busca por palavra-chave), o painel de propriedades (cor de preenchimento/
- * contorno) e o elemento do editor, no mesmo padrão de ShapeTool.js.
+ * Icons come from "packs" registered in IconLibrary.js (see
+ * utils/IconLibrary.js) — by default, utils/icons/MaterialSymbolsPack.js.
+ * This file only builds the picker (with pack/category tabs and keyword
+ * search), the properties panel (fill/stroke colour), and the editor element,
+ * following the same pattern as ShapeTool.js.
  *
- * Novos packs (ex: outro conjunto de ícones) não exigem nenhuma mudança
- * aqui -- basta o novo arquivo do pack chamar IconLibrary.registerPack(...)
- * e importá-lo (como a linha acima faz com MaterialSymbolsPack.js); o
- * picker já lista qualquer pack registrado automaticamente.
+ * New packs (e.g. another icon set) require no changes here — just have the
+ * new pack file call IconLibrary.registerPack(...) and import it (as the line
+ * above does for MaterialSymbolsPack.js); the picker automatically lists every
+ * registered pack.
  */
 
 const PICKER_STYLE_ID = 'ct-icon-picker-styles';
@@ -77,7 +77,7 @@ function ensurePickerStyles() {
 
 export class IconTool extends BaseTool {
 
-    // ── Cria um craftools-element contendo um ícone SVG ──────────────────────
+    // ── Creates a craftools-element containing an SVG icon ───────────────────
     static createElement(packId, iconId, editorApp) {
         const el = document.createElement('craftools-element');
         el.setAttribute('w', '100');
@@ -96,10 +96,10 @@ export class IconTool extends BaseTool {
         return el;
     }
 
-    // ── Renderiza o picker de ícones (abas de pack/categoria + busca) ────────
-    // Se `targetElement` for informado, clicar num ícone troca o ícone desse
-    // elemento em vez de criar um novo (usado pelo botão "Trocar ícone").
-    // `onApplied` é chamado após a troca em um elemento existente.
+    // ── Renders the icon picker (pack/category tabs + search) ─────────────────
+    // If `targetElement` is provided, clicking an icon replaces that element's
+    // icon instead of creating a new element (used by the "Change icon" button).
+    // `onApplied` is called after replacing the icon on an existing element.
     static renderPickerPanel(panelBody, editor, targetElement = null, onApplied = null) {
         ensurePickerStyles();
 
@@ -227,7 +227,7 @@ export class IconTool extends BaseTool {
         renderAll();
     }
 
-    // ── Painel de propriedades (quando um ícone está selecionado) ────────────
+    // ── Properties panel (when an icon element is selected) ──────────────────
     static renderPropertiesPanel(editorPanel, element, editor) {
         const meta = element._craftoolsMeta || IconLibrary.defaultMeta('material-symbols', 'star');
         if (!element._craftoolsMeta) element._craftoolsMeta = meta;
@@ -241,7 +241,7 @@ export class IconTool extends BaseTool {
 
         let showingPicker = false;
 
-        const htmlIcone = `
+        const htmlIcon = `
             <div class="ct-icon-preview">${IconLibrary.buildSvgString(meta.packId, meta.iconId, meta)}</div>
             <button class="craftools-pill" id="ct-icon-change-btn"
                 style="width:100%;justify-content:center;gap:6px;margin-bottom:6px;">
@@ -251,7 +251,7 @@ export class IconTool extends BaseTool {
             <div id="ct-icon-picker-slot"></div>
         `;
 
-        const htmlCor = `
+        const htmlColor = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('iconTool.fillColor')}</span>
@@ -269,8 +269,8 @@ export class IconTool extends BaseTool {
         `;
 
         editorPanel.innerHTML =
-            PanelUI.accordion('icon-icone', 'category', I18n.t('iconTool.sectionIcon'), htmlIcone, { open: true }) +
-            PanelUI.accordion('icon-cor', 'palette', I18n.t('iconTool.sectionColor'), htmlCor);
+            PanelUI.accordion('icon-icone', 'category', I18n.t('iconTool.sectionIcon'), htmlIcon, { open: true }) +
+            PanelUI.accordion('icon-cor', 'palette', I18n.t('iconTool.sectionColor'), htmlColor);
 
         this.renderCommonProperties(editorPanel, element, {
             border: 'svg',
@@ -280,7 +280,7 @@ export class IconTool extends BaseTool {
             zindex: true,
         });
 
-        // --- Trocar ícone ---
+        // --- Change icon ---
         editorPanel.querySelector('#ct-icon-change-btn').addEventListener('click', () => {
             showingPicker = !showingPicker;
             const slot = editorPanel.querySelector('#ct-icon-picker-slot');
@@ -311,7 +311,7 @@ export class IconTool extends BaseTool {
         });
     }
 
-    /** Reconstrói o SVG a partir do estado atual de `_craftoolsMeta`. */
+    /** Rebuilds the SVG from the current `_craftoolsMeta` state. */
     static _regenerate(element) {
         const meta = element._craftoolsMeta;
         if (!meta || !element.contentArea) return;
@@ -324,7 +324,7 @@ export class IconTool extends BaseTool {
 
         let svg = element.contentArea.querySelector('svg');
         if (svg) {
-            // Mantém o mesmo nó <svg> (preserva borda/raio aplicados via CommonProperties)
+            // Reuse the same <svg> node (preserves border/radius applied via CommonProperties)
             svg.setAttribute('viewBox', fresh.getAttribute('viewBox'));
             svg.innerHTML = fresh.innerHTML;
         } else {
