@@ -1,0 +1,156 @@
+/**
+ * Notify.js
+ *
+ * Substituto leve para alert()/confirm() nativos do navegador: eles travam a
+ * thread principal, ficam fora do tema (claro/escuro) e da tipografia do
+ * CrafTools, e não funcionam bem em fluxos assíncronos. Usado por
+ * BaseTool.js, MobileToolbar.js, PageTool.js e PdfExport.js.
+ *
+ * API:
+ *   Notify.toast(message, type = 'info', duration = 4000) -> () => void
+ *     Mostra uma notificação temporária no canto da tela (substitui alert()).
+ *     Retorna uma função para fechar a notificação manualmente, se preciso.
+ *
+ *   Notify.confirm(message, opts = {}) -> Promise<boolean>
+ *     Mostra um modal de confirmação (substitui confirm()). Resolve `true`
+ *     se o usuário confirmar, `false` se cancelar, clicar fora ou apertar Esc.
+ *     opts: { confirmLabel, cancelLabel, danger }
+ */
+
+import { I18n } from "../settings/Translations.js";
+
+const TYPE_ICON = {
+    info: 'info',
+    success: 'check_circle',
+    error: 'error',
+};
+
+const TYPE_COLOR_VAR = {
+    info: '--accent',
+    success: '--success',
+    error: '--danger',
+};
+
+function ensureToastContainer() {
+    let container = document.getElementById('craftools-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'craftools-toast-container';
+        container.style.cssText = `
+            position: fixed; top: 16px; right: 16px; z-index: 99999;
+            display: flex; flex-direction: column; gap: 8px;
+            max-width: min(360px, calc(100vw - 32px));
+            font-family: 'DM Sans', sans-serif;
+        `;
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+export const Notify = {
+    /**
+     * Mostra uma notificação temporária (substitui alert()).
+     * @param {string} message
+     * @param {'info'|'success'|'error'} type
+     * @param {number} duration - ms até fechar automaticamente (0 = não fecha sozinha)
+     * @returns {Function} função para fechar manualmente
+     */
+    toast(message, type = 'info', duration = 4000) {
+        const container = ensureToastContainer();
+        const colorVar = TYPE_COLOR_VAR[type] || TYPE_COLOR_VAR.info;
+        const icon = TYPE_ICON[type] || TYPE_ICON.info;
+
+        const el = document.createElement('div');
+        el.setAttribute('role', 'alert');
+        el.style.cssText = `
+            display: flex; align-items: flex-start; gap: 8px;
+            background: var(--bg-panel, #fff); color: var(--text-primary, #18181b);
+            border: 1px solid var(--border, #e4e4e7); border-left: 3px solid var(${colorVar}, #f97316);
+            border-radius: 8px; padding: 10px 12px; box-shadow: var(--shadow-lg, 0 4px 24px rgba(0,0,0,.12));
+            font-size: 13px; line-height: 1.4; opacity: 0; transform: translateY(-6px);
+            transition: opacity .18s ease, transform .18s ease; cursor: pointer;
+        `;
+        el.innerHTML = `
+            <span class="material-symbols-outlined" style="font-size:18px; color: var(${colorVar}, #f97316); flex-shrink:0;">${icon}</span>
+            <span style="flex:1;">${message}</span>
+        `;
+
+        const dismiss = () => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-6px)';
+            setTimeout(() => el.remove(), 200);
+        };
+        el.addEventListener('click', dismiss);
+
+        container.appendChild(el);
+        requestAnimationFrame(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        });
+
+        if (duration > 0) {
+            setTimeout(dismiss, duration);
+        }
+        return dismiss;
+    },
+
+    /**
+     * Modal de confirmação assíncrono (substitui confirm()).
+     * @param {string} message
+     * @param {{confirmLabel?: string, cancelLabel?: string, danger?: boolean}} opts
+     * @returns {Promise<boolean>}
+     */
+    confirm(message, opts = {}) {
+        const { confirmLabel = I18n.t('common.confirm'), cancelLabel = I18n.t('common.cancel'), danger = false } = opts;
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 99999;
+                background: rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center;
+                padding: 16px; font-family: 'DM Sans', sans-serif;
+            `;
+
+            const box = document.createElement('div');
+            box.style.cssText = `
+                background: var(--bg-panel, #fff); color: var(--text-primary, #18181b);
+                border: 1px solid var(--border, #e4e4e7); border-radius: 12px;
+                padding: 20px; width: 100%; max-width: 360px;
+                box-shadow: var(--shadow-xl, 0 8px 48px rgba(0,0,0,.16));
+            `;
+            box.innerHTML = `
+                <p style="margin:0 0 16px; font-size:14px; line-height:1.5;">${message}</p>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" data-action="cancel" style="
+                        padding:7px 14px; border-radius:7px; border:1px solid var(--border, #e4e4e7);
+                        background: var(--bg-input, #f4f4f5); color: var(--text-primary, #18181b);
+                        font-size:13px; cursor:pointer; font-family:inherit;">${cancelLabel}</button>
+                    <button type="button" data-action="confirm" style="
+                        padding:7px 14px; border-radius:7px; border:none;
+                        background: ${danger ? 'var(--danger, #dc2626)' : 'var(--accent, #f97316)'}; color:#fff;
+                        font-size:13px; cursor:pointer; font-family:inherit;">${confirmLabel}</button>
+                </div>
+            `;
+
+            const close = (result) => {
+                document.removeEventListener('keydown', onKeydown);
+                overlay.remove();
+                resolve(result);
+            };
+            const onKeydown = (e) => {
+                if (e.key === 'Escape') close(false);
+            };
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close(false);
+            });
+            box.querySelector('[data-action="cancel"]').addEventListener('click', () => close(false));
+            box.querySelector('[data-action="confirm"]').addEventListener('click', () => close(true));
+            document.addEventListener('keydown', onKeydown);
+
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+            box.querySelector('[data-action="confirm"]').focus();
+        });
+    },
+};

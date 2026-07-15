@@ -20,6 +20,8 @@
     --accent:      #f97316;
     --accent-hover:#ea6c0a;
     --accent-subtle:#fff7ed;
+    --danger:      #dc2626;
+    --success:     #16a34a;
     --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
     --shadow-lg:   0 4px 24px rgba(0,0,0,.12);
     --shadow-xl:   0 8px 48px rgba(0,0,0,.16);
@@ -44,6 +46,8 @@
     --accent:      #f97316;
     --accent-hover:#ea6c0a;
     --accent-subtle:rgba(249,115,22,.12);
+    --danger:      #ef4444;
+    --success:     #22c55e;
     --shadow:      0 1px 3px rgba(0,0,0,.3);
     --shadow-lg:   0 4px 24px rgba(0,0,0,.4);
     --shadow-xl:   0 8px 48px rgba(0,0,0,.5);
@@ -66,6 +70,7 @@ html, body {
 @keyframes elIn    { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:none; } }
 @keyframes panelIn { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
 @keyframes ctxIn   { from { opacity:0; transform:translateY(5px) scale(.96); } to { opacity:1; transform:none; } }
+@keyframes ct-fadeInUp { from { opacity:0; transform:translate(-50%, 15px); } to { opacity:1; transform:translate(-50%, 0); } }
 
 .craftools-page    { animation: pageIn  .25s cubic-bezier(.22,1,.36,1); }
 .craftools-element { animation: elIn    .15s cubic-bezier(.22,1,.36,1); }
@@ -113,11 +118,99 @@ html, body {
 .craftools-field:last-child { border-bottom:none; }
 .craftools-label  { display:block; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
 
+/* ── Accordion Sections ───────────────────────────────────────────────────── */
+.ct-accordion { border-bottom: 1px solid var(--border); }
+.ct-accordion:last-child { border-bottom: none; }
+
+.ct-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background .12s;
+    user-select: none;
+}
+.ct-accordion-header:hover { background: var(--bg-hover); }
+
+.ct-accordion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.ct-accordion-icon .material-symbols-outlined { font-size: 15px; line-height: 1; }
+
+.ct-accordion-title { flex: 1; }
+
+.ct-accordion-chevron {
+    color: var(--text-muted);
+    transition: transform .2s cubic-bezier(.22,1,.36,1);
+    flex-shrink: 0;
+}
+.ct-accordion-chevron .material-symbols-outlined { font-size: 16px; line-height: 1; }
+.ct-accordion.open .ct-accordion-chevron { transform: rotate(180deg); }
+
+.ct-accordion-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .25s cubic-bezier(.22,1,.36,1), opacity .2s;
+    opacity: 0;
+}
+.ct-accordion.open .ct-accordion-body {
+    max-height: 500vh;
+    opacity: 1;
+}
+.ct-accordion-content { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Panel field rows (inside accordion) ─────────────────────────────────── */
+.ct-field { display: flex; flex-direction: column; gap: 5px; }
+.ct-field-row { display: flex; align-items: center; gap: 8px; }
+.ct-field-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ct-field-grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+.ct-sublabel { font-size: 9px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; display: flex; align-items: center; gap: 3px; }
+.ct-sublabel .material-symbols-outlined { font-size: 11px; }
+
+/* Filter icon badges (Image tool) */
+.ct-filter-icon { width: 22px; height: 22px; border-radius: 5px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+
+/* Copy/Paste styles bar */
+.ct-copypaste-bar { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
+.ct-copypaste-bar .craftools-pill { flex: 1; justify-content: center; gap: 4px; font-size: 10px; }
+
+/* Compact value display next to sliders */
+.ct-val-badge { font-size: 10px; font-family: monospace; color: var(--accent); font-weight: 700; min-width: 36px; text-align: right; flex-shrink: 0; }
+
+/* Danger section */
+.ct-danger-section { padding: 10px 14px; }
+
+
+
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 .craftools-input  { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color .15s; }
 .craftools-input:focus { border-color:var(--border-focus); }
-.craftools-select { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%2371717a' d='M5 6L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 9px center; }
-.craftools-select:focus { border-color:var(--border-focus); }
+/* Escopado a `select.craftools-select` (não ao seletor genérico `.craftools-select`)
+   porque <ct-font-select> (web component com sua própria caixa via shadow DOM,
+   ver CtFontSelect.js) também usa a classe `craftools-select` só por
+   convenção visual -- se o box model abaixo (padding/borda/fundo/seta) fosse
+   aplicado a ele também, o host teria sua própria caixa por cima da caixa
+   interna do componente, dando o efeito de "caixa dentro de caixa". */
+select.craftools-select { width:100%; padding:6px 9px; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); font-size:12px; font-family:'DM Sans',sans-serif; outline:none; appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%2371717a' d='M5 6L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 9px center; }
+select.craftools-select:focus { border-color:var(--border-focus); }
+ct-font-select.craftools-select { display:block; width:100%; }
 .craftools-color-swatch { width:32px; height:32px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px; background:var(--bg-input); flex-shrink:0; }
 
 /* Pill buttons */
@@ -191,6 +284,50 @@ input[type="number"] { -moz-appearance:textfield; }
     z-index: 999 !important;
     box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 2px var(--accent) !important;
 }
+
+/* Active Photostrip Slot */
+.craftools-slot-active {
+    z-index: 10 !important;
+}
+.craftools-slot-active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999 !important;
+    box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 2px var(--accent) !important;
+}
+
+/* Prevent native browser drag behavior on slot children */
+.photostrip-slot craftools-element,
+.photostrip-slot img {
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+}
+
+/* Cell selecionada pelo CellPanel */
+.craftools-grid-cell.cell-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Botão de editar cell — hover */
+.cell-edit-btn:hover {
+    background: var(--accent-subtle, #fff7ed) !important;
+    color: var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+/* Camadas da cell: garante empilhamento correto */
+/* Os handles ficam acima do z-index:100 que craftools-element assume ao ser
+   selecionado (ver Element.js select()), senão o primeiro clique na foto
+   cobre a alça e ela não pode mais ser arrastada. */
+.craftools-grid-cell .cell-bg-layer    { z-index: 0; }
+.craftools-grid-cell .cell-content-layer { z-index: 1; }
+.craftools-grid-cell .cell-overlay-layer { z-index: 4; }
+.craftools-grid-cell .album-drag-handle  { z-index: 110; }
+.craftools-grid-cell .cell-edit-btn      { z-index: 120; }
+.photostrip-slot .slot-drag-handle       { z-index: 110; }
 
 /* Resize handle */
 .craftools-resize { position:absolute; bottom:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border:2px solid var(--bg-panel); border-radius:2px; cursor:se-resize; z-index:10; opacity:0; transition:opacity .15s; touch-action:none; }

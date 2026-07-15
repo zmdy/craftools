@@ -7,6 +7,7 @@ export var Craftools_Settings =
             icon: "menu_book",
             sizes: [
                 {
+                    key: "a4",
                     name: "A4",
                     icon: "stock_media",
                     description: "Indicado para Papel timbrado, agendas, certificados",
@@ -14,6 +15,7 @@ export var Craftools_Settings =
                     sizeUnit: "mm"
                 },
                 {
+                    key: "a4Landscape",
                     name: "A4 Horizontal",
                     icon: "stock_media",
                     description: "Indicado para Papel timbrado, agendas, certificados",
@@ -21,6 +23,7 @@ export var Craftools_Settings =
                     sizeUnit: "mm"
                 },
                 {
+                    key: "a6",
                     name: "A6",
                     icon: "stock_media",
                     description: "Indicado para impressão de fotos",
@@ -28,6 +31,7 @@ export var Craftools_Settings =
                     sizeUnit: "mm"
                 },
                 {
+                    key: "a5",
                     name: "A5",
                     icon: "stock_media",
                     description: "Cartazes, convites grandes, materiais dobrados",
@@ -35,6 +39,7 @@ export var Craftools_Settings =
                     sizeUnit: "mm"
                 },
                 {
+                    key: "a3",
                     name: "A3",
                     icon: "stock_media",
                     description: "Cartazes, convites grandes, materiais dobrados",
@@ -49,6 +54,7 @@ export var Craftools_Settings =
             icon: "photo_camera_back",
             sizes: [
                 {
+                    key: "freeform",
                     name: "*",
                     icon: "stock_media",
                     description: "Importe sua foto e comece a editar!",
@@ -63,6 +69,7 @@ export var Craftools_Settings =
             icon: "dataset_linked",
             sizes: [
                 {
+                    key: "instagramSquare",
                     name: "Instagram - Quadrado",
                     icon: "stock_media",
                     description: "Vamos começar!",

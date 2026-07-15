@@ -1,9 +1,11 @@
+import { I18n } from "../settings/Translations.js";
+
 export class CtxBar {
     constructor(container) {
         this.container = container; // Should be document.body or the app wrapper
         this.el = document.createElement('div');
         this.el.className = 'craftools-ctxbar hidden';
-        this.el.style.cssText = 'position:fixed; z-index:500; display:flex; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
+        this.el.style.cssText = 'position:fixed; z-index:500; display:none; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
         this.container.appendChild(this.el);
         
         this.activeElement = null;
@@ -73,15 +75,15 @@ export class CtxBar {
             if (action === 'down') element.style.zIndex = Math.max(1, currentZ - 1);
         };
 
-        this.el.appendChild(this.createButton('flip_to_front', 'Para frente', () => zAdjust('front')));
-        this.el.appendChild(this.createButton('flip_to_back', 'Para trás', () => zAdjust('back')));
-        this.el.appendChild(this.createButton('arrow_upward', 'Subir', () => zAdjust('up')));
-        this.el.appendChild(this.createButton('arrow_downward', 'Descer', () => zAdjust('down')));
+        this.el.appendChild(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
+        this.el.appendChild(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
+        this.el.appendChild(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
+        this.el.appendChild(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
 
         this.el.appendChild(this.createSeparator());
-        
+
         // Duplicate Action
-        this.el.appendChild(this.createButton('content_copy', 'Duplicar elemento', async () => {
+        this.el.appendChild(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
             const clone = element.cloneNode(true);
             
             // Offset slightly

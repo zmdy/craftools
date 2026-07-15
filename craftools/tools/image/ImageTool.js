@@ -2,6 +2,7 @@ import { I18n } from "../../settings/Translations.js";
 import { FILTERS_CONFIG, ImageFilters } from "./ImageFilters.js";
 import { ImageTransform } from "./ImageTransform.js";
 import { BaseTool } from "../BaseTool.js";
+import { PanelUI } from "../../utils/PanelUI.js";
 import "./ImageTool_Translations.js";
 
 export class ImageTool extends BaseTool {
@@ -22,88 +23,104 @@ export class ImageTool extends BaseTool {
         }
 
         let filtersHtml = FILTERS_CONFIG.map(f => `
-            <div class="craftools-field" style="padding: 4px 0;">
-                <span class="craftools-label">${I18n.t('imageTool.' + f.label)}</span>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" class="filter-slider" data-key="${f.key}" data-unit="${f.unit || ''}" 
-                        min="${f.min}" max="${f.max}" step="${f.step}" style="flex:1;" 
-                        value="${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}">
-                    <span class="filter-val" style="font-size: 11px; width: 33px; text-align: right; color: var(--text-muted); font-family: monospace;">${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}</span>
+            <div class="ct-field-row" style="margin-bottom:8px;">
+                <div class="ct-filter-icon" title="${I18n.t('imageTool.' + f.label)}">
+                    <span class="material-symbols-outlined">${f.icon}</span>
                 </div>
+                <input type="range" class="filter-slider" data-key="${f.key}" data-unit="${f.unit || ''}" 
+                    min="${f.min}" max="${f.max}" step="${f.step}" style="flex:1;" 
+                    value="${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}">
+                <span class="filter-val ct-val-badge">${meta.filters[f.key] !== undefined ? meta.filters[f.key] : f.def}${f.unit || ''}</span>
             </div>
         `).join('');
 
-        const html = `
-            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div class="craftools-panel-section">
-                    <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span> ${I18n.t('imageTool.uploadPhoto')}
-                    </button>
-                    <input type="file" id="img-file-hidden" style="display:none;" accept="image/*">
-                </div>
+        const htmlSource = `
+            <div class="ct-field">
+                <button class="craftools-topbtn" id="img-switch-btn" style="width: 100%; justify-content: center; gap: 8px; font-weight: 600;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span> ${I18n.t('imageTool.uploadPhoto')}
+                </button>
+                <input type="file" id="img-file-hidden" style="display:none;" accept="image/*">
+            </div>
 
-                <div class="craftools-field">
-                    <span class="craftools-label">${I18n.t('imageTool.fit')}</span>
-                    <div style="display: flex; gap: 4px;">
-                        ${['contain', 'cover', 'fill'].map(fit => `
-                            <button class="craftools-pill fit-btn ${meta.objectFit === fit ? 'active' : ''}" data-fit="${fit}" style="flex:1;">${fit}</button>
-                        `).join('')}
-                    </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('imageTool.fit')}</span>
+                <div style="display: flex; gap: 4px;">
+                    ${['contain', 'cover', 'fill'].map(fit => `
+                        <button class="craftools-pill fit-btn ${meta.objectFit === fit ? 'active' : ''}" data-fit="${fit}" style="flex:1;">${fit}</button>
+                    `).join('')}
                 </div>
-
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 4px; border-top: 1px solid var(--border); margin-top: 5px;">
-                    <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${I18n.t('imageTool.transform') || 'Ajustes de Transformação'}</span>
-                    <button id="img-reset-btn" style="font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 3px; font-family: 'DM Sans', sans-serif; padding: 2px 4px; border-radius: 4px;">
-                        <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> Reset
-                    </button>
-                </div>
-
-                <div class="craftools-field">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.zoom')}</span>
-                        <span id="zoom-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${Math.round((meta.zoom || 1) * 100)}%</span>
-                    </div>
-                    <input type="range" id="zoom-slider" min="0.1" max="5" step="0.05" value="${meta.zoom || 1}" style="width:100%;">
-                </div>
-
-                <div class="craftools-field">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">${I18n.t('imageTool.rotation')}</span>
-                        <span id="rotate-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.rotation || 0}°</span>
-                    </div>
-                    <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="${meta.rotation || 0}" style="width:100%;">
-                </div>
-
-                <div class="craftools-field" style="border-top: 1px solid var(--border); padding-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <span class="craftools-label" style="margin:0;">Preenchimento de Fundo (Blur)</span>
-                        <span id="bgblur-val-display" style="font-size: 11px; font-family: monospace; color: var(--accent); font-weight: bold;">${meta.bgBlur || 0}px</span>
-                    </div>
-                    <input type="range" id="bgblur-slider" min="1" max="100" step="1" value="${meta.bgBlur || 20}" style="width:100%;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('imageTool.posX')}</span>
-                        <input type="number" id="pos-x-input" class="craftools-input" value="${Math.round(meta.posX || 0)}" style="width: 100%;">
-                    </div>
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('imageTool.posY')}</span>
-                        <input type="number" id="pos-y-input" class="craftools-input" value="${Math.round(meta.posY || 0)}" style="width: 100%;">
-                    </div>
-                </div>
-
-                <div style="padding: 10px 0 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border); margin-top: 5px; letter-spacing: 0.5px;">
-                    ${I18n.t('imageTool.cssFilters')}
-                </div>
-                ${filtersHtml}
             </div>
         `;
 
-        editorPanel.innerHTML = html;
+        const htmlTransform = `
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                <button id="img-reset-btn" class="craftools-pill" style="font-size: 10px; color: var(--accent); padding: 4px 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">restart_alt</span> ${I18n.t('imageTool.reset')}
+                </button>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">zoom_in</span>${I18n.t('imageTool.zoom')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="zoom-slider" min="0.1" max="5" step="0.05" value="${meta.zoom || 1}" style="flex:1;">
+                    <span id="zoom-val-display" class="ct-val-badge">${Math.round((meta.zoom || 1) * 100)}%</span>
+                </div>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">rotate_right</span>${I18n.t('imageTool.rotation')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="${meta.rotation || 0}" style="flex:1;">
+                    <span id="rotate-val-display" class="ct-val-badge">${meta.rotation || 0}°</span>
+                </div>
+            </div>
+
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">open_with</span>${I18n.t('imageTool.position') || 'Position in Mask'}</div>
+                <div class="ct-field-grid2">
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <span style="font-size:9px;color:var(--text-muted);">X</span>
+                        <input type="number" id="pos-x-input" class="craftools-input" value="${Math.round(meta.posX || 0)}" style="text-align:center;padding:4px;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <span style="font-size:9px;color:var(--text-muted);">Y</span>
+                        <input type="number" id="pos-y-input" class="craftools-input" value="${Math.round(meta.posY || 0)}" style="text-align:center;padding:4px;">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const BLEND_MODES = [
+            'normal','multiply','screen','overlay','darken','lighten',
+            'color-dodge','color-burn','hard-light','soft-light',
+            'difference','exclusion','hue','saturation','color','luminosity',
+        ];
+
+        const htmlEffects = `
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">blur_on</span>${I18n.t('imageTool.bgBlur')}</div>
+                <div class="ct-field-row">
+                    <input type="range" id="bgblur-slider" min="0" max="100" step="1" value="${meta.bgBlur || 0}" style="flex:1;">
+                    <span id="bgblur-val-display" class="ct-val-badge">${meta.bgBlur || 0}px</span>
+                </div>
+            </div>
+            <div class="ct-field">
+                <div class="ct-sublabel"><span class="material-symbols-outlined">blender</span>${I18n.t('imageTool.blendMode') || 'Blend Mode'}</div>
+                <select id="img-blend-select" class="craftools-select">
+                    ${BLEND_MODES.map(m => `<option value="${m}" ${(meta.blendMode || 'normal') === m ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
+            </div>
+        `;
+
+        editorPanel.innerHTML = 
+            PanelUI.accordion('img-fonte', 'photo_camera', I18n.t('imageTool.source') || 'Source', htmlSource, { open: true }) +
+            PanelUI.accordion('img-transform', 'transform', I18n.t('imageTool.transform') || 'Transform', htmlTransform) +
+            PanelUI.accordion('img-filters', 'auto_fix_high', I18n.t('imageTool.cssFilters'), filtersHtml) +
+            PanelUI.accordion('img-efeitos', 'magic_button', I18n.t('imageTool.effects') || 'Effects', htmlEffects);
+
         
         // Render Common Properties (Inherited)
-        this.renderCommonProperties(editorPanel.firstElementChild, element, {
+        this.renderCommonProperties(editorPanel, element, {
             border: 'img',
             radius: 'img',
             zindex: true,
@@ -118,6 +135,12 @@ export class ImageTool extends BaseTool {
                 if (element._syncSidebar) element._syncSidebar();
             }
         });
+
+        // Apply blend mode on panel open (restores persisted state)
+        const imgEl = element.contentArea?.querySelector('img');
+        if (imgEl && meta.blendMode && meta.blendMode !== 'normal') {
+            imgEl.style.mixBlendMode = meta.blendMode;
+        }
 
         // Interaction Bindings
         const syncSliders = () => {
@@ -139,23 +162,10 @@ export class ImageTool extends BaseTool {
 
              this._applyBgBlur(element);
 
-             // Propagate to linked elements (Business Card mode)
-             if (element._linkedElements) {
-                 element._linkedElements.forEach(sibling => {
-                     if (sibling !== element) {
-                         ImageTransform.applyTransform(sibling);
-                         ImageFilters.applyFilters(sibling);
-                         // Apply borders and radius to siblings
-                         const siblingImg = sibling.contentArea.querySelector('img');
-                         if (siblingImg) {
-                             siblingImg.style.borderWidth = meta.borderWidth + 'px';
-                             siblingImg.style.borderStyle = meta.borderStyle;
-                             siblingImg.style.borderColor = meta.borderColor;
-                             siblingImg.style.borderRadius = meta.borderRadius + 'px';
-                         }
-                     }
-                 });
-             }
+             // Propagate to linked elements (Business Card mode) -- covers
+             // both the Álbum wizard's shared _linkedElements array and the
+             // data-linked-id clones created by PageTool.js's drag&drop.
+             this._propagateToSiblings(element, meta);
         };
         element._syncSidebar = syncSliders;
 
@@ -167,10 +177,14 @@ export class ImageTool extends BaseTool {
             meta.posY = defaults.posY;
             meta.rotation = defaults.rotation;
             meta.bgBlur = defaults.bgBlur;
+            meta.blendMode = defaults.blendMode;
             meta.objectFit = defaults.objectFit;
             FILTERS_CONFIG.forEach(f => meta.filters[f.key] = f.def);
+            const img = element.contentArea?.querySelector('img');
+            if (img) img.style.mixBlendMode = '';
             ImageTransform.applyTransform(element);
             ImageFilters.applyFilters(element);
+            this._propagateToSiblings(element, meta);
             // Re-render the whole panel to reflect reset state (sliders, fit buttons)
             this.renderPropertiesPanel(editorPanel, element);
         };
@@ -186,6 +200,9 @@ export class ImageTool extends BaseTool {
                     meta.src = ev.target.result;
                     const img = element.contentArea.querySelector('img');
                     if (img) img.src = meta.src;
+                    const blurBg = element.querySelector('.craftools-element-blur-bg');
+                    if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
+                    this._propagateToSiblings(element, meta);
                 };
                 reader.readAsDataURL(file);
             }
@@ -255,6 +272,56 @@ export class ImageTool extends BaseTool {
             };
         }
 
+        // Bind Blend Mode
+        editorPanel.querySelector('#img-blend-select')?.addEventListener('change', (e) => {
+            meta.blendMode = e.target.value;
+            const img = element.contentArea?.querySelector('img');
+            if (img) img.style.mixBlendMode = meta.blendMode === 'normal' ? '' : meta.blendMode;
+            if (element._syncSidebar) element._syncSidebar();
+        });
+
+        // ── Grid Cell background & overlay integration ─────────────────────
+        const cellEl = element.closest('.craftools-grid-cell');
+        if (cellEl) {
+            // Create a placeholder accordion at the top level of the panel
+            const cellAccWrapper = document.createElement('div');
+            cellAccWrapper.className = 'ct-accordion';
+            cellAccWrapper.dataset.accordionId = 'img-cell-bg';
+            editorPanel.appendChild(cellAccWrapper);
+
+            // Dynamic import to avoid circular dependencies
+            // (also ensures CellPanel translations are loaded)
+            import('../album/CellPanel.js').then(({ CellPanel }) => {
+                // Render the accordion header now that translations are available
+                cellAccWrapper.innerHTML = `
+                    <button class="ct-accordion-header" type="button" data-toggle-accordion="img-cell-bg">
+                        <span class="ct-accordion-icon">
+                            <span class="material-symbols-outlined">texture</span>
+                        </span>
+                        <span class="ct-accordion-title">${I18n.t('cellPanel.bgOverlayHeader') || 'Fundo & Overlay'}</span>
+                        <span class="ct-accordion-chevron">
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </span>
+                    </button>
+                    <div class="ct-accordion-body">
+                        <div class="ct-accordion-content" id="img-cell-bg-content"></div>
+                    </div>
+                `;
+
+                // Bind this new accordion into the one-open-at-a-time logic
+                import('../../utils/PanelUI.js').then(({ PanelUI }) => {
+                    PanelUI.bindAccordions(editorPanel);
+                });
+
+                const content = editorPanel.querySelector('#img-cell-bg-content');
+                if (content) {
+                    CellPanel.renderInto(content, cellEl, () => {
+                        // Callback quando propriedades do fundo mudarem
+                    });
+                }
+            });
+        }
+
     }
 
     static _applyBgBlur(element) {
@@ -289,6 +356,61 @@ export class ImageTool extends BaseTool {
         blurBg.style.filter = `blur(${meta.bgBlur}px)`;
     }
 
+    /**
+     * Returns the other image elements "siblings" linked to this one —
+     * used to keep photo/adjustments synchronised across all cells in
+     * Album (Business Card) mode.
+     *
+     * Two linking mechanisms exist in the system:
+     *  1) `element._linkedElements` — shared array assigned by the Album
+     *     wizard (AlbumTool.js) when multiple photos are uploaded at once;
+     *     the elements already share the same `_craftoolsMeta` object by
+     *     reference.
+     *  2) `data-linked-id` — DOM attribute assigned by PageTool.js
+     *     (Business Card Cloning Logic) when ONE tool is dragged into a
+     *     grid cell in "card" mode; the element is cloned (cloneNode) to
+     *     the other cells, but cloneNode does NOT copy JS properties such as
+     *     `_craftoolsMeta` — each clone ends up with its own meta object,
+     *     disconnected from the others, so the sync below must also copy the
+     *     VALUES of meta (not just re-apply the same reference).
+     */
+    static _getLinkedSiblings(element) {
+        if (Array.isArray(element._linkedElements)) {
+            return element._linkedElements.filter(el => el !== element);
+        }
+        const lid = element.getAttribute('data-linked-id');
+        if (!lid) return [];
+        return [...document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`)]
+            .filter(el => el !== element);
+    }
+
+    /** Copies the current meta state to a sibling element (unless it is
+     *  already the same shared object) and re-applies it to the sibling's DOM. */
+    static _pushMetaToSibling(sibling, meta) {
+        if (sibling._craftoolsMeta !== meta) {
+            if (!sibling._craftoolsMeta) sibling._craftoolsMeta = this.getDefaultMeta();
+            Object.assign(sibling._craftoolsMeta, meta, { filters: { ...meta.filters } });
+        }
+        const sMeta = sibling._craftoolsMeta;
+        const img = sibling.contentArea?.querySelector('img');
+        if (img) {
+            if (img.getAttribute('src') !== meta.src) img.src = meta.src;
+            img.style.mixBlendMode = (sMeta.blendMode && sMeta.blendMode !== 'normal') ? sMeta.blendMode : '';
+            img.style.borderWidth = (sMeta.borderWidth || 0) + 'px';
+            img.style.borderStyle = sMeta.borderStyle || 'none';
+            img.style.borderColor = sMeta.borderColor || '#000000';
+            img.style.borderRadius = (sMeta.borderRadius || 0) + 'px';
+        }
+        ImageTransform.applyTransform(sibling);
+        ImageFilters.applyFilters(sibling);
+        this._applyBgBlur(sibling);
+    }
+
+    /** Propagates the current meta to all linked sibling elements. */
+    static _propagateToSiblings(element, meta) {
+        this._getLinkedSiblings(element).forEach(sibling => this._pushMetaToSibling(sibling, meta));
+    }
+
     static getCtxOptions() {
         return [
             {
@@ -308,9 +430,14 @@ export class ImageTool extends BaseTool {
                                 const img = element.contentArea.querySelector('img');
                                 if (img) img.src = e.target.result;
 
-                                 // Atualiza fundo desfocado se existir
+                                 // Update blurred background if present
                                  const blurBg = element.querySelector('.craftools-element-blur-bg');
                                  if (blurBg) blurBg.style.backgroundImage = `url(${e.target.result})`;
+
+                                 // Propagate to other linked elements (Business Card
+                                 // mode) even when the properties panel was never
+                                 // opened for this element.
+                                 this._propagateToSiblings(element, element._craftoolsMeta);
                             };
                             reader.readAsDataURL(file);
                         }
@@ -329,7 +456,8 @@ export class ImageTool extends BaseTool {
             posX: 0,
             posY: 0,
             rotation: 0,
-            bgBlur: 0, // Default 0 (off)
+            bgBlur: 0,
+            blendMode: 'normal',
             borderWidth: 0,
             borderStyle: 'none',
             borderColor: '#000000',

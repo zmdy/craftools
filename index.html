@@ -1,28 +1,1389 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CrafTools</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Fonts -->
+    
+    <meta name="theme-color" content="#f97316">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon-craftools.svg">
+
+    <!-- Fonts Originais CrafTools -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
-    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <!-- Custom CSS -->
+
+    <!-- Bootstrap 5.3.8 CSS (CDN, antes vendorizado em vendor/pwa-template/assets/css/) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" integrity="sha256-2FMn2Zx6PuH5tdBQDRNwrOo60ts5wWPC9R8jK67b3t4=" crossorigin="anonymous">
+
+    <!-- PWA Template CSS — shell próprio do template (sem libs de terceiros, ver docs/HTML_Assets_Plan.md) -->
+    <link rel="stylesheet" href="./vendor/pwa-template/style.css">
+
+    <!-- CrafTools Original CSS -->
     <link rel="stylesheet" href="./craftools/craftools.css">
+
+    <style>
+        /* ==============================================================
+           CSS INLINE DE ADAPTAÇÃO PWA vs CRAFTOOLS
+           ============================================================== */
+        
+        /* Sobrescrita dos tokens de cor do PWA template para usar a paleta original do CrafTools */
+        :root {
+            --primary-50: #f4f4f5;   /* Fundo do app/canvas */
+            --primary-100: #ffffff;  /* Fundo de cards/sidebar */
+            --primary-200: #e4e4e7;  /* Hover/input */
+            --primary-300: #d4d4d8;  /* Bordas */
+            --primary-400: #a1a1aa;
+            --primary-500: #ffffff;  /* Para cabeçalhos e menus offcanvas */
+            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
+            --primary-700: #ea580c;  /* Hover da cor principal */
+            --primary-800: #c2410c;
+            --primary-900: #9a3412;
+            --primary-950: #18181b;  /* Texto principal */
+            --accent: #f97316;
+            --text: #71717a;
+            --border: #e4e4e7;
+        }
+
+        [data-theme="dark"] {
+            --primary-50: #09090b;   /* Fundo do app/canvas */
+            --primary-100: #18181b;  /* Fundo de cards/sidebar */
+            --primary-200: #27272a;  /* Hover/input */
+            --primary-300: #3f3f46;  /* Bordas */
+            --primary-400: #52525b;
+            --primary-500: #18181b;  /* Para cabeçalhos e menus offcanvas */
+            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
+            --primary-700: #ea580c;  /* Hover da cor principal */
+            --primary-800: #c2410c;
+            --primary-900: #9a3412;
+            --primary-950: #f4f4f5;  /* Texto principal */
+            --accent: #f97316;
+            --text: #a1a1aa;
+            --border: #3f3f46;
+            --warning-500: #f97316;  /* Inverte amarelos do warning para laranja */
+            --warning-700: #ea580c;
+        }
+
+        /* Força as fontes do CrafTools no PWA */
+        body, .header-area, .offcanvas, .footer-nav-area {
+            font-family: 'DM Sans', sans-serif !important;
+        }
+        
+        /* Tema laranja do CrafTools em substituição ao azul do PWA template */
+        .text-primary, .text-info, .text-warning { color: var(--accent) !important; }
+        .bg-primary, .bg-gradient, .bg-info, .bg-warning { background-color: var(--accent) !important; background-image: none !important; }
+        .border-primary { border-color: var(--accent) !important; }
+        .footer-nav ul li.active a, .footer-nav ul li.active button { color: var(--accent) !important; }
+
+        /* Esconde a interface original gerada pelo Editor.js e Setup.js */
+        .craftools-topbar, 
+        .craftools-sidebar,
+        #lang-select {
+            display: none !important;
+        }
+
+        /* O canvas precisa ocupar todo o espaço do app-content.
+           height e margin-top são controlados pelo inline style do elemento
+           (height:100% dentro do main-layout-wrapper, margin-top:0).
+           As regras abaixo ficam como fallback caso o inline style seja removido. */
+        .page-content-wrapper {
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header com mais respiro vertical (padding superior/inferior maior) —
+           o template base usa altura fixa de 50px; aumentamos para 64px (o
+           conteúdo continua centralizado verticalmente via align-items:center). */
+        .header-area,
+        .header-content {
+            height: 64px !important;
+        }
+        
+        #wrapper, .craftools-app {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        /* Marca no header: fora do .container, alinhada à esquerda para bater
+           exatamente com o padding da sidebar (16px), independente do
+           max-width/centralização do Bootstrap .container. */
+        .header-brand {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 1px;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .header-brand-logo {
+            height: 22px;
+            width: auto;
+            display: block;
+        }
+        .header-brand-tagline {
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            color: var(--text-secondary, #71717a);
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            /* No mobile mantém só a logo (compacta) visível; a tagline some
+               para não disputar espaço com os ícones do header. */
+            .header-brand-tagline { display: none; }
+            .header-brand-logo { height: 18px; }
+        }
+
+        /* Painel direito: mesmo visual do sidenav-wrapper */
+        .craftools-panel {
+            width: 272px;
+            background: var(--primary-500, #ffffff);
+            border-left: 1px solid var(--border);
+            z-index: 10;
+            border-radius: 0;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* Header do painel: igual ao sidenav-profile */
+        .craftools-panel-head {
+            background: var(--accent, #f97316) !important;
+            background-image: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+            color: #ffffff !important;
+            padding: 16px 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            border-bottom: none !important;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+        .craftools-panel-title {
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+        }
+        /* Botão fechar no painel: estilo consistente com branco */
+        .craftools-panel #close-panel {
+            color: rgba(255,255,255,0.85) !important;
+            background: rgba(255,255,255,0.15) !important;
+            border-radius: 6px !important;
+        }
+        .craftools-panel #close-panel:hover {
+            background: rgba(255,255,255,0.3) !important;
+            color: #ffffff !important;
+        }
+        /* Esconde o painel se estiver escondido via classe original */
+        .craftools-panel.hidden {
+            display: none !important;
+        }
+        /* Painel como Bottom Sheet apenas no Mobile */
+        @media (max-width: 768px) {
+            .craftools-panel {
+                position: fixed !important;
+                bottom: 62px !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-height: 50vh !important;
+                z-index: 1000 !important;
+                border-radius: 20px 20px 0 0 !important;
+                border-left: none !important;
+                border-top: 1px solid var(--border) !important;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+            }
+            .craftools-panel-head {
+                border-radius: 20px 20px 0 0 !important;
+            }
+        }
+
+        /* Garante que o Header e Footer do PWA sobreponham o canvas */
+        .header-area { z-index: 1050; }
+        .footer-nav-area { z-index: 1050; }
+        .offcanvas { z-index: 1060 !important; } /* Acima do header */
+
+        .footer-nav-area i.material-symbols-outlined {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        
+        /* Ajuste do botão de idioma no PWA */
+        .pwa-lang-select {
+            background: var(--bg-input, #f4f4f5);
+            border: 1px solid var(--border, #e4e4e7);
+            color: var(--text-primary, #18181b);
+            padding: 4px 8px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+        }
+        .pwa-lang-select option {
+            background: var(--bg-shell, #ffffff);
+            color: var(--text-primary, #18181b);
+        }
+
+        /* Estilo dos botões do footer (drag no PC) */
+        .footer-nav-btn {
+            background: none;
+            border: none;
+            color: #7773a6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            cursor: grab;
+            user-select: none;
+        }
+        .footer-nav-btn:hover,
+        .footer-nav-btn:focus {
+            color: var(--accent, #f97316) !important;
+            outline: none;
+        }
+        .footer-nav-btn span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .footer-nav-btn .material-symbols-outlined {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        /* Garantindo centralização perfeita e simetria no footer */
+        .footer-nav ul li {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        .footer-nav li.center-menu-item {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        /* Botão Menu Central */
+        .footer-nav li.center-menu-item a {
+            background-color: rgba(249, 115, 22, 0.1);
+            color: var(--primary-600, #f97316) !important;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -15px auto 0 auto !important;
+            box-shadow: none;
+            border: 2px solid var(--primary-100, #ffffff);
+            transition: all 0.2s;
+        }
+        .footer-nav li.center-menu-item a:hover,
+        .footer-nav li.center-menu-item a:focus {
+            transform: scale(1.05);
+            background-color: rgba(249, 115, 22, 0.2) !important;
+        }
+        [data-theme="dark"] .footer-nav li.center-menu-item a {
+            border-color: #18181b;
+        }
+
+        /* Setup Mode */
+        body.is-setup-mode .footer-nav ul li:not(.center-menu-item):not(.pwa-welcome-msg) {
+            display: none !important;
+        }
+        body.is-setup-mode .footer-nav ul {
+            justify-content: flex-start !important;
+            width: 100% !important;
+        }
+        body.is-setup-mode .center-menu-item {
+            margin: 0 !important;
+            order: -1;
+            padding-left: 10px;
+            flex-shrink: 0;
+        }
+        body.is-setup-mode .center-menu-item a {
+            margin: 0 !important;
+            border: none;
+        }
+        body.is-setup-mode .pwa-welcome-msg {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-start;
+            flex: 1;
+            padding-left: 15px;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .pwa-welcome-msg {
+            display: none !important;
+        }
+
+        /* Sidenav Panel - Sliding Panel for Desktop, Bottom Sheet for Mobile */
+        .sidenav-panel {
+            width: 272px;
+            margin-left: -272px; /* Closed by default */
+            background: var(--primary-500, #ffffff);
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+            transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .sidenav-panel.panel-open {
+            margin-left: 0; /* Open on desktop */
+        }
+        /* Mantém a transição de abertura/fechamento, mas não anima durante o
+           arrasto de redimensionamento (senão a largura "atrasa" do mouse). */
+        .sidenav-panel.resizing {
+            transition: none;
+        }
+
+        /* Alça de redimensionamento — fica perto da borda direita do painel;
+           ao passar o mouse por cima, fica visível e o cursor muda para
+           indicar que é possível arrastar para aumentar/diminuir a largura. */
+        .craftools-panel-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 20;
+            background: transparent;
+            touch-action: none;
+        }
+        .craftools-panel-resize-handle:hover,
+        .craftools-panel-resize-handle.resizing {
+            background: var(--accent, #f97316);
+            opacity: 0.35;
+        }
+        @media (max-width: 768px) {
+            .sidenav-panel {
+                display: none !important;
+            }
+            .sidenav-panel.mobile-modal-mode {
+                display: flex !important;
+            }
+            /* Redimensionamento horizontal não se aplica ao bottom sheet mobile */
+            .craftools-panel-resize-handle {
+                display: none !important;
+            }
+        }
+
+        /* --- MOBILE TOOLBAR UX (CANVA STYLE) --- */
+        @media (max-width: 768px) {
+            .footer-nav-area {
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+            .footer-nav ul {
+                overflow-x: auto;
+                overflow-y: hidden;
+                white-space: nowrap;
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none;  /* IE/Edge */
+                justify-content: flex-start !important;
+                padding: 0 10px !important;
+                gap: 12px;
+            }
+            .footer-nav ul::-webkit-scrollbar {
+                display: none;
+            }
+            .footer-nav ul li {
+                display: inline-flex !important;
+                flex: 0 0 auto;
+            }
+            .mobile-toolbar-btn {
+                background: none;
+                border: none;
+                color: #7773a6;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 6px;
+                min-width: 54px;
+                cursor: pointer;
+                outline: none;
+            }
+            .mobile-toolbar-btn:active {
+                color: var(--accent);
+            }
+            .mobile-toolbar-btn .material-symbols-outlined {
+                font-size: 24px;
+                margin-bottom: 4px;
+            }
+            .mobile-toolbar-label {
+                font-size: 10px;
+                font-weight: 600;
+                line-height: 1.1;
+                text-align: center;
+            }
+            [data-theme="dark"] .mobile-toolbar-btn {
+                color: rgba(255,255,255,0.6);
+            }
+            [data-theme="dark"] .mobile-toolbar-btn:active {
+                color: var(--accent);
+            }
+            
+            /* Mini-Panel Overlay — desativado por design. O editor mobile agora se
+               comporta como o canvas normal: o elemento em edição continua
+               totalmente visível e interativo (dá pra mover/redimensionar) enquanto
+               um painel de propriedades está aberto embaixo, em vez de escurecer/
+               bloquear a tela toda. O elemento em si continua no DOM só por
+               compatibilidade com o seletor "#mobile-mini-overlay" usado no
+               outsideHandler de Element.js. Ver MobileToolbar.js (_keepElementVisible)
+               para a lógica que mantém o elemento visível acima do footer/painel. */
+            #mobile-mini-overlay {
+                display: none;
+            }
+            
+            /* Mini-Panel */
+            #mobile-mini-panel {
+                position: fixed;
+                bottom: 70px; /* Above footer */
+                left: 10px;
+                right: 10px;
+                background: var(--primary-500, #fff);
+                border-radius: 16px;
+                z-index: 1065;
+                box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+                transform: translateY(120%);
+                opacity: 0;
+                pointer-events: none;
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                max-height: calc(100vh - 150px);
+                border: 1px solid var(--border);
+            }
+            #mobile-mini-panel.open {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            [data-theme="dark"] #mobile-mini-panel {
+                background: #18181b;
+                box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+            }
+            
+            .mmp-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border);
+            }
+            .mmp-title {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text-primary, #111);
+            }
+            [data-theme="dark"] .mmp-title { color: #fff; }
+            .mmp-close {
+                background: var(--bg-input, #f4f4f5);
+                border: none;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-primary, #111);
+            }
+            [data-theme="dark"] .mmp-close {
+                background: rgba(255,255,255,0.1);
+                color: #fff;
+            }
+            .mmp-body {
+                padding: 16px;
+                overflow-y: auto;
+            }
+            .mmp-section {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .mmp-field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .mmp-field label {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-primary);
+                display: flex;
+                justify-content: space-between;
+            }
+            [data-theme="dark"] .mmp-field label { color: #fff; }
+            .mmp-val {
+                color: var(--accent);
+                font-family: monospace;
+            }
+            .mmp-field input[type=range] { width: 100%; }
+            .mmp-grid2 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            .mmp-input, .mmp-select {
+                background: var(--bg-input, #f4f4f5);
+                border: 1px solid var(--border, #e4e4e7);
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 14px;
+                color: var(--text-primary, #111);
+                width: 100%;
+                outline: none;
+            }
+            [data-theme="dark"] .mmp-input, [data-theme="dark"] .mmp-select {
+                background: #27272a;
+                border-color: #3f3f46;
+                color: #fff;
+            }
+            .mmp-pill-group {
+                display: flex;
+                gap: 8px;
+            }
+            .mmp-pill {
+                flex: 1;
+                background: var(--bg-input, #f4f4f5);
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 10px 0;
+                text-align: center;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-primary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .mmp-pill.active {
+                background: rgba(249, 115, 22, 0.1);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+            [data-theme="dark"] .mmp-pill {
+                background: #27272a;
+                color: #fff;
+            }
+            .mmp-full-btn {
+                width: 100%;
+                background: var(--accent);
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 14px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+            .mmp-full-btn.mmp-secondary {
+                background: var(--bg-input, #f4f4f5);
+                color: var(--text-primary);
+            }
+            [data-theme="dark"] .mmp-full-btn.mmp-secondary {
+                background: #27272a;
+                color: #fff;
+            }
+            .mmp-center { align-items: center; }
+            .mmp-color-big {
+                width: 60px;
+                height: 60px;
+                padding: 0;
+                border: none;
+                border-radius: 50%;
+                overflow: hidden;
+                cursor: pointer;
+            }
+            .mmp-color-big::-webkit-color-swatch-wrapper { padding: 0; }
+            .mmp-color-big::-webkit-color-swatch { border: none; border-radius: 50%; }
+        }
+
+        /* Estilização Premium para botões de ação e select no Header */
+        .header-content .box-icon {
+            color: var(--text-primary, #18181b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--bg-input, #f4f4f5);
+            transition: background 0.2s, color 0.2s;
+        }
+        .header-content .box-icon:hover {
+            background: var(--bg-hover, #e4e4e7);
+            color: var(--accent, #f97316);
+        }
+        .header-content .box-icon span {
+            font-size: 20px;
+        }
+        .header-content .box-icon.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .header-content .box-icon.disabled:hover {
+            background: var(--bg-input, #f4f4f5) !important;
+            color: var(--text-primary, #18181b) !important;
+        }
+
+        /* Hover do sidenav igual ao footer (laranja, transição suave) */
+        .sidenav-nav li a {
+            color: #7773a6 !important;
+            font-weight: 500 !important;
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+        .sidenav-nav li a:hover,
+        .sidenav-nav li a:focus {
+            color: var(--accent, #f97316) !important;
+            background-color: transparent !important;
+        }
+        /* Dark mode */
+        [data-theme="dark"] .header-area,
+        [data-theme="dark"] .sidenav-wrapper,
+        [data-theme="dark"] .offcanvas {
+            background-color: #18181b !important;
+            background-image: none !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a:hover,
+        [data-theme="dark"] .sidenav-nav li a:focus {
+            color: var(--accent) !important;
+            background-color: transparent !important;
+        }
+        [data-theme="dark"] .footer-nav-btn {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        [data-theme="dark"] .footer-nav-btn span {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        [data-theme="dark"] .footer-nav-btn:hover,
+        [data-theme="dark"] .footer-nav-btn:focus {
+            color: var(--accent) !important;
+        }
+        [data-theme="dark"] .footer-nav-btn:hover span,
+        [data-theme="dark"] .footer-nav-btn:focus span {
+            color: var(--accent) !important;
+        }
+
+        /* ==============================================================
+           SIDEBAR — cabeçalho (título dinâmico da ferramenta) e busca
+           ============================================================== */
+
+        /* Cabeçalho da sidebar: a marca (logo + tagline) mora no header do
+           app agora — aqui só sobra o título dinâmico da ferramenta (quando
+           um painel de propriedades está aberto) + botão de fechar. */
+        .craftools-panel-head.sidenav-brand-head {
+            background: var(--primary-500, #ffffff) !important;
+            background-image: none !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            padding: 12px 16px !important;
+            min-height: 20px;
+        }
+        .sidenav-brand-head #close-panel {
+            color: var(--text-muted, #71717a) !important;
+            background: var(--bg-input, #f4f4f5) !important;
+        }
+        .sidenav-brand-head #close-panel:hover {
+            background: var(--bg-hover, #e4e4e7) !important;
+            color: var(--text-primary, #18181b) !important;
+        }
+        .sidenav-brand-head .panel-subtitle {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: var(--text-primary, #18181b) !important;
+            margin: 0 !important;
+        }
+
+        /* ── Sidebar recolhida (somente ícones) — acionada pelo botão de
+           menu do rodapé no desktop. Nunca esconde a sidebar por completo;
+           só reduz para uma coluna estreita de ícones. Os elementos que
+           desaparecem no modo recolhido encolhem/desaparecem suavemente
+           (opacity + max-height/max-width) em vez de sumir de repente via
+           display:none — evita o "salto"/quebra visual durante a transição
+           de largura do painel. Usa :last-child (não a classe do ícone) para
+           identificar o rótulo de texto, já que nem todo ícone usa a fonte
+           material-symbols-outlined (ex: o emoji 😊 da ferramenta Emojis). */
+        .sidenav-panel.sidenav-collapsed {
+            width: 68px !important;
+        }
+        .sidenav-panel .panel-subtitle,
+        .sidenav-panel .sidenav-search,
+        .sidenav-panel .ct-sec-label {
+            transition: opacity 0.18s ease, max-height 0.22s ease, padding 0.22s ease, margin 0.22s ease;
+            overflow: hidden;
+        }
+        .sidenav-panel.sidenav-collapsed .panel-subtitle,
+        .sidenav-panel.sidenav-collapsed .sidenav-search,
+        .sidenav-panel.sidenav-collapsed .ct-sec-label {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border: none !important;
+            pointer-events: none;
+        }
+        .sidenav-panel .sidenav-nav li a span:last-child {
+            transition: opacity 0.18s ease, max-width 0.22s ease;
+            max-width: 160px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .sidenav-panel.sidenav-collapsed .sidenav-nav li a span:last-child {
+            opacity: 0;
+            max-width: 0;
+        }
+        .sidenav-panel.sidenav-collapsed .sidenav-nav li a {
+            justify-content: center;
+            padding: 10px 0 !important;
+            margin: 1px 6px !important;
+            width: calc(100% - 12px) !important;
+        }
+        .sidenav-panel.sidenav-collapsed .craftools-panel-resize-handle {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .sidenav-panel.sidenav-collapsed {
+                width: 100% !important;
+            }
+        }
+
+        /* Caixa de busca de ferramentas */
+        .sidenav-search {
+            position: relative;
+            padding: 12px 14px 6px;
+        }
+        .sidenav-search .material-symbols-outlined {
+            position: absolute;
+            left: 26px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: var(--text-muted, #a1a1aa);
+            pointer-events: none;
+        }
+        .sidenav-search input {
+            width: 100%;
+            padding: 8px 10px 8px 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border, #e4e4e7);
+            background: var(--bg-input, #f4f4f5);
+            color: var(--text-primary, #18181b);
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .sidenav-search input:focus {
+            border-color: var(--accent, #f97316);
+            box-shadow: 0 0 0 3px var(--accent-subtle, #fff7ed);
+        }
+        .ct-no-results {
+            padding: 18px 15px;
+            font-size: 12px;
+            color: var(--text-muted, #a1a1aa);
+            text-align: center;
+        }
+        /* Item ativo na sidebar (ferramenta selecionada / picker aberto) */
+        .sidenav-nav li a {
+            border-radius: 8px;
+            margin: 1px 8px;
+            width: calc(100% - 16px) !important;
+        }
+        .sidenav-nav li a.active {
+            background: var(--accent-subtle, #fff7ed) !important;
+            color: var(--accent, #f97316) !important;
+            font-weight: 700 !important;
+        }
+        [data-theme="dark"] .sidenav-nav li a.active {
+            background: rgba(249,115,22,.15) !important;
+        }
+    </style>
 
     <script type="module">
         import { Craftools } from './craftools/craftools.js';
-        window.onload = () => new Craftools('#wrapper');
+        
+        window.onload = () => {
+            // Bootstrap the core application
+            new Craftools('#wrapper');
+
+            // --- CLICK & EVENT PROXY (PWA shell → CrafTools core) ---
+            setTimeout(() => {
+                // The proxy only makes sense from an element WITHOUT data-tool (e.g. the
+                // mobile footer buttons, pwa-btn-*) to the REAL element that has data-tool
+                // (the sidebar item, which Editor.js already listens to directly via
+                // toolBtns). The pwa-sidebar-* entries were removed from here because each
+                // one pointed to ITSELF — the only element matching '[data-tool="X"]' is
+                // the sidebar item itself — so clicking it fired target.click() on itself,
+                // re-processing the listeners a second time. This was what caused 2 copies
+                // of the paper to be created (and, less visibly, duplicated title /
+                // paragraph / image / album / qrcode / emoji too) when clicking via the
+                // side menu.
+                const toolsMap = {
+                    'pwa-btn-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
+                    'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
+                    'pwa-btn-imagem': { selector: '[data-tool="imagem"]', type: 'imagem' },
+                    'pwa-btn-album': { selector: '[data-tool="album"]', type: 'album' },
+                    'pwa-btn-qrcode': { selector: '[data-tool="qrcode"]', type: 'qrcode' },
+                    'pwa-sidebar-export': { selector: '#pdf-btn', type: null },
+                    'pwa-sidebar-newpage': { selector: '#new-page-btn', type: null },
+                    'pwa-btn-emoji': { selector: '[data-tool="emoji"]', type: 'emoji' }
+                };
+
+                for (const [pwaId, info] of Object.entries(toolsMap)) {
+                    const pwaBtn = document.getElementById(pwaId);
+                    if (pwaBtn) {
+                        // Proxy Click (Mobile / Generic)
+                        pwaBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const target = document.querySelector(info.selector);
+                            if (target) {
+                                target.click();
+                            }
+                        });
+                        
+                        // Proxy Drag (PC Desktop)
+                        if (info.type) {
+                            pwaBtn.addEventListener('dragstart', (e) => {
+                                e.dataTransfer.setData('ToolType', info.type);
+                                e.dataTransfer.setData('text/plain', info.type);
+                                e.dataTransfer.effectAllowed = 'copy';
+                            });
+                        }
+                    }
+                }
+
+                // Proxy for Undo / Redo
+                const pwaUndo = document.getElementById('pwa-undo');
+                const pwaRedo = document.getElementById('pwa-redo');
+
+                pwaUndo?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (pwaUndo.classList.contains('disabled')) return;
+                    document.getElementById('undo-btn')?.click();
+                });
+                pwaRedo?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (pwaRedo.classList.contains('disabled')) return;
+                    document.getElementById('redo-btn')?.click();
+                });
+
+                const syncUndoRedoState = () => {
+                    const originalUndo = document.getElementById('undo-btn');
+                    const originalRedo = document.getElementById('redo-btn');
+                    if (originalUndo && pwaUndo) {
+                        pwaUndo.classList.toggle('disabled', originalUndo.disabled);
+                    }
+                    if (originalRedo && pwaRedo) {
+                        pwaRedo.classList.toggle('disabled', originalRedo.disabled);
+                    }
+                    // Mirror the "N/10" history indicator (see Editor.js / HistoryManager.js)
+                    const desktopIndicator = document.getElementById('history-indicator');
+                    const pwaIndicator = document.getElementById('pwa-history-indicator');
+                    if (desktopIndicator && pwaIndicator) {
+                        pwaIndicator.textContent = desktopIndicator.textContent;
+                        pwaIndicator.title = desktopIndicator.title;
+                    }
+                };
+
+                document.addEventListener('craftools-history-change', syncUndoRedoState);
+                setInterval(syncUndoRedoState, 200);
+
+                // Proxy for Zoom
+                document.getElementById('pwa-zoom-in')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('zoom-in-btn')?.click();
+                });
+                document.getElementById('pwa-zoom-out')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('zoom-out-btn')?.click();
+                });
+
+                // Proxy for Theme Toggle (dark / light mode)
+                document.getElementById('pwa-theme-btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('theme-btn')?.click();
+                });
+
+                // Mutation Observer to keep theme UI in sync
+                const updateThemeUI = () => {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const themeIcon = document.querySelector('#pwa-theme-btn .material-symbols-outlined');
+                    if (themeIcon) {
+                        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+                    }
+                    const darkSwitch = document.getElementById('darkSwitch');
+                    if (darkSwitch) {
+                        darkSwitch.checked = isDark;
+                    }
+                };
+
+                const themeObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'data-theme') {
+                            updateThemeUI();
+                        }
+                    });
+                });
+                themeObserver.observe(document.documentElement, { attributes: true });
+                updateThemeUI();
+
+                // Proxy for Language Selector
+                const pwaLangSelect = document.getElementById('pwa-lang-select');
+                if (pwaLangSelect) {
+                    const syncLang = () => {
+                        const originalLang = document.getElementById('lang-select');
+                        if (originalLang) {
+                            pwaLangSelect.value = originalLang.value;
+                        }
+                    };
+                    
+                    syncLang();
+                    
+                    pwaLangSelect.addEventListener('change', (e) => {
+                        const originalLang = document.getElementById('lang-select');
+                        if (originalLang) {
+                            originalLang.value = e.target.value;
+                            originalLang.dispatchEvent(new Event('change'));
+                        }
+                    });
+
+                    // Check for lang-select periodically since it gets re-created on render
+                    setInterval(syncLang, 1000);
+                }
+
+                // Check setup mode periodically for bulletproof detection
+                const checkSetupMode = () => {
+                    const canvasExists = document.querySelector('#canvas-area');
+                    if (canvasExists) {
+                        document.body.classList.remove('is-setup-mode');
+                        const welcomeMsg = document.querySelector('.pwa-welcome-msg');
+                        if (welcomeMsg) {
+                            welcomeMsg.remove(); // Permanently remove from DOM
+                        }
+                    } else {
+                        document.body.classList.add('is-setup-mode');
+                    }
+                };
+                setInterval(checkSetupMode, 500);
+                checkSetupMode();
+
+                // ── Remove the offcanvas-backdrop so it does not block drag ──────
+                // Bootstrap's backdrop prevents dragging tools onto the canvas
+                const removeBackdrop = () => {
+                    const backdrop = document.querySelector('.offcanvas-backdrop');
+                    if (backdrop) backdrop.remove();
+                };
+                // Intercept the menu toggle event and animate the icon
+                const menuIcon  = document.getElementById('pwa-menu-icon');
+                const toggleMenuIcon = (isOpen) => {
+                    if (!menuIcon) return;
+                    menuIcon.style.transition = 'transform 0.25s ease, opacity 0.2s ease';
+                    menuIcon.style.opacity = '0';
+                    menuIcon.style.transform = isOpen ? 'rotate(90deg) scale(0.7)' : 'rotate(-90deg) scale(0.7)';
+                    setTimeout(() => {
+                        menuIcon.textContent = isOpen ? 'close' : 'menu';
+                        menuIcon.style.opacity = '1';
+                        menuIcon.style.transform = 'rotate(0deg) scale(1)';
+                    }, 150);
+                };
+
+                // Collapses/expands the sidebar on desktop (icon-only mode).
+                // Forces the width via inline !important instead of relying solely on
+                // the CSS rule .sidenav-collapsed{width:68px !important} — this
+                // eliminates any residual width left by manual resizing (dragging the
+                // handle), which is stored as an inline style (style="width:Npx") and,
+                // on first load with a saved width in localStorage, is applied BEFORE
+                // the user interacts — a scenario where "close" (collapse) could fail
+                // to reduce to 68 px.
+                const setSidebarCollapsed = (panel, collapsed) => {
+                    if (collapsed) {
+                        // Save the current width (e.g. after manual resize) so it can be
+                        // restored exactly when the sidebar is expanded again.
+                        const currentWidth = panel.style.width || (panel.getBoundingClientRect().width + 'px');
+                        panel.dataset.expandedWidth = currentWidth;
+                        panel.classList.add('sidenav-collapsed');
+                        panel.style.setProperty('width', '68px', 'important');
+                    } else {
+                        panel.classList.remove('sidenav-collapsed');
+                        panel.style.removeProperty('width');
+                        if (panel.dataset.expandedWidth) {
+                            panel.style.width = panel.dataset.expandedWidth;
+                        }
+                    }
+                    toggleMenuIcon(!collapsed);
+                    panel.style.marginLeft = '';
+                    if (!panel.classList.contains('panel-open')) {
+                        panel.classList.add('panel-open');
+                    }
+                };
+
+                document.getElementById('pwa-menu-toggle')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const panel = document.getElementById('right-panel');
+                    if (panel) {
+                        const isMobileView = window.innerWidth <= 768;
+
+                        if (!isMobileView) {
+                            // If a tool/element is selected with the properties panel open,
+                            // the footer button should first close that panel (deselecting
+                            // the element on the page) and only then collapse the sidebar to
+                            // icon-only mode — prevents the properties panel content (which
+                            // is not designed for the collapsed state) from being clipped
+                            // or broken inside the 68 px width.
+                            const closePanelBtn = document.getElementById('close-panel');
+                            const isToolPanelOpen = closePanelBtn && !closePanelBtn.classList.contains('d-none');
+                            if (isToolPanelOpen) {
+                                closePanelBtn.click();
+                                setSidebarCollapsed(panel, true);
+                                return;
+                            }
+
+                            // Desktop: toggles between full sidebar and collapsed (icon-only)
+                            // — never hides it entirely as on mobile.
+                            const isNowCollapsed = !panel.classList.contains('sidenav-collapsed');
+                            setSidebarCollapsed(panel, isNowCollapsed);
+                            return;
+                        }
+
+                        const isNowOpen = panel.classList.toggle('panel-open');
+                        toggleMenuIcon(isNowOpen);
+
+                        // When opening: clear inline margin so CSS class handles it.
+                        // When closing: set margin-left to the actual current width so the
+                        // panel fully hides even if it was resized wider than the default 272px.
+                        if (isNowOpen) {
+                            panel.style.marginLeft = '';
+                        } else {
+                            panel.style.marginLeft = '-' + panel.offsetWidth + 'px';
+                        }
+
+                        // Update overlay (mobile bottom sheet)
+                        const overlay = document.getElementById('sidebar-overlay');
+                        if (overlay) {
+                            if (isNowOpen) overlay.classList.add('visible');
+                            else overlay.classList.remove('visible');
+                        }
+                    }
+                });
+                // MutationObserver to remove the backdrop as soon as it is added to the DOM
+                const backdropObserver = new MutationObserver(() => {
+                    const backdrop = document.querySelector('.offcanvas-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                });
+                backdropObserver.observe(document.body, { childList: true, subtree: false });
+
+                // ── i18n for footer and PWA shell elements ───────────────
+                const htmlLangMap = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
+                const applyPwaI18n = () => {
+                    if (!window.craftoolsLang) return;
+                    if (window.craftoolsApp && window.craftoolsApp.constructor) {
+                        // Reuses the same i18n system as the CrafTools core
+                        import('./craftools/settings/Translations.js').then(({ I18n }) => {
+                            document.querySelectorAll('[data-i18n]').forEach(el => {
+                                const key = el.getAttribute('data-i18n');
+                                const text = I18n.t(key);
+                                if (text && text !== key) el.textContent = text;
+                            });
+                            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                                const key = el.getAttribute('data-i18n-title');
+                                const text = I18n.t(key);
+                                if (text && text !== key) el.title = text;
+                            });
+                            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                                const key = el.getAttribute('data-i18n-placeholder');
+                                const text = I18n.t(key);
+                                if (text && text !== key) el.setAttribute('placeholder', text);
+                            });
+                            document.documentElement.lang = htmlLangMap[window.craftoolsLang] || 'pt-BR';
+                        });
+                    }
+                };
+                // Re-apply whenever the language changes
+                const langSelect = document.getElementById('pwa-lang-select');
+                if (langSelect) langSelect.addEventListener('change', applyPwaI18n);
+                setInterval(applyPwaI18n, 1500);
+
+
+
+                // ── Sidebar: tool search ────────────────────────────────
+                const sidenavSearchInput = document.getElementById('sidenav-search-input');
+                const sidenavList = document.getElementById('sidenav-nav-list');
+                const sidenavNoResults = document.getElementById('sidenav-no-results');
+                if (sidenavSearchInput && sidenavList) {
+                    sidenavSearchInput.addEventListener('input', () => {
+                        const q = sidenavSearchInput.value.trim().toLowerCase();
+                        const items = Array.from(sidenavList.children);
+                        const labels = [];
+                        let anyVisible = false;
+                        items.forEach(li => {
+                            if (li.classList.contains('ct-sec-label')) {
+                                labels.push(li);
+                                return;
+                            }
+                            const text = li.textContent.trim().toLowerCase();
+                            const match = !q || text.includes(q);
+                            li.classList.toggle('d-none', !match);
+                            if (match) anyVisible = true;
+                        });
+                        // Hide section labels whose group has no visible items
+                        labels.forEach(label => {
+                            let el = label.nextElementSibling;
+                            let hasVisible = false;
+                            while (el && !el.classList.contains('ct-sec-label')) {
+                                if (!el.classList.contains('d-none')) { hasVisible = true; break; }
+                                el = el.nextElementSibling;
+                            }
+                            label.classList.toggle('d-none', !hasVisible);
+                        });
+                        if (sidenavNoResults) sidenavNoResults.classList.toggle('d-none', anyVisible || !q);
+                    });
+                }
+
+                // ── Ctrl+Scroll = Zoom (overrides native browser zoom) ──────
+                window.addEventListener('wheel', (e) => {
+                    if (!e.ctrlKey) return;
+                    e.preventDefault(); // prevent native browser zoom
+                    if (e.deltaY < 0) {
+                        // Scroll up = zoom in
+                        document.getElementById('pwa-zoom-in')?.click();
+                    } else {
+                        // Scroll down = zoom out
+                        document.getElementById('pwa-zoom-out')?.click();
+                    }
+                }, { passive: false });
+
+            }, 500); // safety delay for initial render
+        };
     </script>
 </head>
-<body class="m-0 p-0">
-    <main id="wrapper">
+<body class="is-setup-mode">
+    <!-- HEADER PWA -->
+    <div class="header-area" id="headerArea">
+        <!-- Brand: left-aligned, outside .container, to match exactly
+             the sidebar's left padding (independent of Bootstrap's max-width) -->
+        <div class="header-brand">
+            <img src="./assets/logo-craftools.svg" alt="CrafTools" class="header-brand-logo">
+            <span class="header-brand-tagline" data-i18n="editor.panelSubtitle">Tecnologia para criatividade</span>
+        </div>
+        <div class="container">
+            <div class="header-content header-style-five position-relative d-flex align-items-center justify-content-end">
+
+                <!-- Right Actions: Zoom, Dark Mode, Language -->
+                <div class="right d-flex align-items-center gap-2">
+                    <a href="#" id="pwa-undo" class="box-icon disabled" style="text-decoration:none;" title="Desfazer (Ctrl+Z)" data-i18n-title="editor.undoTitle">
+                        <span class="material-symbols-outlined">undo</span>
+                    </a>
+                    <span id="pwa-history-indicator" title="Ações guardadas no histórico de desfazer/refazer" data-i18n-title="editor.historyIndicatorTitle" style="font-size: 10px; color: var(--text, #71717a); padding: 0 2px; user-select: none;">0/10</span>
+                    <a href="#" id="pwa-redo" class="box-icon disabled" style="text-decoration:none;" title="Refazer (Ctrl+Y)" data-i18n-title="editor.redoTitle">
+                        <span class="material-symbols-outlined">redo</span>
+                    </a>
+                    <a href="#" id="pwa-zoom-out" class="box-icon" style="text-decoration:none;" title="Zoom Out" data-i18n-title="editor.zoomOut">
+                        <span class="material-symbols-outlined">zoom_out</span>
+                    </a>
+                    <a href="#" id="pwa-zoom-in" class="box-icon" style="text-decoration:none;" title="Zoom In" data-i18n-title="editor.zoomIn">
+                        <span class="material-symbols-outlined">zoom_in</span>
+                    </a>
+                    <a href="#" id="pwa-theme-btn" class="box-icon" style="text-decoration:none;" title="Alternar Tema" data-i18n-title="editor.themeToggle">
+                        <span class="material-symbols-outlined">dark_mode</span>
+                    </a>
+                    <select id="pwa-lang-select" class="pwa-lang-select" title="Selecionar Idioma" data-i18n-title="editor.selectLanguage">
+                        <option value="pt-br">PT-BR</option>
+                        <option value="en">EN-US</option>
+                        <option value="es">ES-ES</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN LAYOUT WRAPPER (PANEL + CANVAS) -->
+    <div class="main-layout-wrapper d-flex" style="height: calc(100vh - 126px); margin-top: 64px; overflow: hidden; position: relative; width: 100%;">
         
-    </main>
+        <!-- LEFT PANEL (Menu & Properties) -->
+        <div class="craftools-panel sidenav-panel" id="right-panel">
+
+            <div class="craftools-panel-resize-handle" id="panel-resize-handle"></div>
+
+            <div class="craftools-panel-drag-indicator"></div>
+            
+            <div class="craftools-panel-head sidenav-brand-head" style="position: relative;">
+                <button class="craftools-icon-btn d-none" id="close-panel" style="position: absolute; right: 10px; top: 10px;">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <p class="mb-0 panel-subtitle" id="panel-title"></p>
+            </div>
+            
+            <div class="craftools-panel-body-container" style="flex: 1; overflow-y: auto;">
+                
+                <!-- DEFAULT MENU -->
+                <div id="panel-default-menu">
+                    <div class="sidenav-search">
+                        <span class="material-symbols-outlined">search</span>
+                        <input type="search" id="sidenav-search-input" data-i18n-placeholder="editor.searchTools" placeholder="Buscar ferramentas...">
+                    </div>
+                    <ul class="sidenav-nav ps-0 mt-2" id="sidenav-nav-list">
+                        <li class="ct-sec-label" style="padding: 12px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px;"><span data-i18n="editor.sectionPagesFiles">Páginas e Arquivos</span></li>
+                        <li><a href="#" id="pwa-sidebar-papeis" draggable="true" data-tool="papeis"><span class="material-symbols-outlined">layers</span> <span data-i18n="editor.papers2">Papéis / Temas</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-gerador" data-tool="gerador"><span class="material-symbols-outlined">dashboard_customize</span> <span data-i18n="editor.generator">Gerador</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-export"><span class="material-symbols-outlined">picture_as_pdf</span> <span data-i18n="editor.exportPdf">Exportar PDF</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-png"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.exportPng">Exportar PNG/JPG</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-agenda" data-tool="agenda"><span class="material-symbols-outlined">event_note</span> <span data-i18n="editor.agendaExport">Exportar Agenda</span></a></li>
+
+                        <li class="ct-sec-label" style="padding: 15px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--border, #e4e4e7); margin-top: 10px;"><span data-i18n="editor.tools">Ferramentas</span></li>
+                        <li><a href="#" id="pwa-sidebar-titulo" draggable="true" data-tool="titulo"><span class="material-symbols-outlined">title</span> <span data-i18n="editor.toolTitle">Título</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-paragrafo" draggable="true" data-tool="paragrafo"><span class="material-symbols-outlined">notes</span> <span data-i18n="editor.text">Texto</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-conteudovariavel" draggable="true" data-tool="conteudovariavel"><span class="material-symbols-outlined">data_object</span> <span data-i18n="editor.variableContent">Conteúdo Variável</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-imagem" draggable="true" data-tool="imagem"><span class="material-symbols-outlined">image</span> <span data-i18n="editor.image">Imagem</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-album" draggable="true" data-tool="album"><span class="material-symbols-outlined">photo_library</span> <span data-i18n="editor.album">Álbum</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-fatiador" data-tool="fatiador"><span class="material-symbols-outlined">content_cut</span> <span data-i18n="editor.imageSlicer">Fatiador de Imagem</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-textocurvo" data-tool="textocurvo" draggable="true"><span class="material-symbols-outlined">change_history</span> <span data-i18n="editor.curvedText">Texto em Curva</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-carimbo" data-tool="carimbo" draggable="true"><span class="material-symbols-outlined">verified</span> <span data-i18n="editor.stamp">Carimbo / Selo</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-calendario" draggable="true" data-tool="calendario"><span class="material-symbols-outlined">calendar_month</span> <span data-i18n="editor.calendarTool">Calendário</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-minicalendario" draggable="true" data-tool="minicalendario"><span class="material-symbols-outlined">today</span> <span data-i18n="editor.miniCalendar">Mini Calendário</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-emojikitchen" draggable="true" data-tool="emojikitchen"><img src="https://www.gstatic.com/android/keyboard/emojikitchen/20241023/u1f614/u1f614_u1f614.png" alt="" style="width:20px; height:20px; object-fit:contain; flex-shrink:0;"> <span data-i18n="editor.emojiKitchen">Emoji Kitchen</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-qrcode" draggable="true" data-tool="qrcode"><span class="material-symbols-outlined">qr_code_2</span> <span data-i18n="editor.qrcode">QR Code</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-barcode" draggable="true" data-tool="barcode"><span class="material-symbols-outlined">barcode_reader</span> <span data-i18n="editor.barcode">Código de Barras</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-shape" data-tool="shape"><span class="material-symbols-outlined">category</span> <span data-i18n="shapeTool.panelTitle">Forma</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-icone" data-tool="icone"><span class="material-symbols-outlined">grid_view</span> <span data-i18n="editor.icons">Ícones</span></a></li>
+                    </ul>
+                    <div class="ct-no-results d-none" id="sidenav-no-results" data-i18n="editor.noToolsFound">Nenhuma ferramenta encontrada</div>
+                </div>
+                
+                <!-- DYNAMIC PROPERTIES BODY -->
+                <div class="craftools-panel-body d-none" id="panel-body" style="padding: 0;">
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT WRAPPER -->
+        <div class="page-content-wrapper flex-grow-1" style="height: 100% !important; margin-top: 0 !important; overflow: hidden; position: relative;">
+            <main id="wrapper"></main>
+        </div>
+    </div>
+
+    <!-- FOOTER NAV PWA -->
+    <div class="footer-nav-area" id="footerNav">
+        <div class="container px-0">
+            <div class="footer-nav position-relative">
+                <ul class="h-100 d-flex align-items-center justify-content-between ps-0">
+                    <li>
+                        <button id="pwa-btn-titulo" draggable="true" class="footer-nav-btn" data-i18n-title="editor.toolTitle">
+                            <span class="material-symbols-outlined">title</span>
+                            <span data-i18n="editor.toolTitle">Título</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="pwa-btn-paragrafo" draggable="true" class="footer-nav-btn" data-i18n-title="editor.text">
+                            <span class="material-symbols-outlined">notes</span>
+                            <span data-i18n="editor.text">Texto</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="pwa-btn-emoji" class="footer-nav-btn" title="Emojis" data-tool="emoji">
+                            <span style="font-family:'Noto Color Emoji',sans-serif;font-size:20px;line-height:1;display:block;">😊</span>
+                            <span>Emojis</span>
+                        </button>
+                    </li>
+                    
+                    <!-- Circular Menu Button (center) -->
+                    <li class="center-menu-item">
+                        <a href="#" id="pwa-menu-toggle">
+                            <span class="material-symbols-outlined" id="pwa-menu-icon">menu</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <button id="pwa-btn-imagem" draggable="true" class="footer-nav-btn" data-i18n-title="editor.image">
+                            <span class="material-symbols-outlined">image</span>
+                            <span data-i18n="editor.image">Imagem</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="pwa-btn-album" draggable="true" class="footer-nav-btn" data-i18n-title="editor.album">
+                            <span class="material-symbols-outlined">photo_library</span>
+                            <span data-i18n="editor.album">Álbum</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="pwa-btn-qrcode" draggable="true" class="footer-nav-btn" data-i18n-title="editor.qrcode">
+                            <span class="material-symbols-outlined">qr_code_2</span>
+                            <span data-i18n="editor.qrcode">QR Code</span>
+                        </button>
+                    </li>
+                    <li class="pwa-welcome-msg">
+                        <span data-i18n="setup.welcome">Bem-vindo ao CrafTools!</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * CRAFTOOLS_CONFIG — global app configuration.
+         * Change apiBase to point to the production server before deploying.
+         * The token is NOT set here; requests without a token return Free-tier content.
+         * Premium user tokens will be added via authentication in a future version.
+         */
+        window.CRAFTOOLS_CONFIG = {
+            apiBase: 'http://127.0.0.1/craftools_api/public',
+        };
+
+        // Environment check: if the page is not on localhost but apiBase still
+        // points to 127.0.0.1 (the dev default), warn loudly in the console
+        // instead of failing silently (ApiDataLoader.js would fall back to local
+        // data with no visible indication).
+        (function () {
+            const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const usingDevApiBase = (window.CRAFTOOLS_CONFIG.apiBase || '').indexOf('127.0.0.1') !== -1;
+            if (usingDevApiBase && !isLocalHost) {
+                console.error(
+                    '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase still points to 127.0.0.1 (dev default) ' +
+                    'on this production host (' + window.location.hostname + '). ' +
+                    'GridSizes, album templates and the craftools_api image library will fall back to ' +
+                    'local data. Set apiBase to the real craftools_api URL before deploying.'
+                );
+            }
+        })();
+    </script>
+    <!-- Bootstrap 5.3.8 JS bundle (CDN — previously vendored in vendor/bootstrap/) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha256-5P1JGBOIxI7FBAvT/mb1fCnI5n/NhQKzNUuW7Hq0fMc=" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -22,14 +22,15 @@ export class Craftools_Setup extends HTMLElement{
         mediaTypes += "</div>";
 
         this.innerHTML = `
-        <div class="craftools-app" style="align-items: center; justify-content: center; height: 100vh;">
-            <div style="position: fixed; top: 20px; right: 20px;">
+        <div class="craftools-app" style="padding: 40px 20px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
+            <div style="position: absolute; top: 20px; right: 20px; z-index: 10;">
                 <select id="lang-select" style="padding: 6px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 12px;">
                     <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
                     <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                    <option value="es" ${I18n.currentLang === 'es' ? 'selected' : ''}>ES-ES</option>
                 </select>
             </div>
-            <div style="background: var(--bg-shell); padding: 40px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center;">
+            <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; margin: auto;">
                 <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-family: 'DM Serif Display', serif;">${I18n.t('setup.title')}</h2>
                 <p style="color: var(--text-secondary); font-size: 14px;">${I18n.t('setup.subtitle')}</p>
                 ${mediaTypes}
@@ -63,21 +64,22 @@ export class Craftools_Setup extends HTMLElement{
             sizesHtml += `
             <a href="#" data-size="${index}" class="media-btn" style="background: var(--bg-panel); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow);">
                 <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent);">${size.icon}</span>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${size.name} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit}${descSize})</span></h3>
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${size.description}</p>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${I18n.t('sizes.' + mediaKey + '.' + size.key)} <span style="font-size: 12px; color: var(--text-muted);">(${size.sizeUnit}${descSize})</span></h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${I18n.t('sizes.' + mediaKey + '.' + size.key + 'Desc')}</p>
             </a>`;
         });
         sizesHtml += "</div>";
 
         this.innerHTML = `
-        <div class="craftools-app" style="align-items: center; justify-content: center; height: 100vh;">
-             <div style="position: fixed; top: 20px; right: 20px;">
+        <div class="craftools-app" style="padding: 40px 20px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
+             <div style="position: absolute; top: 20px; right: 20px; z-index: 10;">
                 <select id="lang-select" style="padding: 6px 12px; border-radius: 8px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; cursor: pointer; font-size: 12px;">
                     <option value="pt-br" ${I18n.currentLang === 'pt-br' ? 'selected' : ''}>PT-BR</option>
                     <option value="en" ${I18n.currentLang === 'en' ? 'selected' : ''}>EN-US</option>
+                    <option value="es" ${I18n.currentLang === 'es' ? 'selected' : ''}>ES-ES</option>
                 </select>
             </div>
-            <div style="background: var(--bg-shell); padding: 40px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; position: relative;">
+            <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; position: relative; margin: auto;">
                 <button id="back-btn" class="craftools-topbtn" style="position: absolute; top: 20px; left: 20px;">
                     <span class="material-symbols-outlined">arrow_back</span> ${I18n.t('setup.back')}
                 </button>

@@ -1,4 +1,7 @@
 import { I18n } from "../../settings/Translations.js";
+import { CommonProperties } from "../../utils/CommonProperties.js";
+import { PanelUI } from "../../utils/PanelUI.js";
+import { Notify } from "../../utils/Notify.js";
 import "./PageTool_Translations.js";
 
 export class PageTool {
@@ -19,38 +22,185 @@ export class PageTool {
             pageEl.classList.remove('drag-over');
 
             const toolType = e.dataTransfer.getData('ToolType');
-            
+
             if (toolType === 'album') {
                 const { AlbumTool } = await import('../album/AlbumTool.js');
                 AlbumTool.setup(editor, pageEl);
-            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem') {
+            } else if (toolType === 'calendario') {
+                const { CalendarTool } = await import('../calendar/CalendarTool.js');
+                CalendarTool.setup(editor);
+            } else if (toolType === 'emoji') {
+                const emoji = e.dataTransfer.getData('EmojiChar');
+                if (!emoji) return;
+                const { EmojiTool } = await import('../emoji/EmojiTool.js');
                 const rect = pageEl.getBoundingClientRect();
                 const scale = window.craftoolsZoomLevel || 1;
-                // Calculate drop coordinates mapping viewport to page scope
-                let dropX = (e.clientX - rect.left) / scale;
-                let dropY = (e.clientY - rect.top) / scale;
+                const el = EmojiTool.createElement(emoji);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 40, (rect.width / scale) - 90));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 40, (rect.height / scale) - 90));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
+            } else if (toolType === 'shape') {
+                const shapeType = e.dataTransfer.getData('ShapeType');
+                if (!shapeType) return;
+                const { ShapeTool } = await import('../shape/ShapeTool.js');
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const el = ShapeTool.createElement(shapeType, editor);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 60, (rect.width / scale) - 120));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 60, (rect.height / scale) - 120));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
+            } else if (toolType === 'icone') {
+                const iconPackId = e.dataTransfer.getData('IconPackId');
+                const iconId = e.dataTransfer.getData('IconId');
+                if (!iconPackId || !iconId) return;
+                const { IconTool } = await import('../icon/IconTool.js');
+                const rect = pageEl.getBoundingClientRect();
+                const scale = window.craftoolsZoomLevel || 1;
+                const el = IconTool.createElement(iconPackId, iconId, editor);
+                const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 50, (rect.width / scale) - 100));
+                const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 50, (rect.height / scale) - 100));
+                el.setAttribute('x', Math.round(dropX));
+                el.setAttribute('y', Math.round(dropY));
+                pageEl.appendChild(el);
+                const placeholder = pageEl.querySelector('div[style*="font-size: 14px"]');
+                if (placeholder) placeholder.remove();
+            } else if (toolType === 'titulo' || toolType === 'paragrafo' || toolType === 'imagem' || toolType === 'qrcode' || toolType === 'barcode' || toolType === 'minicalendario' || toolType === 'emojikitchen' || toolType === 'conteudovariavel') {
+                const rect = pageEl.getBoundingClientRect();
+                let scale = window.craftoolsZoomLevel || 1;
+
+                let dropX, dropY;
+                let targetContainer = pageEl;
+
+                const cellTarget = e.target.closest('.craftools-grid-cell');
+                const pRect = pageEl.getBoundingClientRect();
+
+                let elW = toolType === 'imagem' ? 200 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 220 : (toolType === 'minicalendario' ? 190 : (toolType === 'emojikitchen' ? 160 : (toolType === 'conteudovariavel' ? 220 : 120)))));
+                let elH = toolType === 'imagem' ? 150 : (toolType === 'qrcode' ? 180 : (toolType === 'barcode' ? 100 : (toolType === 'minicalendario' ? 210 : (toolType === 'emojikitchen' ? 160 : (toolType === 'conteudovariavel' ? 50 : 40)))));
+
+                if (cellTarget && window.craftoolsAutoSnap !== false) {
+                    const cRect = cellTarget.getBoundingClientRect();
+                    const align = window.craftoolsAutoSnapAlign || 'bottom-center';
+                    const offset = 5;
+                    const cLeft = (cRect.left - pRect.left) / scale;
+                    const cTop = (cRect.top - pRect.top) / scale;
+                    const cWidth = cRect.width / scale;
+                    const cHeight = cRect.height / scale;
+
+                    if (align.includes('left')) dropX = cLeft + offset;
+                    else if (align.includes('right')) dropX = cLeft + cWidth - elW - offset;
+                    else dropX = cLeft + (cWidth / 2) - (elW / 2);
+
+                    if (align.includes('top')) dropY = cTop + offset;
+                    else if (align.includes('bottom')) dropY = cTop + cHeight - elH - offset;
+                    else dropY = cTop + (cHeight / 2) - (elH / 2);
+                } else {
+                    dropX = (e.clientX - pRect.left) / scale;
+                    dropY = (e.clientY - pRect.top) / scale;
+                    if (toolType === 'imagem') {
+                        dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200));
+                        dropY = Math.max(10, Math.min(dropY - 75, (pRect.height / scale) - 150));
+                    } else if (toolType === 'qrcode') {
+                        dropX = Math.max(10, Math.min(dropX - 90, (pRect.width / scale) - 180));
+                        dropY = Math.max(10, Math.min(dropY - 90, (pRect.height / scale) - 180));
+                    } else if (toolType === 'barcode') {
+                        dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220));
+                        dropY = Math.max(10, Math.min(dropY - 50, (pRect.height / scale) - 100));
+                    } else if (toolType === 'minicalendario') {
+                        dropX = Math.max(10, Math.min(dropX - 95, (pRect.width / scale) - 190));
+                        dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210));
+                    } else if (toolType === 'emojikitchen') {
+                        dropX = Math.max(10, Math.min(dropX - 80, (pRect.width / scale) - 160));
+                        dropY = Math.max(10, Math.min(dropY - 80, (pRect.height / scale) - 160));
+                    } else if (toolType === 'conteudovariavel') {
+                        dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220));
+                        dropY = Math.max(10, Math.min(dropY - 25, (pRect.height / scale) - 50));
+                    } else {
+                        dropX = Math.max(10, Math.min(dropX - 60, (pRect.width / scale) - 120));
+                        dropY = Math.max(10, Math.min(dropY - 20, (pRect.height / scale) - 40));
+                    }
+                }
 
                 let el;
                 if (toolType === 'imagem') {
                     const { ImageTool } = await import('../image/ImageTool.js');
                     el = ImageTool.createElement(toolType, editor);
-                    dropX = Math.max(10, Math.min(dropX - 100, (rect.width / scale) - 200));
-                    dropY = Math.max(10, Math.min(dropY - 75, (rect.height / scale) - 150));
+                } else if (toolType === 'qrcode') {
+                    const { QRCodeTool } = await import('../qrcode/QRCodeTool.js');
+                    el = QRCodeTool.createElement(toolType, editor);
+                } else if (toolType === 'barcode') {
+                    const { BarcodeTool } = await import('../barcode/BarcodeTool.js');
+                    el = BarcodeTool.createElement(toolType, editor);
+                } else if (toolType === 'minicalendario') {
+                    const { MiniCalendarTool } = await import('../minicalendar/MiniCalendarTool.js');
+                    el = MiniCalendarTool.createElement(toolType, editor);
+                } else if (toolType === 'emojikitchen') {
+                    const { EmojiKitchenTool } = await import('../emojikitchen/EmojiKitchenTool.js');
+                    el = EmojiKitchenTool.createElement(toolType, editor);
+                } else if (toolType === 'conteudovariavel') {
+                    const { VariableContentTool } = await import('../variablecontent/VariableContentTool.js');
+                    el = VariableContentTool.createElement(toolType, editor);
+                } else if (toolType === 'papeis') {
+                    const { PaperTool } = await import('../paper/PaperTool.js');
+                    el = PaperTool.createElement(toolType, editor);
+                    // Paper covers the entire page, so we position it at 0, 0
+                    dropX = 0;
+                    dropY = 0;
                 } else {
                     const { TextTool } = await import('../text/TextTool.js');
                     el = TextTool.createElement(toolType, editor);
-                    dropX = Math.max(10, Math.min(dropX - 60, (rect.width / scale) - 120));
-                    dropY = Math.max(10, Math.min(dropY - 20, (rect.height / scale) - 40));
                 }
                 
-                el.setAttribute('x', dropX);
-                el.setAttribute('y', dropY);
+                const unit = el.getAttribute('w') ? el.getAttribute('w').replace(/[0-9.-]/g, '') : 'px';
+                el.setAttribute('x', dropX + (toolType === 'papeis' ? unit : ''));
+                el.setAttribute('y', dropY + (toolType === 'papeis' ? unit : ''));
 
                 if (!el.parentNode) {
-                    pageEl.appendChild(el);
-                } else if (el.parentNode !== pageEl) {
+                    targetContainer.appendChild(el);
+                } else if (el.parentNode !== targetContainer) {
                     el.parentNode.removeChild(el);
-                    pageEl.appendChild(el);
+                    targetContainer.appendChild(el);
+                }
+                
+                // --- Business Card Cloning Logic ---
+                if (cellTarget) {
+                    const grid = cellTarget.closest('.craftools-grid-container');
+                    if (grid && grid.dataset.gridMode === 'card') {
+                        const allCells = Array.from(grid.querySelectorAll('.craftools-grid-cell'));
+                        const myIndex = allCells.indexOf(cellTarget);
+                        
+                        const cRect = cellTarget.getBoundingClientRect();
+                        const cX = (cRect.left - pRect.left) / scale;
+                        const cY = (cRect.top - pRect.top) / scale;
+                        
+                        // Relative coordinates inside the original cell
+                        const relX = dropX - cX;
+                        const relY = dropY - cY;
+                        
+                        // Link clones for future potential syncing
+                        const linkedId = 'link-' + Date.now();
+                        el.dataset.linkedId = linkedId;
+                        
+                        allCells.forEach((cell, idx) => {
+                            if (idx === myIndex) return; // Skip original
+                            const cellRect = cell.getBoundingClientRect();
+                            const ciX = (cellRect.left - pRect.left) / scale;
+                            const ciY = (cellRect.top - pRect.top) / scale;
+                            
+                            const clone = el.cloneNode(true);
+                            clone.setAttribute('x', ciX + relX);
+                            clone.setAttribute('y', ciY + relY);
+                            clone.dataset.linkedId = linkedId;
+                            targetContainer.appendChild(clone);
+                        });
+                    }
                 }
 
                 // Remove placeholder text
@@ -68,18 +218,38 @@ export class PageTool {
             if (isPageClick) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
                 
-                // Check if page has an album
-                if (pageEl.querySelector('.craftools-grid-container')) {
+                // Check if page has a grid (Album or another tool that also
+                // generates .craftools-grid-container, such as Calendar) — uses
+                // the gridSource marker to decide which panel to reopen.
+                const gridContainer = pageEl.querySelector('.craftools-grid-container');
+                if (gridContainer) {
+                    if (gridContainer.dataset.gridSource === 'calendario') {
+                        const { CalendarTool } = await import('../calendar/CalendarTool.js');
+                        CalendarTool.setup(editor);
+                        return;
+                    }
                     const { AlbumTool } = await import('../album/AlbumTool.js');
                     AlbumTool.setup(editor, pageEl);
                     return;
                 }
                 
-                const rightPanel = editor.querySelector('#right-panel');
-                const panelTitle = editor.querySelector('#panel-title');
-                const panelBody = editor.querySelector('#panel-body');
+                // Check if page has a paper element
+                const paperEl = pageEl.querySelector('craftools-element[data-craftool="papeis"]');
+                if (paperEl) {
+                    if (typeof paperEl.select === 'function') {
+                        paperEl.select();
+                        return;
+                    }
+                }
                 
-                panelTitle.textContent = I18n.t('pageTool.title');
+                const rightPanel = document.getElementById('right-panel');
+                const panelTitle = document.getElementById('panel-title');
+                const panelBody = document.getElementById('panel-body');
+                const defaultMenu = document.getElementById('panel-default-menu');
+                const closePanel = document.getElementById('close-panel');
+                const panelLogo = document.getElementById('panel-logo');
+                
+                if (panelTitle) panelTitle.textContent = I18n.t('pageTool.title');
                 editor.activePage = pageEl;
                 
                 // Parse current dimensions
@@ -95,61 +265,73 @@ export class PageTool {
                     ? window.craftoolsApp.activeMedia.sizes.map((s, i) => `<button class="craftools-pill preset-btn" data-index="${i}">${s.name}</button>`).join('')
                     : `<span style="font-size:11px;color:var(--text-muted)">${I18n.t('pageTool.noPresets')}</span>`;
 
-                const currentColor = pageEl.style.backgroundColor || '#ffffff';
+                const currentColor = CommonProperties._rgbToHex(pageEl.style.backgroundColor || '#ffffff');
 
-                panelBody.innerHTML = `
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
-                            ${presetsHtml}
-                        </div>
-                    </div>
-
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
-                        <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
-                            ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" class="craftools-input" id="dim-w" style="width: 70px;" value="${currentW}">
-                            <span style="color: var(--text-muted); font-size: 13px;">×</span>
-                            <input type="number" class="craftools-input" id="dim-h" style="width: 70px;" value="${currentH}">
-                            <span style="color: var(--text-muted); font-size: 11px;" id="dim-unit-label">${currentUnit}</span>
-                        </div>
-                    </div>
-
-                    <div class="craftools-field">
-                        <span class="craftools-label">${I18n.t('pageTool.background')}</span>
-                        <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
-                            <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
-                            <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
-                            <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
-                        </div>
-                        
-                        <div id="bg-color-section">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
-                                <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
+                if (panelBody) {
+                    const htmlSize = `
+                        <div class="ct-field">
+                            <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
+                                ${presetsHtml}
                             </div>
                         </div>
+                        <div class="ct-field">
+                            <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
+                            <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
+                                ${['px', 'mm', 'cm', 'in', '%'].map(u => `<button class="craftools-pill unit-btn ${u === currentUnit ? 'active' : ''}" data-unit="${u}">${u}</button>`).join('')}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <input type="number" class="craftools-input" id="dim-w" style="width: 70px;" value="${currentW}">
+                                <span style="color: var(--text-muted); font-size: 13px;">×</span>
+                                <input type="number" class="craftools-input" id="dim-h" style="width: 70px;" value="${currentH}">
+                                <span style="color: var(--text-muted); font-size: 11px;" id="dim-unit-label">${currentUnit}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    const htmlBackground = `
+                        <div class="ct-field">
+                            <span class="craftools-label">${I18n.t('pageTool.background')}</span>
+                            <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
+                                <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
+                                <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
+                                <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
+                            </div>
+                            
+                            <div id="bg-color-section">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
+                                    <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
+                                </div>
+                            </div>
+                            
+                            <div id="bg-gradient-section" style="display: none;">
+                                <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
+                            </div>
+
+                            <div id="bg-image-section" style="display: none;">
+                                <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
+                                <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
+                            </div>
+                        </div>
+                    `;
+
+                    const htmlActions = `
+                        <div class="ct-danger-section">
+                            <button class="craftools-danger-btn" id="delete-page-btn" style="width:100%; justify-content:center; gap:6px;">
+                                <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ${I18n.t('pageTool.deletePage')}
+                            </button>
+                        </div>
+                    `;
+
+                    panelBody.innerHTML =
+                        PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
+                        PanelUI.accordion('page-fundo', 'palette', I18n.t('pageTool.background') || 'Background', htmlBackground) +
+                        PanelUI.accordion('page-acoes', 'warning', I18n.t('pageTool.actions') || 'Actions', htmlActions);
                         
-                        <div id="bg-gradient-section" style="display: none;">
-                            <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
-                        </div>
-
-                        <div id="bg-image-section" style="display: none;">
-                            <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
-                            <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
-                        </div>
-                    </div>
-
-                    <div class="craftools-field">
-                        <button class="craftools-danger-btn" id="delete-page-btn">
-                            <span class="material-symbols-outlined">delete</span> ${I18n.t('pageTool.deletePage')}
-                        </button>
-                    </div>
-                `;
+                    PanelUI.bindAccordions(panelBody);
+                }
 
                 let activeUnit = currentUnit;
 
@@ -254,20 +436,32 @@ export class PageTool {
                 });
 
                 // Delete Page
-                panelBody.querySelector('#delete-page-btn').addEventListener('click', () => {
-                    if (confirm(I18n.t('pageTool.confirmDelete'))) {
-                        const pagesWrapper = editor.querySelector('#pages-wrapper');
-                        if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
-                            editor.activePage.remove();
-                            rightPanel.classList.add('hidden');
-                            editor.activePage = null;
-                        } else {
-                            alert(I18n.t('pageTool.alertLastPage'));
-                        }
-                    }
-                });
+                if (panelBody) {
+                    panelBody.querySelector('#delete-page-btn').addEventListener('click', async () => {
+                        if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: I18n.t('pageTool.deletePage') })) {
+                            const pagesWrapper = editor.querySelector('#pages-wrapper');
+                            if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
+                                editor.activePage.remove();
 
-                rightPanel.classList.remove('hidden');
+                                if(defaultMenu) defaultMenu.classList.remove('d-none');
+                                if(panelBody) panelBody.classList.add('d-none');
+                                if(closePanel) closePanel.classList.add('d-none');
+                                if(panelLogo) panelLogo.classList.remove('d-none');
+                                if(panelTitle) panelTitle.textContent = '';
+
+                                editor.activePage = null;
+                            } else {
+                                Notify.toast(I18n.t('pageTool.alertLastPage'), 'error');
+                            }
+                        }
+                    });
+                }
+
+                if(defaultMenu) defaultMenu.classList.add('d-none');
+                if(panelBody) panelBody.classList.remove('d-none');
+                if(closePanel) closePanel.classList.remove('d-none');
+                if(panelLogo) panelLogo.classList.add('d-none');
+                if(rightPanel) rightPanel.classList.add('mobile-open');
             }
         });
     }
@@ -276,18 +470,21 @@ export class PageTool {
         const pagesWrapper = editor.querySelector('#pages-wrapper');
         const lastPage = pagesWrapper.querySelector('.craftools-page:last-child');
         
-        // Clona a última página para manter a dimensão local
+        // Clone the last page to preserve local dimensions
         const clone = lastPage.cloneNode(true);
         clone.id = 'page-' + Date.now();
         
-        // Remove os componentes filhos da página inteiramente mas mantém a sua forma
+        // Remove child components entirely but keep the page shape
         clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
         
-        // Acoplar os eventos para poder clicar na nova página localmente
+        // Attach events so the new page can be clicked locally
         this.attachPageEvents(editor, clone);
         pagesWrapper.appendChild(clone);
         
-        // Scrollar automaticamente para a página nova de forma suave
+        // Notify history system
+        document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
+        
+        // Smoothly scroll to the newly added page
         pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
     }
 }

@@ -1,3 +1,5 @@
+import { SnapEngine } from '../utils/SnapEngine.js';
+
 export class Craftools_Element extends HTMLElement {
     constructor() {
         super();
@@ -164,12 +166,23 @@ export class Craftools_Element extends HTMLElement {
 
         this._ctrlbar.querySelector('.del-handle')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            
-            const event = new CustomEvent('craftools-element-delete', { bubbles: true, detail: { element: this } });
-            this.dispatchEvent(event);
 
-            this.deselect();
-            this.remove();
+            // "Linked" elements (automatically cloned into all cells in
+            // Business Card mode — see PageTool.js, Business Card Cloning Logic)
+            // share the same data-linked-id.
+            // Deleting one must delete all of them, otherwise the clones become
+            // "ghost" elements in the other cells.
+            const lid = this.getAttribute('data-linked-id');
+            const toRemove = lid
+                ? [...document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`)]
+                : [this];
+
+            toRemove.forEach(el => {
+                const event = new CustomEvent('craftools-element-delete', { bubbles: true, detail: { element: el } });
+                el.dispatchEvent(event);
+                el.deselect();
+                el.remove();
+            });
         });
     }
 
@@ -181,6 +194,22 @@ export class Craftools_Element extends HTMLElement {
         if (editable) {
             editable.style.pointerEvents = 'auto';
             editable.focus();
+            
+            const syncText = () => {
+                const lid = this.getAttribute('data-linked-id');
+                if (lid) {
+                    const html = editable.innerHTML;
+                    document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                        if (clone !== this) {
+                            const cEdit = clone.contentArea?.querySelector('[contenteditable]');
+                            if (cEdit && cEdit.innerHTML !== html) cEdit.innerHTML = html;
+                        }
+                    });
+                }
+            };
+            editable.addEventListener('input', syncText);
+            editable.addEventListener('blur', () => editable.removeEventListener('input', syncText), { once: true });
+
             try {
                 const range = document.createRange();
                 range.selectNodeContents(editable);
@@ -200,6 +229,21 @@ export class Craftools_Element extends HTMLElement {
         this._content.addEventListener('focusout', restore, { once: true });
     }
 
+    /**
+     * Applies the data-locked state to the UI: hides the resize/rotate/delete
+     * handles and changes the drag overlay cursor.
+     * Called in select() (to reflect the lock when the element is opened) and
+     * also by the "Lock" toggle in CommonProperties.js, so that lock/unlock
+     * takes effect immediately even when the element is already selected.
+     */
+    _syncLockUI() {
+        if (!this._ctrlbar) return;
+        const isLocked = this.getAttribute('data-locked') === 'true';
+        const handles = this._ctrlbar.querySelectorAll('.rsz-handle, .rot-handle, .del-handle');
+        handles.forEach(h => h.style.display = isLocked ? 'none' : '');
+        if (this._overlay) this._overlay.style.cursor = isLocked ? 'default' : 'move';
+    }
+
     select() {
         const page = this.closest('.craftools-page');
         if (page) {
@@ -208,15 +252,17 @@ export class Craftools_Element extends HTMLElement {
             });
         }
         
-        const cell = this.closest('.craftools-grid-cell');
-        if (cell) cell.classList.add('craftools-cell-active');
+        this.classList.add('craftools-selected');
+        const slot = this.closest('.photostrip-slot');
+        if (slot) {
+            slot.classList.add('craftools-slot-active');
+        } else {
+            const cell = this.closest('.craftools-grid-cell');
+            if (cell) cell.classList.add('craftools-cell-active');
+        }
 
         this._ctrlbar.style.display = 'block';
-        
-        if (this.getAttribute('data-locked') === 'true') {
-            const handles = this._ctrlbar.querySelectorAll('.rsz-handle, .rot-handle, .del-handle');
-            handles.forEach(h => h.style.display = 'none');
-        }
+        this._syncLockUI();
 
         this.style.zIndex = '100';
 
@@ -225,7 +271,22 @@ export class Craftools_Element extends HTMLElement {
 
         if (this._outsideHandler) return;
         this._outsideHandler = (e) => {
-            if (!this.contains(e.target) && !e.target.closest('.craftools-ctxbar') && !e.target.closest('.craftools-panel')) {
+            if (!this.contains(e.target) &&
+                !e.target.closest('.craftools-ctxbar') &&
+                !e.target.closest('.craftools-panel') &&
+                !e.target.closest('.footer-nav-area') &&
+                !e.target.closest('#mobile-mini-panel') &&
+                !e.target.closest('#mobile-mini-overlay') &&
+                // Bottom-sheet property panels (used e.g. by photo_uploader.html's
+                // Legenda/Ajuste/Fundo sheets) and the API asset picker modal are also
+                // "part of the UI", not an outside click — without this, every pointerdown
+                // on a control inside them (font <select>, color swatch, align buttons...)
+                // was deselecting the element mid-click, which tore down and rebuilt the
+                // panel before the click could register (native <select> never opened,
+                // sliders lost drag tracking, etc).
+                !e.target.closest('#bottom-sheet') &&
+                !e.target.closest('#sheet-overlay') &&
+                !e.target.closest('#api-picker-backdrop')) {
                 this.deselect();
             }
         };
@@ -235,11 +296,17 @@ export class Craftools_Element extends HTMLElement {
     }
 
     deselect() {
+        this.classList.remove('craftools-selected');
         this._ctrlbar.style.display = 'none';
         this.style.zIndex = '2';
         
-        const cell = this.closest('.craftools-grid-cell');
-        if (cell) cell.classList.remove('craftools-cell-active');
+        const slot = this.closest('.photostrip-slot');
+        if (slot) {
+            slot.classList.remove('craftools-slot-active');
+        } else {
+            const cell = this.closest('.craftools-grid-cell');
+            if (cell) cell.classList.remove('craftools-cell-active');
+        }
         
         // Salva guarda global: Restaura a camada protetora interativa ao clicar fora
         this._overlay.style.pointerEvents = '';
@@ -259,6 +326,8 @@ export class Craftools_Element extends HTMLElement {
         e.preventDefault();
 
         const sc = this._getScale();
+        const oldPx = this.px;
+        const oldPy = this.py;
 
         if (this.isDragging) {
             const scX = this.unitX === 'mm' ? sc * 3.7795275591 : sc;
@@ -267,6 +336,11 @@ export class Craftools_Element extends HTMLElement {
             this.py += (e.clientY - this.startY) / scY;
             this.startX = e.clientX;
             this.startY = e.clientY;
+
+            // Apply initial transform so getBoundingClientRect() is up-to-date
+            // before SnapEngine reads element screen position for snap calculation
+            this._applyTransform();
+            SnapEngine.snap(this); // may adjust px/py; caller re-applies transform below
         }
         else if (this.isResizing) {
             const scX = this.unitW === 'mm' ? sc * 3.7795275591 : sc;
@@ -306,11 +380,89 @@ export class Craftools_Element extends HTMLElement {
 
         this._applyTransform();
         
+        const dx = this.px - oldPx;
+        const dy = this.py - oldPy;
+        const lid = this.getAttribute('data-linked-id');
+        if (lid && (dx !== 0 || dy !== 0 || this.isResizing || this.isRotating)) {
+            document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                if (clone !== this) {
+                    if (this.isDragging) {
+                        clone.px += dx;
+                        clone.py += dy;
+                    } else if (this.isResizing) {
+                        clone.px += dx;
+                        clone.py += dy;
+                        clone.pw = this.pw;
+                        clone.ph = this.ph;
+                    } else if (this.isRotating) {
+                        clone.pr = this.pr;
+                    }
+                    clone._applyTransform();
+                }
+            });
+        }
+        
         const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });
         this.dispatchEvent(event);
     }
 
-    _handleUp() {
+    _handleUp(e) {
+        // Clear snap guide lines
+        SnapEngine.clear(this.closest('.craftools-page'));
+
+        if (this.isDragging && window.craftoolsAutoSnap !== false && this.getAttribute('data-locked') !== 'true') {
+            // Temporarily hide to find the element underneath
+            this.style.visibility = 'hidden';
+            const els = document.elementsFromPoint(e.clientX, e.clientY);
+            this.style.visibility = '';
+            
+            const cell = els.find(el => el.classList.contains('craftools-grid-cell'));
+            if (cell) {
+                const page = this.closest('.craftools-page');
+                if (page) {
+                    const cRect = cell.getBoundingClientRect();
+                    const pRect = page.getBoundingClientRect();
+                    const scale = this._getScale();
+                    
+                    const align = window.craftoolsAutoSnapAlign || 'bottom-center';
+                    const offset = 5;
+                    const cLeft = (cRect.left - pRect.left) / scale;
+                    const cTop = (cRect.top - pRect.top) / scale;
+                    const cWidth = cRect.width / scale;
+                    const cHeight = cRect.height / scale;
+
+                    const oldPx = this.px;
+                    const oldPy = this.py;
+
+                    if (align.includes('left')) this.px = cLeft + offset;
+                    else if (align.includes('right')) this.px = cLeft + cWidth - this.pw - offset;
+                    else this.px = cLeft + (cWidth / 2) - (this.pw / 2);
+
+                    if (align.includes('top')) this.py = cTop + offset;
+                    else if (align.includes('bottom')) this.py = cTop + cHeight - this.ph - offset;
+                    else this.py = cTop + (cHeight / 2) - (this.ph / 2);
+                    
+                    this._applyTransform();
+                    
+                    const dx = this.px - oldPx;
+                    const dy = this.py - oldPy;
+                    const lid = this.getAttribute('data-linked-id');
+                    if (lid && (dx !== 0 || dy !== 0)) {
+                        document.querySelectorAll(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+                            if (clone !== this) {
+                                clone.px += dx;
+                                clone.py += dy;
+                                clone._applyTransform();
+                            }
+                        });
+                    }
+                    
+                    const event = new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: this } });
+                    this.dispatchEvent(event);
+                }
+            }
+        }
+        
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;

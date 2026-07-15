@@ -10,6 +10,7 @@ I18n.addTranslations('pageTool', {
         color: "Cor",
         gradient: "Gradiente",
         imageUrl: "URL da imagem",
+        actions: "Ações",
         deletePage: "Apagar Página",
         confirmDelete: "Tem certeza que deseja excluir esta página? Essa ação não pode ser desfeita.",
         alertLastPage: "Você não pode apagar a única página restante.",
@@ -24,9 +25,25 @@ I18n.addTranslations('pageTool', {
         color: "Color",
         gradient: "Gradient",
         imageUrl: "Image URL",
+        actions: "Actions",
         deletePage: "Delete Page",
         confirmDelete: "Are you sure you want to delete this page? This action cannot be undone.",
         alertLastPage: "You cannot delete the only remaining page.",
         newPageLabel: "New Page"
+    },
+    "es": {
+        title: "Configuración de Página",
+        presets: "Predefinición",
+        noPresets: "Sin predefiniciones",
+        dimensions: "Dimensiones",
+        background: "Fondo",
+        color: "Color",
+        gradient: "Degradado",
+        imageUrl: "URL de la imagen",
+        actions: "Acciones",
+        deletePage: "Eliminar Página",
+        confirmDelete: "¿Seguro que deseas eliminar esta página? Esta acción no se puede deshacer.",
+        alertLastPage: "No puedes eliminar la única página restante.",
+        newPageLabel: "Nueva Página"
     }
 });
