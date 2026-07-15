@@ -63,7 +63,7 @@ export class IconTool extends BaseTool {
     PropertyRenderer.applyChange(element, key, value);
     const el = element as HTMLElement & { _craftoolsMeta?: IconMeta };
     if (el._craftoolsMeta) {
-      (el._craftoolsMeta as Record<string, unknown>)[key] = value;
+      (el._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
     }
     element.dispatchEvent(new CustomEvent('craftools-icon-regenerate', { bubbles: false }));
   }

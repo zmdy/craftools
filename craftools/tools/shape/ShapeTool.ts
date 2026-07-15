@@ -130,7 +130,7 @@ export class ShapeTool extends BaseTool {
         ].filter(f => !f.hidden),
       },
       zIndexSection(),
-    ];
+    ] as PropertySchema;
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {

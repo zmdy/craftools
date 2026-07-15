@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';

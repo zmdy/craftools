@@ -54,11 +54,18 @@ import '../tools/imageslicer/ImageSlicerTool';
 type PanelSetupFn = (editor: HTMLElement, page?: HTMLElement | null) => void | Promise<void>;
 
 const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
-  agenda:    () => import('../tools/agenda/AgendaExportTool.js').then(m => m.AgendaExportTool.setup.bind(m.AgendaExportTool)),
-  album:     () => import('../tools/album/AlbumTool.js').then(m => m.AlbumTool.setup.bind(m.AlbumTool)),
-  calendario:() => import('../tools/calendar/CalendarTool.js').then(m => m.CalendarTool.setup.bind(m.CalendarTool)),
-  gerador:   () => import('../tools/gerador/GeradorTool.js').then(m => m.GeradorTool.setup.bind(m.GeradorTool)),
-  fatiador:  () => import('../tools/imageslicer/ImageSlicerTool.js').then(m => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
+  // Dynamic imports target .js files; cast via `any` because TypeScript resolves
+  // '.js' to '.ts' stubs (side-effect only) that don't export named classes.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  agenda:    () => import('../tools/agenda/AgendaExportTool.js').then((m: any) => m.AgendaExportTool.setup.bind(m.AgendaExportTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  album:     () => import('../tools/album/AlbumTool.js').then((m: any) => m.AlbumTool.setup.bind(m.AlbumTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  calendario:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gerador:   () => import('../tools/gerador/GeradorTool.js').then((m: any) => m.GeradorTool.setup.bind(m.GeradorTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fatiador:  () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -148,20 +155,81 @@ export class Craftools_Editor extends HTMLElement {
     const pagesWrapper    = this.querySelector('#pages-wrapper')!;
     const undoBtn         = this.querySelector('#undo-btn') as HTMLButtonElement;
     const redoBtn         = this.querySelector('#redo-btn') as HTMLButtonElement;
-    const historyIndicator = this.querySelector('#history-indicator')!;
+    const historyIndicator = this.querySelector('#history-indicator') as HTMLElement;
 
-    const updateHistoryUI = () => {
-      undoBtn.disabled = !HistoryManager.canUndo();
-      redoBtn.disabled = !HistoryManager.canRedo();
-      const { current, total } = HistoryManager.getStats();
-      historyIndicator.textContent = `${current}/${total}`;
+    // canUndo / canRedo are getter properties (not methods) in HistoryManager.js
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hm = HistoryManager as any;
+
+    const updateHistoryUI = ({ count, max }: { count?: number; max?: number } = {}) => {
+      undoBtn.disabled = !hm.canUndo;
+      redoBtn.disabled = !hm.canRedo;
+      const c = typeof count === 'number' ? count : (hm.historyCount as number);
+      const m = typeof max   === 'number' ? max   : (hm.maxStates   as number);
+      historyIndicator.textContent = `${c}/${m}`;
+      historyIndicator.title = I18n.t('editor.historyIndicatorDetail')
+        .replace('{c}', String(c)).replace('{m}', String(m));
     };
+    updateHistoryUI();
 
-    HistoryManager.init(pagesWrapper, updateHistoryUI);
-    SessionManager.init(pagesWrapper);
+    undoBtn.addEventListener('click', () => {
+      HistoryManager.undo(pagesWrapper);
+      this._reattachAllPageEvents(pagesWrapper);
+    });
+    redoBtn.addEventListener('click', () => {
+      HistoryManager.redo(pagesWrapper);
+      this._reattachAllPageEvents(pagesWrapper);
+    });
 
-    undoBtn.addEventListener('click', () => { HistoryManager.undo(); updateHistoryUI(); });
-    redoBtn.addEventListener('click', () => { HistoryManager.redo(); updateHistoryUI(); });
+    document.addEventListener('craftools-history-change', (e: Event) => {
+      updateHistoryUI((e as CustomEvent).detail ?? {});
+    });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault(); HistoryManager.undo(pagesWrapper); this._reattachAllPageEvents(pagesWrapper);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        e.preventDefault(); HistoryManager.redo(pagesWrapper); this._reattachAllPageEvents(pagesWrapper);
+      }
+    });
+
+    let actionDebounce: ReturnType<typeof setTimeout> | null = null;
+    this.addEventListener('craftools-element-change', () => {
+      clearTimeout(actionDebounce!);
+      actionDebounce = setTimeout(() => {
+        HistoryManager.snapshot(pagesWrapper);
+        SessionManager.markDirty();
+      }, 400);
+      SessionManager.markDirty();
+    });
+
+    this.addEventListener('craftools-element-delete', () => {
+      HistoryManager.snapshot(pagesWrapper); SessionManager.markDirty();
+    });
+    document.addEventListener('craftools-page-add', () => {
+      HistoryManager.snapshot(pagesWrapper); SessionManager.markDirty();
+    });
+
+    setTimeout(() => HistoryManager.snapshot(pagesWrapper), 300);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const craftoolsSize = (window as any).craftoolsSize;
+    const mediaKey = craftoolsSize?.key ?? 'unknown';
+    SessionManager.startSession(mediaKey, craftoolsSize);
+  }
+
+  /** Re-attaches PageTool events to all pages after undo/redo restore. */
+  _reattachAllPageEvents(pagesWrapper: Element | null): void {
+    if (!pagesWrapper) return;
+    pagesWrapper.querySelectorAll('.craftools-page').forEach(page => {
+      const p = page as HTMLElement & { _craftoolsEventsAttached?: boolean };
+      if (!p._craftoolsEventsAttached) {
+        PageTool.attachPageEvents(this, page as HTMLElement);
+        p._craftoolsEventsAttached = true;
+      }
+    });
   }
 
   bindEvents() {
@@ -346,35 +414,41 @@ export class Craftools_Editor extends HTMLElement {
         const cy     = rect.height / scale / 2;
 
         if (tool === 'album') {
-          const { AlbumTool } = await import('../tools/album/AlbumTool.js');
-          AlbumTool.setup(this, mainPage);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const m: any = await import('../tools/album/AlbumTool.js');
+          m.AlbumTool.setup(this, mainPage);
           return;
         }
         if (tool === 'emoji') {
-          const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const m: any = await import('../tools/emoji/EmojiTool.js');
           if (panelTitle) panelTitle.textContent = 'Emoji';
-          if (panelBody)  EmojiTool.renderPickerPanel(panelBody, this);
+          if (panelBody)  m.EmojiTool.renderPickerPanel(panelBody, this);
           openPanelMenu();
           return;
         }
         if (tool === 'shape') {
-          const { ShapeTool } = await import('../tools/shape/ShapeTool.js');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const m: any = await import('../tools/shape/ShapeTool.js');
           if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
-          if (panelBody)  ShapeTool.renderPickerPanel(panelBody, this);
+          if (panelBody)  m.ShapeTool.renderPickerPanel(panelBody, this);
           openPanelMenu();
           return;
         }
         if (tool === 'icone') {
-          const { IconTool } = await import('../tools/icon/IconTool.js');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const m: any = await import('../tools/icon/IconTool.js');
           if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
-          if (panelBody)  IconTool.renderPickerPanel(panelBody, this);
+          if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
           openPanelMenu();
           return;
         }
 
-        // Generic createElement via JS module (TS tools delegate createElement to JS)
-        type ToolModule = { [key: string]: { createElement: (type: string, ed: HTMLElement) => HTMLElement } };
-        const MODULE_MAP: Record<string, () => Promise<ToolModule>> = {
+        // Generic createElement via JS module (TS tools delegate createElement to JS).
+        // Typed as `any` because TypeScript resolves .js imports to .ts stubs which
+        // don't declare createElement — the real implementations live in .js files.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const MODULE_MAP: Record<string, () => Promise<any>> = {
           imagem:          () => import('../tools/image/ImageTool.js'),
           qrcode:          () => import('../tools/qrcode/QRCodeTool.js'),
           barcode:         () => import('../tools/barcode/BarcodeTool.js'),
@@ -397,7 +471,8 @@ export class Craftools_Editor extends HTMLElement {
         const loader = MODULE_MAP[tool];
         if (!loader) return;
         const mod = await loader();
-        const ToolClass = Object.values(mod)[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ToolClass = Object.values(mod)[0] as any;
         if (!ToolClass?.createElement) return;
 
         const el = ToolClass.createElement(tool, this);
@@ -434,18 +509,19 @@ export class Craftools_Editor extends HTMLElement {
           document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (tool === 'emoji') {
-            const { EmojiTool } = await import('../tools/emoji/EmojiTool.js');
+            const m: any = await import('../tools/emoji/EmojiTool.js');
             if (panelTitle) panelTitle.textContent = 'Emoji';
-            if (panelBody)  EmojiTool.renderPickerPanel(panelBody, this);
+            if (panelBody)  m.EmojiTool.renderPickerPanel(panelBody, this);
           } else if (tool === 'shape') {
-            const { ShapeTool } = await import('../tools/shape/ShapeTool.js');
+            const m: any = await import('../tools/shape/ShapeTool.js');
             if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
-            if (panelBody)  ShapeTool.renderPickerPanel(panelBody, this);
+            if (panelBody)  m.ShapeTool.renderPickerPanel(panelBody, this);
           } else if (tool === 'icone') {
-            const { IconTool } = await import('../tools/icon/IconTool.js');
+            const m: any = await import('../tools/icon/IconTool.js');
             if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
-            if (panelBody)  IconTool.renderPickerPanel(panelBody, this);
+            if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
           }
           openPanelMenu();
         });
@@ -467,8 +543,9 @@ export class Craftools_Editor extends HTMLElement {
             if (page) {
               let paperEl = page.querySelector('craftools-element[data-craftool="papeis"]') as (HTMLElement & { select?: () => void }) | null;
               if (!paperEl) {
-                const { PaperTool } = await import('../tools/paper/PaperTool.js');
-                paperEl = PaperTool.createElement('papeis', this);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const m: any = await import('../tools/paper/PaperTool.js');
+                paperEl = m.PaperTool.createElement('papeis', this);
                 page.appendChild(paperEl!);
               }
               setTimeout(() => { if (typeof paperEl?.select === 'function') paperEl!.select!(); }, 50);
@@ -479,25 +556,28 @@ export class Craftools_Editor extends HTMLElement {
 
           // album: open the wizard panel on the active page
           if (tool === 'album') {
-            const { AlbumTool } = await import('../tools/album/AlbumTool.js');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const m: any = await import('../tools/album/AlbumTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) AlbumTool.setup(this, targetPage);
+            if (targetPage) m.AlbumTool.setup(this, targetPage);
             return;
           }
 
           // textocurvo / carimbo: create element directly on the active page
           if (tool === 'textocurvo') {
             if (isMobile()) return;
-            const { TextoCurvoTool } = await import('../tools/textocurvo/TextoCurvoTool.js');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const m: any = await import('../tools/textocurvo/TextoCurvoTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = TextoCurvoTool.createElement('textocurvo', this); targetPage.appendChild(el); closeSidebar(); }
+            if (targetPage) { const el = m.TextoCurvoTool.createElement('textocurvo', this); targetPage.appendChild(el); closeSidebar(); }
             return;
           }
           if (tool === 'carimbo') {
             if (isMobile()) return;
-            const { CarimboTool } = await import('../tools/carimbo/CarimboTool.js');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const m: any = await import('../tools/carimbo/CarimboTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = CarimboTool.createElement('carimbo', this); targetPage.appendChild(el); closeSidebar(); }
+            if (targetPage) { const el = m.CarimboTool.createElement('carimbo', this); targetPage.appendChild(el); closeSidebar(); }
             return;
           }
 

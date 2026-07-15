@@ -141,7 +141,7 @@ export class ImageTool extends BaseTool {
       if (meta.filters) meta.filters[filterKey] = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-filters-apply', { bubbles: false }));
     } else if (['zoom', 'posX', 'posY', 'rotation', 'objectFit'].includes(key)) {
-      (meta as Record<string, unknown>)[key] = value;
+      (meta as unknown as Record<string, unknown>)[key] = value;
       element.dispatchEvent(new CustomEvent('craftools-image-transform-apply', { bubbles: false }));
     } else if (key === 'bgBlur') {
       meta.bgBlur = value as number;
@@ -151,7 +151,7 @@ export class ImageTool extends BaseTool {
       const img = element.querySelector<HTMLElement>('img');
       if (img) img.style.mixBlendMode = String(value);
     } else if (['borderWidth', 'borderStyle', 'borderColor', 'borderRadius'].includes(key)) {
-      (meta as Record<string, unknown>)[key] = value;
+      (meta as unknown as Record<string, unknown>)[key] = value;
       const img = element.querySelector<HTMLElement>('img');
       if (img) {
         img.style.borderWidth  = `${meta.borderWidth}px`;

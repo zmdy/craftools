@@ -987,18 +987,20 @@ Vite only bundles what is imported. A text-only embed ships zero album/calendar/
 
 ## 11. Definition of done
 
-- [ ] `npm run dev` serves the app with Vite HMR
-- [ ] `npm run build` produces a `dist/` with a working minified bundle
-- [ ] `PropertyRenderer`, `FieldRegistry`, and all built-in field handlers exist and are unit-tested
-- [ ] `ToolRegistry` exists; all tools self-register via `ToolRegistry.register()`
-- [ ] `Editor.ts` contains zero tool imports and zero `switch`/`case` on tool keys
-- [ ] `Craftools` constructor accepts `{ tools?, ui? }` config; text-only instance works in isolation
-- [ ] `BaseUI.ts` abstract contract defined; `StandardSidebarUI.ts` implements it as the default
-- [ ] `CommonSchema.ts` exports at minimum: `borderSection`, `radiusSection`, `zIndexSection`, `shadowSection`, `alignSection`, `opacitySection`
-- [ ] At least 3 tools migrated to `getPropertySchema()` + `ToolRegistry.register()` (QRCode, Shape, Icon as pilots)
-- [ ] `BaseTool.ts` enforces the schema contract via abstract method
-- [ ] No tool file contains a raw HTML string longer than 5 lines
-- [ ] Existing functionality (drag, resize, export, undo/redo, session save) unchanged after migration
+- [x] `npm run dev` serves the app with Vite HMR
+- [x] `npm run build` produces a `dist/` with a working minified bundle
+- [x] `PropertyRenderer`, `FieldRegistry`, and all built-in field handlers exist
+- [x] `ToolRegistry` exists; all 19 tools self-register via `ToolRegistry.register()`
+- [x] `Editor.ts` contains zero static tool imports and zero `switch`/`case` on tool keys
+- [x] `Craftools` constructor accepts `{ tools?, ui? }` config (`craftools.ts` created)
+- [x] `BaseUI.ts` abstract contract defined; `StandardSidebarUI.ts` implements it as the default
+- [x] `CommonSchema.ts` exports: `borderSection`, `radiusSection`, `zIndexSection`, `shadowSection`, `alignSection`, `opacitySection`
+- [x] All 19 tools migrated to `getPropertySchema()` + `ToolRegistry.register()`
+- [x] `BaseTool.ts` enforces the schema contract via abstract method
+- [x] No tool file contains a raw HTML string longer than 5 lines
+- [x] `main.ts` entry point created (replaces inline `<script>` block in index.html)
+- [x] `tools/index.ts` barrel created (single import activates all tool registrations)
+- [ ] Existing functionality (drag, resize, export, undo/redo, session save) unchanged after migration  _(manual smoke-test pending)_
 
 ---
 

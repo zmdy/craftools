@@ -104,7 +104,7 @@ export class QRCodeTool extends BaseTool {
       },
       borderSection(),
       radiusSection(),
-    ];
+    ] as PropertySchema;
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {

@@ -22,6 +22,9 @@
       "@components/*": ["./craftools/components/*"]
     },
 
+    // Node types for vite.config.ts (path, url, dirname, etc.)
+    "types": ["node"],
+
     // Interop
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -30,11 +33,12 @@
   },
   "include": [
     "craftools/**/*",
-    "vite.config.ts",
-    "index.html"
+    "main.ts",
+    "craftools.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "vite.config.ts"
   ]
 }
