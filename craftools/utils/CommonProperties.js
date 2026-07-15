@@ -1,3 +1,13 @@
+/**
+ * @deprecated CommonProperties.js is superseded by the schema-based system.
+ *
+ * Use CommonSchema.ts (shared Section fragments) + PropertyRenderer.ts instead.
+ * This file remains for backward compatibility with existing .js tools and will
+ * be removed once all tools are migrated to getPropertySchema().
+ *
+ * Migration: replace renderBaseAccordions() calls with CommonSchema sections
+ * inside the tool's getPropertySchema() return value.
+ */
 import { I18n } from "../settings/Translations.js";
 import { PanelUI } from "./PanelUI.js";
 import { SnapEngine } from "./SnapEngine.js";
