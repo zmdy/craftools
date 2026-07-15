@@ -8,7 +8,7 @@
 import { ToolRegistry } from '../../utils/ToolRegistry';
 
 ToolRegistry.register({
-  key: 'agendaexport',
+  key: 'agenda',
   label: 'editor.agendaExport',
   icon: 'export_notes',
   panelOnly: true,

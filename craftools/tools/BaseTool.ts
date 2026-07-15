@@ -28,6 +28,14 @@ export abstract class BaseTool {
    * @param element - The selected canvas element. Use it to read current
    *                  state and conditionally show/hide fields.
    */
+  /**
+   * Returns context-bar action descriptors for the selected element.
+   * Override in tools that provide quick-action buttons (format, crop, etc.).
+   */
+  static getCtxOptions(_element?: HTMLElement): unknown[] {
+    return [];
+  }
+
   static getPropertySchema(_element: HTMLElement): PropertySchema {
     // Subclasses must override this.
     return [];

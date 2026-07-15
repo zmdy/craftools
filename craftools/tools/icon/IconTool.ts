@@ -71,10 +71,10 @@ export class IconTool extends BaseTool {
 
 // ── Self-registration ─────────────────────────────────────────────────────────
 
-IconTool.registeredKeys = ['icon'];
+IconTool.registeredKeys = ['icone'];
 
 ToolRegistry.register({
-  key:             'icon',
+  key:             'icone',
   label:           'editor.icon',
   icon:            'emoji_symbols',
   tool:            IconTool,
