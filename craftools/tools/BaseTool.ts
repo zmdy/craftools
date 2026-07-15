@@ -42,10 +42,25 @@ export abstract class BaseTool {
    * Override `getPropertySchema()` to change what appears in the panel.
    */
   static renderPropertiesPanel(container: HTMLElement, element: HTMLElement): void {
+    // Prime dataset.ctState from existing DOM/meta state (first render only).
+    this._syncFromDOM(element);
     const schema = this.getPropertySchema(element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
       this._applyProperty(element, key, value);
     });
+  }
+
+  /**
+   * Primes `dataset.ctState` from the element's existing DOM or meta state.
+   *
+   * Called once before the first panel render. Tools that store state outside
+   * `dataset.ctState` (CSS styles, `_craftoolsMeta`, etc.) must override this
+   * to populate the JSON state store so PropertyRenderer can read initial values.
+   *
+   * Only writes keys that are not already present — safe to call on re-renders.
+   */
+  protected static _syncFromDOM(_element: HTMLElement): void {
+    // Default: no-op. Subclasses override as needed.
   }
 
   // ── State management ────────────────────────────────────────────────────────
