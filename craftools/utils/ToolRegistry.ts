@@ -21,8 +21,17 @@ export interface ToolDefinition {
   label: string;
   /** Material Symbol icon name. */
   icon: string;
-  /** The tool class. Must extend BaseTool. */
-  tool: typeof BaseTool;
+  /**
+   * The tool class. Must extend BaseTool.
+   * Undefined for panel-only tools (use panelOnly: true instead).
+   */
+  tool?: typeof BaseTool;
+  /**
+   * True for tools that take over the sidebar panel (AgendaExport, Gerador, etc.)
+   * and do not create canvas elements. These tools call setup(editor) instead of
+   * renderPropertiesPanel(). Editor.ts will check this flag to route accordingly.
+   */
+  panelOnly?: boolean;
   /** Whether the tool can be dragged from the sidebar onto the canvas. Default: true. */
   draggable?: boolean;
   /** Whether this tool appears in the mobile bottom navigation bar. */
