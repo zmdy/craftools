@@ -11,7 +11,7 @@
     "checkJs": false,
 
     // Start permissive; enable strict per directory as files are migrated to .ts
-    "strict": false,
+    "strict": true,
     "noEmit": true,
 
     // Path aliases (must mirror vite.config.ts)

@@ -54,15 +54,15 @@ export interface CraftoolsConfig {
 
 export class Craftools {
   wrapper!: HTMLElement;
-  screen: typeof Craftools_Setup | typeof Craftools_Editor;
-  components: (typeof Craftools_Setup | typeof Craftools_Editor | typeof Craftools_Element)[];
+  screen!: typeof Craftools_Setup | typeof Craftools_Editor;
+  components!: (typeof Craftools_Setup | typeof Craftools_Editor | typeof Craftools_Element)[];
   activeMedia?: string;
   activeSize?: unknown;
 
   /** Active tool definitions (filtered by config.tools if provided). */
-  private _activeTools: ReturnType<typeof ToolRegistry.all>;
+  private _activeTools!: ReturnType<typeof ToolRegistry.all>;
   /** UI driver instance. */
-  private _ui: BaseUI;
+  private _ui!: BaseUI;
 
   constructor(wrapper: string | HTMLElement, config: CraftoolsConfig = {}) {
     // Resolve wrapper
