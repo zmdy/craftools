@@ -293,68 +293,8 @@ export class EmojiTool {
     }
 
     // ── Render properties panel (when an emoji element is selected) ───────────
-    static renderPropertiesPanel(panelBody, el, editor) {
-        ensurePickerStyles();
-
-        const inner = el.querySelector('[data-emoji-char]');
-        if (!inner) return;
-
-        const currentEmoji = inner.dataset.emojiChar || inner.textContent.trim();
-        const currentSize  = parseFloat(inner.style.fontSize) || 64;
-
-        let showingPicker = false;
-
-        const renderProps = () => {
-            panelBody.innerHTML = `
-                <div class="ct-emoji-preview">${currentEmoji}</div>
-                <div style="padding: 0 12px;">
-                    <div class="ct-field" style="margin-bottom: 12px;">
-                        <span class="craftools-label">Tamanho</span>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="range" id="ct-emoji-size-r" min="16" max="200" step="4"
-                                style="flex:1;accent-color:var(--accent);" value="${currentSize}">
-                            <input type="number" class="craftools-input" id="ct-emoji-size-n"
-                                style="width:55px;text-align:center;" value="${currentSize}">
-                        </div>
-                    </div>
-                    <button class="craftools-pill" id="ct-emoji-change-btn"
-                        style="width:100%;justify-content:center;gap:6px;margin-bottom:6px;">
-                        <span class="material-symbols-outlined" style="font-size:15px;">mood</span>
-                        Trocar Emoji
-                    </button>
-                </div>
-                <div id="ct-emoji-picker-slot"></div>
-            `;
-
-            const updateSize = (val) => {
-                const sz = Math.max(16, Math.min(200, +val));
-                inner.style.fontSize = sz + 'px';
-                el.setAttribute('w', sz + 16);
-                el.setAttribute('h', sz + 16);
-                el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
-            };
-
-            const sr = panelBody.querySelector('#ct-emoji-size-r');
-            const sn = panelBody.querySelector('#ct-emoji-size-n');
-            sr.addEventListener('input', (e) => { updateSize(e.target.value); sn.value = e.target.value; });
-            sn.addEventListener('input', (e) => { updateSize(e.target.value); sr.value = e.target.value; });
-
-            panelBody.querySelector('#ct-emoji-change-btn').addEventListener('click', () => {
-                showingPicker = !showingPicker;
-                const slot = panelBody.querySelector('#ct-emoji-picker-slot');
-                if (!slot) return;
-                if (showingPicker) {
-                    slot.innerHTML = '<div class="ct-emoji-change-picker" id="ct-change-picker-body"></div>';
-                    const pickerBody = slot.querySelector('#ct-change-picker-body');
-                    EmojiTool.renderPickerPanel(pickerBody, editor, el);
-                } else {
-                    slot.innerHTML = '';
-                }
-            });
-        };
-
-        renderProps();
-    }
+    // Legacy renderPropertiesPanel deleted.
+    // Panel rendering is now schema-driven in EmojiTool.ts via PropertyRenderer.
 
     static getCtxOptions() {
         return [];
