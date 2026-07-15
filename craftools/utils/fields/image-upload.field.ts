@@ -6,17 +6,19 @@
  */
 
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { ImageUploadField } from '../../types/PropertySchema';
 
 FieldRegistry.register('image-upload', {
   render(container, field, value) {
     const f = field as ImageUploadField;
     const src = String(value ?? '');
+    const label = tr(f.i18nKey, f.label ?? '');
 
     if (!container.querySelector('.ct-img-upload-btn')) {
       container.innerHTML = `
         <div class="ct-field">
-          ${f.label ? `<div class="craftools-label">${f.label}</div>` : ''}
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <div class="ct-field-row" style="gap:8px;">
             <div class="ct-img-preview" style="
               width:48px; height:48px; border-radius:6px;

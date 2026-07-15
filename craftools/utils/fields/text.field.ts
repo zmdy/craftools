@@ -1,13 +1,15 @@
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { TextField } from '../../types/PropertySchema';
 
 FieldRegistry.register('text', {
   render(container, field, value) {
     const f = field as TextField;
+    const label = tr(f.i18nKey, f.label ?? '');
     if (!container.querySelector('.ct-fi')) {
       container.innerHTML = `
         <div class="ct-field">
-          ${f.label ? `<div class="craftools-label">${f.label}</div>` : ''}
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <input type="text" class="craftools-input ct-fi"
             ${f.placeholder ? `placeholder="${f.placeholder}"` : ''}
             ${f.maxLength   ? `maxlength="${f.maxLength}"` : ''}>

@@ -96,7 +96,11 @@ export const paddingSection = (): Section => ({
 
 export const zIndexSection = (): Section => ({
   section: 'Layer',
-  i18nKey: 'common.layer',
+  // 'common.layer' doesn't exist as a translation key. The legacy panel
+  // (CommonProperties.js's _appendTamanho) used 'common.zindex' (lowercase)
+  // for this exact concept -- "Camada (Z-Index)" in pt-br -- reusing it here
+  // gives this section a real translation instead of falling back to English.
+  i18nKey: 'common.zindex',
   icon: 'layers',
   collapsible: true,
   defaultOpen: false,
@@ -105,7 +109,10 @@ export const zIndexSection = (): Section => ({
       type: 'number',
       key: 'zIndex',
       label: 'Z-Index',
-      i18nKey: 'common.zIndex',
+      // No separate 'common.zIndex' (camelCase) translation exists -- the
+      // legacy panel never translated this inline field label either (only
+      // the section-level "Camada (Z-Index)" sub-label was translated), so
+      // 'Z-Index' is left as a literal, language-agnostic technical term.
       min: 0,
       max: 9999,
       step: 1,

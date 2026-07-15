@@ -6,6 +6,7 @@
  */
 
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { ColorGradientField } from '../../types/PropertySchema';
 
 type GradientValue = { from: string; to: string; angle?: number };
@@ -16,11 +17,12 @@ FieldRegistry.register('color-gradient', {
   render(container, field, value) {
     const f = field as ColorGradientField;
     const g: GradientValue = (value as GradientValue) ?? DEFAULT;
+    const label = tr(f.i18nKey, f.label ?? '');
 
     if (!container.querySelector('.ct-grad-from')) {
       container.innerHTML = `
         <div class="ct-field">
-          ${f.label ? `<div class="craftools-label">${f.label}</div>` : ''}
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <div class="ct-field-row" style="gap:6px;">
             <div style="flex:1; display:flex; flex-direction:column; gap:3px;">
               <span class="ct-sublabel">From</span>

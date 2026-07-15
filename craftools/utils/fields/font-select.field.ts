@@ -6,6 +6,7 @@
  */
 
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { FontSelectField } from '../../types/PropertySchema';
 // Register the custom element (idempotent — guarded inside CtFontSelect.js)
 import '../../components/CtFontSelect.js';
@@ -13,11 +14,12 @@ import '../../components/CtFontSelect.js';
 FieldRegistry.register('font-select', {
   render(container, field, value) {
     const f = field as FontSelectField;
+    const label = tr(f.i18nKey, f.label ?? '');
 
     if (!container.querySelector('ct-font-select')) {
       container.innerHTML = `
         <div class="ct-field">
-          ${f.label ? `<div class="craftools-label">${f.label}</div>` : ''}
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <ct-font-select class="craftools-select ct-fi" style="display:block; width:100%;"></ct-font-select>
         </div>`;
     }

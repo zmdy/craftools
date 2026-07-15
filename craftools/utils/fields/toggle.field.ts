@@ -1,15 +1,17 @@
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { ToggleField } from '../../types/PropertySchema';
 
 FieldRegistry.register('toggle', {
   render(container, field, value) {
     const f = field as ToggleField;
     const checked = Boolean(value);
+    const label = tr(f.i18nKey, f.label ?? '');
 
     if (!container.querySelector('.ct-fi')) {
       container.innerHTML = `
         <div class="ct-field-row" style="justify-content:space-between; padding:2px 0;">
-          ${f.label ? `<span class="craftools-label" style="margin:0;">${f.label}</span>` : ''}
+          ${label ? `<span class="craftools-label" style="margin:0;">${label}</span>` : ''}
           <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
             <input type="checkbox" class="ct-fi" style="display:none;">
             <span class="ct-toggle-track" style="

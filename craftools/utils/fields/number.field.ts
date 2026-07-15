@@ -1,13 +1,15 @@
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 import type { NumberField } from '../../types/PropertySchema';
 
 FieldRegistry.register('number', {
   render(container, field, value) {
     const f = field as NumberField;
+    const label = tr(f.i18nKey, f.label ?? '');
     if (!container.querySelector('.ct-fi')) {
       container.innerHTML = `
         <div class="ct-field">
-          ${f.label ? `<div class="craftools-label">${f.label}</div>` : ''}
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <div class="ct-field-row">
             <input type="number" class="craftools-input ct-fi" style="flex:1;"
               ${f.min  !== undefined ? `min="${f.min}"`   : ''}

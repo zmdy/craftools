@@ -14,6 +14,7 @@
 
 import type { PropertySchema, Section, Field } from '../types/PropertySchema';
 import { FieldRegistry } from './FieldRegistry';
+import { tr } from './i18nLabel';
 
 export class PropertyRenderer {
   /**
@@ -88,10 +89,12 @@ export class PropertyRenderer {
             <span class="material-symbols-outlined">${section.icon || 'tune'}</span>
           </span>`;
 
+    const title = tr(section.i18nKey, section.section);
+
     if (collapsible) {
       el.innerHTML = `
         <button class="ct-accordion-header" type="button" data-toggle-accordion="${sectionId}">${iconHtml}
-          <span class="ct-accordion-title">${section.section}</span>
+          <span class="ct-accordion-title">${title}</span>
           <span class="ct-accordion-chevron">
             <span class="material-symbols-outlined">expand_more</span>
           </span>
