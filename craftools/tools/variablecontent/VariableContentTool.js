@@ -444,6 +444,9 @@ export class VariableContentTool extends BaseTool {
         el.setAttribute('w', '220');
         el.setAttribute('h', '50');
         el.setAttribute('data-craftool', 'conteudovariavel');
+        // Ajuste automático de tamanho começa DESLIGADO (ver AutoFitText.js/
+        // CommonProperties.js -- só `true` liga o ajuste automático).
+        el._craftoolsAutoResize = false;
 
         const content = document.createElement('div');
         content.setAttribute('contenteditable', 'false');

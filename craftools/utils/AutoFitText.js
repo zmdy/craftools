@@ -9,9 +9,13 @@
  * a lógica de medição é idêntica nos dois casos.
  *
  * Respeita `element._craftoolsAutoResize` (bandeira em memória, nunca
- * persistida -- ver CommonProperties.js/_appendTamanho): `false` desliga o
+ * persistida -- ver CommonProperties.js/_appendTamanho): só `true` liga o
  * ajuste automático; qualquer outro valor (incl. undefined, o padrão para um
- * elemento novo) mantém o ajuste ativo.
+ * elemento novo -- ver TextTool.js/VariableContentTool.js createElement())
+ * mantém o ajuste DESATIVADO. Precisa bater exatamente com a mesma
+ * comparação usada em CommonProperties.js para calcular o estado visual do
+ * toggle "Ativado/Desativado" -- senão o botão mostra desligado mas o
+ * ajuste continua sendo aplicado por baixo (ou vice-versa).
  */
 export class AutoFitText {
 
@@ -52,12 +56,23 @@ export class AutoFitText {
     /**
      * Redimensiona o craftools-element (`element`) para caber exatamente o
      * conteúdo atual de `textElement`, respeitando o toggle "Ajustar tamanho
-     * automaticamente" (ativo por padrão -- só é ignorado quando o usuário
-     * desliga explicitamente). Atualiza também os campos W/H do painel de
-     * Tamanho, se estiverem visíveis, para refletir o novo tamanho.
+     * automaticamente" (DESATIVADO por padrão -- só age quando o usuário liga
+     * explicitamente). Atualiza também os campos W/H do painel de Tamanho, se
+     * estiverem visíveis, para refletir o novo tamanho.
+     *
+     * IMPORTANTE: além do `style.width/height` e dos atributos `w`/`h`,
+     * também atualiza `element.pw`/`element.ph` -- as propriedades internas
+     * que Craftools_Element (components/Element.js) usa como fonte da
+     * verdade para width/height sempre que reaplica a transform (arrastar,
+     * redimensionar, girar -- ver `_applyTransform()`, chamado a cada
+     * pointermove). `pw`/`ph` só são lidos do atributo `w`/`h` UMA vez, no
+     * connectedCallback (criação do elemento) -- se não forem atualizados
+     * aqui também, o primeiro drag depois de um auto-fit reaplica o
+     * tamanho antigo (o da criação) por cima do tamanho recém-calculado,
+     * fazendo o elemento "voltar" ao tamanho default no meio do arraste.
      */
     static applyAutoSize(element, textElement) {
-        if (element._craftoolsAutoResize === false) return;
+        if (element._craftoolsAutoResize !== true) return;
         if (!textElement || !textElement.isConnected) return;
 
         const { width, height } = this.measureNaturalSize(textElement);
@@ -68,6 +83,11 @@ export class AutoFitText {
         element.style.height = newH + 'px';
         element.setAttribute('w', newW);
         element.setAttribute('h', newH);
+
+        // Mantém o estado interno de drag/resize/rotate (Element.js) em
+        // sincronia -- ver nota acima.
+        if (typeof element.pw === 'number') element.pw = newW;
+        if (typeof element.ph === 'number') element.ph = newH;
 
         const wInput = document.getElementById('ct-sz-w');
         const hInput = document.getElementById('ct-sz-h');

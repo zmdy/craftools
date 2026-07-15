@@ -407,15 +407,24 @@ export class CommonProperties {
         if (!acc) return;
 
         // Size
+        // Além de style.width/height, atualiza element.pw/ph -- as
+        // propriedades internas que Craftools_Element (components/Element.js)
+        // usa como fonte da verdade sempre que reaplica a transform (arrastar,
+        // redimensionar, girar). Elas só são lidas do atributo w/h uma vez, no
+        // connectedCallback -- sem esse sync, o primeiro drag depois de editar
+        // W/H manualmente aqui reverteria para o tamanho de quando o elemento
+        // foi criado.
         const wInput = acc.querySelector('#ct-sz-w');
         const hInput = acc.querySelector('#ct-sz-h');
         wInput?.addEventListener('input', () => {
             element.style.width = wInput.value + 'px';
+            if (typeof element.pw === 'number') element.pw = parseFloat(wInput.value) || 0;
             if (config.onChange) config.onChange();
             this._triggerChange(element);
         });
         hInput?.addEventListener('input', () => {
             element.style.height = hInput.value + 'px';
+            if (typeof element.ph === 'number') element.ph = parseFloat(hInput.value) || 0;
             if (config.onChange) config.onChange();
             this._triggerChange(element);
         });
@@ -423,15 +432,17 @@ export class CommonProperties {
         // Ajuste automático ao texto (só existe quando o tool passa
         // config.autoFitText -- hoje TextTool/Título/Parágrafo e
         // VariableContentTool/Conteúdo Variável). Liga/desliga
-        // `element._craftoolsAutoResize` (padrão: true/ligado quando ainda
-        // não definido) e trava os campos W/H manuais enquanto ligado, já
+        // `element._craftoolsAutoResize` (padrão: false/desligado quando
+        // ainda não definido -- só fica ativo quando é exatamente `true`;
+        // ver AutoFitText.applyAutoSize, que precisa usar a MESMA
+        // comparação) e trava os campos W/H manuais enquanto ligado, já
         // que nesse modo o tamanho é recalculado automaticamente. Mesmo
         // padrão visual de toggle "Ativado/Desativado" usado em outras
         // ferramentas (ex.: AlbumTool.js -- alinhamento automático/ajuste
         // inteligente), em vez de um checkbox nativo.
         const autoFitBtn = acc.querySelector('.ct-autofit-btn');
         autoFitBtn?.addEventListener('click', () => {
-            const nowOn = element._craftoolsAutoResize === false; // estava desligado -> liga
+            const nowOn = element._craftoolsAutoResize !== true; // estava desligado (undefined/false) -> liga
             element._craftoolsAutoResize = nowOn;
             autoFitBtn.classList.toggle('active', nowOn);
             autoFitBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">aspect_ratio</span>${nowOn ? (I18n.t('common.enabled') || 'Ativado') : (I18n.t('common.disabled') || 'Desativado')}`;

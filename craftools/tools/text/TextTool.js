@@ -545,6 +545,9 @@ export class TextTool extends BaseTool {
         el.setAttribute('w', w);
         el.setAttribute('h', h);
         el.setAttribute('data-craftool', type);
+        // Ajuste automático de tamanho começa DESLIGADO (ver AutoFitText.js/
+        // CommonProperties.js -- só `true` liga o ajuste automático).
+        el._craftoolsAutoResize = false;
 
         const content = document.createElement(tag);
         content.setAttribute('contenteditable', 'true');
