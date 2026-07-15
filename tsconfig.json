@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    // Target modern browsers — aligns with our min-browser requirements (Chrome 80+)
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // Allow existing .js files to coexist during incremental migration
+    "allowJs": true,
+    "checkJs": false,
+
+    // Start permissive; enable strict per directory as files are migrated to .ts
+    "strict": false,
+    "noEmit": true,
+
+    // Path aliases (must mirror vite.config.ts)
+    "paths": {
+      "@tools/*":      ["./craftools/tools/*"],
+      "@utils/*":      ["./craftools/utils/*"],
+      "@settings/*":   ["./craftools/settings/*"],
+      "@components/*": ["./craftools/components/*"]
+    },
+
+    // Interop
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "craftools/**/*",
+    "vite.config.ts",
+    "index.html"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

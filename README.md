@@ -56,9 +56,60 @@ The CrafTools export engine is not just a screen "print". It features a **Flatte
 2.  **Media Optimization**: Ensures images maintain their resolution and applied filters.
 3.  **Page Precision**: Applies dynamic `@page` directives so the browser understands the exact paper size of each project page.
 
+## Getting Started
+
+### Requirements
+
+| Dependency | Minimum version |
+|---|---|
+| Node.js | 18+ |
+| PHP | 8.0+ with `pdo_sqlite` |
+
+Writable server directories: `craftools_api/storage/`, `craftools_api/logs/`, `craftools_api/api/`
+
+### Local Development
+
+```bash
+# 1. Install dependencies
+cd craftools
+npm install
+
+# 2. Start the dev server (hot reload at http://localhost:5173)
+npm run dev
+```
+
+> The PHP API (`craftools_api/`) must run on a separate PHP-capable server.  
+> Quick option for local testing: `php -S localhost:8080 -t ../craftools_api`
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+Output is written to `craftools/dist/`. Deploy those files to your web server's public root.
+
+### Deployment Checklist
+
+1. Run `npm run build`
+2. Upload `craftools/dist/` contents to the web root
+3. Upload `craftools_api/` alongside it
+4. Ensure API directories are writable:
+   ```bash
+   chmod -R 755 craftools_api/storage craftools_api/logs
+   ```
+5. Confirm the API base URL in `craftools/settings/` matches your server path
+
+### Type Checking
+
+```bash
+npm run typecheck   # TS check without emitting files (use in CI or pre-commit)
+```
+
 ## Development Guide
 
-*   **Language**: Vanilla JavaScript (ES6+).
+*   **Language**: Vanilla JavaScript (ES6+), incrementally migrating to TypeScript.
+*   **Build**: Vite 8 + TypeScript 5 (`npm run dev` / `npm run build`).
 *   **Styling**: Modern CSS (Variables, Grid, Flexbox).
 *   **UI Assets**: Material Symbols for icons and DM Sans typography.
 *   **Interactions**: PointerEvents for hybrid mouse and touch support.
