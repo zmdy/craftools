@@ -5,6 +5,8 @@ import { VariableEngine } from "./VariableEngine.js";
 import { QrCode } from "./QrCode.js";
 import { BarcodeGenerator } from "./BarcodeGenerator.js";
 import { QRCodeTool } from "../tools/qrcode/QRCodeTool.js";
+import { CalendarRenderer } from "./CalendarRenderer.js";
+import { MiniCalendarTool } from "../tools/minicalendar/MiniCalendarTool.js";
 
 const UI_STRIP_SELECTORS = [
     '.craftools-ctrlbar',
@@ -99,6 +101,18 @@ export class AgendaExport {
                 [...leaders, ...followers].forEach(j => {
                     const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
                     this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+                });
+
+                // Mini Calendário "solto" (fora do Conteúdo Variável, sem
+                // vínculo de variável -- ver MiniCalendarTool.js) NÃO passa
+                // pelo VariableEngine (não tem binding), então nunca era
+                // tocado aqui: toda repetição só clonava o card estático já
+                // renderizado, mostrando sempre o mesmo mês. Como o propósito
+                // de uma "Agenda" é uma sequência mensal, avança o mês
+                // configurado no painel em +1 a cada repetição da página.
+                origEls.forEach((origEl, idx) => {
+                    if (origEl.getAttribute('data-craftool') !== 'minicalendario') return;
+                    this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, i);
                 });
 
                 // Achata todos os <craftools-element> em divs regulares
@@ -211,6 +225,28 @@ export class AgendaExport {
             });
             this._swapSvgContent(svg, svgString);
         }
+    }
+
+    /**
+     * Recalcula e substitui o card do Mini Calendário "solto" (clone ainda
+     * não achatado) para o mês `meta.month + repetitionIndex` (com
+     * virada de ano), preservando displayMode/tema configurados no painel.
+     * @param {HTMLElement} [cloneEl]
+     * @param {object} [meta]  `origEl._craftoolsMeta` (year/month/displayMode/theme)
+     * @param {number} repetitionIndex
+     */
+    static _advanceStandaloneMiniCalendar(cloneEl, meta, repetitionIndex) {
+        if (!cloneEl || !meta) return;
+        const card = cloneEl.querySelector('.cal-month-card');
+        if (!card) return;
+
+        let year = meta.year;
+        let month = meta.month + repetitionIndex;
+        while (month > 12) { month -= 12; year += 1; }
+        while (month < 1) { month += 12; year -= 1; }
+
+        const parts = MiniCalendarTool._currentMode(meta).parts;
+        card.outerHTML = CalendarRenderer.buildCardHtml(year, month, { theme: meta.theme, parts });
     }
 
     static _escAttr(val) {
