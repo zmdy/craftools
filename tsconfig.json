@@ -10,6 +10,10 @@
     "allowJs": true,
     "checkJs": false,
 
+    // Needed so craftools.ts can import Editor.ts explicitly (see below) --
+    // without this, ".ts" in an import specifier is a type error.
+    "allowImportingTsExtensions": true,
+
     // Start permissive; enable strict per directory as files are migrated to .ts
     "strict": true,
     "noEmit": true,

@@ -18,6 +18,19 @@ export default defineConfig({
       '@settings':   resolve(__dirname, 'craftools/settings'),
       '@components': resolve(__dirname, 'craftools/components'),
     },
+    // Vite's default order (['.mjs','.js','.mts','.ts',...]) checks .js BEFORE
+    // .ts. During this migration, ~19 files exist as both Foo.ts (new,
+    // ToolRegistry-registering) and Foo.js (legacy, kept for createElement /
+    // dynamic-import use) side by side. Every bare-specifier import of one of
+    // these (e.g. import from '../tools/text/TextTool') was silently resolving
+    // to the OLD Foo.js -- which never calls ToolRegistry.register() -- so no
+    // tool ever actually registered itself. This reorder makes bare imports
+    // prefer .ts, matching what tsc already assumes (moduleResolution:
+    // "bundler" prefers .ts over .js for the same reason). Imports that
+    // explicitly write ".js" (e.g. the panel-only tools' dynamic imports,
+    // which intentionally target the legacy implementation) are untouched --
+    // explicit extensions always resolve literally, ignoring this list.
+    extensions: ['.mjs', '.mts', '.ts', '.js', '.jsx', '.tsx', '.json'],
   },
 
   build: {

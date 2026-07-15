@@ -348,18 +348,25 @@ export class PageTool {
                             panelBody.querySelectorAll('.unit-btn').forEach(b => {
                                 b.classList.toggle('active', b.getAttribute('data-unit') === activeUnit);
                             });
-                            editor.activePage.style.width = parts[0] + activeUnit;
-                            editor.activePage.style.minHeight = parts[1] + activeUnit;
+                            pageEl.style.width = parts[0] + activeUnit;
+                            pageEl.style.minHeight = parts[1] + activeUnit;
                         }
                     });
                 });
 
                 // Bind Dimensions
+                // Uses `pageEl` (already in closure, guaranteed non-null) rather
+                // than bouncing through `editor.activePage` -- the latter is only
+                // meant for OTHER modules (AlbumTool.js, PaperTool.js, Editor.ts's
+                // sidebar dispatch) to read the "currently open page" from outside
+                // this closure; relying on it staying in sync here caused a crash
+                // when something reset it between opening this panel and the user
+                // interacting with the dimension/background controls.
                 const applyDims = () => {
                     const w = document.getElementById('dim-w').value;
                     const h = document.getElementById('dim-h').value;
-                    editor.activePage.style.width = w + activeUnit;
-                    editor.activePage.style.minHeight = h + activeUnit;
+                    pageEl.style.width = w + activeUnit;
+                    pageEl.style.minHeight = h + activeUnit;
                 };
 
                 document.getElementById('dim-w').addEventListener('input', applyDims);
@@ -395,13 +402,13 @@ export class PageTool {
 
                 // Color Background
                 document.getElementById('page-bg-color').addEventListener('input', (e) => {
-                    editor.activePage.style.background = e.target.value;
+                    pageEl.style.background = e.target.value;
                 });
 
                 // Gradient Background
                 const gradInput = document.getElementById('page-bg-grad-input');
                 gradInput.addEventListener('input', (e) => {
-                    editor.activePage.style.background = e.target.value;
+                    pageEl.style.background = e.target.value;
                 });
                 
                 const gradPresetsContainer = document.getElementById('grad-presets');
@@ -411,7 +418,7 @@ export class PageTool {
                     gradBtn.style.cssText = `width:26px;height:26px;border-radius:5px;background:${grad};border:1px solid var(--border);cursor:pointer;`;
                     gradBtn.addEventListener('click', () => {
                         gradInput.value = grad;
-                        editor.activePage.style.background = grad;
+                        pageEl.style.background = grad;
                     });
                     gradPresetsContainer.appendChild(gradBtn);
                 });
@@ -419,7 +426,7 @@ export class PageTool {
                 // Image Background
                 const imgUrlInput = document.getElementById('page-bg-img-url');
                 imgUrlInput.addEventListener('input', (e) => {
-                    editor.activePage.style.background = `url(${e.target.value}) center/cover no-repeat`;
+                    pageEl.style.background = `url(${e.target.value}) center/cover no-repeat`;
                 });
 
                 const imgFileInput = document.getElementById('page-bg-img-file');
@@ -429,7 +436,7 @@ export class PageTool {
                         const reader = new FileReader();
                         reader.onload = (ev) => {
                             imgUrlInput.value = ev.target.result;
-                            editor.activePage.style.background = `url(${ev.target.result}) center/cover no-repeat`;
+                            pageEl.style.background = `url(${ev.target.result}) center/cover no-repeat`;
                         };
                         reader.readAsDataURL(file);
                     }
@@ -441,7 +448,7 @@ export class PageTool {
                         if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: I18n.t('pageTool.deletePage') })) {
                             const pagesWrapper = editor.querySelector('#pages-wrapper');
                             if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
-                                editor.activePage.remove();
+                                pageEl.remove();
 
                                 if(defaultMenu) defaultMenu.classList.remove('d-none');
                                 if(panelBody) panelBody.classList.add('d-none');

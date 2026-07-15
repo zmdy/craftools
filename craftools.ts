@@ -17,8 +17,24 @@
  */
 
 import { Craftools_Setup }   from './craftools/components/Setup.js';
-import { Craftools_Editor }  from './craftools/components/Editor.js';
+// Explicit ".ts" extension (not the usual ".js" convention) is required here:
+// craftools/components/Editor.js still exists on disk (legacy, superseded by
+// Editor.ts -- see Editor.ts's own header comment). Vite's default
+// resolve.extensions checks ".js" before ".ts", so an extensionless or
+// ".js"-suffixed import here would silently load the OLD Editor.js instead
+// of the new ToolRegistry-based Editor.ts -- which is exactly what was
+// happening (every tool's legacy renderPropertiesPanel() was deleted from
+// its .js file assuming Editor.ts -- the only caller left -- was already
+// active). Once Editor.js is deleted for good, this can go back to ".js".
+import { Craftools_Editor }  from './craftools/components/Editor.ts';
 import { Craftools_Element } from './craftools/components/Element.js';
+// Registers every built-in field handler (text, number, color, slider, etc.)
+// into FieldRegistry -- required before PropertyRenderer can render ANY
+// panel. Per its own header comment, fields/index.ts was meant to be
+// imported "once, e.g. in main.ts or craftools.ts" -- that import was never
+// actually added, so FieldRegistry stayed empty and every field type logged
+// "No handler for field type" instead of rendering.
+import './craftools/utils/fields';
 import { I18n }              from './craftools/settings/Translations.js';
 import { SessionManager }    from './craftools/utils/SessionManager.js';
 import { HistoryManager }    from './craftools/utils/HistoryManager.js';
