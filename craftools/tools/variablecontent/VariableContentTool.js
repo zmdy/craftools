@@ -383,22 +383,39 @@ export class VariableContentTool extends BaseTool {
      */
     static _applyVariablePreview(element, textElement, binding) {
         if (binding && binding.type) {
+            textElement.style.whiteSpace = 'pre-wrap';
             textElement.textContent = I18n.t('variablePanel.previewLoading');
             VariableEngine.resolvePreview(binding).then(val => {
                 if (binding.type === 'emojiKitchen') {
+                    // Markup real (não texto digitado) -- ver nota abaixo
+                    // sobre miniCalendar. Aqui é só uma <img>, mas mantemos o
+                    // mesmo tratamento por consistência/segurança.
+                    textElement.style.whiteSpace = 'normal';
                     textElement.innerHTML = val
                         ? `<img src="${this._escAttr(val)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
                         : '—';
                 } else if (binding.type === 'miniCalendar') {
-                    // O valor aqui já é o HTML completo do card -- insere
-                    // direto via innerHTML, não como texto.
+                    // O valor aqui já é o HTML completo do card (múltiplas
+                    // divs aninhadas, cada uma com quebras de linha/indentação
+                    // entre as tags -- normal para HTML gerado por template
+                    // literal). `white-space: pre-wrap` (necessário para
+                    // preservar quebras de linha quando o conteúdo é texto
+                    // digitado) faz o navegador renderizar TODAS essas
+                    // quebras/indentações internas como espaço em branco
+                    // visível -- inflando a barra do título (texto cercado de
+                    // linhas em branco) e descentralizando o texto. HTML de
+                    // verdade deve seguir a colagem de espaço em branco normal
+                    // do HTML, então volta para `white-space: normal` aqui.
+                    textElement.style.whiteSpace = 'normal';
                     textElement.innerHTML = val || '—';
                 } else {
+                    textElement.style.whiteSpace = 'pre-wrap';
                     textElement.textContent = (val && String(val).length) ? val : '—';
                 }
                 AutoFitText.applyAutoSize(element, textElement);
             });
         } else {
+            textElement.style.whiteSpace = 'pre-wrap';
             textElement.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
         }
     }
