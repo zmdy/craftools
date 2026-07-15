@@ -1,15 +1,15 @@
 /**
- * SessionManager — Singleton para gerenciar:
- *   - Auto-save da sessão no localStorage
+ * SessionManager — Singleton responsible for:
+ *   - Auto-saving the session to localStorage
  *   - Dirty flag + beforeunload lock
- *   - Recovery de sessão ao reabrir o app
+ *   - Session recovery when the app is reopened
  *
- * Chave localStorage: 'craftools-session'
- * Formato: { html, timestamp, mediaKey, sizeConfig }
+ * localStorage key: 'craftools-session'
+ * Format: { html, timestamp, mediaKey, sizeConfig }
  */
 
 const SESSION_KEY = 'craftools-session';
-const AUTOSAVE_INTERVAL_MS = 30_000; // 30 segundos
+const AUTOSAVE_INTERVAL_MS = 30_000; // 30 seconds
 
 class _SessionManager {
     constructor() {
@@ -23,9 +23,9 @@ class _SessionManager {
     // ─── Public API ──────────────────────────────────────────────────────
 
     /**
-     * Inicializa a sessão ao entrar no editor.
-     * @param {string} mediaKey - chave do tipo de mídia (ex: 'standard', 'album')
-     * @param {object} sizeConfig - configuração de tamanho selecionada
+     * Initialises the session when the editor is entered.
+     * @param {string} mediaKey - media type key (e.g. 'standard', 'album')
+     * @param {object} sizeConfig - selected size configuration
      */
     startSession(mediaKey, sizeConfig) {
         this._mediaKey = mediaKey;
@@ -33,25 +33,25 @@ class _SessionManager {
         this._dirty = false;
         this._sessionActive = true;
 
-        // Inicia autosave
+        // Start the autosave timer
         this._startAutosave();
 
-        // Registra beforeunload
+        // Register the beforeunload handler
         this._registerBeforeunload();
     }
 
     /**
-     * Marca sessão como "suja" (há mudanças não confirmadas).
-     * Ativa o lock de saída e agenda um auto-save.
+     * Marks the session as dirty (unsaved changes exist).
+     * Activates the exit lock and schedules an auto-save.
      */
     markDirty() {
         this._dirty = true;
-        // Auto-save imediato após cada mudança (debounced 2s)
+        // Debounced save triggered 2 s after each change
         this._debouncedSave();
     }
 
     /**
-     * Salva o estado atual das páginas no localStorage.
+     * Saves the current page state to localStorage immediately.
      */
     saveNow() {
         const pagesWrapper = document.querySelector('#pages-wrapper');
@@ -67,12 +67,12 @@ class _SessionManager {
             localStorage.setItem(SESSION_KEY, JSON.stringify(session));
             this._dirty = false;
         } catch (e) {
-            console.error('[SessionManager] Erro ao salvar sessão:', e);
+            console.error('[SessionManager] Failed to save session:', e);
         }
     }
 
     /**
-     * Limpa a sessão salva (ex: ao exportar PDF ou iniciar projeto limpo).
+     * Clears the saved session (e.g. on PDF export or new project start).
      */
     clearSaved() {
         localStorage.removeItem(SESSION_KEY);
@@ -81,7 +81,7 @@ class _SessionManager {
     }
 
     /**
-     * Verifica se existe uma sessão salva e retorna seus metadados.
+     * Returns the saved session metadata, or null if none exists.
      * @returns {object|null}
      */
     getSavedSession() {
@@ -95,8 +95,9 @@ class _SessionManager {
     }
 
     /**
-     * Restaura a sessão salva no editor.
-     * @param {object} session - objeto de sessão do localStorage
+     * Restores a saved session into the editor.
+     * @param {object} session - session object from localStorage
+     * @param {HTMLElement} pagesWrapper - the pages container element
      */
     restoreSession(session, pagesWrapper) {
         if (!pagesWrapper) pagesWrapper = document.querySelector('#pages-wrapper');
@@ -104,12 +105,12 @@ class _SessionManager {
 
         pagesWrapper.innerHTML = session.html;
 
-        // Configura o estado global de tamanho
+        // Set global size state
         if (session.sizeConfig) {
             window.craftoolsSize = session.sizeConfig;
         }
 
-        // Reattach page events para todas as páginas restauradas
+        // Re-attach page events for all restored pages
         pagesWrapper.querySelectorAll('.craftools-page').forEach(page => {
             const evt = new CustomEvent('craftools-page-restored', { bubbles: true, detail: { page } });
             pagesWrapper.dispatchEvent(evt);
@@ -141,9 +142,9 @@ class _SessionManager {
 
         this._beforeunloadHandler = (e) => {
             if (!this._sessionActive && !this._dirty) return;
-            // Salva a sessão antes de fechar (para o caso de fechamento brusco)
+            // Save the session before the tab closes (handles abrupt closures)
             this.saveNow();
-            // Exibe alerta nativo do navegador
+            // Show the browser's native "leave page?" dialog
             e.preventDefault();
             e.returnValue = '';
         };

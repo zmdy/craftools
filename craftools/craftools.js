@@ -6,6 +6,8 @@ import { I18n } from "./settings/Translations.js";
 import { SessionManager } from "./utils/SessionManager.js";
 import { HistoryManager } from "./utils/HistoryManager.js";
 
+export const VERSION = '0.1.0';
+
 export class Craftools{
     // Constructor
     constructor(wrapper){

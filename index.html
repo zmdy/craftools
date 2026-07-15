@@ -836,21 +836,21 @@
         import { Craftools } from './craftools/craftools.js';
         
         window.onload = () => {
-            // Inicializa o sistema original
+            // Bootstrap the core application
             new Craftools('#wrapper');
 
-            // --- PROXY DE CLIQUES E EVENTOS (PWA -> CRAFTOOLS) ---
+            // --- CLICK & EVENT PROXY (PWA shell → CrafTools core) ---
             setTimeout(() => {
-                // Proxy só faz sentido de um elemento SEM data-tool (ex.: os botões do
-                // footer mobile, pwa-btn-*) para o elemento REAL que tem data-tool (o item
-                // da sidebar, que o Editor.js já escuta diretamente via toolBtns). As
-                // entradas pwa-sidebar-* foram removidas daqui porque cada uma apontava
-                // para SI MESMA (o único elemento que casa com '[data-tool="X"]' é o
-                // próprio item da sidebar) -- clicar nele disparava um target.click()
-                // sobre si mesmo, reprocessando os listeners uma segunda vez. Isso é o
-                // que causava a criação de 2 cópias do papel (e, de forma menos visível,
-                // duplicava título/parágrafo/imagem/álbum/qrcode/emoji também) ao clicar
-                // pelo menu lateral.
+                // The proxy only makes sense from an element WITHOUT data-tool (e.g. the
+                // mobile footer buttons, pwa-btn-*) to the REAL element that has data-tool
+                // (the sidebar item, which Editor.js already listens to directly via
+                // toolBtns). The pwa-sidebar-* entries were removed from here because each
+                // one pointed to ITSELF — the only element matching '[data-tool="X"]' is
+                // the sidebar item itself — so clicking it fired target.click() on itself,
+                // re-processing the listeners a second time. This was what caused 2 copies
+                // of the paper to be created (and, less visibly, duplicated title /
+                // paragraph / image / album / qrcode / emoji too) when clicking via the
+                // side menu.
                 const toolsMap = {
                     'pwa-btn-titulo': { selector: '[data-tool="titulo"]', type: 'titulo' },
                     'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
@@ -885,7 +885,7 @@
                     }
                 }
 
-                // Proxy do Undo/Redo
+                // Proxy for Undo / Redo
                 const pwaUndo = document.getElementById('pwa-undo');
                 const pwaRedo = document.getElementById('pwa-redo');
 
@@ -909,7 +909,7 @@
                     if (originalRedo && pwaRedo) {
                         pwaRedo.classList.toggle('disabled', originalRedo.disabled);
                     }
-                    // Espelha o indicador "N/10" do histórico (ver Editor.js / HistoryManager.js)
+                    // Mirror the "N/10" history indicator (see Editor.js / HistoryManager.js)
                     const desktopIndicator = document.getElementById('history-indicator');
                     const pwaIndicator = document.getElementById('pwa-history-indicator');
                     if (desktopIndicator && pwaIndicator) {
@@ -921,7 +921,7 @@
                 document.addEventListener('craftools-history-change', syncUndoRedoState);
                 setInterval(syncUndoRedoState, 200);
 
-                // Proxy do Zoom
+                // Proxy for Zoom
                 document.getElementById('pwa-zoom-in')?.addEventListener('click', (e) => {
                     e.preventDefault();
                     document.getElementById('zoom-in-btn')?.click();
@@ -931,7 +931,7 @@
                     document.getElementById('zoom-out-btn')?.click();
                 });
 
-                // Proxy Theme (Modo Escuro/Claro)
+                // Proxy for Theme Toggle (dark / light mode)
                 document.getElementById('pwa-theme-btn')?.addEventListener('click', (e) => {
                     e.preventDefault();
                     document.getElementById('theme-btn')?.click();
@@ -960,7 +960,7 @@
                 themeObserver.observe(document.documentElement, { attributes: true });
                 updateThemeUI();
 
-                // Proxy Lang (Idioma)
+                // Proxy for Language Selector
                 const pwaLangSelect = document.getElementById('pwa-lang-select');
                 if (pwaLangSelect) {
                     const syncLang = () => {
@@ -991,7 +991,7 @@
                         document.body.classList.remove('is-setup-mode');
                         const welcomeMsg = document.querySelector('.pwa-welcome-msg');
                         if (welcomeMsg) {
-                            welcomeMsg.remove(); // Remoção definitiva do DOM
+                            welcomeMsg.remove(); // Permanently remove from DOM
                         }
                     } else {
                         document.body.classList.add('is-setup-mode');
@@ -1000,14 +1000,13 @@
                 setInterval(checkSetupMode, 500);
                 checkSetupMode();
 
-                // ── Remover offcanvas-backdrop para não bloquear drag ──────
-                // O backdrop do Bootstrap impede arrastar ferramentas para o canvas
+                // ── Remove the offcanvas-backdrop so it does not block drag ──────
+                // Bootstrap's backdrop prevents dragging tools onto the canvas
                 const removeBackdrop = () => {
                     const backdrop = document.querySelector('.offcanvas-backdrop');
                     if (backdrop) backdrop.remove();
                 };
-                // Intercepta o evento de show do offcanvas
-                // Intercepta o evento do menu toggle e anima ícone
+                // Intercept the menu toggle event and animate the icon
                 const menuIcon  = document.getElementById('pwa-menu-icon');
                 const toggleMenuIcon = (isOpen) => {
                     if (!menuIcon) return;
@@ -1021,19 +1020,18 @@
                     }, 150);
                 };
 
-                // Recolhe/expande a sidebar no desktop (modo somente ícones).
-                // Força a largura via inline !important em vez de confiar só na
-                // regra CSS .sidenav-collapsed{width:68px !important} — isso
-                // elimina qualquer resíduo da largura customizada pelo redimen-
-                // sionamento manual (arrastar a alça), que fica gravada como
-                // estilo inline (style="width:Npx") e, num primeiro carregamento
-                // com uma largura salva no localStorage, é aplicada ANTES de o
-                // usuário interagir — cenário em que o "fechar" (recolher) podia
-                // não reduzir totalmente para 68px.
+                // Collapses/expands the sidebar on desktop (icon-only mode).
+                // Forces the width via inline !important instead of relying solely on
+                // the CSS rule .sidenav-collapsed{width:68px !important} — this
+                // eliminates any residual width left by manual resizing (dragging the
+                // handle), which is stored as an inline style (style="width:Npx") and,
+                // on first load with a saved width in localStorage, is applied BEFORE
+                // the user interacts — a scenario where "close" (collapse) could fail
+                // to reduce to 68 px.
                 const setSidebarCollapsed = (panel, collapsed) => {
                     if (collapsed) {
-                        // Guarda a largura atual (ex: redimensionada) para restaurar
-                        // exatamente ao expandir de novo.
+                        // Save the current width (e.g. after manual resize) so it can be
+                        // restored exactly when the sidebar is expanded again.
                         const currentWidth = panel.style.width || (panel.getBoundingClientRect().width + 'px');
                         panel.dataset.expandedWidth = currentWidth;
                         panel.classList.add('sidenav-collapsed');
@@ -1059,12 +1057,12 @@
                         const isMobileView = window.innerWidth <= 768;
 
                         if (!isMobileView) {
-                            // Se houver uma ferramenta/elemento selecionado com o painel de
-                            // propriedades aberto, o botão do rodapé deve primeiro fechar
-                            // esse painel (desativando a seleção na página) e só então
-                            // recolher a sidebar para o modo somente ícones — evita que o
-                            // conteúdo do painel de propriedades (não preparado para o modo
-                            // recolhido) fique cortado/quebrado dentro dos 68px.
+                            // If a tool/element is selected with the properties panel open,
+                            // the footer button should first close that panel (deselecting
+                            // the element on the page) and only then collapse the sidebar to
+                            // icon-only mode — prevents the properties panel content (which
+                            // is not designed for the collapsed state) from being clipped
+                            // or broken inside the 68 px width.
                             const closePanelBtn = document.getElementById('close-panel');
                             const isToolPanelOpen = closePanelBtn && !closePanelBtn.classList.contains('d-none');
                             if (isToolPanelOpen) {
@@ -1073,8 +1071,8 @@
                                 return;
                             }
 
-                            // Desktop: alterna entre sidebar completa e recolhida (somente
-                            // ícones) — nunca esconde totalmente, como no mobile.
+                            // Desktop: toggles between full sidebar and collapsed (icon-only)
+                            // — never hides it entirely as on mobile.
                             const isNowCollapsed = !panel.classList.contains('sidenav-collapsed');
                             setSidebarCollapsed(panel, isNowCollapsed);
                             return;
@@ -1092,7 +1090,7 @@
                             panel.style.marginLeft = '-' + panel.offsetWidth + 'px';
                         }
 
-                        // Atualiza overlay (bottom sheet mobile)
+                        // Update overlay (mobile bottom sheet)
                         const overlay = document.getElementById('sidebar-overlay');
                         if (overlay) {
                             if (isNowOpen) overlay.classList.add('visible');
@@ -1100,7 +1098,7 @@
                         }
                     }
                 });
-                // Observer para remover o backdrop assim que for adicionado ao DOM
+                // MutationObserver to remove the backdrop as soon as it is added to the DOM
                 const backdropObserver = new MutationObserver(() => {
                     const backdrop = document.querySelector('.offcanvas-backdrop');
                     if (backdrop) {
@@ -1109,12 +1107,12 @@
                 });
                 backdropObserver.observe(document.body, { childList: true, subtree: false });
 
-                // ── i18n nos elementos do footer ─────────────────────────
+                // ── i18n for footer and PWA shell elements ───────────────
                 const htmlLangMap = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
                 const applyPwaI18n = () => {
                     if (!window.craftoolsLang) return;
                     if (window.craftoolsApp && window.craftoolsApp.constructor) {
-                        // Usa o mesmo sistema de tradução do craftools
+                        // Reuses the same i18n system as the CrafTools core
                         import('./craftools/settings/Translations.js').then(({ I18n }) => {
                             document.querySelectorAll('[data-i18n]').forEach(el => {
                                 const key = el.getAttribute('data-i18n');
@@ -1135,14 +1133,14 @@
                         });
                     }
                 };
-                // Aplica quando o idioma mudar
+                // Re-apply whenever the language changes
                 const langSelect = document.getElementById('pwa-lang-select');
                 if (langSelect) langSelect.addEventListener('change', applyPwaI18n);
                 setInterval(applyPwaI18n, 1500);
 
 
 
-                // ── Sidebar: busca de ferramentas ───────────────────────
+                // ── Sidebar: tool search ────────────────────────────────
                 const sidenavSearchInput = document.getElementById('sidenav-search-input');
                 const sidenavList = document.getElementById('sidenav-nav-list');
                 const sidenavNoResults = document.getElementById('sidenav-no-results');
@@ -1162,7 +1160,7 @@
                             li.classList.toggle('d-none', !match);
                             if (match) anyVisible = true;
                         });
-                        // Esconde rótulos de seção cujo grupo ficou sem itens visíveis
+                        // Hide section labels whose group has no visible items
                         labels.forEach(label => {
                             let el = label.nextElementSibling;
                             let hasVisible = false;
@@ -1176,28 +1174,28 @@
                     });
                 }
 
-                // ── Ctrl+Scroll = Zoom (sobrescreve o zoom nativo do browser) ──
+                // ── Ctrl+Scroll = Zoom (overrides native browser zoom) ──────
                 window.addEventListener('wheel', (e) => {
                     if (!e.ctrlKey) return;
-                    e.preventDefault(); // bloqueia o zoom nativo do browser
+                    e.preventDefault(); // prevent native browser zoom
                     if (e.deltaY < 0) {
-                        // Scroll para cima = zoom in
+                        // Scroll up = zoom in
                         document.getElementById('pwa-zoom-in')?.click();
                     } else {
-                        // Scroll para baixo = zoom out
+                        // Scroll down = zoom out
                         document.getElementById('pwa-zoom-out')?.click();
                     }
                 }, { passive: false });
 
-            }, 500); // tempo de segurança para renderização
+            }, 500); // safety delay for initial render
         };
     </script>
 </head>
 <body class="is-setup-mode">
     <!-- HEADER PWA -->
     <div class="header-area" id="headerArea">
-        <!-- Marca: alinhada à esquerda, fora do .container, para bater exatamente
-             com o padding esquerdo da sidebar (independente do max-width do Bootstrap) -->
+        <!-- Brand: left-aligned, outside .container, to match exactly
+             the sidebar's left padding (independent of Bootstrap's max-width) -->
         <div class="header-brand">
             <img src="./assets/logo-craftools.svg" alt="CrafTools" class="header-brand-logo">
             <span class="header-brand-tagline" data-i18n="editor.panelSubtitle">Tecnologia para criatividade</span>
@@ -1324,7 +1322,7 @@
                         </button>
                     </li>
                     
-                    <!-- Botão Menu Circular no Centro -->
+                    <!-- Circular Menu Button (center) -->
                     <li class="center-menu-item">
                         <a href="#" id="pwa-menu-toggle">
                             <span class="material-symbols-outlined" id="pwa-menu-icon">menu</span>
@@ -1359,33 +1357,33 @@
 
     <script>
         /**
-         * CRAFTOOLS_CONFIG — configuração global do app.
-         * Altere apiBase para apontar para o servidor de produção quando for publicar.
-         * O token NÃO é configurado aqui; o acesso sem token retorna conteúdo Free.
-         * Tokens de usuários premium serão adicionados futuramente via autenticação.
+         * CRAFTOOLS_CONFIG — global app configuration.
+         * Change apiBase to point to the production server before deploying.
+         * The token is NOT set here; requests without a token return Free-tier content.
+         * Premium user tokens will be added via authentication in a future version.
          */
         window.CRAFTOOLS_CONFIG = {
             apiBase: 'http://127.0.0.1/craftools_api/public',
         };
 
-        // Verificação de ambiente: se a página não está em localhost mas o
-        // apiBase ainda aponta para 127.0.0.1 (valor de desenvolvimento),
-        // avisa em alto e bom som no console em vez de falhar silenciosamente
-        // (ApiDataLoader.js cairia no fallback local sem nenhum aviso visível).
+        // Environment check: if the page is not on localhost but apiBase still
+        // points to 127.0.0.1 (the dev default), warn loudly in the console
+        // instead of failing silently (ApiDataLoader.js would fall back to local
+        // data with no visible indication).
         (function () {
             const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
             const usingDevApiBase = (window.CRAFTOOLS_CONFIG.apiBase || '').indexOf('127.0.0.1') !== -1;
             if (usingDevApiBase && !isLocalHost) {
                 console.error(
-                    '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase ainda aponta para 127.0.0.1 (valor de ' +
-                    'desenvolvimento) neste host de produção (' + window.location.hostname + '). ' +
-                    'GridSizes, templates de álbum e a biblioteca de imagens da craftools_api vão cair ' +
-                    'no fallback local. Configure apiBase para a URL real do craftools_api antes de publicar.'
+                    '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase still points to 127.0.0.1 (dev default) ' +
+                    'on this production host (' + window.location.hostname + '). ' +
+                    'GridSizes, album templates and the craftools_api image library will fall back to ' +
+                    'local data. Set apiBase to the real craftools_api URL before deploying.'
                 );
             }
         })();
     </script>
-    <!-- Bootstrap 5.3.8 JS bundle (CDN, antes vendorizado em vendor/bootstrap/) -->
+    <!-- Bootstrap 5.3.8 JS bundle (CDN — previously vendored in vendor/bootstrap/) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha256-5P1JGBOIxI7FBAvT/mb1fCnI5n/NhQKzNUuW7Hq0fMc=" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 /**
- * HistoryManager — Singleton para gerenciar undo/redo no CrafTools.
- * Armazena até MAX_STATES snapshots do HTML das páginas.
- * Escuta eventos do sistema e expõe métodos undo/redo.
+ * HistoryManager — Singleton for managing undo/redo in CrafTools.
+ * Stores up to MAX_STATES full innerHTML snapshots of the pages wrapper.
+ * Exposes undo/redo methods and fires 'craftools-history-change' events.
  */
 
 const MAX_STATES = 10;
@@ -16,8 +16,8 @@ class _HistoryManager {
     // ─── Public API ──────────────────────────────────────────────────────
 
     /**
-     * Captura o estado atual das páginas e empilha no histórico.
-     * Descarta qualquer estado "futuro" (redo branch) ao fazer nova ação.
+     * Captures the current page state and pushes it onto the history stack.
+     * Any "future" states (redo branch) are discarded on each new action.
      */
     snapshot(pagesWrapper) {
         if (this._locked) return;
@@ -28,17 +28,17 @@ class _HistoryManager {
 
         const html = pagesWrapper.innerHTML;
 
-        // Se o estado atual é idêntico ao último, não empilha (evita duplicatas)
+        // Skip if the current state is identical to the last snapshot (avoids duplicates)
         if (this._stack[this._index] === html) return;
 
-        // Descarta estados à frente do cursor (após undo)
+        // Discard states ahead of the cursor (cleared after an undo)
         if (this._index < this._stack.length - 1) {
             this._stack = this._stack.slice(0, this._index + 1);
         }
 
         this._stack.push(html);
 
-        // Limita ao máximo
+        // Enforce the maximum stack size
         if (this._stack.length > MAX_STATES) {
             this._stack.shift();
         }
@@ -47,13 +47,13 @@ class _HistoryManager {
         this._emit();
     }
 
-    /** Desfaz a última ação. Retorna true se bem-sucedido. */
+    /** Undoes the last action. Returns true on success. */
     undo(pagesWrapper) {
         if (!this.canUndo) return false;
         if (!pagesWrapper) pagesWrapper = document.querySelector('#pages-wrapper');
         if (!pagesWrapper) return false;
 
-        // Se ainda não temos um snapshot do estado atual, salva antes de desfazer
+        // If the current state has not been snapshotted yet, save it before undoing
         const currentHtml = pagesWrapper.innerHTML;
         if (this._stack[this._index] !== currentHtml) {
             this.snapshot(pagesWrapper);
@@ -66,7 +66,7 @@ class _HistoryManager {
         return true;
     }
 
-    /** Refaz a última ação desfeita. Retorna true se bem-sucedido. */
+    /** Redoes the last undone action. Returns true on success. */
     redo(pagesWrapper) {
         if (!this.canRedo) return false;
         if (!pagesWrapper) pagesWrapper = document.querySelector('#pages-wrapper');
@@ -80,15 +80,17 @@ class _HistoryManager {
     get canUndo() { return this._index > 0; }
     get canRedo() { return this._index < this._stack.length - 1; }
 
-    /** Quantos estados estão guardados agora (0 a maxStates). Usado pela UI
-     * para mostrar um indicador visível de quão perto o usuário está do
-     * limite do histórico (ex: "7/10"). */
+    /**
+     * Number of states currently stored (0 to maxStates).
+     * Used by the UI to display a visible indicator of how close the user
+     * is to the history limit (e.g. "7/10").
+     */
     get historyCount() { return this._stack.length; }
 
-    /** Limite máximo de estados guardados (MAX_STATES). */
+    /** Maximum number of stored states (MAX_STATES). */
     get maxStates() { return MAX_STATES; }
 
-    /** Limpa todo o histórico (ex: ao abrir novo projeto) */
+    /** Clears the full history stack (e.g. when opening a new project). */
     clear() {
         this._stack = [];
         this._index = -1;
@@ -101,7 +103,7 @@ class _HistoryManager {
         this._locked = true;
         pagesWrapper.innerHTML = this._stack[this._index];
 
-        // Re-attach page events for any new pages
+        // Re-attach page events for any restored pages
         const editor = document.querySelector('craftools-editor');
         if (editor) {
             const { PageTool } = window._craftoolsPageTool || {};
@@ -115,7 +117,7 @@ class _HistoryManager {
         this._locked = false;
         this._emit();
 
-        // Notify session manager about the change
+        // Notify SessionManager about the change
         const evt = new CustomEvent('craftools-history-restored', { bubbles: true });
         document.dispatchEvent(evt);
     }
