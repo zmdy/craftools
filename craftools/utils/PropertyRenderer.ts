@@ -78,9 +78,19 @@ export class PropertyRenderer {
     el.className    = `ct-accordion${open ? ' open' : ''}`;
     el.dataset.ctSection = sectionId;
 
+    // Icon span mirrors PanelUI.accordion()'s markup exactly (same
+    // ct-accordion-icon class) so panels built by PropertyRenderer look
+    // identical to the still-legacy panel-only tools (Album, Agenda, etc.)
+    // Falls back to a generic icon rather than omitting the span, so a
+    // schema that hasn't been given a real icon yet still lines up visually.
+    const iconHtml = `
+          <span class="ct-accordion-icon">
+            <span class="material-symbols-outlined">${section.icon || 'tune'}</span>
+          </span>`;
+
     if (collapsible) {
       el.innerHTML = `
-        <button class="ct-accordion-header" type="button" data-toggle-accordion="${sectionId}">
+        <button class="ct-accordion-header" type="button" data-toggle-accordion="${sectionId}">${iconHtml}
           <span class="ct-accordion-title">${section.section}</span>
           <span class="ct-accordion-chevron">
             <span class="material-symbols-outlined">expand_more</span>

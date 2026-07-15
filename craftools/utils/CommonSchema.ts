@@ -25,6 +25,7 @@ import type { Section } from '../types/PropertySchema';
 export const borderSection = (): Section => ({
   section: 'Border',
   i18nKey: 'common.border',
+  icon: 'border_style',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -61,6 +62,7 @@ export const borderSection = (): Section => ({
 export const radiusSection = (): Section => ({
   section: 'Radius',
   i18nKey: 'common.radius',
+  icon: 'rounded_corner',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -79,6 +81,7 @@ export const radiusSection = (): Section => ({
 export const paddingSection = (): Section => ({
   section: 'Padding',
   i18nKey: 'common.padding',
+  icon: 'padding',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -94,6 +97,7 @@ export const paddingSection = (): Section => ({
 export const zIndexSection = (): Section => ({
   section: 'Layer',
   i18nKey: 'common.layer',
+  icon: 'layers',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -112,6 +116,7 @@ export const zIndexSection = (): Section => ({
 export const opacitySection = (): Section => ({
   section: 'Opacity',
   i18nKey: 'common.opacity',
+  icon: 'opacity',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -132,6 +137,7 @@ export const opacitySection = (): Section => ({
 export const shadowSection = (): Section => ({
   section: 'Shadow',
   i18nKey: 'common.shadow',
+  icon: 'shadow',
   collapsible: true,
   defaultOpen: false,
   fields: [
@@ -148,6 +154,7 @@ export const shadowSection = (): Section => ({
 export const alignSection = (): Section => ({
   section: 'Alignment',
   i18nKey: 'common.alignment',
+  icon: 'format_align_left',
   collapsible: true,
   defaultOpen: false,
   fields: [

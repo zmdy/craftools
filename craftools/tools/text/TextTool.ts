@@ -102,6 +102,7 @@ export class TextTool extends BaseTool {
       {
         section: 'Typography',
         i18nKey: 'textTool.typography',
+        icon: 'text_fields',
         defaultOpen: true,
         fields: [
           { type: 'font-select', key: 'font',       label: 'Font' },
@@ -116,6 +117,7 @@ export class TextTool extends BaseTool {
       {
         section: 'Color',
         i18nKey: 'textTool.color',
+        icon: 'palette',
         defaultOpen: true,
         fields: [
           {

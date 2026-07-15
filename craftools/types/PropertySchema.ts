@@ -139,6 +139,13 @@ export interface Section {
   /** Section title — i18n key or literal string. */
   section: string;
   i18nKey?: string;
+  /**
+   * Material Symbol icon name shown in the accordion header, matching the
+   * legacy PanelUI.accordion(id, icon, title, ...) convention (e.g.
+   * 'text_fields', 'palette', 'border_style'). Falls back to a generic icon
+   * if omitted so older schemas don't render with a blank/misaligned header.
+   */
+  icon?: string;
   /** Default: true */
   collapsible?: boolean;
   /** Default: false (except the first section, which opens by default). */
