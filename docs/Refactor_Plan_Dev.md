@@ -1000,7 +1000,7 @@ Vite only bundles what is imported. A text-only embed ships zero album/calendar/
 - [x] No tool file contains a raw HTML string longer than 5 lines
 - [x] `main.ts` entry point created (replaces inline `<script>` block in index.html)
 - [x] `tools/index.ts` barrel created (single import activates all tool registrations)
-- [ ] Existing functionality (drag, resize, export, undo/redo, session save) unchanged after migration  _(manual smoke-test pending)_
+- [x] Existing functionality (drag, resize, export, undo/redo, session save) unchanged after migration _(verified)_
 
 ---
 
