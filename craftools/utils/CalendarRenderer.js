@@ -164,6 +164,15 @@ export class CalendarRenderer {
                     }).join('')}
                 </div>` : '';
 
+        // .trim() é importante: sem ele, a string retornada tem uma quebra
+        // de linha + indentação ANTES do <div> raiz (sobra do template
+        // literal formatado). `buildCardElement()` (abaixo) não sofre com
+        // isso porque usa `.firstElementChild`, que ignora nós de texto
+        // (espaço em branco) soltos -- mas quem usa este HTML bruto
+        // diretamente via innerHTML (ex: VariableEngine._formatMiniCalendar,
+        // consumido por VariableContentTool com `white-space: pre-wrap` no
+        // container) via renderizava aquele espaço em branco como uma
+        // "margem"/linha em branco visível acima do card.
         return `
             <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(t.cellBg)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
                 ${titleBarHtml}
@@ -172,7 +181,7 @@ export class CalendarRenderer {
                 ${holidaysHtml}
                 ${moonHtml}
             </div>
-        `;
+        `.trim();
     }
 
     /** @returns {HTMLElement} */
