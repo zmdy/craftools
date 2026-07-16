@@ -1,430 +1,125 @@
-# CrafTools — Test Battery
+# Plano de Testes Manual — CrafTools PWA
 
-Complete manual test checklist. Run top to bottom on a fresh browser session (no localStorage) and again after a session restore. Check each box as you go.
-
----
-
-## 1. Boot & PWA
-
-| # | Test | Expected |
-|---|------|----------|
-| 1.1 | Open the app cold (no prior session) | Editor loads; empty canvas with one page |
-| 1.2 | Open in Chrome → Install as PWA | Install prompt appears; standalone window opens correctly |
-| 1.3 | With service worker cached, disable network and reload | App still loads from cache |
-| 1.4 | Open on mobile (iOS Safari / Android Chrome) | Layout switches to mobile view; top toolbar collapses; hamburger menu appears |
-| 1.5 | Open with an explicit `?mediaKey=album` config | Album mode activates; correct size config loads |
+Este documento descreve a bateria completa de testes manuais para validação do sistema CrafTools PWA. Execute este checklist de cima a baixo em uma sessão limpa de navegador (sem dados de `localStorage`) e também após a restauração de uma sessão.
 
 ---
 
-## 2. Session & Auto-save
+## 1. Inicialização e PWA
 
-| # | Test | Expected |
-|---|------|----------|
-| 2.1 | Add a text element, wait 30 s (autosave interval) | No visible flicker; session saved silently to `localStorage` |
-| 2.2 | Add elements, close tab, reopen app | Recovery dialog or auto-restore loads the previous session |
-| 2.3 | Add elements, close tab without waiting for autosave | Browser shows "unsaved changes" `beforeunload` warning |
-| 2.4 | Start fresh session (clear `craftools-session` key in DevTools) | Canvas starts empty; no recovery prompt |
-| 2.5 | Open two tabs simultaneously | Each tab maintains its own state; no cross-contamination |
-
----
-
-## 3. Canvas & Zoom
-
-| # | Test | Expected |
-|---|------|----------|
-| 3.1 | Click **Zoom In** (+) repeatedly | Canvas scales up in 10 % increments; label updates |
-| 3.2 | Click **Zoom Out** (−) | Canvas scales down; stops at minimum (e.g. 10 %) |
-| 3.3 | Click **Fit** button | Canvas resets to 100 % or fits viewport |
-| 3.4 | Pinch-zoom on mobile | Canvas zoom follows gesture |
-| 3.5 | Drag canvas background (no element selected) | Canvas pans; elements maintain relative positions |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 1.1 | Abrir o aplicativo a frio (sem sessão anterior salva no localStorage) | O editor carrega perfeitamente, exibindo um canvas vazio com uma página inicial. | [ ] |
+| 1.2 | Abrir no Chrome e instalar como PWA | O prompt de instalação aparece; após instalar, o app abre como janela standalone corretamente. | [ ] |
+| 1.3 | Testar funcionalidade offline | Com o service worker em cache, desabilitar a rede e recarregar. O app deve carregar do cache sem tela de erro (dinossauro). | [ ] |
+| 1.4 | Acessar via dispositivo móvel (iOS Safari / Android Chrome) | O layout alterna para a visualização mobile; a barra de ferramentas superior encolhe e o menu hambúrguer é ativado. | [ ] |
+| 1.5 | Parâmetro URL `?mediaKey=album` | Acessar com a URL do álbum deve ativar o modo Álbum, carregando as configurações e medidas apropriadas de imediato. | [ ] |
 
 ---
 
-## 4. Undo / Redo (HistoryManager)
+## 2. Sessão e Auto-salvamento
 
-| # | Test | Expected |
-|---|------|----------|
-| 4.1 | Add an element → click Undo | Element disappears; indicator shows `0/10` |
-| 4.2 | Undo after adding 10+ actions | Stack saturates at 10; oldest state is silently dropped |
-| 4.3 | Undo several steps → make a new action | Redo branch is cleared; counter resets forward history |
-| 4.4 | Click Redo | Reverts undo; indicator increments |
-| 4.5 | Undo/Redo with keyboard shortcut (Ctrl+Z / Ctrl+Y) | Same behavior as buttons |
-| 4.6 | Undo when stack is empty | Button is disabled; no error thrown |
-
----
-
-## 5. Page Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 5.1 | Click **Add Page** | New page appended; canvas scrolls to it |
-| 5.2 | Reorder pages by drag | Page order updates immediately |
-| 5.3 | Clone a page | Duplicate appears with identical content |
-| 5.4 | Delete a page | Page removed; adjacent page becomes active |
-| 5.5 | Delete last remaining page | Action blocked or new blank page auto-created |
-| 5.6 | Change paper size (A4, Letter, custom) | Canvas dimensions update; grid recalculates |
-| 5.7 | Change background color | Page background updates in real time |
-| 5.8 | Change background image (upload) | Image fills page; transform controls appear |
-| 5.9 | Toggle grid | Grid lines appear/disappear on canvas |
-| 5.10 | Smooth-scroll navigation between pages | No jump; animation is smooth |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 2.1 | Testar intervalo de auto-salvamento | Adicionar um elemento e aguardar 30 segundos. O sistema deve salvar no `localStorage` silenciosamente (sem flickering visual). | [ ] |
+| 2.2 | Restauração de Sessão (Crash/Fechamento) | Adicionar elementos, fechar a aba abruptamente e reabrir. O diálogo de recuperação deve aparecer ou a sessão deve ser restaurada automaticamente. | [ ] |
+| 2.3 | Testar alerta de fechamento inseguro | Adicionar um elemento e tentar fechar a aba sem esperar o auto-save. O navegador deve exibir o aviso de `beforeunload` ("mudanças não salvas"). | [ ] |
+| 2.4 | Iniciar nova sessão após limpar dados | Limpar a chave `craftools-session` no DevTools e atualizar. O canvas deve carregar totalmente vazio, sem prompts de recuperação. | [ ] |
+| 2.5 | Testar abas simultâneas | Abrir duas abas do CrafTools ao mesmo tempo. Cada aba deve manter seu estado sem contaminação cruzada imediata de ações. | [ ] |
 
 ---
 
-## 6. Text Tool (Title / Paragraph)
+## 3. Canvas e Navegação (Zoom)
 
-| # | Test | Expected |
-|---|------|----------|
-| 6.1 | Double-click a text element to enter edit mode | Cursor appears; toolbar changes to text mode |
-| 6.2 | Type text; click outside to confirm | Text saved; element resizes if auto-fit is on |
-| 6.3 | Change font family (local + Google Fonts) | Font preview visible in dropdown; element updates |
-| 6.4 | Upload a custom `.ttf`/`.otf` font | Font loads; appears in picker; element uses it |
-| 6.5 | Change font size | Element updates in real time |
-| 6.6 | Toggle Bold / Italic / Underline | Style applies immediately |
-| 6.7 | Switch color mode → Solid | Color picker appears; element color changes |
-| 6.8 | Switch color mode → Gradient | Angle input and two color pickers appear; gradient renders on text |
-| 6.9 | Change text alignment (left / center / right / justify) | Text realigns inside element |
-| 6.10 | Auto-fit enabled: type very long text | Font shrinks to fit element bounds |
-| 6.11 | Auto-fit disabled: type long text | Text overflows or truncates; no auto-resize |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 3.1 | Zoom In (+) | Clicar no botão '+' várias vezes; o canvas deve aumentar proporcionalmente, e o rótulo de % atualizará de acordo. | [ ] |
+| 3.2 | Zoom Out (−) | Clicar no botão '−'; o canvas deve diminuir (até um limite razoável de 10%). | [ ] |
+| 3.3 | Encaixar na Tela (Fit) | Clicar no botão de fit reseta o canvas para 100% ou ajusta de acordo com o viewport atual. | [ ] |
+| 3.4 | Gesto de Pinça (Mobile) | Tentar dar zoom com gesto de pinça num dispositivo móvel ou trackpad. O canvas deve seguir o zoom fluidamente. | [ ] |
+| 3.5 | Pan (Arrastar Tela) | Clicar no fundo (sem elementos selecionados) e arrastar. O canvas deve se mover com os elementos mantendo suas posições relativas. | [ ] |
 
 ---
 
-## 7. Image Tool
+## 4. Gestão de Histórico (Undo / Redo)
 
-| # | Test | Expected |
-|---|------|----------|
-| 7.1 | Add image via file upload | Image renders in element; Source accordion shows filename |
-| 7.2 | Add image via URL paste | Image loads from URL |
-| 7.3 | Change mask shape (circle, rounded, custom SVG) | Image clips to selected mask |
-| 7.4 | Adjust position within mask (drag or X/Y inputs) | Image repositions inside mask boundary |
-| 7.5 | Apply brightness / contrast / saturation filter | Canvas updates in real time |
-| 7.6 | Apply blur / grayscale / sepia | Effect visible on element |
-| 7.7 | Flip horizontal / vertical | Transform applies; accordion shows correct state |
-| 7.8 | Rotate image within element | Image rotates inside mask |
-| 7.9 | Link two image elements (Business Card mode) | Changing photo on one propagates to linked sibling |
-| 7.10 | Upload large image (>5 MB) | No freeze; loading indicator shown; image renders |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 4.1 | Desfazer Ação Simples | Adicionar um elemento e clicar em Undo. O elemento some e o contador volta uma etapa. | [ ] |
+| 4.2 | Saturação da Pilha de Histórico | Fazer 15 adições e edições; a pilha deve acomodar apenas os últimos X estados (padrão 10) e os antigos devem ser limpos silenciosamente. | [ ] |
+| 4.3 | Ramificação de Histórico | Dar Undo 2 vezes, depois criar um novo elemento. O "futuro" antigo do Redo deve ser apagado e o contador assume a nova ramificação. | [ ] |
+| 4.4 | Refazer (Redo) | Clicar no botão Redo restaura a ação apagada anteriormente; contador atualiza adequadamente. | [ ] |
+| 4.5 | Atalhos de Teclado | Usar Ctrl+Z e Ctrl+Y (ou Cmd) produz o mesmo efeito dos botões de Undo/Redo. | [ ] |
 
 ---
 
-## 8. Icon Tool
+## 5. Ferramentas Básicas de Página
 
-| # | Test | Expected |
-|---|------|----------|
-| 8.1 | Open icon picker | Material Symbols pack loads; icons render in grid |
-| 8.2 | Search by keyword | Results filter in real time |
-| 8.3 | Filter by category | Only relevant icons shown |
-| 8.4 | Select an icon | Element created on canvas with selected icon |
-| 8.5 | Change icon color (fill) | Element color updates |
-| 8.6 | Change icon via "Change icon" button in properties | Picker reopens; new selection replaces current |
-| 8.7 | Scale icon element | SVG scales without pixelation |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 5.1 | Adicionar Nova Página | Clicar no botão correspondente anexa uma nova página ao fim do editor e a tela rola até ela. | [ ] |
+| 5.2 | Reordenar Páginas | Arrastar a miniatura da página para reordenar deve mover a página fisicamente na tela. | [ ] |
+| 5.3 | Clonar Página | Clicar no botão de duplicar gera uma cópia exata de todo o conteúdo e propriedades da página alvo. | [ ] |
+| 5.4 | Deletar Página | A página é removida do fluxo. Se for a única página, a exclusão é bloqueada ou uma folha em branco substitui a anterior. | [ ] |
+| 5.5 | Grid e Snapping | Ativar as réguas/grid e arrastar um objeto. Ele deve "grudar" nos eixos ou pontilhados da grade configurada. | [ ] |
 
 ---
 
-## 9. Shape Tool
+## 6. Ferramentas de Conteúdo: Texto
 
-| # | Test | Expected |
-|---|------|----------|
-| 9.1 | Add a rectangle | Shape renders with default style |
-| 9.2 | Add a circle, triangle, star, etc. | Each shape renders correctly |
-| 9.3 | Change fill color | Shape fill updates |
-| 9.4 | Change stroke color and width | Border updates in real time |
-| 9.5 | Change corner radius (rectangle) | Corners round smoothly |
-
----
-
-## 10. QR Code Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 10.1 | Enter a plain URL | QR code renders |
-| 10.2 | Enter `spotify:track:<id>` URI | Parsed correctly; QR encodes Spotify deep-link |
-| 10.3 | Change foreground / background color | QR colors update |
-| 10.4 | Change error correction level | QR regenerates |
-| 10.5 | Enter empty string | Graceful fallback; no crash |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 6.1 | Entrar em Edição de Texto | Duplo clique sobre um texto entra no estado `contenteditable`. A barra flutuante reflete o modo texto. | [ ] |
+| 6.2 | Configurações de Tipografia | Mudar fonte (Google Fonts/Upload Local), tamanho e peso. As mudanças refletem em tempo real no canvas. | [ ] |
+| 6.3 | Cores e Gradientes | Aplicar cor sólida, mudar para cor degradê (gradient). O efeito deve colorir os glifos corretamente (background-clip). | [ ] |
+| 6.4 | Auto-fit (Ajuste Automático) | Habilitar Auto-fit e digitar um texto comprido. A fonte deve encolher para nunca extrapolar a caixa de contorno original. | [ ] |
+| 6.5 | Alinhamento e Espaçamento | Testar alinhamento (Esq, Centro, Dir) e ajuste de Line-height; o espaçamento flui de acordo sem quebrar a caixa. | [ ] |
 
 ---
 
-## 11. Barcode Tool
+## 7. Ferramentas de Conteúdo: Imagem e Filtros
 
-| # | Test | Expected |
-|---|------|----------|
-| 11.1 | Generate EAN-13 barcode | Valid barcode renders |
-| 11.2 | Generate Code128 | Renders correctly |
-| 11.3 | Enter invalid barcode value | Error message shown; no crash |
-| 11.4 | Change bar color | Updates in real time |
-
----
-
-## 12. Calendar Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 12.1 | Add calendar for current month | Full month grid renders with correct weekdays |
-| 12.2 | Change month / year | Grid updates |
-| 12.3 | Brazilian public holidays visible | Holidays marked on correct dates |
-| 12.4 | Moon phases display | Phase icons on correct days |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 7.1 | Adição e Fonte | Adicionar uma imagem usando Upload Local e via Colar URL. A imagem preenche a caixa respectiva. | [ ] |
+| 7.2 | Máscaras de Recorte (Clipping) | Aplicar máscara circular ou SVG dinâmico. A imagem é cortada mantendo a proporção. | [ ] |
+| 7.3 | Transformações Matriciais | Alterar os inputs X, Y ou zoom da imagem dentro de uma máscara. A imagem desloca seu enquadramento interno sem mover a div pai. | [ ] |
+| 7.4 | Filtros de CSS | Mudar Brilho, Contraste, Saturação e Desfoque. As predefinições ou sliders alteram os visuais (via variáveis CSS ou filtros). | [ ] |
+| 7.5 | Remoção de Fundo (Background Removal) | (Se configurado na API), disparar o removedor; aguardar loading e verificar o recorte Alpha renderizado no canvas. | [ ] |
 
 ---
 
-## 13. Mini Calendar Tool
+## 8. Ferramentas de Conteúdo: QR Code e Código de Barras
 
-| # | Test | Expected |
-|---|------|----------|
-| 13.1 | Mode: Days table only | Compact grid without header |
-| 13.2 | Mode: Full calendar | Header (month + year) + grid |
-| 13.3 | Mode: Header only | Only month/year text renders |
-| 13.4 | Mode: Holidays box | Only holiday list shown |
-| 13.5 | Mode: Moon phases box | Only moon phase list shown |
-| 13.6 | Mode: Calendar with holidays | Grid + holiday box combined |
-| 13.7 | Mode: Full calendar with moon phases | Grid + moon phases combined |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 8.1 | Geração de QR Code | Inserir texto ou URL. O QR code é recarregado usando a cor primária e de fundo escolhidas. O grau de correção EC é respeitado. | [ ] |
+| 8.2 | Leitura Padrão do QR Code | Testar a renderização final escaneando a tela com uma câmera de celular genérico (ex: Câmera do iOS) para confirmar legibilidade. | [ ] |
+| 8.3 | Inserir Código de Barras (EAN-13) | Inserir 13 dígitos numéricos. A sintaxe de barras é traçada corretamente; testar escaneamento por aplicativo. | [ ] |
+| 8.4 | Cores do Código de Barras | Alterar cor das linhas e cor de fundo. A paleta é refletida usando a API de desenho. | [ ] |
+| 8.5 | Vinculação com Variável (Conteúdo Dinâmico) | Vincular o valor numérico ou URL a um campo do Banco de Dados/Variável. O placeholder deve acusar o vínculo corretamente na tela de edição. | [ ] |
 
 ---
 
-## 14. Curved Text Tool (TextoCurvo)
+## 9. Renderização Híbrida de Variáveis (Variable Engine)
 
-| # | Test | Expected |
-|---|------|----------|
-| 14.1 | Add curved text element | SVG arc renders with default text |
-| 14.2 | Edit text content | Arc text updates |
-| 14.3 | Change arc radius | Curve tightens or loosens |
-| 14.4 | Change font and color | Updates propagate to SVG |
-| 14.5 | Flip to bottom arc | Text curves below the line |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 9.1 | Inserção de Texto Variável | Adicionar um elemento Conteúdo Variável; escolher o tipo "Frase API" ou "Número Sequencial". O bloco exibe o placeholder. | [ ] |
+| 9.2 | Preview Dinâmico | Alterar o index no Painel de Testes (ex: Item 1 de 10). O texto de placeholder em todos os elementos da página se transforma no valor simulado do banco/API. | [ ] |
+| 9.3 | Ligação entre Elementos | Criar uma imagem e vinculá-la a uma coluna de "Logo" do modo variável; mudar o Index da amostragem fará a imagem atualizar seu Src. | [ ] |
 
 ---
 
-## 15. Stamp / Seal Tool (Carimbo)
+## 10. Exportação (PDF e Imagens)
 
-| # | Test | Expected |
-|---|------|----------|
-| 15.1 | Add a stamp element | Circular SVG stamp renders |
-| 15.2 | Edit outer text (circle path) | Text follows circular path |
-| 15.3 | Edit center text / icon | Updates in center area |
-| 15.4 | Change colors | Stroke, fill, text colors update |
-| 15.5 | Scale element | SVG scales without degradation |
+| Etapa | Ação de Teste | Resultado Esperado | Status |
+|---|---|---|---|
+| 10.1 | Exportar para PNG (Página Única) | O arquivo PNG baixado reflete estritamente os limites da página, respeitando camadas (z-index) e não possui serrilhamento severo (bom dpi). | [ ] |
+| 10.2 | Exportar para PDF (Sem Variáveis) | O PDF renderiza todas as páginas com margens exatas e tamanho de folha correspondente ao configurado. | [ ] |
+| 10.3 | Exportar para PDF (Com Geração Variável) | Se a página possui numeração sequencial (1 a 10), o PDF gerado deve iterar 10 páginas com o número atualizado sequencialmente em cada laço de exportação, mantendo as dimensões coerentes. | [ ] |
 
 ---
 
-## 16. Emoji Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 16.1 | Open emoji picker | Native or custom emoji grid appears |
-| 16.2 | Select an emoji | Element added to canvas |
-| 16.3 | Emoji renders with Noto Color Emoji font | Color emoji visible on all platforms |
-| 16.4 | Resize emoji element | No pixelation (text-based render) |
-
----
-
-## 17. Emoji Kitchen Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 17.1 | Select two emoji | Combined "kitchen" emoji image fetched from API |
-| 17.2 | No API connection | Graceful error; no crash |
-| 17.3 | Change tier filter | Only tier-appropriate combos shown |
-
----
-
-## 18. Variable Content Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 18.1 | Add variable content element | Placeholder text shown |
-| 18.2 | Configure a variable (name, value) | Element renders the variable value |
-| 18.3 | Change variable value via panel | Element updates in real time |
-| 18.4 | Export with variable content | Variable values baked into export |
-
----
-
-## 19. Album Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 19.1 | Enter album mode | Grid layout renders; cell panels visible |
-| 19.2 | Upload photos into cells | Photos fill cells with correct cropping |
-| 19.3 | Reorder cells | Drag to swap; layout updates |
-| 19.4 | Open API Picker | Modal opens; assets from API load in grid |
-| 19.5 | Select asset from API Picker | Photo placed into active cell |
-| 19.6 | Change cell background color | Cell background updates |
-
----
-
-## 20. Image Slicer Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 20.1 | Upload an image | Preview appears |
-| 20.2 | Define slice grid (e.g. 3×3) | Grid overlay rendered on preview |
-| 20.3 | Export slices | Individual image files downloaded |
-| 20.4 | Change slice count | Grid updates in real time |
-
----
-
-## 21. Agenda Export Tool
-
-| # | Test | Expected |
-|---|------|----------|
-| 21.1 | Configure events | Event list populates |
-| 21.2 | Export to PDF | PDF with agenda layout generated |
-| 21.3 | Export to image | PNG/JPEG downloaded |
-
----
-
-## 22. Element Interactions (Element.js)
-
-| # | Test | Expected |
-|---|------|----------|
-| 22.1 | Drag element | Moves with cursor; snaps to grid/guides if SnapEngine active |
-| 22.2 | Resize via handles | Element resizes; aspect ratio locked if shift held |
-| 22.3 | Rotate via handle | Element rotates; angle shown |
-| 22.4 | Select multiple elements (Shift+click or drag select) | All selected; shared properties editable |
-| 22.5 | Align selected elements (left, center, right, top, middle, bottom) | Elements align correctly |
-| 22.6 | Distribute evenly | Spacing equalized |
-| 22.7 | Lock element | Element no longer draggable/resizable; lock icon shown |
-| 22.8 | Unlock element | Interaction restored |
-| 22.9 | Clone element (Ctrl+D or button) | Duplicate appears offset from original |
-| 22.10 | Delete element (Delete key or button) | Element removed; undo restores it |
-| 22.11 | Change Z-order (bring forward / send backward) | Layer order updates on canvas |
-| 22.12 | In Business Card mode: delete linked element | Sibling deleted automatically |
-
----
-
-## 23. Snap Engine
-
-| # | Test | Expected |
-|---|------|----------|
-| 23.1 | Drag element near canvas center | Element snaps to center guide |
-| 23.2 | Drag near another element's edge | Element snaps to sibling edge |
-| 23.3 | Drag near page margin | Element snaps to margin |
-| 23.4 | Snap guides visible | Red/blue guide lines appear during drag |
-| 23.5 | Disable snap | Drag is free; no guides |
-
----
-
-## 24. Export — Image (ImageExport)
-
-| # | Test | Expected |
-|---|------|----------|
-| 24.1 | Export as PNG | Dialog opens; download starts; file opens correctly |
-| 24.2 | Export as JPEG | JPEG file downloads; quality setting applied |
-| 24.3 | Export at 2× resolution | File dimensions are double the canvas size |
-| 24.4 | Export multi-page canvas | Each page exported as separate file (or combined) |
-| 24.5 | Export with transparent background (PNG) | Background is transparent in downloaded file |
-
----
-
-## 25. Export — PDF (PdfExport)
-
-| # | Test | Expected |
-|---|------|----------|
-| 25.1 | Export single page as PDF | PDF downloads; content matches canvas |
-| 25.2 | Export multi-page document | Each page becomes a PDF page |
-| 25.3 | PDF includes custom fonts | Text renders with correct typeface |
-| 25.4 | PDF includes images | Images embedded; not broken links |
-
----
-
-## 26. i18n (Translations)
-
-| # | Test | Expected |
-|---|------|----------|
-| 26.1 | Switch language to **English** | All UI labels, panel titles, and buttons change to English |
-| 26.2 | Switch language to **Spanish** | All labels switch to Spanish |
-| 26.3 | Switch back to **Portuguese (PT-BR)** | Reverts correctly |
-| 26.4 | Open a tool panel and check all accordion labels | No `undefined` or raw i18n key visible anywhere |
-| 26.5 | Check Editor toolbar labels (Undo, Redo, Zoom) | Translated in all 3 languages |
-| 26.6 | Check export dialog labels | Fully translated |
-
----
-
-## 27. API Backend (craftools_api)
-
-### Authentication
-
-| # | Test | Expected |
-|---|------|----------|
-| 27.1 | POST `/v1/phrases` without token | `401 Unauthorized` |
-| 27.2 | POST with invalid token | `403 Forbidden` |
-| 27.3 | POST with valid free-tier token | `200` with free-tier data only |
-| 27.4 | POST with premium token | `200` with full data set |
-
-### Phrases
-
-| # | Test | Expected |
-|---|------|----------|
-| 27.5 | `GET /v1/phrases` | Returns paginated phrase list in JSON |
-| 27.6 | Filter by collection | Returns only phrases in that collection |
-| 27.7 | Filter by tier | Free token cannot see plus/premium phrases |
-
-### Assets / Photos
-
-| # | Test | Expected |
-|---|------|----------|
-| 27.8 | Upload a photo via `upload.php` | File saved; record created in DB |
-| 27.9 | Upload link via `upload_link_photo.php` | URL saved; accessible via API |
-| 27.10 | Delete an asset | Record removed; file deleted from disk |
-| 27.11 | Asset visibility: free asset with free token | Returns asset |
-| 27.12 | Asset visibility: premium asset with free token | Asset excluded from results |
-
-### Emoji Kitchen
-
-| # | Test | Expected |
-|---|------|----------|
-| 27.13 | `GET /v1/emoji-kitchen?left=1f600&right=1f4a5` | Returns matching combo or 404 |
-| 27.14 | Import bulk emoji kitchen data | Records inserted; no duplicates |
-
-### Admin Panel
-
-| # | Test | Expected |
-|---|------|----------|
-| 27.15 | Login with wrong password | Redirect to login; session not created |
-| 27.16 | Login with correct credentials | Dashboard loads |
-| 27.17 | Dashboard stat cards load | Total users, tokens, phrases shown |
-| 27.18 | API Logs tab loads | Stat cards (total, today, errors) and request table shown |
-| 27.19 | Filter API logs by resource | Table filters correctly |
-| 27.20 | Filter by date range | Only logs in range shown |
-| 27.21 | Pagination in logs | Previous / Next work; page counter correct |
-| 27.22 | Create a new API token | Token appears in list; copy button works |
-| 27.23 | Revoke token | Token marked inactive; API rejects it immediately |
-
----
-
-## 28. Security & Edge Cases
-
-| # | Test | Expected |
-|---|------|----------|
-| 28.1 | Paste `<script>alert(1)</script>` into a text element | Script not executed; escaped in DOM |
-| 28.2 | Upload a file with `.php` extension | Rejected by upload handler |
-| 28.3 | Upload a 50 MB image | Size limit enforced; error message shown |
-| 28.4 | CSRF: submit admin form from another origin | Token mismatch; request rejected |
-| 28.5 | SQLite: submit `'; DROP TABLE phrases; --` in a filter | Prepared statement prevents injection |
-| 28.6 | API: send malformed JSON body | `400 Bad Request`; server does not crash |
-
----
-
-## 29. Performance Benchmarks (manual)
-
-| # | Test | Expected |
-|---|------|----------|
-| 29.1 | Canvas with 50 elements | No noticeable lag when selecting/dragging |
-| 29.2 | 10-page document | Page navigation stays smooth |
-| 29.3 | Undo/redo with 10 deep history | Restore is instant (<100 ms) |
-| 29.4 | Export 10-page PDF | Completes in <15 s |
-| 29.5 | Open icon picker with full Material Symbols pack | Picker renders in <2 s |
-| 29.6 | Load 100 phrases from API | Response time <500 ms |
-
----
-
-## 30. Cross-browser
-
-| # | Test | Expected |
-|---|------|----------|
-| 30.1 | Chrome (latest) | Full pass |
-| 30.2 | Firefox (latest) | Full pass; Web Components polyfill not needed |
-| 30.3 | Safari 16+ | Full pass; check `-webkit-background-clip: text` for gradients |
-| 30.4 | Edge (latest) | Full pass |
-| 30.5 | Mobile Safari (iOS 16+) | Layout correct; touch events work |
-| 30.6 | Chrome for Android | Layout correct; touch events work |
-
----
-
-_Last updated: 2026-07-14_
+## Observações de Regressão:
+- Sempre cheque se a aba do Console de Desenvolvedor está limpa (sem erros vermelhos) após a navegação intensa entre painéis de ferramentas.
+- Durante os testes de manipulação (arrastar, soltar, dar zoom), o uso da memória deve se manter estável; lentidão excessiva após 30+ clones de elementos caracteriza memory leak de listeners.
