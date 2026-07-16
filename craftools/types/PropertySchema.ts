@@ -22,6 +22,7 @@ export type FieldType =
   | 'icon-picker'
   | 'image-upload'
   | 'divider'
+  | 'page-align'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -104,6 +105,24 @@ export interface ImageUploadField extends BaseField {
 export interface DividerField extends BaseField {
   type: 'divider';
   key: string; // still required by BaseField; use a unique id like 'divider-1'
+  /**
+   * When set, renders as a labeled sub-header (icon + uppercase label,
+   * matching the legacy `.ct-sublabel` convention from CommonProperties.js)
+   * instead of a plain `<hr>`. Used to group Border/Radius/Padding/Margin
+   * inside a single combined formaSection() accordion. `label`/`i18nKey`
+   * are inherited from BaseField.
+   */
+  icon?: string;
+}
+
+export interface PageAlignField extends BaseField {
+  type: 'page-align';
+  // No extra config: renders the fixed 6-button page-alignment grid and
+  // reports the clicked direction ('left'|'center-h'|'right'|'top'|
+  // 'center-v'|'bottom') via onChange. This is a fire-and-forget action --
+  // it wraps SnapEngine.align(element, direction), not a stored/diffed
+  // value -- see pageAlignSection() in CommonSchema.ts and BaseTool.ts's
+  // default _applyProperty(), which special-cases this key.
 }
 
 export interface CustomField extends BaseField {
@@ -131,6 +150,7 @@ export type Field =
   | IconPickerField
   | ImageUploadField
   | DividerField
+  | PageAlignField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

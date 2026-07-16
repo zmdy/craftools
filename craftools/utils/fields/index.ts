@@ -20,3 +20,4 @@ export * from './font-select.field';
 export * from './slider.field';
 export * from './divider.field';
 export * from './image-upload.field';
+export * from './page-align.field';

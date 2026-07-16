@@ -13,7 +13,8 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection } from '../../utils/CommonSchema';
+import { formaSection, sizePositionSection, pageAlignSection } from '../../utils/CommonSchema';
+import { AutoFitText } from '../../utils/AutoFitText.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -133,15 +134,23 @@ export class TextTool extends BaseTool {
           { type: 'color-gradient', key: 'gradient', label: 'Gradient', hidden: !isGradient },
         ],
       },
-      borderSection(),
-      radiusSection(),
-      zIndexSection(),
+      formaSection({ margin: true }),
+      sizePositionSection({ autoFit: true }),
+      pageAlignSection(),
     ];
   }
 
   // ── Apply ─────────────────────────────────────────────────────────────────────
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
+    // 'pageAlign' (pageAlignSection()) is a fire-and-forget action with no
+    // stored value -- delegate to BaseTool's shared SnapEngine.align()
+    // wiring and skip the state write below entirely.
+    if (key === 'pageAlign') {
+      super._applyProperty(element, key, value);
+      return;
+    }
+
     // Persist to state store
     PropertyRenderer.applyChange(element, key, value);
 
@@ -151,6 +160,45 @@ export class TextTool extends BaseTool {
     const state = PropertyRenderer._readState(element);
 
     switch (key) {
+      case 'autoFit': {
+        (element as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize = !!value;
+        if (value) AutoFitText.applyAutoSize(element, textEl);
+        break;
+      }
+
+      case 'width':
+        element.style.width = `${value}px`;
+        if (typeof (element as unknown as { pw?: number }).pw === 'number') {
+          (element as unknown as { pw?: number }).pw = parseFloat(String(value)) || 0;
+        }
+        break;
+      case 'height':
+        element.style.height = `${value}px`;
+        if (typeof (element as unknown as { ph?: number }).ph === 'number') {
+          (element as unknown as { ph?: number }).ph = parseFloat(String(value)) || 0;
+        }
+        break;
+      case 'x':
+        element.style.left = `${value}px`;
+        element.setAttribute('x', String(value));
+        break;
+      case 'y':
+        element.style.top = `${value}px`;
+        element.setAttribute('y', String(value));
+        break;
+
+      case 'marginTop':
+        textEl.style.marginTop = `${value}px`;
+        break;
+      case 'marginRight':
+        textEl.style.marginRight = `${value}px`;
+        break;
+      case 'marginBottom':
+        textEl.style.marginBottom = `${value}px`;
+        break;
+      case 'marginLeft':
+        textEl.style.marginLeft = `${value}px`;
+        break;
       case 'font':
         textEl.style.fontFamily = `'${value}', sans-serif`;
         break;

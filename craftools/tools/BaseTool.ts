@@ -15,6 +15,7 @@
 
 import type { PropertySchema } from '../types/PropertySchema';
 import { PropertyRenderer } from '../utils/PropertyRenderer';
+import { SnapEngine } from '../utils/SnapEngine.js';
 
 export abstract class BaseTool {
   // ── Schema contract ─────────────────────────────────────────────────────────
@@ -85,6 +86,27 @@ export abstract class BaseTool {
    * @param value   - The new value from the field handler.
    */
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
+    // 'pageAlign' (from CommonSchema.ts's pageAlignSection()) is a
+    // fire-and-forget action, not a persisted property: it just re-runs
+    // SnapEngine's page-alignment math against the element's current size.
+    // Nothing to write to dataset.ctState for it.
+    if (key === 'pageAlign') {
+      SnapEngine.align(element, value as string);
+      return;
+    }
+
+    // 'autoFit' (from CommonSchema.ts's sizePositionSection({ autoFit: true }))
+    // toggles the `_craftoolsAutoResize` expando that AutoFitText.js and the
+    // legacy panel already key off of (see CommonProperties.js's
+    // _appendTamanho()) -- kept in sync here so any tool that spreads in
+    // sizePositionSection() gets working W/H-disable-while-autofit behavior
+    // for free, even without overriding _applyProperty(). Tools that also
+    // need to trigger an immediate resize on toggle (e.g. TextTool) should
+    // override _applyProperty() and call AutoFitText.applyAutoSize() there.
+    if (key === 'autoFit') {
+      (element as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize = !!value;
+    }
+
     PropertyRenderer.applyChange(element, key, value);
   }
 
