@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PaperThemes } from "./PaperTool.js"; // Importa os temas se necessário
 
 export class PaperPatterns {

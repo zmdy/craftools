@@ -155,7 +155,7 @@ export class Craftools_Editor extends HTMLElement {
   }
 
   _initHistoryAndSession() {
-    const pagesWrapper    = this.querySelector('#pages-wrapper')!;
+    const pagesWrapper    = this.querySelector<HTMLElement>('#pages-wrapper')!;
     const undoBtn         = this.querySelector('#undo-btn') as HTMLButtonElement;
     const redoBtn         = this.querySelector('#redo-btn') as HTMLButtonElement;
     const historyIndicator = this.querySelector('#history-indicator') as HTMLElement;
@@ -634,7 +634,7 @@ export class Craftools_Editor extends HTMLElement {
     document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage').forEach(btn => {
       btn.addEventListener('click', () => {
         setTimeout(() => {
-          const pagesWrapper = this.querySelector('#pages-wrapper');
+          const pagesWrapper = this.querySelector<HTMLElement>('#pages-wrapper');
           if (pagesWrapper) HistoryManager.snapshot(pagesWrapper);
           SessionManager.markDirty();
         }, 100);

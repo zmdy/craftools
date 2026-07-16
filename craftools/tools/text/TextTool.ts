@@ -34,6 +34,11 @@ const rgbToHex = (rgb: string): string => {
 
 export class TextTool extends BaseTool {
 
+  public static createElement(type: string, editor: any): HTMLElement | null {
+    const inst = new (this as any)();
+    return (inst as any).createElement(type, editor);
+  }
+
   // ── State sync (CSS → dataset.ctState) ──────────────────────────────────────
 
   protected static _syncFromDOM(element: HTMLElement): void {

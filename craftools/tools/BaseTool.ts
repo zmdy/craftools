@@ -45,7 +45,7 @@ export abstract class BaseTool {
    * Returns context-bar action descriptors for the selected element.
    * Override in tools that provide quick-action buttons (format, crop, etc.).
    */
-  static getCtxOptions(_element?: HTMLElement): unknown[] {
+  static getCtxOptions(_element?: HTMLElement): any[] {
     return [];
   }
 

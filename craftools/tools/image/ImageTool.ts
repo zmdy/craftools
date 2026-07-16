@@ -48,6 +48,10 @@ const getMeta = (element: HTMLElement): ImageMeta =>
 // ── Tool ──────────────────────────────────────────────────────────────────────
 
 export class ImageTool extends BaseTool {
+  public static createElement(type: string, editor: any): HTMLElement | null {
+    const inst = new (this as any)();
+    return (inst as any).createElement(type, editor);
+  }
 
   protected static _syncFromDOM(element: HTMLElement): void {
     const meta = getMeta(element);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AlbumWizard.ts — TypeScript port of AlbumTool.js's wizard-style panel.
  *

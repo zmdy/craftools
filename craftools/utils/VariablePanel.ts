@@ -136,7 +136,7 @@ export class VariablePanel {
             const ce  = el.contentArea?.querySelector<HTMLElement>('[contenteditable]');
             const raw = String(el._craftoolsVariablePrevHtml !== undefined
                 ? el._craftoolsVariablePrevHtml
-                : (ce?.textContent ?? '') ?? '');
+                : (ce?.textContent ?? ''));
             snippet = raw.replace(/<[^>]*>/g, '').trim().slice(0, 18);
         } else if (toolType === 'qrcode')   snippet = 'QR Code';
         else if (toolType === 'barcode') snippet = 'Barcode';

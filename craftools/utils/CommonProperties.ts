@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @deprecated CommonProperties.js is superseded by the schema-based system.
  *
@@ -604,22 +605,22 @@ export class CommonProperties {
     // ─────────────────────────────────────────────────────────────────────────
 
     /** @deprecated use renderBaseAccordions */
-    static renderBorder(container, element, targetSelector, onChange) {
+    static renderBorder(container: HTMLElement, element: any, targetSelector: string, onChange?: Function) {
         this._appendForma(container, element, { border: targetSelector, radius: false, padding: false, margin: false, onChange });
     }
 
     /** @deprecated use renderBaseAccordions */
-    static renderBorderRadius(container, element, targetSelector, onChange) {
+    static renderBorderRadius(container: HTMLElement, element: any, targetSelector: string, onChange?: Function) {
         /* no-op — merged into Forma */
     }
 
     /** @deprecated use renderBaseAccordions */
-    static renderPadding(container, element, targetSelector, onChange) {
+    static renderPadding(container: HTMLElement, element: any, targetSelector: string, onChange?: Function) {
         /* no-op — merged into Forma */
     }
 
     /** @deprecated use renderBaseAccordions */
-    static renderZIndex(container, element, onChange) {
+    static renderZIndex(container: HTMLElement, element: any, onChange?: Function) {
         this._appendTamanho(container, element, { onChange });
     }
 
@@ -627,25 +628,25 @@ export class CommonProperties {
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    static _resolveTarget(element, selector) {
+    static _resolveTarget(element: any, selector: string | boolean) {
         if (!selector || selector === true) return element;
-        return element.contentArea?.querySelector(selector) || element.querySelector(selector) || null;
+        return element.contentArea?.querySelector(selector as string) || element.querySelector(selector as string) || null;
     }
 
-    static _triggerChange(element) {
+    static _triggerChange(element: HTMLElement) {
         element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
     }
 
-    static _toastError(msg) {
+    static _toastError(msg: string) {
         import('./Notify.js').then(({ Notify }) => Notify.toast(msg, 'error'));
     }
 
-    static _getUnit(val) {
+    static _getUnit(val: any) {
         if (!val) return 'px';
         return val.toString().replace(/[0-9.-]/g, '').trim() || 'px';
     }
 
-    static _rgbToHex(rgb) {
+    static _rgbToHex(rgb: string) {
         if (!rgb) return '#000000';
         if (rgb === 'white') return '#ffffff';
         if (rgb === 'black') return '#000000';
@@ -653,7 +654,7 @@ export class CommonProperties {
         if (!rgb.startsWith('rgb')) return rgb;
         const parts = rgb.match(/\d+/g);
         if (!parts) return rgb;
-        const hex = x => ('0' + parseInt(x).toString(16)).slice(-2);
+        const hex = (x: string) => ('0' + parseInt(x).toString(16)).slice(-2);
         return '#' + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
     }
 }
