@@ -1,0 +1,502 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners } from './ApiDataLoader.js';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { CalendarRenderer } from './CalendarRenderer.js';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type VariableType =
+    | 'date' | 'sequenceNumber' | 'sequenceText' | 'pageNumber'
+    | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar';
+
+/** Flat binding structure — all fields are optional since they depend on `type`. */
+export interface VariableBinding {
+    type:          VariableType | string;
+    linkedTo?:     string;
+    // date
+    startDate?:    string;
+    interval?:     string;
+    step?:         number | string;
+    format?:       string;
+    // sequenceNumber
+    start?:        number | string;
+    padding?:      number | string;
+    prefix?:       string;
+    suffix?:       string;
+    // pageNumber / link / sequenceNumber
+    startAt?:      number | string;
+    // link
+    url?:          string;
+    appendIndex?:  boolean;
+    // emoji / sequenceText
+    values?:       string;
+    mode?:         string;
+    loop?:         boolean;
+    // apiPhrase
+    field?:        string;
+    collection?:   string;
+    filterField?:  string;
+    filterValue?:  string;
+    // emojiKitchen
+    leftEmoji?:    string;
+    rightEmoji?:   string;
+    // miniCalendar
+    year?:         number;
+    month?:        number;
+    displayMode?:  string;
+}
+
+export interface ResolveContext {
+    repetitionIndex?: number;
+    pageNumber?:      number;
+    totalPages?:      number;
+    now?:             Date;
+}
+
+export interface ApiCache {
+    phrasesByCollection?:    Record<string, unknown[]>;
+    emojiKitchenCombos?:     Record<string, string>;
+    emojiKitchenPartnersList?: Record<string, string[]>;
+}
+
+interface LinkPick {
+    type: string;
+    pick: unknown;
+}
+
+export interface LinkCtx {
+    id:    string;
+    picks: Map<string, LinkPick>;
+}
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const MINI_CALENDAR_PARTS: Record<string, { header: boolean; week: boolean; days: boolean; holidaysBox: boolean; moonBox: boolean }> = {
+    diasSemana:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
+    calendario:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
+    header:      { header: true,  week: false, days: false, holidaysBox: false, moonBox: false },
+    holidaysBox: { header: false, week: false, days: false, holidaysBox: true,  moonBox: false },
+    moonBox:     { header: false, week: false, days: false, holidaysBox: false, moonBox: true  },
+    completo1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
+    completo2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
+};
+
+const DEFAULT_EMOJI_POOL = [
+    '😀','😁','😂','😃','😄','😅','😆','🥰','😍','😘',
+    '😋','😜','🤩','🥳','😎','🤠','😇','🙂','😉','😊',
+    '🤣','😺','😻','🥹','🤗','🙌','👍','👏','✨','🎉',
+    '❤️','💛','💚','💙','💜','🔥','🌟','⭐','🌈','🍀',
+];
+
+// ── Engine ────────────────────────────────────────────────────────────────────
+
+export class VariableEngine {
+
+    static readonly TYPES: string[] = [
+        'date','sequenceNumber','sequenceText','pageNumber',
+        'link','emoji','apiPhrase','emojiKitchen','miniCalendar',
+    ];
+
+    // ── Default bindings ─────────────────────────────────────────────────────
+
+    static defaultBinding(type: string): VariableBinding | null {
+        const today = new Date();
+        const pad   = (v: number) => String(v).padStart(2, '0');
+        const isoToday = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+        switch (type) {
+            case 'date':           return { type, startDate: isoToday, interval: 'daily', step: 1, format: 'DD/MM/YYYY', linkedTo: '' };
+            case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
+            case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
+            case 'pageNumber':     return { type, startAt: 1, format: 'n', linkedTo: '' };
+            case 'link':           return { type, url: '', appendIndex: false, startAt: 1, linkedTo: '' };
+            case 'emoji':          return { type, values: '', mode: 'sequential', linkedTo: '' };
+            case 'apiPhrase':      return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
+            case 'emojiKitchen':   return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
+            case 'miniCalendar':   return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'completo1', linkedTo: '' };
+            default:               return null;
+        }
+    }
+
+    // ── Synchronous resolution ────────────────────────────────────────────────
+
+    static resolve(
+        binding:  VariableBinding | null,
+        context:  ResolveContext,
+        apiCache: ApiCache = {},
+        linkCtx:  LinkCtx | null = null,
+    ): string {
+        if (!binding || !binding.type) return '';
+        const ctx = {
+            repetitionIndex: context?.repetitionIndex ?? 0,
+            pageNumber:      context?.pageNumber      ?? 1,
+            totalPages:      context?.totalPages      ?? 1,
+            now:             context?.now             ?? new Date(),
+        };
+
+        const picks = linkCtx?.picks ?? null;
+        const myId  = linkCtx?.id   ?? null;
+
+        let pick:       unknown = null;
+        let usedLeader  = false;
+
+        if (binding.linkedTo && picks?.has(binding.linkedTo)) {
+            const leader = picks.get(binding.linkedTo)!;
+            if (leader.type === binding.type) { pick = leader.pick; usedLeader = true; }
+        }
+
+        if (!usedLeader) {
+            pick = this._pick(binding, ctx, apiCache);
+            if (picks && myId) picks.set(myId, { type: binding.type, pick });
+        }
+
+        return this._format(binding, pick, ctx);
+    }
+
+    static newLinkRegistry(): Map<string, LinkPick> {
+        return new Map<string, LinkPick>();
+    }
+
+    static async resolvePreview(
+        binding:       VariableBinding,
+        sampleContext: ResolveContext = {},
+    ): Promise<string> {
+        const context = {
+            repetitionIndex: sampleContext.repetitionIndex ?? 0,
+            pageNumber:      sampleContext.pageNumber      ?? 1,
+            totalPages:      sampleContext.totalPages      ?? 1,
+            now:             new Date(),
+        };
+        if (binding.type === 'apiPhrase' || binding.type === 'emojiKitchen') {
+            const apiCache = await this.prefetchApiResources([binding]);
+            return this.resolve(binding, context, apiCache);
+        }
+        return this.resolve(binding, context, {});
+    }
+
+    static async prefetchApiResources(bindings: (VariableBinding | null)[]): Promise<ApiCache> {
+        const list = bindings ?? [];
+        const apiPhraseBindings = list.filter((b): b is VariableBinding => !!b && b.type === 'apiPhrase');
+
+        const kitchenPairs         = new Set<string>();
+        const kitchenVariableLefts = new Set<string>();
+        list.forEach(b => {
+            if (b?.type === 'emojiKitchen' && (b.leftEmoji ?? '').trim()) {
+                const left  = b.leftEmoji!.trim();
+                const right = (b.rightEmoji ?? '').trim();
+                if (right) kitchenPairs.add(`${left}|${right}`);
+                else       kitchenVariableLefts.add(left);
+            }
+        });
+
+        const cache: ApiCache = {};
+
+        if (apiPhraseBindings.length) {
+            const collections = new Set(apiPhraseBindings.map(b => (b.collection ?? '').trim()));
+            cache.phrasesByCollection = {};
+            await Promise.all([...collections].map(async col => {
+                try   { cache.phrasesByCollection![col] = await loadPhrases('phrases', col); }
+                catch { cache.phrasesByCollection![col] = []; }
+            }));
+        }
+
+        if (kitchenVariableLefts.size) {
+            cache.emojiKitchenPartnersList = {};
+            await Promise.all([...kitchenVariableLefts].map(async left => {
+                let partners: string[] = [];
+                try   { partners = ((await loadEmojiKitchenPartners(left)) as string[]).filter((p: string) => p !== left); }
+                catch { partners = []; }
+                cache.emojiKitchenPartnersList![left] = partners;
+                kitchenPairs.add(`${left}|${left}`);
+                partners.forEach(p => kitchenPairs.add(`${left}|${p}`));
+            }));
+        }
+
+        if (kitchenPairs.size) {
+            cache.emojiKitchenCombos = {};
+            await Promise.all([...kitchenPairs].map(async key => {
+                const [left, right] = key.split('|');
+                try   { const combo = await loadEmojiKitchenCombo(left, right); cache.emojiKitchenCombos![key] = (combo?.imageUrl) ?? ''; }
+                catch { cache.emojiKitchenCombos![key] = ''; }
+            }));
+        }
+
+        return cache;
+    }
+
+    static async loadFilterOptions(field: string, collection = ''): Promise<string[]> {
+        if (!field) return [];
+        try {
+            const list = (await loadPhrases('phrases', collection)) as unknown[];
+            const values = new Set<string>();
+            list.forEach((item: unknown) => {
+                if (item == null || typeof item !== 'object') return;
+                const val = (item as Record<string, unknown>)[field];
+                if (val == null) return;
+                if (Array.isArray(val)) val.forEach(v => { if (v != null && String(v).trim()) values.add(String(v)); });
+                else if (String(val).trim()) values.add(String(val));
+            });
+            return [...values].sort((a, b) => a.localeCompare(b));
+        } catch { return []; }
+    }
+
+    static async loadPhraseCollectionOptions(): Promise<string[]> {
+        try   { return await loadPhraseCollections() as string[]; }
+        catch { return []; }
+    }
+
+    // ── Pick dispatch ─────────────────────────────────────────────────────────
+
+    private static _pick(binding: VariableBinding, ctx: Required<ResolveContext> & { now: Date }, apiCache: ApiCache): unknown {
+        switch (binding.type) {
+            case 'date':           return this._pickDate(binding, ctx);
+            case 'sequenceNumber': return this._pickSequenceNumber(binding, ctx);
+            case 'sequenceText':   return this._pickSequenceText(binding, ctx);
+            case 'pageNumber':     return this._pickPageNumber(binding, ctx);
+            case 'link':           return this._pickLink(binding, ctx);
+            case 'emoji':          return this._pickEmoji(binding, ctx);
+            case 'apiPhrase':      return this._pickApiPhrase(binding, ctx, apiCache);
+            case 'emojiKitchen':   return this._pickEmojiKitchen(binding, ctx, apiCache);
+            case 'miniCalendar':   return this._pickMiniCalendar(binding, ctx);
+            default:               return null;
+        }
+    }
+
+    // ── Format dispatch ───────────────────────────────────────────────────────
+
+    private static _format(binding: VariableBinding, pick: unknown, ctx: Required<ResolveContext> & { now: Date }): string {
+        switch (binding.type) {
+            case 'date':           return pick ? this._formatDate(pick as Date, binding.format ?? 'DD/MM/YYYY') : '';
+            case 'sequenceNumber': return this._formatSequenceNumber(pick as number, binding);
+            case 'sequenceText':   return pick == null ? '' : String(pick);
+            case 'pageNumber':     return this._formatPageNumber(pick as number, binding, ctx);
+            case 'link':           return this._formatLink(pick as number | null, binding);
+            case 'emoji':          return pick == null ? '' : String(pick);
+            case 'apiPhrase':      return this._formatApiPhrase(pick, binding);
+            case 'emojiKitchen':   return (pick && (pick as { url: string }).url) ? (pick as { url: string }).url : '';
+            case 'miniCalendar':   return pick ? this._formatMiniCalendar(pick as { year: number; month: number; displayMode: string }) : '';
+            default:               return '';
+        }
+    }
+
+    // ── date ──────────────────────────────────────────────────────────────────
+
+    private static _pickDate(b: VariableBinding, ctx: { repetitionIndex: number; now: Date }): Date | null {
+        const base = b.startDate ? new Date(`${b.startDate}T00:00:00`) : new Date(ctx.now);
+        if (isNaN(base.getTime())) return null;
+        return this._addInterval(base, b.interval ?? 'daily', (parseInt(String(b.step), 10) || 1) * ctx.repetitionIndex);
+    }
+
+    private static _addInterval(date: Date, interval: string, amount: number): Date {
+        const d = new Date(date.getTime());
+        switch (interval) {
+            case 'daily':   d.setDate(d.getDate() + amount);         break;
+            case 'weekly':  d.setDate(d.getDate() + amount * 7);     break;
+            case 'monthly': d.setMonth(d.getMonth() + amount);       break;
+            case 'yearly':  d.setFullYear(d.getFullYear() + amount); break;
+        }
+        return d;
+    }
+
+    private static _formatDate(d: Date, format: string): string {
+        const pad = (v: number) => String(v).padStart(2, '0');
+        const dd   = pad(d.getDate()), mm = pad(d.getMonth() + 1), yyyy = d.getFullYear(), yy = String(yyyy).slice(-2);
+        const mPt  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const wPt  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+        switch (format) {
+            case 'DD/MM/YYYY':         return `${dd}/${mm}/${yyyy}`;
+            case 'DD/MM/YY':           return `${dd}/${mm}/${yy}`;
+            case 'DD/MM':              return `${dd}/${mm}`;
+            case 'MM/YYYY':            return `${mm}/${yyyy}`;
+            case 'YYYY-MM-DD':         return `${yyyy}-${mm}-${dd}`;
+            case 'DIA_MES_EXTENSO':    return `${d.getDate()} de ${mPt[d.getMonth()]}`;
+            case 'DIA_MES_ANO_EXTENSO':return `${d.getDate()} de ${mPt[d.getMonth()]} de ${yyyy}`;
+            case 'DIA_SEMANA':         return wPt[d.getDay()];
+            case 'DIA_SEMANA_DATA':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
+            default:                   return `${dd}/${mm}/${yyyy}`;
+        }
+    }
+
+    // ── sequenceNumber ────────────────────────────────────────────────────────
+
+    private static _pickSequenceNumber(b: VariableBinding, ctx: { repetitionIndex: number }): number {
+        const start = parseFloat(String(b.start));
+        const step  = parseFloat(String(b.step));
+        return (isNaN(start) ? 1 : start) + (isNaN(step) ? 1 : step) * ctx.repetitionIndex;
+    }
+
+    private static _formatSequenceNumber(n: number, b: VariableBinding): string {
+        if (n == null || isNaN(n)) return '';
+        const padding = parseInt(String(b.padding), 10) || 0;
+        const rounded = Number.isInteger(n) ? n : Math.round(n * 100) / 100;
+        const sign    = rounded < 0 ? '-' : '';
+        let numStr    = String(Math.abs(rounded));
+        if (padding > 0) numStr = numStr.padStart(padding, '0');
+        return `${b.prefix ?? ''}${sign}${numStr}${b.suffix ?? ''}`;
+    }
+
+    // ── sequenceText ──────────────────────────────────────────────────────────
+
+    private static _parseValuesList(raw: unknown): string[] {
+        return String(raw ?? '').split(/\r?\n|,/).map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    private static _pickSequenceText(b: VariableBinding, ctx: { repetitionIndex: number }): string | null {
+        const values = this._parseValuesList(b.values);
+        if (!values.length) return null;
+        const idx = ctx.repetitionIndex;
+        if (b.loop === false) return values[Math.min(idx, values.length - 1)];
+        return values[idx % values.length];
+    }
+
+    // ── pageNumber ────────────────────────────────────────────────────────────
+
+    private static _pickPageNumber(b: VariableBinding, ctx: { repetitionIndex: number }): number {
+        return (parseInt(String(b.startAt), 10) || 1) + ctx.repetitionIndex;
+    }
+
+    private static _formatPageNumber(n: number, b: VariableBinding, ctx: { totalPages: number }): string {
+        if (n == null) return '';
+        if (b.format === 'n_of_total') return `${n}/${ctx.totalPages || n}`;
+        return String(n);
+    }
+
+    // ── link ──────────────────────────────────────────────────────────────────
+
+    private static _pickLink(b: VariableBinding, ctx: { repetitionIndex: number }): number | null {
+        if (!b.appendIndex) return null;
+        return (parseInt(String(b.startAt), 10) || 1) + ctx.repetitionIndex;
+    }
+
+    private static _formatLink(pick: number | null, b: VariableBinding): string {
+        let url = b.url ?? '';
+        if (b.appendIndex) {
+            const n = pick ?? (parseInt(String(b.startAt), 10) || 1);
+            url += (url.includes('?') ? '&' : (url ? '?' : '')) + 'p=' + n;
+        }
+        return url;
+    }
+
+    // ── emoji ─────────────────────────────────────────────────────────────────
+
+    private static _pickEmoji(b: VariableBinding, ctx: { repetitionIndex: number }): string {
+        const values = this._parseEmojiList(b.values);
+        if (!values.length) return DEFAULT_EMOJI_POOL[Math.floor(Math.random() * DEFAULT_EMOJI_POOL.length)];
+        if (b.mode === 'random') return values[this._pseudoRandomIndex(ctx.repetitionIndex, values.length)];
+        return values[ctx.repetitionIndex % values.length];
+    }
+
+    private static _parseEmojiList(raw: unknown): string[] {
+        const str = String(raw ?? '').trim();
+        if (!str) return [];
+        const pieces = str.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
+        const out: string[] = [];
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+            const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+            for (const piece of pieces) {
+                for (const { segment } of seg.segment(piece)) {
+                    if (segment?.trim()) out.push(segment);
+                }
+            }
+        } else {
+            const re = /\p{Extended_Pictographic}(?:\u{FE0F})?(?:\u{200D}\p{Extended_Pictographic}(?:\u{FE0F})?)*|\S/gu;
+            for (const piece of pieces) out.push(...(piece.match(re) ?? []));
+        }
+        return out;
+    }
+
+    // ── apiPhrase ─────────────────────────────────────────────────────────────
+
+    private static _pickApiPhrase(b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): unknown {
+        const col  = (b.collection ?? '').trim();
+        let list   = apiCache.phrasesByCollection?.[col] ?? [];
+        if (!list.length) return null;
+
+        if (b.filterField && b.filterValue) {
+            list = list.filter(item => {
+                if (item == null || typeof item !== 'object') return false;
+                const val = (item as Record<string, unknown>)[b.filterField!];
+                if (Array.isArray(val)) return val.map(String).includes(b.filterValue!);
+                return val != null && String(val) === b.filterValue;
+            });
+            if (!list.length) return null;
+        }
+
+        const idx = ctx.repetitionIndex;
+        return b.mode === 'random'
+            ? list[this._pseudoRandomIndex(idx, list.length)]
+            : list[idx % list.length];
+    }
+
+    private static _formatApiPhrase(item: unknown, b: VariableBinding): string {
+        if (item == null)          return '';
+        if (typeof item === 'string') return item;
+        if (typeof item === 'number') return String(item);
+
+        const obj   = item as Record<string, unknown>;
+        const field = (b.field ?? '').trim();
+        if (field && obj[field] != null) {
+            const val = obj[field];
+            return Array.isArray(val) ? val.join(', ') : String(val);
+        }
+
+        const guessKeys = ['phrase','text','frase','texto','title','name','value'];
+        for (const key of guessKeys) if (obj[key] != null) return String(obj[key]);
+        const firstStr = Object.keys(obj).find(k => typeof obj[k] === 'string');
+        return firstStr ? String(obj[firstStr]) : '';
+    }
+
+    // ── emojiKitchen ──────────────────────────────────────────────────────────
+
+    private static _pickEmojiKitchen(b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): { leftEmoji: string; rightEmoji: string; url: string } | null {
+        const left = (b.leftEmoji ?? '').trim();
+        if (!left) return null;
+        const rightFixed = (b.rightEmoji ?? '').trim();
+
+        let right: string;
+        if (rightFixed) {
+            right = rightFixed;
+        } else {
+            const partners = apiCache.emojiKitchenPartnersList?.[left] ?? [];
+            const pool     = [left, ...partners];
+            const idx      = ctx.repetitionIndex;
+            right = b.mode === 'random' ? pool[this._pseudoRandomIndex(idx, pool.length)] : pool[idx % pool.length];
+        }
+
+        const key = `${left}|${right}`;
+        const url = apiCache.emojiKitchenCombos?.[key] ?? '';
+        return { leftEmoji: left, rightEmoji: right, url };
+    }
+
+    // ── miniCalendar ──────────────────────────────────────────────────────────
+
+    private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }): { year: number; month: number; displayMode: string } {
+        let year  = parseInt(String(b.year), 10)  || new Date().getFullYear();
+        let month = parseInt(String(b.month), 10) || (new Date().getMonth() + 1);
+        if (b.mode === 'sequentialMonthly') {
+            month += ctx.repetitionIndex;
+            while (month > 12) { month -= 12; year += 1; }
+            while (month < 1)  { month += 12; year -= 1; }
+        }
+        const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'completo1';
+        return { year, month, displayMode };
+    }
+
+    private static _formatMiniCalendar(pick: { year: number; month: number; displayMode: string }): string {
+        const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.completo1;
+        // CalendarRenderer stays JS — any type here is acceptable
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts }) as string;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static _pseudoRandomIndex(seed: number, length: number): number {
+        if (!length || length <= 0) return 0;
+        let h = (seed + 0x9e3779b9) | 0;
+        h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+        h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+        h = (h ^ (h >>> 16)) >>> 0;
+        return h % length;
+    }
+}
