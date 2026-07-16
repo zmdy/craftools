@@ -79,6 +79,14 @@ export interface AlignField extends BaseField {
 
 export interface FontSelectField extends BaseField {
   type: 'font-select';
+  /** Overrides the default shared catalog (utils/FontList.ts's FONTS). */
+  fonts?: string[];
+  /**
+   * Shows the "type the name of a locally-installed font" input+button
+   * below the picker (ports MobileToolbar.js's _renderTextFont() custom-font
+   * UI, previously desktop-only-missing). Default: true.
+   */
+  allowCustom?: boolean;
 }
 
 export interface SliderField extends BaseField {

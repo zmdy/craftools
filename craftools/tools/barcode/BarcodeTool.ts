@@ -26,14 +26,14 @@ export class BarcodeTool extends BaseTool {
         defaultOpen: true,
         fields: [
           {
-            type: 'select', key: 'format', label: 'Format',
+            // BarcodeGenerator.js's static FORMATS = ['code39', 'ean13'] --
+            // those are the only two formats actually implemented. The
+            // schema used to also offer code128/ean8/upc/itf14, which
+            // silently produced nothing/incorrect output when picked.
+            type: 'select', key: 'format', label: 'Format', i18nKey: 'barcodeTool.format',
             options: [
-              { value: 'code39',  label: 'Code 39' },
-              { value: 'code128', label: 'Code 128' },
-              { value: 'ean13',   label: 'EAN-13' },
-              { value: 'ean8',    label: 'EAN-8' },
-              { value: 'upc',     label: 'UPC-A' },
-              { value: 'itf14',   label: 'ITF-14' },
+              { value: 'code39', label: 'Code 39 (text/numbers)' },
+              { value: 'ean13',  label: 'EAN-13 (product, 12-13 digits)' },
             ],
           },
           { type: 'text',   key: 'text',       label: 'Content' },

@@ -87,6 +87,14 @@ export class QRCodeTool extends BaseTool {
           // spotify
           { type: 'text',  key: 'spotifyInput', label: 'Spotify URL / URI', hidden: !isSpotify },
           { type: 'color', key: 'spotifyBg',    label: 'Background color',  hidden: !isSpotify },
+          // buildSpotifyCodeUrl() only accepts 'black'/'white' -- spotifyBarColor
+          // was already synced into ctState (_syncFromDOM below) but had no
+          // field to edit it from, so it was stuck at its 'black' default.
+          { type: 'select', key: 'spotifyBarColor', label: 'Code color', i18nKey: 'qrTool.spotifyBarColor', hidden: !isSpotify,
+            options: [
+              { value: 'black', label: 'Black' },
+              { value: 'white', label: 'White' },
+            ] },
         ].filter(f => !f.hidden),
       },
       {

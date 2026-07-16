@@ -7,13 +7,24 @@ import type { PropertySchema } from '../../types/PropertySchema';
 const getMeta = (el: HTMLElement) =>
   (el as HTMLElement & { _craftoolsMeta?: Record<string, unknown> })._craftoolsMeta ?? {};
 
+// Must match MiniCalendarTool.js's real DISPLAY_MODES exactly (id + order) --
+// CalendarRenderer only knows how to render these 7 modes. The previous list
+// here ('mes'/'semana'/'mini'/'lista') didn't correspond to anything the
+// renderer implements (picking them silently fell back to 'completo1'), and
+// 5 real modes (diasSemana/calendario/header/holidaysBox/moonBox) were
+// missing entirely.
+// NOTE: SelectField's options are { value, label } literals only -- no
+// per-option i18nKey support exists yet in the field system (same as
+// borderStyle's options in CommonSchema.ts), so these stay English literals
+// like every other <select> field in the codebase today.
 const DISPLAY_MODES = [
-  { value: 'completo1', label: 'Full (style 1)' },
-  { value: 'completo2', label: 'Full (style 2)' },
-  { value: 'mes',       label: 'Month only' },
-  { value: 'semana',    label: 'Week grid' },
-  { value: 'mini',      label: 'Mini' },
-  { value: 'lista',     label: 'List' },
+  { value: 'diasSemana',  label: 'Days table only (with holidays marked)' },
+  { value: 'calendario',  label: 'Calendar (header + days table)' },
+  { value: 'header',      label: 'Header only (month and year)' },
+  { value: 'holidaysBox', label: 'Holidays box only' },
+  { value: 'moonBox',     label: 'Moon phases box only' },
+  { value: 'completo1',   label: 'Calendar with holidays' },
+  { value: 'completo2',   label: 'Full calendar with moon phases' },
 ];
 
 const now = new Date();
