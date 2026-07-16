@@ -93,6 +93,17 @@ export class TextTool extends BaseTool {
     }
   }
 
+  // ── Style bar target ─────────────────────────────────────────────────────────
+
+  // Border/radius/margin styling lives on the [contenteditable] child, not
+  // the outer craftools-element (see _applyProperty()'s border*/margin*
+  // cases below) -- so the Copy/Paste bar (BaseTool.ts's _renderStyleBar())
+  // must read/write cssText there too, or it would copy/paste nothing
+  // meaningful from the outer element.
+  protected static _getStyleTarget(element: HTMLElement): HTMLElement {
+    return getTextEl(element) ?? element;
+  }
+
   // ── Schema ────────────────────────────────────────────────────────────────────
 
   static getPropertySchema(element: HTMLElement): PropertySchema {

@@ -16,6 +16,17 @@
 import type { PropertySchema } from '../types/PropertySchema';
 import { PropertyRenderer } from '../utils/PropertyRenderer';
 import { SnapEngine } from '../utils/SnapEngine.js';
+import { Notify } from '../utils/Notify.js';
+import { tr } from '../utils/i18nLabel';
+
+// Shape of the clipboard payload copied by the style bar. Kept loose
+// (unknown meta) since `_craftoolsMeta`'s shape varies per tool.
+interface ClipboardStyle {
+  type: string | null;
+  cssText: string;
+  zIndex: string;
+  meta: unknown;
+}
 
 export abstract class BaseTool {
   // ── Schema contract ─────────────────────────────────────────────────────────
@@ -51,12 +62,29 @@ export abstract class BaseTool {
    * Override `getPropertySchema()` to change what appears in the panel.
    */
   static renderPropertiesPanel(container: HTMLElement, element: HTMLElement): void {
+    // Sticky Copy/Paste/Lock bar, always rendered above the accordions --
+    // matches the legacy CommonProperties.renderEstiloBar() bar every
+    // .js tool got automatically via renderCommonProperties().
+    this._renderStyleBar(container, element);
+
     // Prime dataset.ctState from existing DOM/meta state (first render only).
     this._syncFromDOM(element);
     const schema = this.getPropertySchema(element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
       this._applyProperty(element, key, value);
     });
+  }
+
+  /**
+   * Returns the DOM node whose inline styles (border/radius/padding/margin/
+   * etc.) the style bar's Copy/Paste buttons read from and write to.
+   *
+   * Defaults to the canvas element itself. Override when a tool keeps its
+   * visual styling on an inner node instead (e.g. TextTool.ts applies
+   * border/radius to its `[contenteditable]` child, not the outer element).
+   */
+  protected static _getStyleTarget(element: HTMLElement): HTMLElement {
+    return element;
   }
 
   /**
@@ -116,6 +144,133 @@ export abstract class BaseTool {
    */
   protected static _readState(element: HTMLElement): Record<string, unknown> {
     return PropertyRenderer._readState(element);
+  }
+
+  // ── Style bar (Copy/Paste/Lock) ──────────────────────────────────────────────
+
+  /**
+   * Renders (or updates) the sticky Copy/Paste/Lock bar at the very top of
+   * the panel container -- a faithful port of CommonProperties.js's
+   * renderEstiloBar(). Not an accordion section: always visible, above
+   * everything getPropertySchema() returns.
+   *
+   * `container` is reused by Editor.ts across element selections (it's
+   * never cleared), so the bar itself is only created once, but its
+   * buttons' click listeners are always rebound against the CURRENTLY
+   * selected `element` on every call (via cloneNode, which drops old
+   * listeners) -- otherwise a stale closure from the first-ever selection
+   * would keep receiving every click forever.
+   */
+  private static _renderStyleBar(container: HTMLElement, element: HTMLElement): void {
+    let bar = container.querySelector<HTMLElement>('.ct-copypaste-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'ct-copypaste-bar';
+      bar.innerHTML = `
+        <button type="button" class="craftools-pill" data-ct-bar="copy">
+          <span class="material-symbols-outlined" style="font-size:13px;">content_copy</span>
+          <span>${tr('common.copy', 'Copiar')}</span>
+        </button>
+        <button type="button" class="craftools-pill" data-ct-bar="paste">
+          <span class="material-symbols-outlined" style="font-size:13px;">content_paste</span>
+          <span>${tr('common.paste', 'Colar')}</span>
+        </button>
+        <button type="button" class="craftools-pill" data-ct-bar="lock">
+          <span class="material-symbols-outlined" style="font-size:13px;">lock_open</span>
+          <span></span>
+        </button>`;
+      container.insertBefore(bar, container.firstChild);
+    }
+
+    const rawCopy  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="copy"]')!;
+    const rawPaste = bar.querySelector<HTMLButtonElement>('[data-ct-bar="paste"]')!;
+    const rawLock  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="lock"]')!;
+
+    // Strip any listeners left over from a previous selection.
+    const btnCopy  = rawCopy.cloneNode(true) as HTMLButtonElement;
+    const btnPaste = rawPaste.cloneNode(true) as HTMLButtonElement;
+    const btnLock  = rawLock.cloneNode(true) as HTMLButtonElement;
+    rawCopy.replaceWith(btnCopy);
+    rawPaste.replaceWith(btnPaste);
+    rawLock.replaceWith(btnLock);
+
+    this._updateLockButton(btnLock, element.getAttribute('data-locked') === 'true');
+
+    const target = this._getStyleTarget(element);
+
+    btnCopy.addEventListener('click', () => {
+      const meta = (element as unknown as { _craftoolsMeta?: unknown })._craftoolsMeta;
+      (window as unknown as { __craftoolsClipboardStyle?: ClipboardStyle }).__craftoolsClipboardStyle = {
+        type:    element.getAttribute('data-craftool'),
+        cssText: target.style.cssText,
+        zIndex:  element.style.zIndex,
+        meta:    meta ? JSON.parse(JSON.stringify(meta)) : null,
+      };
+      const orig = btnCopy.innerHTML;
+      btnCopy.innerHTML = `<span class="material-symbols-outlined" style="font-size:13px;color:var(--accent);">check</span> ${tr('common.copied', 'Copiado')}`;
+      setTimeout(() => { btnCopy.innerHTML = orig; }, 1500);
+    });
+
+    btnPaste.addEventListener('click', () => {
+      const clip = (window as unknown as { __craftoolsClipboardStyle?: ClipboardStyle }).__craftoolsClipboardStyle;
+      if (!clip) {
+        Notify.toast(tr('common.noStyleCopied', 'Nenhum estilo copiado'), 'error');
+        return;
+      }
+      if (clip.type !== element.getAttribute('data-craftool')) {
+        Notify.toast(tr('common.incompatibleStyleTypes', 'Tipos de elemento incompatíveis'), 'error');
+        return;
+      }
+
+      target.style.cssText = clip.cssText;
+      if (clip.zIndex) element.style.zIndex = clip.zIndex;
+
+      const meta = (element as unknown as { _craftoolsMeta?: Record<string, unknown> })._craftoolsMeta;
+      if (clip.meta && meta) {
+        const incoming = { ...(clip.meta as Record<string, unknown>) };
+        if (meta.src) incoming.src = meta.src;
+        Object.assign(meta, incoming);
+      }
+
+      // The pasted CSS bypasses every field's own onChange, so
+      // dataset.ctState is now stale (it still holds the pre-paste values).
+      // Drop it entirely so the next _syncFromDOM() -- triggered by the
+      // re-select below -- rebuilds it fresh from the just-pasted styles,
+      // instead of _syncFromDOM's "only fill in missing keys" guard
+      // preserving the old cached values.
+      delete element.dataset.ctState;
+
+      element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+      (element as unknown as { _syncSidebar?: () => void })._syncSidebar?.();
+
+      // Re-select to force a fresh renderPropertiesPanel() with the
+      // now-current styles (same trick as the legacy panel).
+      setTimeout(() => {
+        const rect = element.getBoundingClientRect();
+        element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.x + 10, clientY: rect.y + 10 }));
+        element.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      }, 50);
+    });
+
+    btnLock.addEventListener('click', () => {
+      const nowLocked = element.getAttribute('data-locked') !== 'true';
+      element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+      (element as unknown as { _syncLockUI?: () => void })._syncLockUI?.();
+      this._updateLockButton(btnLock, nowLocked);
+      element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+    });
+  }
+
+  /** Paints the lock button's icon/label/active-state/title for the given locked state. */
+  private static _updateLockButton(btn: HTMLButtonElement, isLocked: boolean): void {
+    btn.classList.toggle('active', isLocked);
+    const icon  = btn.querySelector('.material-symbols-outlined');
+    if (icon) icon.textContent = isLocked ? 'lock' : 'lock_open';
+    const label = btn.querySelector('span:last-child');
+    if (label) label.textContent = isLocked ? tr('common.locked', 'Bloqueado') : tr('common.lock', 'Bloquear');
+    btn.title = isLocked
+      ? tr('common.unlockElement', 'Desbloquear elemento')
+      : tr('common.lockElement', 'Bloquear elemento (impede mover/redimensionar)');
   }
 
   // ── ToolRegistry integration ────────────────────────────────────────────────
