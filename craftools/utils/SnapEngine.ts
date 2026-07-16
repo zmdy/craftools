@@ -25,7 +25,7 @@ const MM_PX          = 3.7795275591; // CSS pixels per mm at 96dpi
 
 /**
  * Minimal shape of a `craftools-element` custom element as seen by SnapEngine.
- * The full implementation lives in Element.js (not yet migrated to TS).
+ * The full implementation lives in Element.ts (Craftools_Element implements this).
  * Exported so callers can cast when passing HTMLElement refs from untyped DOM.
  */
 export interface CraftoolsSnapTarget extends HTMLElement {
