@@ -160,15 +160,11 @@ export class Craftools_Editor extends HTMLElement {
     const redoBtn         = this.querySelector('#redo-btn') as HTMLButtonElement;
     const historyIndicator = this.querySelector('#history-indicator') as HTMLElement;
 
-    // canUndo / canRedo are getter properties (not methods) in HistoryManager.js
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hm = HistoryManager as any;
-
     const updateHistoryUI = ({ count, max }: { count?: number; max?: number } = {}) => {
-      undoBtn.disabled = !hm.canUndo;
-      redoBtn.disabled = !hm.canRedo;
-      const c = typeof count === 'number' ? count : (hm.historyCount as number);
-      const m = typeof max   === 'number' ? max   : (hm.maxStates   as number);
+      undoBtn.disabled = !HistoryManager.canUndo;
+      redoBtn.disabled = !HistoryManager.canRedo;
+      const c = typeof count === 'number' ? count : HistoryManager.historyCount;
+      const m = typeof max   === 'number' ? max   : HistoryManager.maxStates;
       historyIndicator.textContent = `${c}/${m}`;
       historyIndicator.title = I18n.t('editor.historyIndicatorDetail')
         .replace('{c}', String(c)).replace('{m}', String(m));

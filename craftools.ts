@@ -166,12 +166,10 @@ export class Craftools {
   // ── Private — session recovery ───────────────────────────────────────────────
 
   private _checkSessionRecovery(): void {
-    // getSavedSession() is typed as `object` (JS); cast to access properties.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const session = SessionManager.getSavedSession() as any;
+    const session = SessionManager.getSavedSession();
     if (!session?.html) return;
 
-    const ts        = new Date(session.timestamp as string);
+    const ts        = new Date(session.timestamp);
     const localeMap: Record<string, string> = { 'pt-br': 'pt-BR', 'es': 'es-ES', 'en': 'en-US' };
     const dateStr   = ts.toLocaleDateString(localeMap[I18n.currentLang] ?? 'en-US', {
       day: '2-digit', month: '2-digit', year: 'numeric',
