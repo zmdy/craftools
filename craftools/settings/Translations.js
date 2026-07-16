@@ -107,7 +107,41 @@ export const Translations = {
             alignRight: "Alinhar à direita",
             alignTop: "Alinhar no topo",
             alignCenterV: "Centralizar verticalmente",
-            alignBottom: "Alinhar na base"
+            alignBottom: "Alinhar na base",
+            // Keys used by CommonSchema.ts sections (not present in original common block)
+            borderRadius: "Arredondamento (px)",
+            opacity: "Opacidade",
+            shadow: "Sombra",
+            shadowEnabled: "Ativar sombra",
+            shadowColor: "Cor da sombra",
+            alignment: "Alinhamento",
+            textAlign: "Alinhar texto"
+        },
+        // Tool-specific namespaces — mirrored here so TS tools' panel sections
+        // have translations on first render (before the .js lazy imports fire).
+        textTool: {
+            typography: "Tipografia",
+            color: "Cor"
+        },
+        barcodeTool: {
+            format: "Formato",
+            formatCode39: "Code 39 (texto/números)",
+            formatEan13: "EAN-13 (produto, 12-13 dígitos)"
+        },
+        miniCalendarTool: {
+            modeDiasSemana: "Apenas tabela de dias (com feriados marcados)",
+            modeCalendario: "Calendário (cabeçalho + tabela de dias)",
+            modeHeader: "Apenas cabeçalho (mês e ano)",
+            modeHolidaysBox: "Apenas caixa de feriados",
+            modeMoonBox: "Apenas caixa de fases da lua",
+            modeCompleto1: "Calendário com feriados",
+            modeCompleto2: "Calendário completo com fases da lua"
+        },
+        qrTool: {
+            spotifyBarColor: "Cor do Código"
+        },
+        variablePanel: {
+            title: "Texto Variável"
         },
         sessionRecovery: {
             title: "Sessão recuperada",
@@ -247,7 +281,38 @@ export const Translations = {
             alignRight: "Align right",
             alignTop: "Align top",
             alignCenterV: "Center vertically",
-            alignBottom: "Align bottom"
+            alignBottom: "Align bottom",
+            borderRadius: "Roundness (px)",
+            opacity: "Opacity",
+            shadow: "Shadow",
+            shadowEnabled: "Enable shadow",
+            shadowColor: "Shadow color",
+            alignment: "Alignment",
+            textAlign: "Align text"
+        },
+        textTool: {
+            typography: "Typography",
+            color: "Color"
+        },
+        barcodeTool: {
+            format: "Format",
+            formatCode39: "Code 39 (text/numbers)",
+            formatEan13: "EAN-13 (product, 12-13 digits)"
+        },
+        miniCalendarTool: {
+            modeDiasSemana: "Days table only (with holidays marked)",
+            modeCalendario: "Calendar (header + days table)",
+            modeHeader: "Header only (month and year)",
+            modeHolidaysBox: "Holidays box only",
+            modeMoonBox: "Moon phases box only",
+            modeCompleto1: "Calendar with holidays",
+            modeCompleto2: "Full calendar with moon phases"
+        },
+        qrTool: {
+            spotifyBarColor: "Code Color"
+        },
+        variablePanel: {
+            title: "Variable Text"
         },
         sessionRecovery: {
             title: "Session recovered",
@@ -387,7 +452,38 @@ export const Translations = {
             alignRight: "Alinear a la derecha",
             alignTop: "Alinear arriba",
             alignCenterV: "Centrar verticalmente",
-            alignBottom: "Alinear abajo"
+            alignBottom: "Alinear abajo",
+            borderRadius: "Redondeo (px)",
+            opacity: "Opacidad",
+            shadow: "Sombra",
+            shadowEnabled: "Activar sombra",
+            shadowColor: "Color de la sombra",
+            alignment: "Alineación",
+            textAlign: "Alinear texto"
+        },
+        textTool: {
+            typography: "Tipografía",
+            color: "Color"
+        },
+        barcodeTool: {
+            format: "Formato",
+            formatCode39: "Code 39 (texto/números)",
+            formatEan13: "EAN-13 (producto, 12-13 dígitos)"
+        },
+        miniCalendarTool: {
+            modeDiasSemana: "Solo tabla de días (con feriados marcados)",
+            modeCalendario: "Calendario (encabezado + tabla de días)",
+            modeHeader: "Solo encabezado (mes y año)",
+            modeHolidaysBox: "Solo caja de feriados",
+            modeMoonBox: "Solo caja de fases de la luna",
+            modeCompleto1: "Calendario con feriados",
+            modeCompleto2: "Calendario completo con fases de la luna"
+        },
+        qrTool: {
+            spotifyBarColor: "Color del Código"
+        },
+        variablePanel: {
+            title: "Texto Variable"
         },
         sessionRecovery: {
             title: "Sesión recuperada",

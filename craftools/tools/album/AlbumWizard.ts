@@ -39,11 +39,27 @@ const ImageTool = ImageToolTyped as any;
 import { I18n } from '../../settings/Translations.js';
 import { Craftools_LayoutGrid } from '../../utils/LayoutGrid.js';
 import { loadGridSizes } from '../../utils/ApiDataLoader.js';
-import { CommonProperties } from '../../utils/CommonProperties.js';
+import { PropertyRenderer } from '../../utils/PropertyRenderer';
+import { borderSection } from '../../utils/CommonSchema';
 import { CellPanel } from './CellPanel.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG.js';
 import './AlbumTool_Translations.js';
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+/** Convert a CSS rgb(...) string to a #rrggbb hex string for color inputs. */
+function _rgbToHex(rgb: string): string {
+  if (!rgb) return '#000000';
+  if (rgb === 'white') return '#ffffff';
+  if (rgb === 'black') return '#000000';
+  if (rgb === 'transparent') return '#ffffff';
+  if (!rgb.startsWith('rgb')) return rgb;
+  const parts = rgb.match(/\d+/g);
+  if (!parts) return rgb;
+  const hex = (x: string) => ('0' + parseInt(x).toString(16)).slice(-2);
+  return '#' + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
+}
 
 // ── Loose domain types ───────────────────────────────────────────────────────
 // GridSizes.js / the templates API return dynamically-shaped entries (some
@@ -687,18 +703,27 @@ export class AlbumTool {
 
       // ── Bind: Borders ──────────────────────────────────────────────
       if (existingGrid) {
-        // Mock an element structure for CommonProperties
-        const mockElement = {
-          contentArea: pageEl,
-          style: existingGrid.style,
-          dispatchEvent: () => { /* no-op */ },
-        };
+        // Build a fake element seeded with the current grid-cell border so
+        // PropertyRenderer can show the right initial values. Uses borderSection()
+        // from CommonSchema instead of the legacy CommonProperties.renderBorder().
+        const gridCell = pageEl?.querySelector('.craftools-grid-cell') as HTMLElement | null;
+        const rawColor = gridCell?.style.borderColor ?? '';
+        const initialBorderColor = _rgbToHex(rawColor) || '#000000';
+        const fakeEl = document.createElement('div');
+        fakeEl.dataset.ctState = JSON.stringify({
+          borderWidth: parseFloat(gridCell?.style.borderWidth ?? '0') || 0,
+          borderStyle: gridCell?.style.borderStyle || 'none',
+          borderColor: initialBorderColor,
+        });
 
-        CommonProperties.renderBorder(panelBody, mockElement, '.craftools-grid-cell', () => {
-          const bWidth = (panelBody.querySelector('#cp-border-w') as HTMLInputElement | null)?.value || 0;
-          const bStyle = (panelBody.querySelector('#cp-border-style') as HTMLSelectElement | null)?.value || 'none';
-          const bColor = (panelBody.querySelector('#cp-border-color') as HTMLInputElement | null)?.value || '#000000';
-          Craftools_LayoutGrid.updateBorders(editor, bWidth, bStyle, bColor);
+        PropertyRenderer.render(panelBody, [borderSection()], fakeEl, () => {
+          const s = PropertyRenderer._readState(fakeEl);
+          Craftools_LayoutGrid.updateBorders(
+            editor,
+            s.borderWidth ?? 0,
+            s.borderStyle ?? 'none',
+            s.borderColor ?? '#000000',
+          );
         });
       }
 
