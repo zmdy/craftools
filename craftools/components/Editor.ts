@@ -408,7 +408,7 @@ export class Craftools_Editor extends HTMLElement {
         if (!mainPage) return;
 
         const rect   = mainPage.getBoundingClientRect();
-        const scale  = (window as any).craftoolsZoomLevel ?? 1;
+        const scale  = window.craftoolsZoomLevel ?? 1;
         const cx     = rect.width  / scale / 2;
         const cy     = rect.height / scale / 2;
 
@@ -643,7 +643,7 @@ export class Craftools_Editor extends HTMLElement {
 
     // ── Zoom ────────────────────────────────────────────────────────────────
     let zoomLevel = 1.0;
-    (window as any).craftoolsZoomLevel = 1.0;
+    window.craftoolsZoomLevel = 1.0;
     const zoomLevelLabel = this.querySelector('#zoom-level')!;
     const pagesWrapper   = this.querySelector('#pages-wrapper') as HTMLElement;
 
@@ -651,7 +651,7 @@ export class Craftools_Editor extends HTMLElement {
       if (pagesWrapper) {
         pagesWrapper.style.transform = `scale(${zoomLevel})`;
         zoomLevelLabel.textContent = Math.round(zoomLevel * 100) + '%';
-        (window as any).craftoolsZoomLevel = zoomLevel;
+        window.craftoolsZoomLevel = zoomLevel;
       }
     };
 

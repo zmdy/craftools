@@ -16,6 +16,7 @@
 import type { PropertySchema } from '../types/PropertySchema';
 import { PropertyRenderer } from '../utils/PropertyRenderer';
 import { SnapEngine } from '../utils/SnapEngine.js';
+import type { CraftoolsSnapTarget } from '../utils/SnapEngine';
 import { Notify } from '../utils/Notify.js';
 import { tr } from '../utils/i18nLabel';
 
@@ -119,7 +120,7 @@ export abstract class BaseTool {
     // SnapEngine's page-alignment math against the element's current size.
     // Nothing to write to dataset.ctState for it.
     if (key === 'pageAlign') {
-      SnapEngine.align(element, value as string);
+      SnapEngine.align(element as unknown as CraftoolsSnapTarget, value as string);
       return;
     }
 
