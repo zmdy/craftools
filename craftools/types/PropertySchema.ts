@@ -71,7 +71,10 @@ export interface ToggleField extends BaseField {
 
 export interface SelectField extends BaseField {
   type: 'select';
-  options: Array<{ value: string; label: string }>;
+  // i18nKey is optional per-option: falls back to the literal `label` when
+  // absent or untranslated (same tr() fallback convention as BaseField's own
+  // i18nKey), so existing schemas with plain literals keep working unchanged.
+  options: Array<{ value: string; label: string; i18nKey?: string }>;
 }
 
 export interface AlignField extends BaseField {

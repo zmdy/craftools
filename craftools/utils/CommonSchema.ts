@@ -50,10 +50,10 @@ export const borderSection = (): Section => ({
       label: 'Style',
       i18nKey: 'common.borderStyle',
       options: [
-        { value: 'solid',  label: 'Solid' },
-        { value: 'dashed', label: 'Dashed' },
-        { value: 'dotted', label: 'Dotted' },
-        { value: 'none',   label: 'None' },
+        { value: 'solid',  label: 'Solid',  i18nKey: 'common.borderSolid' },
+        { value: 'dashed', label: 'Dashed', i18nKey: 'common.borderDashed' },
+        { value: 'dotted', label: 'Dotted', i18nKey: 'common.borderDotted' },
+        { value: 'none',   label: 'None',   i18nKey: 'common.borderNone' },
       ],
     },
   ],
@@ -94,10 +94,6 @@ export const paddingSection = (): Section => ({
 
 export const marginSection = (): Section => ({
   section: 'Margin',
-  // 'common.margin' has no dedicated pt-br/en/es entry yet (same gap noted
-  // on the legacy side -- CommonProperties.js's _appendForma() falls back to
-  // the literal "Margem" there too); tr() falls back to the English literal
-  // below until that key is backfilled.
   i18nKey: 'common.margin',
   icon: 'margin',
   collapsible: true,

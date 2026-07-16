@@ -9,7 +9,7 @@ FieldRegistry.register('select', {
 
     if (!container.querySelector('.ct-fi')) {
       const options = f.options
-        .map(o => `<option value="${o.value}">${o.label}</option>`)
+        .map(o => `<option value="${o.value}">${tr(o.i18nKey, o.label)}</option>`)
         .join('');
       container.innerHTML = `
         <div class="ct-field">

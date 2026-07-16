@@ -39,8 +39,8 @@ export class BarcodeTool extends BaseTool {
             // silently produced nothing/incorrect output when picked.
             type: 'select', key: 'format', label: 'Format', i18nKey: 'barcodeTool.format',
             options: [
-              { value: 'code39', label: 'Code 39 (text/numbers)' },
-              { value: 'ean13',  label: 'EAN-13 (product, 12-13 digits)' },
+              { value: 'code39', label: 'Code 39 (text/numbers)',       i18nKey: 'barcodeTool.formatCode39' },
+              { value: 'ean13',  label: 'EAN-13 (product, 12-13 digits)', i18nKey: 'barcodeTool.formatEan13' },
             ],
           },
           { type: 'text',   key: 'text',       label: 'Content' },

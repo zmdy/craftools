@@ -13,18 +13,18 @@ const getMeta = (el: HTMLElement) =>
 // renderer implements (picking them silently fell back to 'completo1'), and
 // 5 real modes (diasSemana/calendario/header/holidaysBox/moonBox) were
 // missing entirely.
-// NOTE: SelectField's options are { value, label } literals only -- no
-// per-option i18nKey support exists yet in the field system (same as
-// borderStyle's options in CommonSchema.ts), so these stay English literals
-// like every other <select> field in the codebase today.
+// SelectField.options now supports an optional per-option i18nKey (see
+// types/PropertySchema.ts) -- these already exist in
+// MiniCalendarTool_Translations.js (used by the legacy panel/VariablePanel's
+// miniCalendar config), just weren't wired up here yet.
 const DISPLAY_MODES = [
-  { value: 'diasSemana',  label: 'Days table only (with holidays marked)' },
-  { value: 'calendario',  label: 'Calendar (header + days table)' },
-  { value: 'header',      label: 'Header only (month and year)' },
-  { value: 'holidaysBox', label: 'Holidays box only' },
-  { value: 'moonBox',     label: 'Moon phases box only' },
-  { value: 'completo1',   label: 'Calendar with holidays' },
-  { value: 'completo2',   label: 'Full calendar with moon phases' },
+  { value: 'diasSemana',  label: 'Days table only (with holidays marked)', i18nKey: 'miniCalendarTool.modeDiasSemana' },
+  { value: 'calendario',  label: 'Calendar (header + days table)',         i18nKey: 'miniCalendarTool.modeCalendario' },
+  { value: 'header',      label: 'Header only (month and year)',          i18nKey: 'miniCalendarTool.modeHeader' },
+  { value: 'holidaysBox', label: 'Holidays box only',                     i18nKey: 'miniCalendarTool.modeHolidaysBox' },
+  { value: 'moonBox',     label: 'Moon phases box only',                  i18nKey: 'miniCalendarTool.modeMoonBox' },
+  { value: 'completo1',   label: 'Calendar with holidays',                i18nKey: 'miniCalendarTool.modeCompleto1' },
+  { value: 'completo2',   label: 'Full calendar with moon phases',        i18nKey: 'miniCalendarTool.modeCompleto2' },
 ];
 
 const now = new Date();
