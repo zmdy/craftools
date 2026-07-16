@@ -23,6 +23,7 @@ export type FieldType =
   | 'image-upload'
   | 'divider'
   | 'page-align'
+  | 'variable-binding'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -133,6 +134,23 @@ export interface PageAlignField extends BaseField {
   // default _applyProperty(), which special-cases this key.
 }
 
+export interface VariableBindingField extends BaseField {
+  type: 'variable-binding';
+  // No extra config: wraps utils/VariablePanel.js's existing "Texto Variável"
+  // accordion (type select + per-type config + live preview + cross-element
+  // "Vincular a" linking), shared by QRCodeTool, BarcodeTool and
+  // VariableContentTool. Unlike every other field, its stored value is a
+  // JSON-*stringified* binding object (see utils/fields/variable-binding.field.ts
+  // for why: PropertyRenderer's diffing compares String(value), and every plain
+  // object stringifies to the same "[object Object]", which would silently
+  // stop this field from ever re-rendering after the first selected element --
+  // stringifying makes the diff key actually reflect content/element changes).
+  // Tools must JSON.parse() the value in _applyProperty() before writing it
+  // into their real storage (_craftoolsMeta.variableBinding or
+  // element._craftoolsVariable) and JSON.stringify() it back in
+  // _syncFromDOM() when priming dataset.ctState.
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -159,6 +177,7 @@ export type Field =
   | ImageUploadField
   | DividerField
   | PageAlignField
+  | VariableBindingField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

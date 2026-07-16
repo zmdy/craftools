@@ -15,15 +15,21 @@ export interface FieldHandler {
   /**
    * Renders the field UI into the container.
    * Called every time the value changes (diffed by PropertyRenderer).
+   *
+   * @param element  The selected canvas element this field belongs to.
+   *   Optional/unused by most handlers; added for variable-binding.field.ts,
+   *   which needs it to resolve VariablePanel's cross-element "Vincular a"
+   *   linking. A function type with fewer declared params is still assignable
+   *   to this interface, so existing handlers don't need to accept it.
    */
-  render(container: HTMLElement, field: Field, value: unknown): void;
+  render(container: HTMLElement, field: Field, value: unknown, element?: HTMLElement): void;
 
   /**
    * Attaches event listeners to the container.
    * Called ONCE at field creation time — not on re-render.
    * Calls onChange(newValue) whenever the user interacts.
    */
-  bind(container: HTMLElement, field: Field, onChange: (value: unknown) => void): void;
+  bind(container: HTMLElement, field: Field, onChange: (value: unknown) => void, element?: HTMLElement): void;
 }
 
 // ── Registry ──────────────────────────────────────────────────────────────────

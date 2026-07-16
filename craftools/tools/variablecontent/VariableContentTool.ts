@@ -5,8 +5,19 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, variableBindingSection } from '../../utils/CommonSchema';
+import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import type { PropertySchema } from '../../types/PropertySchema';
+// Imported with an explicit .js extension so Vite's runtime resolution
+// (bare-specifier-only .ts preference, per vite.config.ts) loads the real
+// legacy class -- _applyVariablePreview()/createElement() live there, not on
+// this schema-based VariableContentTool.ts BaseTool subclass. TypeScript's
+// "bundler" moduleResolution statically prefers the .ts twin for typing
+// purposes though, so the import is cast to `any` here, same workaround
+// AlbumWizard.ts uses for ImageTool.js.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { VariableContentTool as VariableContentToolTyped } from './VariableContentTool.js';
+const VariableContentToolJs = VariableContentToolTyped as any;
 
 const getContent = (el: HTMLElement) =>
   el.querySelector<HTMLElement>('[contenteditable], div:first-child') ?? null;
@@ -29,15 +40,28 @@ export class VariableContentTool extends BaseTool {
     if (!('textAlign' in existing)) patch.textAlign = content.style.textAlign || 'left';
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
+    // The binding lives on the element itself (element._craftoolsVariable),
+    // not in a _craftoolsMeta object like Barcode/QRCode -- same convention
+    // VariablePanel.js's _getElementBinding() already relies on for
+    // cross-element "Vincular a" lookups. Stored here as a JSON *string* in
+    // ctState (see variable-binding.field.ts for why).
+    if (!('variableBinding' in existing)) {
+      const binding = (element as HTMLElement & { _craftoolsVariable?: Record<string, unknown> | null })._craftoolsVariable;
+      patch.variableBinding = stringifyVariableBinding(binding);
+    }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
 
   static getPropertySchema(_element: HTMLElement): PropertySchema {
     return [
+      // First and open by default: unlike Barcode/QRCode (where the variable
+      // binding is a secondary option alongside their own content config),
+      // this tool's entire purpose IS the bound variable -- matches
+      // MobileToolbar.js's _getVariableContentItems(), which also lists it first.
+      variableBindingSection({ defaultOpen: true }),
       {
         section: 'Typography',
-        defaultOpen: true,
         fields: [
           { type: 'font-select', key: 'font',      label: 'Font' },
           { type: 'slider',      key: 'fontSize',  label: 'Size', min: 8, max: 200, step: 1 },
@@ -55,6 +79,15 @@ export class VariableContentTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
+
+    if (key === 'variableBinding') {
+      const binding = parseVariableBinding(value);
+      (element as HTMLElement & { _craftoolsVariable?: Record<string, unknown> | null })._craftoolsVariable = binding;
+      const content = getContent(element);
+      if (content) VariableContentToolJs._applyVariablePreview(element, content, binding);
+      return;
+    }
+
     const content = getContent(element);
     if (!content) return;
     switch (key) {

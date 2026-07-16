@@ -21,3 +21,4 @@ export * from './slider.field';
 export * from './divider.field';
 export * from './image-upload.field';
 export * from './page-align.field';
+export * from './variable-binding.field';

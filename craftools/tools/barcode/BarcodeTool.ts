@@ -1,7 +1,8 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, variableBindingSection } from '../../utils/CommonSchema';
+import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 const getMeta = (el: HTMLElement) =>
@@ -15,6 +16,12 @@ export class BarcodeTool extends BaseTool {
     const patch: Record<string, unknown> = {};
     ['format','text','color','background','showText','borderWidth','borderStyle','borderColor','borderRadius']
       .forEach(k => { if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k]; });
+    // variableBinding is stored as a JSON *string* in ctState (see
+    // variable-binding.field.ts) -- meta.variableBinding itself stays a
+    // real object, unlike the plain keys copied above.
+    if (!('variableBinding' in existing)) {
+      patch.variableBinding = stringifyVariableBinding(meta.variableBinding as Record<string, unknown> | null | undefined);
+    }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -44,13 +51,19 @@ export class BarcodeTool extends BaseTool {
       },
       borderSection(),
       radiusSection(),
+      variableBindingSection(),
     ];
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: Record<string, unknown> };
-    if (e._craftoolsMeta) e._craftoolsMeta[key] = value;
+    if (e._craftoolsMeta) {
+      // value arrives as the field's stringified form -- parse it back to a
+      // real object (or null) before it lands in _craftoolsMeta, since
+      // _regenerate() reads meta.variableBinding.type directly.
+      e._craftoolsMeta[key] = key === 'variableBinding' ? parseVariableBinding(value) : value;
+    }
     element.dispatchEvent(new CustomEvent('craftools-barcode-regenerate', { bubbles: false }));
   }
 }

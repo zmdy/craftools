@@ -1,7 +1,8 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, variableBindingSection } from '../../utils/CommonSchema';
+import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 const getMeta = (el: HTMLElement) =>
@@ -26,6 +27,12 @@ export class QRCodeTool extends BaseTool {
       'ecLevel','darkColor','lightColor','borderWidth','borderStyle','borderColor','borderRadius',
     ];
     keys.forEach(k => { if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k]; });
+    // variableBinding is stored as a JSON *string* in ctState (see
+    // variable-binding.field.ts for why), unlike every other key above which
+    // is copied as-is -- meta.variableBinding itself stays a real object.
+    if (!('variableBinding' in existing)) {
+      patch.variableBinding = stringifyVariableBinding(meta.variableBinding as Record<string, unknown> | null | undefined);
+    }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -112,12 +119,20 @@ export class QRCodeTool extends BaseTool {
       },
       borderSection(),
       radiusSection(),
+      variableBindingSection(),
     ] as PropertySchema;
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
-    setMeta(element, { [key]: value });
+    if (key === 'variableBinding') {
+      // value arrives as the field's stringified form -- parse it back to a
+      // real object (or null) before it lands in _craftoolsMeta, since
+      // _regenerate() reads meta.variableBinding.type directly.
+      setMeta(element, { variableBinding: parseVariableBinding(value) });
+    } else {
+      setMeta(element, { [key]: value });
+    }
     element.dispatchEvent(new CustomEvent('craftools-qr-regenerate', { bubbles: false }));
   }
 }

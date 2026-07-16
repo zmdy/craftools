@@ -264,6 +264,32 @@ export const pageAlignSection = (): Section => ({
   ],
 });
 
+// ── Variable binding ──────────────────────────────────────────────────────────
+
+/**
+ * "Texto Variável" accordion (utils/VariablePanel.js) -- lets the user bind
+ * an element's content to a data variable (date, sequential number/text,
+ * page number, link, emoji, API phrase, Emoji Kitchen, Mini Calendar), with
+ * live preview and cross-element linking. Shared by QRCodeTool, BarcodeTool
+ * and VariableContentTool -- matches MobileToolbar.js's mini-panels, which
+ * already offer this on mobile for the same three tools.
+ *
+ * @param opts.defaultOpen  VariableContentTool opens this first and expanded
+ *   by default (it IS the tool's whole purpose); QRCodeTool/BarcodeTool treat
+ *   it as a secondary, collapsed-by-default option alongside their content
+ *   config. Default: false.
+ */
+export const variableBindingSection = (opts: { defaultOpen?: boolean } = {}): Section => ({
+  section: 'Variable',
+  i18nKey: 'variablePanel.title',
+  icon: 'data_object',
+  collapsible: true,
+  defaultOpen: opts.defaultOpen ?? false,
+  fields: [
+    { type: 'variable-binding', key: 'variableBinding' },
+  ],
+});
+
 // ── Convenience combos (most tools need these together) ───────────────────────
 
 /** Border + Radius — the most common shape combo. */

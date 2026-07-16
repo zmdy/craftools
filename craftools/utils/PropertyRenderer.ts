@@ -149,15 +149,15 @@ export class PropertyRenderer {
       bodyEl.appendChild(wrapper);
 
       const currentValue = state[field.key];
-      handler.render(wrapper, field, currentValue);
-      handler.bind(wrapper, field, value => onChange(field.key, value));
+      handler.render(wrapper, field, currentValue, element);
+      handler.bind(wrapper, field, value => onChange(field.key, value), element);
       wrapper.dataset.renderedValue = String(currentValue ?? '');
     } else {
       // Update: only re-render if value changed (preserves focus)
       const currentValue = state[field.key];
       const rendered     = wrapper.dataset.renderedValue;
       if (rendered !== String(currentValue ?? '')) {
-        handler.render(wrapper, field, currentValue);
+        handler.render(wrapper, field, currentValue, element);
         wrapper.dataset.renderedValue = String(currentValue ?? '');
       }
     }
