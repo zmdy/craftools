@@ -552,13 +552,13 @@ export class MobileToolbar {
     static _renderTextFont(container, el, textEl) {
         if (!textEl) return;
         const fonts = ['DM Sans','DM Serif Display','DM Mono','Open Sans','Pacifico','Lobster','Georgia','Arial','Times New Roman','Courier New','Impact','Parisienne','Dancing Script','Quicksand'];
-        
+
         let savedLocalFonts = [];
         try {
             const stored = localStorage.getItem('craftools-local-fonts');
             if (stored) savedLocalFonts = JSON.parse(stored);
         } catch (e) {}
-        
+
         if (Array.isArray(savedLocalFonts)) {
             savedLocalFonts.forEach(font => {
                 if (!fonts.includes(font)) fonts.push(font);
@@ -590,7 +590,7 @@ export class MobileToolbar {
             if(!val) return;
             textEl.style.fontFamily = `'${val}', sans-serif`;
             CommonProperties._triggerChange(el);
-            
+
             if(!fonts.includes(val)) {
                 savedLocalFonts.push(val);
                 localStorage.setItem('craftools-local-fonts', JSON.stringify(savedLocalFonts));
@@ -992,7 +992,8 @@ export class MobileToolbar {
     // ─── AlbumTool — modal step-by-step ───────────────────────────────────────
 
     static _openAlbumModal() {
-        import('../tools/album/AlbumTool.js').then(({ AlbumTool }) => {
+        // AlbumTool.js's wizard logic was ported to AlbumWizard.ts.
+        import('../tools/album/AlbumWizard').then(({ AlbumTool }) => {
             const mainPage = this._editor?.querySelector('.craftools-page');
             if (mainPage) AlbumTool.setup(this._editor, mainPage);
         });

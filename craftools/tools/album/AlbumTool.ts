@@ -9,9 +9,12 @@
  * craftools-grid-container directly on the page, filled with ImageTool elements
  * via Craftools_LayoutGrid.
  *
- * The real implementation lives in AlbumTool.js (829 lines). This stub only
- * registers the tool in ToolRegistry so the sidebar button and routing work
- * at type-check time without importing the JS implementation.
+ * The real implementation is now AlbumWizard.ts (ported from AlbumTool.js,
+ * which is dead code as of that port). This stub stays separate and stays
+ * tiny because it's imported EAGERLY (Editor.ts, purely for this
+ * ToolRegistry.register() side effect), while AlbumWizard.ts is only
+ * dynamically imported when the user actually opens the Album tool — see
+ * AlbumWizard.ts's header comment for the full reasoning.
  */
 import { ToolRegistry } from '../../utils/ToolRegistry';
 

@@ -58,8 +58,11 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // '.js' to '.ts' stubs (side-effect only) that don't export named classes.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   agenda:    () => import('../tools/agenda/AgendaExportTool.js').then((m: any) => m.AgendaExportTool.setup.bind(m.AgendaExportTool)),
+  // AlbumTool.js's wizard logic was ported to AlbumWizard.ts (see that file's
+  // header comment for why it's split from AlbumTool.ts, the eagerly-loaded
+  // ToolRegistry-only stub above). AlbumTool.js itself is now dead code.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  album:     () => import('../tools/album/AlbumTool.js').then((m: any) => m.AlbumTool.setup.bind(m.AlbumTool)),
+  album:     () => import('../tools/album/AlbumWizard').then((m: any) => m.AlbumTool.setup.bind(m.AlbumTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   calendario:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -415,7 +418,7 @@ export class Craftools_Editor extends HTMLElement {
 
         if (tool === 'album') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const m: any = await import('../tools/album/AlbumTool.js');
+          const m: any = await import('../tools/album/AlbumWizard');
           m.AlbumTool.setup(this, mainPage);
           return;
         }
@@ -557,7 +560,7 @@ export class Craftools_Editor extends HTMLElement {
           // album: open the wizard panel on the active page
           if (tool === 'album') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const m: any = await import('../tools/album/AlbumTool.js');
+            const m: any = await import('../tools/album/AlbumWizard');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
             if (targetPage) m.AlbumTool.setup(this, targetPage);
             return;

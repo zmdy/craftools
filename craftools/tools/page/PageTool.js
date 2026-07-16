@@ -24,7 +24,8 @@ export class PageTool {
             const toolType = e.dataTransfer.getData('ToolType');
 
             if (toolType === 'album') {
-                const { AlbumTool } = await import('../album/AlbumTool.js');
+                // AlbumTool.js's wizard logic was ported to AlbumWizard.ts.
+                const { AlbumTool } = await import('../album/AlbumWizard');
                 AlbumTool.setup(editor, pageEl);
             } else if (toolType === 'calendario') {
                 const { CalendarTool } = await import('../calendar/CalendarTool.js');
@@ -157,7 +158,7 @@ export class PageTool {
                     const { TextTool } = await import('../text/TextTool.js');
                     el = TextTool.createElement(toolType, editor);
                 }
-                
+
                 const unit = el.getAttribute('w') ? el.getAttribute('w').replace(/[0-9.-]/g, '') : 'px';
                 el.setAttribute('x', dropX + (toolType === 'papeis' ? unit : ''));
                 el.setAttribute('y', dropY + (toolType === 'papeis' ? unit : ''));
@@ -168,32 +169,32 @@ export class PageTool {
                     el.parentNode.removeChild(el);
                     targetContainer.appendChild(el);
                 }
-                
+
                 // --- Business Card Cloning Logic ---
                 if (cellTarget) {
                     const grid = cellTarget.closest('.craftools-grid-container');
                     if (grid && grid.dataset.gridMode === 'card') {
                         const allCells = Array.from(grid.querySelectorAll('.craftools-grid-cell'));
                         const myIndex = allCells.indexOf(cellTarget);
-                        
+
                         const cRect = cellTarget.getBoundingClientRect();
                         const cX = (cRect.left - pRect.left) / scale;
                         const cY = (cRect.top - pRect.top) / scale;
-                        
+
                         // Relative coordinates inside the original cell
                         const relX = dropX - cX;
                         const relY = dropY - cY;
-                        
+
                         // Link clones for future potential syncing
                         const linkedId = 'link-' + Date.now();
                         el.dataset.linkedId = linkedId;
-                        
+
                         allCells.forEach((cell, idx) => {
                             if (idx === myIndex) return; // Skip original
                             const cellRect = cell.getBoundingClientRect();
                             const ciX = (cellRect.left - pRect.left) / scale;
                             const ciY = (cellRect.top - pRect.top) / scale;
-                            
+
                             const clone = el.cloneNode(true);
                             clone.setAttribute('x', ciX + relX);
                             clone.setAttribute('y', ciY + relY);
@@ -217,7 +218,7 @@ export class PageTool {
 
             if (isPageClick) {
                 editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
-                
+
                 // Check if page has a grid (Album or another tool that also
                 // generates .craftools-grid-container, such as Calendar) — uses
                 // the gridSource marker to decide which panel to reopen.
@@ -228,11 +229,12 @@ export class PageTool {
                         CalendarTool.setup(editor);
                         return;
                     }
-                    const { AlbumTool } = await import('../album/AlbumTool.js');
+                    // AlbumTool.js's wizard logic was ported to AlbumWizard.ts.
+                    const { AlbumTool } = await import('../album/AlbumWizard');
                     AlbumTool.setup(editor, pageEl);
                     return;
                 }
-                
+
                 // Check if page has a paper element
                 const paperEl = pageEl.querySelector('craftools-element[data-craftool="papeis"]');
                 if (paperEl) {
@@ -241,17 +243,17 @@ export class PageTool {
                         return;
                     }
                 }
-                
+
                 const rightPanel = document.getElementById('right-panel');
                 const panelTitle = document.getElementById('panel-title');
                 const panelBody = document.getElementById('panel-body');
                 const defaultMenu = document.getElementById('panel-default-menu');
                 const closePanel = document.getElementById('close-panel');
                 const panelLogo = document.getElementById('panel-logo');
-                
+
                 if (panelTitle) panelTitle.textContent = I18n.t('pageTool.title');
                 editor.activePage = pageEl;
-                
+
                 // Parse current dimensions
                 const currentWidthRaw = pageEl.style.width || '800px';
                 const currentHeightRaw = pageEl.style.minHeight || '600px';
@@ -261,7 +263,7 @@ export class PageTool {
                 const currentH = parseFloat(currentHeightRaw);
 
                 // Determine active media sizes from global state
-                const presetsHtml = (window.craftoolsApp && window.craftoolsApp.activeMedia && window.craftoolsApp.activeMedia.sizes) 
+                const presetsHtml = (window.craftoolsApp && window.craftoolsApp.activeMedia && window.craftoolsApp.activeMedia.sizes)
                     ? window.craftoolsApp.activeMedia.sizes.map((s, i) => `<button class="craftools-pill preset-btn" data-index="${i}">${s.name}</button>`).join('')
                     : `<span style="font-size:11px;color:var(--text-muted)">${I18n.t('pageTool.noPresets')}</span>`;
 
@@ -297,14 +299,14 @@ export class PageTool {
                                 <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
                                 <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
                             </div>
-                            
+
                             <div id="bg-color-section">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
                                     <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
                                 </div>
                             </div>
-                            
+
                             <div id="bg-gradient-section" style="display: none;">
                                 <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
                                 <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
@@ -329,7 +331,7 @@ export class PageTool {
                         PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
                         PanelUI.accordion('page-fundo', 'palette', I18n.t('pageTool.background') || 'Background', htmlBackground) +
                         PanelUI.accordion('page-acoes', 'warning', I18n.t('pageTool.actions') || 'Actions', htmlActions);
-                        
+
                     PanelUI.bindAccordions(panelBody);
                 }
 
@@ -410,7 +412,7 @@ export class PageTool {
                 gradInput.addEventListener('input', (e) => {
                     pageEl.style.background = e.target.value;
                 });
-                
+
                 const gradPresetsContainer = document.getElementById('grad-presets');
                 const gradList = ['linear-gradient(135deg,#f5f7fa,#c3cfe2)', 'linear-gradient(135deg,#fddb92,#d1fdff)', 'linear-gradient(135deg,#a18cd1,#fbc2eb)', 'linear-gradient(120deg,#f093fb,#f5576c)', 'linear-gradient(135deg,#0f2027,#203a43,#2c5364)', 'radial-gradient(circle at top,#ffecd2,#fcb69f)', 'linear-gradient(135deg,#11998e,#38ef7d)'];
                 gradList.forEach(grad => {
@@ -476,21 +478,21 @@ export class PageTool {
     static addNewPage(editor) {
         const pagesWrapper = editor.querySelector('#pages-wrapper');
         const lastPage = pagesWrapper.querySelector('.craftools-page:last-child');
-        
+
         // Clone the last page to preserve local dimensions
         const clone = lastPage.cloneNode(true);
         clone.id = 'page-' + Date.now();
-        
+
         // Remove child components entirely but keep the page shape
         clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
-        
+
         // Attach events so the new page can be clicked locally
         this.attachPageEvents(editor, clone);
         pagesWrapper.appendChild(clone);
-        
+
         // Notify history system
         document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
-        
+
         // Smoothly scroll to the newly added page
         pagesWrapper.parentElement.scrollTo({ top: pagesWrapper.parentElement.scrollHeight, behavior: 'smooth' });
     }
