@@ -519,19 +519,11 @@ export class AlbumTool {
         }
       }
 
-      // PanelUI.accordion's JSDoc documents its 5th param's destructured `open`
-      // property as `@param {boolean} [open]` (describing the field, not the
-      // options object) -- TS's JS-inference reads that literally and infers
-      // the whole parameter as `boolean | undefined` instead of `{ open?: boolean }`.
-      // AlbumWizard.ts is the first .ts caller to pass that options object, so
-      // the mistyped inference only surfaces here; cast to `any` to match the
-      // real (correct) runtime signature rather than fighting the bad JSDoc.
-      const accordion = PanelUI.accordion as unknown as (id: string, icon: string, title: string, bodyHtml: string, opts?: { open?: boolean }) => string;
       panelBody.innerHTML =
-        accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
-        accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
-        accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
-        accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
+        PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
+        PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
+        PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
+        PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
 
       // ── Bind: Step 1 — Size ────────────────────────────────────────
       panelBody.querySelectorAll<HTMLButtonElement>('.size-btn').forEach(btn => {
