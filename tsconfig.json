@@ -6,9 +6,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
 
-    // Allow existing .js files to coexist during incremental migration
-    "allowJs": true,
-    "checkJs": false,
+    // No legacy .js files allowed (strict TS mode)
+    "allowJs": false,
 
     // Needed so craftools.ts can import Editor.ts explicitly (see below) --
     // without this, ".ts" in an import specifier is a type error.
