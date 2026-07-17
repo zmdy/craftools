@@ -55,6 +55,57 @@
     --page-shadow: 0 4px 32px rgba(0,0,0,.5);
 }
 
+/* ── PWA template color-token overrides ──────────────────────────────────────
+   The vendored PWA template (vendor/pwa-template/style.css) defines its own
+   --primary-* Tailwind-style scale (blue) plus --accent/--text/--border. These
+   two blocks override it with CrafTools' orange palette. They used to live in
+   an inline <style> in index.html's <head>, positioned after both stylesheet
+   <link> tags -- which wins the cascade in dev (individual <link> tags keep
+   their source order), but NOT in the production build: Vite bundles every
+   <link rel="stylesheet"> it finds into one file (this one) and injects that
+   file's own <link> wherever it ends up in the built index.html's <head>,
+   which is AFTER the inline <style> block -- reversing the cascade and
+   silently reverting the whole app to the template's default blue. Keeping
+   these overrides here instead guarantees they always load after
+   vendor/pwa-template/style.css (same <link> order as in index.html) in both
+   dev and the production bundle, since both are external stylesheets Vite
+   concatenates in <link> order rather than one inline + one external. */
+:root {
+    --primary-50: #f4f4f5;
+    --primary-100: #ffffff;
+    --primary-200: #e4e4e7;
+    --primary-300: #d4d4d8;
+    --primary-400: #a1a1aa;
+    --primary-500: #ffffff;
+    --primary-600: #f97316;
+    --primary-700: #ea580c;
+    --primary-800: #c2410c;
+    --primary-900: #9a3412;
+    --primary-950: #18181b;
+    --accent: #f97316;
+    --text: #71717a;
+    --border: #e4e4e7;
+}
+
+[data-theme="dark"] {
+    --primary-50: #09090b;
+    --primary-100: #18181b;
+    --primary-200: #27272a;
+    --primary-300: #3f3f46;
+    --primary-400: #52525b;
+    --primary-500: #18181b;
+    --primary-600: #f97316;
+    --primary-700: #ea580c;
+    --primary-800: #c2410c;
+    --primary-900: #9a3412;
+    --primary-950: #f4f4f5;
+    --accent: #f97316;
+    --text: #a1a1aa;
+    --border: #3f3f46;
+    --warning-500: #f97316;
+    --warning-700: #ea580c;
+}
+
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html, body { 
     height: 100%; 

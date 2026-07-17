@@ -33,43 +33,16 @@
         /* ==============================================================
            CSS INLINE DE ADAPTAÇÃO PWA vs CRAFTOOLS
            ============================================================== */
-        
-        /* Sobrescrita dos tokens de cor do PWA template para usar a paleta original do CrafTools */
-        :root {
-            --primary-50: #f4f4f5;   /* Fundo do app/canvas */
-            --primary-100: #ffffff;  /* Fundo de cards/sidebar */
-            --primary-200: #e4e4e7;  /* Hover/input */
-            --primary-300: #d4d4d8;  /* Bordas */
-            --primary-400: #a1a1aa;
-            --primary-500: #ffffff;  /* Para cabeçalhos e menus offcanvas */
-            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
-            --primary-700: #ea580c;  /* Hover da cor principal */
-            --primary-800: #c2410c;
-            --primary-900: #9a3412;
-            --primary-950: #18181b;  /* Texto principal */
-            --accent: #f97316;
-            --text: #71717a;
-            --border: #e4e4e7;
-        }
 
-        [data-theme="dark"] {
-            --primary-50: #09090b;   /* Fundo do app/canvas */
-            --primary-100: #18181b;  /* Fundo de cards/sidebar */
-            --primary-200: #27272a;  /* Hover/input */
-            --primary-300: #3f3f46;  /* Bordas */
-            --primary-400: #52525b;
-            --primary-500: #18181b;  /* Para cabeçalhos e menus offcanvas */
-            --primary-600: #f97316;  /* Cor primária de destaque (Orange) */
-            --primary-700: #ea580c;  /* Hover da cor principal */
-            --primary-800: #c2410c;
-            --primary-900: #9a3412;
-            --primary-950: #f4f4f5;  /* Texto principal */
-            --accent: #f97316;
-            --text: #a1a1aa;
-            --border: #3f3f46;
-            --warning-500: #f97316;  /* Inverte amarelos do warning para laranja */
-            --warning-700: #ea580c;
-        }
+        /* A sobrescrita dos tokens --primary-*/--accent/--text/--border do
+           template PWA (originalmente inline aqui) foi movida para o final
+           de craftools/craftools.css. Um <style> inline no <head> só vence a
+           cascata em dev, porque cada <link rel="stylesheet"> mantém sua
+           ordem de origem; no build de produção o Vite concatena todos os
+           <link rel="stylesheet"> em um único arquivo e injeta esse <link>
+           depois deste bloco inline no HTML final -- invertendo a cascata e
+           fazendo o app voltar ao azul padrão do template silenciosamente.
+           Ver o comentário em craftools.css para detalhes. */
 
         /* Força as fontes do CrafTools no PWA */
         body, .header-area, .offcanvas, .footer-nav-area {
