@@ -1,15 +1,9 @@
-// @ts-nocheck
 /**
  * craftools.ts — TypeScript entry-point class for CrafTools.
  *
- * Wraps the existing Craftools JS runtime with a typed constructor that accepts
- * CraftoolsConfig so callers can pass specific tool subsets and a custom UI.
- *
- * Migration strategy (strangler-fig):
- *   1. This file re-exports VERSION and the Craftools class (typed).
- *   2. All runtime logic is delegated to craftools.js via dynamic import while
- *      the JS file is still alive. When craftools.js is fully replaced, delete
- *      that delegation and move the implementation here.
+ * Full TypeScript implementation of the Craftools runtime (the legacy
+ * craftools.js this once wrapped via strangler-fig delegation is gone --
+ * the whole class body below is the real, only implementation now).
  *
  * Phase 2 contract:
  *   - `tools` — array of BaseTool subclasses. Each class's registeredKeys are
@@ -18,15 +12,12 @@
  */
 
 import { Craftools_Setup }   from './craftools/components/Setup.js';
-// Explicit ".ts" extension (not the usual ".js" convention) is required here:
-// craftools/components/Editor.js still exists on disk (legacy, superseded by
-// Editor.ts -- see Editor.ts's own header comment). Vite's default
-// resolve.extensions checks ".js" before ".ts", so an extensionless or
-// ".js"-suffixed import here would silently load the OLD Editor.js instead
-// of the new ToolRegistry-based Editor.ts -- which is exactly what was
-// happening (every tool's legacy renderPropertiesPanel() was deleted from
-// its .js file assuming Editor.ts -- the only caller left -- was already
-// active). Once Editor.js is deleted for good, this can go back to ".js".
+// Editor.js (the legacy pre-migration file this ".ts" extension used to
+// guard against) no longer exists -- craftools/components/Editor.ts is the
+// only implementation on disk. The explicit ".ts" extension is kept only
+// because it already works and touching it isn't worth the risk; new code
+// should use the standard ".js"-suffixed convention (see every other import
+// in this file), which Vite/tsc resolve to the real ".ts" source.
 import { Craftools_Editor }  from './craftools/components/Editor.ts';
 import { Craftools_Element } from './craftools/components/Element.js';
 // Registers every built-in field handler (text, number, color, slider, etc.)
@@ -73,7 +64,15 @@ export class Craftools {
   wrapper!: HTMLElement;
   screen!: typeof Craftools_Setup | typeof Craftools_Editor;
   components!: (typeof Craftools_Setup | typeof Craftools_Editor | typeof Craftools_Element)[];
-  activeMedia?: string;
+  // Set from the 'craftools-start' CustomEvent's `detail.media` (Setup.ts) --
+  // this is the WHOLE media-type config object (`{ sizes: [...], icon }`),
+  // not the media type's string key. Shape must match the `CraftoolsApp`
+  // global augmentation in PageTool.ts (window.craftoolsApp.activeMedia),
+  // since this class instance is assigned directly to window.craftoolsApp
+  // below. Was mistyped as `string` here while this file was under
+  // `@ts-nocheck` -- PageTool.ts/AlbumWizard.ts always read `.sizes` off it
+  // correctly at runtime, only the type annotation was wrong.
+  activeMedia?: { sizes: Array<{ name: string; size: string; sizeUnit: string }> };
   activeSize?: unknown;
 
   /** Active tool definitions (filtered by config.tools if provided). */
@@ -99,7 +98,7 @@ export class Craftools {
     const UIClass  = config.ui ?? StandardSidebarUI;
     this._ui       = new UIClass(this.wrapper);
 
-    // ── Component system (mirrors craftools.js) ───────────────────────────────
+    // ── Component system ───────────────────────────────────────────────────
     (window as Window & { craftoolsApp?: Craftools }).craftoolsApp = this;
 
     this.components = [Craftools_Setup, Craftools_Editor, Craftools_Element];
@@ -110,7 +109,10 @@ export class Craftools {
 
     // Navigation events
     this.wrapper.addEventListener('craftools-start', (e: Event) => {
-      const detail = (e as CustomEvent).detail as { media: string; size: unknown };
+      const detail = (e as CustomEvent).detail as {
+        media: { sizes: Array<{ name: string; size: string; sizeUnit: string }> };
+        size: unknown;
+      };
       this.activeMedia = detail.media;
       this.activeSize  = detail.size as any;
       (window as Window & { craftoolsSize?: unknown }).craftoolsSize = detail.size as any;
