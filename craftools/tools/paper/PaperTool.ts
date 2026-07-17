@@ -24,7 +24,7 @@ type PaperMeta = {
   bgPattern: string;
   watermark: { enabled: boolean };
   logo: { enabled: boolean };
-  pageSettings: { pageCount: number; showPageNumber: boolean };
+  pageSettings: { showPageNumber: boolean };
 };
 
 const getMeta = (el: HTMLElement): Partial<PaperMeta> =>
@@ -139,7 +139,7 @@ export class PaperTool extends BaseTool {
       bgPattern: 'none',
       watermark: { enabled: false },
       logo: { enabled: false },
-      pageSettings: { pageCount: 1, showPageNumber: false },
+      pageSettings: { showPageNumber: false },
     };
   }
 
