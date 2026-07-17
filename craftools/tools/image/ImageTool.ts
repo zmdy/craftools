@@ -327,14 +327,14 @@ export class ImageTool extends BaseTool {
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
 
-    const el = element as HTMLElement & { _craftoolsMeta?: ImageMeta };
+    const el = element as HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement };
     const meta = el._craftoolsMeta;
     if (!meta) return;
 
     // Map schema key → meta key
     if (key === 'src') {
       meta.src = String(value);
-      const img = (element.contentArea ?? element).querySelector<HTMLImageElement>('img');
+      const img = (el.contentArea ?? element).querySelector<HTMLImageElement>('img');
       if (img) img.src = meta.src;
       const blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
       if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
