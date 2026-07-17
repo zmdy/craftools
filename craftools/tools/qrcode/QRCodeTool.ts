@@ -418,6 +418,7 @@ export class QRCodeTool extends BaseTool {
     return [
       {
         section: 'Payload',
+        icon: 'edit_note',
         defaultOpen: true,
         fields: [
           {
@@ -461,6 +462,7 @@ export class QRCodeTool extends BaseTool {
       },
       {
         section: 'Appearance',
+        icon: 'palette',
         fields: [
           { type: 'color', key: 'darkColor',  label: 'QR color' },
           { type: 'color', key: 'lightColor', label: 'Background' },

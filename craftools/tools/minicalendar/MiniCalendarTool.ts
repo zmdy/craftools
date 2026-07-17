@@ -150,6 +150,7 @@ export class MiniCalendarTool extends BaseTool {
     return [
       {
         section: 'Calendar',
+        icon: 'calendar_month',
         defaultOpen: true,
         fields: [
           { type: 'select', key: 'displayMode', label: 'Display', options: DISPLAY_MODES },
@@ -159,6 +160,7 @@ export class MiniCalendarTool extends BaseTool {
       },
       {
         section: 'Theme',
+        icon: 'palette',
         fields: [
           { type: 'color', key: 'themeHeaderBg',   label: 'Header background' },
           { type: 'color', key: 'themeHeaderText',  label: 'Header text' },

@@ -179,6 +179,7 @@ export class ShapeTool extends BaseTool {
     return [
       {
         section: 'Fill & Stroke',
+        icon: 'format_shapes',
         defaultOpen: true,
         fields: [
           { type: 'color',  key: 'fillColor',    label: 'Fill' },
@@ -188,6 +189,7 @@ export class ShapeTool extends BaseTool {
       },
       {
         section: 'Shape',
+        icon: 'category',
         defaultOpen: true,
         fields: [
           // square

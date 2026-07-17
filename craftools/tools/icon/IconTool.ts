@@ -283,6 +283,7 @@ export class IconTool extends BaseTool {
     return [
       {
         section: 'Icon Style',
+        icon: 'interests',
         defaultOpen: true,
         fields: [
           { type: 'color',  key: 'fillColor',   label: 'Fill color' },
