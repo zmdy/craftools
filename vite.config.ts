@@ -11,6 +11,13 @@ export default defineConfig({
   // Serve from the repo root so ./assets, ./vendor and ./craftools paths all resolve
   root: '.',
 
+  // Relative base so the built dist/index.html's injected <script>/<link> tags
+  // use "./assets/..." instead of "/assets/...". With the default "/" base,
+  // the build only works when dist/ itself is the webserver's document root --
+  // serving it from a subfolder (e.g. XAMPP htdocs/craftools/dist/) makes every
+  // asset request resolve against the domain root instead and 404.
+  base: './',
+
   resolve: {
     alias: {
       '@tools':      resolve(__dirname, 'craftools/tools'),
