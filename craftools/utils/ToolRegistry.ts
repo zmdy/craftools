@@ -10,7 +10,6 @@
  */
 
 import type { BaseTool } from '../tools/BaseTool';
-import type { PropertySchema } from '../types/PropertySchema';
 
 // ── ToolDefinition ────────────────────────────────────────────────────────────
 

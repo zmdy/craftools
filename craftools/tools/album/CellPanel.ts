@@ -4,7 +4,7 @@
  * Abas: Fundo (cor / gradiente / imagem) | Overlay | Borda
  */
 
-import { CellBackground, type BgOptions, type CellState } from './CellBackground.js';
+import { CellBackground, type CellState } from './CellBackground.js';
 import { ApiPicker }   from './ApiPicker.js';
 import { I18n }        from '../../settings/Translations.js';
 import './CellPanel_Translations.js';
@@ -181,7 +181,7 @@ function renderBgTab(
     subContent.innerHTML = '';
     if      (bgMode === 'color')    renderColorMode(subContent, cellEl);
     else if (bgMode === 'gradient') renderGradientMode(subContent, cellEl);
-    else if (bgMode === 'image')    renderImageMode(subContent, cellEl, state.bg, 'bg');
+    else if (bgMode === 'image')    renderImageMode(subContent, cellEl, 'bg');
   };
   renderBgSubMode();
 
@@ -348,7 +348,6 @@ function renderGradientMode(container: HTMLElement, cellEl: HTMLElement): void {
 function renderImageMode(
   container: HTMLElement,
   cellEl:    HTMLElement,
-  state:     CellState['bg'] | CellState['overlay'],
   role:      ImageRole,
 ): void {
   const currentUrl = role === 'bg'
@@ -546,7 +545,7 @@ function renderOverlayTab(
   state:     CellState,
   rerender:  () => void,
 ): void {
-  renderImageMode(container, cellEl, state.overlay, 'overlay');
+  renderImageMode(container, cellEl, 'overlay');
 
   const clearBtn = document.createElement('button');
   clearBtn.style.cssText = 'margin-top:14px; width:100%; padding:7px; border-radius:6px; border:1px solid var(--border); background:transparent; color:#ef4444; font-size:12px; font-family:"DM Sans",sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;';

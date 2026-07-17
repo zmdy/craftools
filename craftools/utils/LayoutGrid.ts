@@ -189,7 +189,13 @@ export class Craftools_LayoutGrid {
       });
   }
 
-  _renderPromoKit(grid: HTMLElement, items: any[], startIdx: number, perPage: number, unit: string, availableW: number, availableH: number, renderCellContentCallback?: Function) {
+  // NOTE: _availableH is accepted for API symmetry with the other layout
+  // methods but not actually used to cap/paginate the shelf-packing below --
+  // blocks stack downward via currentY with no check against this bound, so
+  // a promo-kit page with enough items can overflow the available height.
+  // Flagged during a static-analysis pass; left as-is since fixing it means
+  // deciding a real behavior (clip? paginate? shrink?), not a mechanical fix.
+  _renderPromoKit(grid: HTMLElement, items: any[], startIdx: number, perPage: number, unit: string, availableW: number, _availableH: number, renderCellContentCallback?: Function) {
       const gap = parseFloat(String(this.template.cellGap)) || 0;
       let currentX = 0;
       let currentY = 0;
