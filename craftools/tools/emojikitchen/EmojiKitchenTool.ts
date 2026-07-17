@@ -115,6 +115,7 @@ export class EmojiKitchenTool extends BaseTool {
     return [
       {
         section: 'Emoji Kitchen',
+        icon: 'sentiment_very_satisfied',
         defaultOpen: true,
         fields: [
           { type: 'text',   key: 'leftEmoji',  label: 'Left emoji' },

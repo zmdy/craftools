@@ -241,7 +241,7 @@ export class ImageTool extends BaseTool {
     const patch: Record<string, unknown> = {};
 
     const topKeys: (keyof ImageMeta)[] = [
-      'objectFit', 'zoom', 'posX', 'posY', 'rotation',
+      'src', 'objectFit', 'zoom', 'posX', 'posY', 'rotation',
       'bgBlur', 'blendMode', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius',
     ];
 
@@ -267,7 +267,15 @@ export class ImageTool extends BaseTool {
 
     return [
       {
+        section: 'Photo',
+        icon: 'photo_camera',
+        fields: [
+          { type: 'image-upload', key: 'src', label: 'Switch photo' },
+        ],
+      },
+      {
         section: 'Transform',
+        icon: 'tune',
         defaultOpen: true,
         fields: [
           {
@@ -286,6 +294,7 @@ export class ImageTool extends BaseTool {
       },
       {
         section: 'Filters',
+        icon: 'photo_filter',
         fields: [
           { type: 'slider', key: 'filter_brightness', label: 'Brightness', min: 0,   max: 2,   step: 0.01 },
           { type: 'slider', key: 'filter_contrast',   label: 'Contrast',   min: 0,   max: 3,   step: 0.01 },
@@ -300,6 +309,7 @@ export class ImageTool extends BaseTool {
       },
       {
         section: 'Background',
+        icon: 'gradient',
         fields: [
           { type: 'slider', key: 'bgBlur', label: 'Background blur', min: 0, max: 100, step: 1 },
           {
@@ -322,7 +332,14 @@ export class ImageTool extends BaseTool {
     if (!meta) return;
 
     // Map schema key → meta key
-    if (key.startsWith('filter_')) {
+    if (key === 'src') {
+      meta.src = String(value);
+      const img = (element.contentArea ?? element).querySelector<HTMLImageElement>('img');
+      if (img) img.src = meta.src;
+      const blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
+      if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
+      ImageTool._propagateToSiblings(element, meta);
+    } else if (key.startsWith('filter_')) {
       const filterKey = key.replace('filter_', '').replace('_', '-') as FilterKey;
       if (meta.filters) meta.filters[filterKey] = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-filters-apply', { bubbles: false }));

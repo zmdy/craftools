@@ -201,6 +201,7 @@ export class TextoCurvoTool extends BaseTool {
     return [
       {
         section: 'Text',
+        icon: 'text_fields',
         defaultOpen: true,
         fields: [
           { type: 'text',       key: 'text',          label: 'Text' },
@@ -213,6 +214,7 @@ export class TextoCurvoTool extends BaseTool {
       },
       {
         section: 'Arc',
+        icon: 'architecture',
         fields: [
           {
             type: 'select', key: 'mode', label: 'Mode',
@@ -229,6 +231,7 @@ export class TextoCurvoTool extends BaseTool {
       },
       {
         section: 'Color',
+        icon: 'palette',
         fields: [
           { type: 'color-picker', key: 'color', label: 'Color' },
         ],

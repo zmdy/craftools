@@ -333,6 +333,7 @@ export class EmojiTool extends BaseTool {
     return [
       {
         section: 'Emoji',
+        icon: 'emoji_emotions',
         defaultOpen: true,
         fields: [
           { type: 'text',   key: 'emoji',    label: 'Emoji character' },

@@ -201,6 +201,7 @@ export class VariableContentTool extends BaseTool {
       variableBindingSection({ defaultOpen: true }),
       {
         section: 'Typography',
+        icon: 'text_fields',
         fields: [
           { type: 'font-select', key: 'font',      label: 'Font' },
           { type: 'slider',      key: 'fontSize',  label: 'Size', min: 8, max: 200, step: 1 },

@@ -245,6 +245,7 @@ export class PaperTool extends BaseTool {
     return [
       {
         section: 'Paper',
+        icon: 'description',
         defaultOpen: true,
         fields: [
           { type: 'select', key: 'paperType', label: 'Type',  options: PAPER_TYPES },
@@ -254,6 +255,7 @@ export class PaperTool extends BaseTool {
       },
       {
         section: 'Lines',
+        icon: 'table_rows',
         fields: [
           { type: 'color',  key: 'lineColor',   label: 'Line color' },
           { type: 'select', key: 'lineStyle',   label: 'Line style',
@@ -264,6 +266,7 @@ export class PaperTool extends BaseTool {
       },
       {
         section: 'Margins (mm)',
+        icon: 'straighten',
         fields: [
           { type: 'number', key: 'marginTop',    label: 'Top',    min: 0, max: 50, step: 1 },
           { type: 'number', key: 'marginRight',  label: 'Right',  min: 0, max: 50, step: 1 },
@@ -273,6 +276,7 @@ export class PaperTool extends BaseTool {
       },
       {
         section: 'Background',
+        icon: 'gradient',
         fields: [
           { type: 'color',  key: 'bgColor',   label: 'Color' },
           { type: 'select', key: 'bgPattern', label: 'Pattern',
@@ -289,6 +293,7 @@ export class PaperTool extends BaseTool {
       },
       {
         section: 'Extras',
+        icon: 'more_horiz',
         fields: [
           { type: 'toggle', key: 'sidebarEnabled',   label: 'Side bar' },
           { type: 'toggle', key: 'watermarkEnabled', label: 'Watermark' },

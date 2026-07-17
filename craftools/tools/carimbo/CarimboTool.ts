@@ -221,6 +221,7 @@ export class CarimboTool extends BaseTool {
     return [
       {
         section: 'Outer text',
+        icon: 'text_rotation_none',
         defaultOpen: true,
         fields: [
           { type: 'text',   key: 'outerText',     label: 'Text' },
@@ -230,6 +231,7 @@ export class CarimboTool extends BaseTool {
       },
       {
         section: 'Inner text',
+        icon: 'text_format',
         fields: [
           { type: 'toggle', key: 'showInnerText',  label: 'Show inner text' },
           { type: 'text',   key: 'innerText',      label: 'Text' },
@@ -238,6 +240,7 @@ export class CarimboTool extends BaseTool {
       },
       {
         section: 'Center',
+        icon: 'center_focus_weak',
         fields: [
           {
             type: 'select', key: 'centerType', label: 'Center type',
@@ -250,6 +253,7 @@ export class CarimboTool extends BaseTool {
       },
       {
         section: 'Style',
+        icon: 'style',
         fields: [
           { type: 'font-select', key: 'fontFamily',  label: 'Font' },
           { type: 'color',       key: 'color',        label: 'Color' },

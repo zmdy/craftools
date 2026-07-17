@@ -43,6 +43,29 @@ export class PropertyRenderer {
     });
   }
 
+  /**
+   * Renders a single section's fields directly into `container` — no accordion
+   * wrapper. Used by MobileToolbar mini-panels to show one section at a time.
+   *
+   * Safe to call repeatedly; values are diffed like `render()`.
+   *
+   * @param container  The panel container to render fields into.
+   * @param section    A single section from the tool's PropertySchema.
+   * @param element    The selected canvas element.
+   * @param onChange   Called with (key, value) on every user interaction.
+   */
+  static renderSectionFields(
+    container: HTMLElement,
+    section: Section,
+    element: HTMLElement,
+    onChange: (key: string, value: unknown) => void,
+  ): void {
+    const state = PropertyRenderer._readState(element);
+    section.fields.forEach(field => {
+      PropertyRenderer._renderField(container, field, element, state, onChange);
+    });
+  }
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private static _renderSection(

@@ -178,6 +178,7 @@ export class BarcodeTool extends BaseTool {
     return [
       {
         section: 'Barcode',
+        icon: 'barcode_scanner',
         defaultOpen: true,
         fields: [
           {
