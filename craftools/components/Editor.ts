@@ -3,16 +3,26 @@
  *
  * Key changes vs Editor.js:
  *  - Removed static imports for TextTool / ImageTool / QRCodeTool.
- *  - Added ToolRegistry import + side-effect imports for all TS tool files
- *    (each file registers itself when imported).
+ *  - ToolRegistry import; every tool module registers itself (calls
+ *    ToolRegistry.register()) as a side effect of being loaded, but nothing
+ *    is imported eagerly here anymore -- see LAZY_TOOL_LOADERS below. (This
+ *    file used to side-effect-import all 19 tool files at module scope,
+ *    which defeated Vite's per-tool code-splitting: everything ended up
+ *    bundled into the initial chunk instead of loading on demand. The only
+ *    thing that actually needs a tool's module loaded is either creating one
+ *    of its elements -- already lazy via MODULE_MAP/PANEL_SETUP_MAP below --
+ *    or selecting an existing element of that type, which is now handled
+ *    lazily too.)
  *  - craftools-element-select handler: replaced 12-branch if/else chain with
- *    a single ToolRegistry.get() dispatch (~110 lines → ~25 lines).
+ *    a single ToolRegistry.get() dispatch (~110 lines → ~25 lines); now
+ *    lazily imports the tool's module first via LAZY_TOOL_LOADERS if it
+ *    hasn't been registered yet (covers elements reconstructed from a
+ *    restored session, which never go through a creation codepath).
  *  - Sidebar tool click handler: panel-only tools use PANEL_SETUP_MAP;
  *    picker tools (emoji/shape/icon) kept as dynamic imports.
  *  - Everything else (zoom, history, session, export, drag-drop) unchanged.
  */
 
-import { Craftools_Settings } from '../settings/Settings.js';
 import { PageTool } from '../tools/page/PageTool.js';
 import { CtxBar } from '../utils/CtxBar.js';
 import { I18n } from '../settings/Translations.js';
@@ -21,31 +31,30 @@ import { ImageExport } from '../utils/ImageExport.js';
 import { HistoryManager } from '../utils/HistoryManager.js';
 import { SessionManager } from '../utils/SessionManager.js';
 import { MobileToolbar } from '../utils/MobileToolbar.js';
-
-// ── ToolRegistry + all tool side-effect registrations ─────────────────────────
 import { ToolRegistry } from '../utils/ToolRegistry';
 
-// Canvas tools — each call ToolRegistry.register() at module evaluation time
-import '../tools/text/TextTool';
-import '../tools/image/ImageTool';
-import '../tools/shape/ShapeTool';
-import '../tools/icon/IconTool';
-import '../tools/emoji/EmojiTool';
-import '../tools/qrcode/QRCodeTool';
-import '../tools/barcode/BarcodeTool';
-import '../tools/minicalendar/MiniCalendarTool';
-import '../tools/emojikitchen/EmojiKitchenTool';
-import '../tools/variablecontent/VariableContentTool';
-import '../tools/textocurvo/TextoCurvoTool';
-import '../tools/carimbo/CarimboTool';
-import '../tools/paper/PaperTool';
-
-// Panel-only stubs — register with panelOnly: true
-import '../tools/agenda/AgendaExportTool';
-import '../tools/album/AlbumTool';
-import '../tools/calendar/CalendarTool';
-import '../tools/gerador/GeradorTool';
-import '../tools/imageslicer/ImageSlicerTool';
+// ── Canvas-element tools: key → lazy module import ────────────────────────────
+// Every ToolRegistry key that can appear as a `data-craftool` on a live
+// `<craftools-element>` (i.e. every tool registered with a `tool:` class,
+// not the panelOnly ones -- see PANEL_SETUP_MAP for those). Used by the
+// craftools-element-select handler below to import a tool's module
+// on-demand the first time one of its elements is selected in this session.
+const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
+  titulo:           () => import('../tools/text/TextTool.js'),
+  paragrafo:        () => import('../tools/text/TextTool.js'),
+  imagem:           () => import('../tools/image/ImageTool.js'),
+  shape:            () => import('../tools/shape/ShapeTool.js'),
+  icone:            () => import('../tools/icon/IconTool.js'),
+  emoji:            () => import('../tools/emoji/EmojiTool.js'),
+  emojikitchen:     () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
+  qrcode:           () => import('../tools/qrcode/QRCodeTool.js'),
+  barcode:          () => import('../tools/barcode/BarcodeTool.js'),
+  minicalendario:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
+  textocurvo:       () => import('../tools/textocurvo/TextoCurvoTool.js'),
+  carimbo:          () => import('../tools/carimbo/CarimboTool.js'),
+  papeis:           () => import('../tools/paper/PaperTool.js'),
+  conteudovariavel: () => import('../tools/variablecontent/VariableContentTool.js'),
+};
 
 // ── Panel-only tools: key → lazy setup() import ───────────────────────────────
 // These tools take over the entire right panel via their own setup(editor, page?) method.
@@ -310,15 +319,27 @@ export class Craftools_Editor extends HTMLElement {
         if (menuIcon && menuIcon.textContent !== 'close') menuIcon.textContent = 'close';
       };
 
-      const toolDef = ToolRegistry.get(toolType);
-      if (toolDef?.tool) {
-        this.ctxBar.show(el, toolDef.tool.getCtxOptions(el));
-        if (panelTitle) panelTitle.textContent = I18n.t(toolDef.label) || toolDef.label;
-        if (panelBody)  toolDef.tool.renderPropertiesPanel(panelBody, el);
-        openPanelMenu();
-        this.activePage = null;
+      const dispatch = (): void => {
+        const toolDef = ToolRegistry.get(toolType);
+        if (toolDef?.tool) {
+          this.ctxBar.show(el, toolDef.tool.getCtxOptions(el));
+          if (panelTitle) panelTitle.textContent = I18n.t(toolDef.label) || toolDef.label;
+          if (panelBody)  toolDef.tool.renderPropertiesPanel(panelBody, el);
+          openPanelMenu();
+          this.activePage = null;
+        } else {
+          this.ctxBar.show(el, []);
+        }
+      };
+
+      // Elements created fresh in this session already went through a
+      // dynamic import to be created, so ToolRegistry already has them. An
+      // element reconstructed from a restored session never went through
+      // that path — lazily import its module now, on first selection.
+      if (!ToolRegistry.has(toolType) && LAZY_TOOL_LOADERS[toolType]) {
+        LAZY_TOOL_LOADERS[toolType]().then(dispatch);
       } else {
-        this.ctxBar.show(el, []);
+        dispatch();
       }
     });
 
@@ -495,8 +516,6 @@ export class Craftools_Editor extends HTMLElement {
 
     // Sidebar panel-open / setup dispatchers (desktop click)
     // Tools are grouped into: picker-panel tools, panel-only setup tools, element-creator sidebar tools.
-    const PICKER_TOOLS: Record<string, { getTitle: () => string; render: (pb: HTMLElement, ed: HTMLElement) => void }> = {};
-
     toolBtns.forEach(btn => {
       const tool = btn.dataset.tool ?? btn.id.replace('pwa-sidebar-', '');
 
