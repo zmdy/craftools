@@ -1,6 +1,7 @@
 import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { Notify } from '../../utils/Notify.js';
+import { renderColorPicker, cssFromValue, parseCssBackground, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
 import './PageTool_Translations.js';
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -310,24 +311,19 @@ export class PageTool {
             </div>
           `;
 
+          // Cor/Gradiente is rendered through the SAME standardized picker
+          // (utils/ColorPickerUI.ts) every element tool's color field uses --
+          // it owns its own Cor/Gradiente toggle internally (see
+          // renderColorPicker() below), so this outer group only needs to
+          // choose between "a flat color or gradient fill" and "an image".
           const htmlBackground = `
             <div class="ct-field">
               <span class="craftools-label">${I18n.t('pageTool.background')}</span>
               <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
-                <button class="craftools-pill bg-type-btn active" data-type="color">${I18n.t('pageTool.color')}</button>
-                <button class="craftools-pill bg-type-btn" data-type="gradient">${I18n.t('pageTool.gradient')}</button>
+                <button class="craftools-pill bg-type-btn active" data-type="fill">${I18n.t('pageTool.color')}</button>
                 <button class="craftools-pill bg-type-btn" data-type="image">${I18n.t('editor.image')}</button>
               </div>
-              <div id="bg-color-section">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="color" class="craftools-color-swatch" id="page-bg-color" value="${currentColor}">
-                  <span style="font-size: 12px; color: var(--text-secondary)">${I18n.t('pageTool.color')}</span>
-                </div>
-              </div>
-              <div id="bg-gradient-section" style="display: none;">
-                <input type="text" class="craftools-input" id="page-bg-grad-input" placeholder="linear-gradient(...)">
-                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;" id="grad-presets"></div>
-              </div>
+              <div id="bg-fill-section"></div>
               <div id="bg-image-section" style="display: none;">
                 <input type="url" class="craftools-input" id="page-bg-img-url" placeholder="${I18n.t('pageTool.imageUrl')}">
                 <input type="file" id="page-bg-img-file" accept="image/*" style="margin-top: 8px; font-size: 11px; width: 100%;">
@@ -411,9 +407,8 @@ export class PageTool {
         // Bind Backgrounds
         const bgTypeBtns = panelBody!.querySelectorAll<HTMLButtonElement>('.bg-type-btn');
         const sections: Record<string, HTMLElement | null> = {
-          color:    document.getElementById('bg-color-section'),
-          gradient: document.getElementById('bg-gradient-section'),
-          image:    document.getElementById('bg-image-section'),
+          fill:  document.getElementById('bg-fill-section'),
+          image: document.getElementById('bg-image-section'),
         };
 
         bgTypeBtns.forEach(btn => {
@@ -426,36 +421,19 @@ export class PageTool {
           });
         });
 
-        // Color Background
-        (document.getElementById('page-bg-color') as HTMLInputElement).addEventListener('input', (e: Event) => {
-          pageEl.style.background = (e.target as HTMLInputElement).value;
-        });
-
-        // Gradient Background
-        const gradInput = document.getElementById('page-bg-grad-input') as HTMLInputElement;
-        gradInput.addEventListener('input', (e: Event) => {
-          pageEl.style.background = (e.target as HTMLInputElement).value;
-        });
-
-        const gradPresetsContainer = document.getElementById('grad-presets')!;
-        const gradList = [
-          'linear-gradient(135deg,#f5f7fa,#c3cfe2)',
-          'linear-gradient(135deg,#fddb92,#d1fdff)',
-          'linear-gradient(135deg,#a18cd1,#fbc2eb)',
-          'linear-gradient(120deg,#f093fb,#f5576c)',
-          'linear-gradient(135deg,#0f2027,#203a43,#2c5364)',
-          'radial-gradient(circle at top,#ffecd2,#fcb69f)',
-          'linear-gradient(135deg,#11998e,#38ef7d)',
-        ];
-        gradList.forEach(grad => {
-          const gradBtn = document.createElement('button');
-          gradBtn.style.cssText = `width:26px;height:26px;border-radius:5px;background:${grad};border:1px solid var(--border);cursor:pointer;`;
-          gradBtn.addEventListener('click', () => {
-            gradInput.value = grad;
-            pageEl.style.background = grad;
-          });
-          gradPresetsContainer.appendChild(gradBtn);
-        });
+        // Color/Gradient background -- the standardized picker (same one
+        // every element tool's color field uses). Seed its initial value
+        // from the page's current background: a gradient if one's already
+        // applied, otherwise the plain background-color.
+        const fillSection = document.getElementById('bg-fill-section')!;
+        const initialFillValue: ColorPickerValue = parseCssBackground(pageEl.style.background) ?? {
+          mode: 'solid',
+          solid: currentColor,
+          gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] },
+        };
+        renderColorPicker(fillSection, initialFillValue, (next) => {
+          pageEl.style.background = cssFromValue(next);
+        }, { allowGradient: true });
 
         // Image Background
         const imgUrlInput = document.getElementById('page-bg-img-url') as HTMLInputElement;

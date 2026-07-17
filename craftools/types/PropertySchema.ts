@@ -13,6 +13,7 @@ export type FieldType =
   | 'number'
   | 'color'
   | 'color-gradient'
+  | 'color-picker'
   | 'toggle'
   | 'select'
   | 'align'
@@ -63,6 +64,17 @@ export interface ColorField extends BaseField {
 
 export interface ColorGradientField extends BaseField {
   type: 'color-gradient';
+}
+
+/**
+ * The standardized solid-OR-gradient picker (see
+ * utils/fields/color-picker.field.ts / utils/ColorPickerUI.ts). Stores a
+ * JSON-stringified `{ mode: 'solid'|'gradient', solid, gradient }` object --
+ * tools must JSON.parse()/JSON.stringify() it themselves, same convention
+ * as VariableBindingField below.
+ */
+export interface ColorPickerField extends BaseField {
+  type: 'color-picker';
 }
 
 export interface ToggleField extends BaseField {
@@ -170,6 +182,7 @@ export type Field =
   | NumberField
   | ColorField
   | ColorGradientField
+  | ColorPickerField
   | ToggleField
   | SelectField
   | AlignField

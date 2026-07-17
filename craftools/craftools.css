@@ -264,6 +264,43 @@ select.craftools-select:focus { border-color:var(--border-focus); }
 ct-font-select.craftools-select { display:block; width:100%; }
 .craftools-color-swatch { width:32px; height:32px; border-radius:6px; border:1px solid var(--border); cursor:pointer; padding:2px; background:var(--bg-input); flex-shrink:0; }
 
+/* ── Standardized Color/Gradient Picker (utils/ColorPickerUI.ts) ─────────────
+   Shared by every color-capable schema field (color.field.ts,
+   color-picker.field.ts) and PageTool.ts's page-background "Fundo"
+   accordion -- one visual language for color/gradient selection everywhere. */
+.ct-color-picker { display:flex; flex-direction:column; gap:2px; }
+.ct-color-palette { display:flex; flex-wrap:wrap; gap:6px; }
+.ct-color-swatch-btn {
+  width:26px; height:26px; border-radius:7px; border:2px solid var(--border);
+  cursor:pointer; padding:0; background-clip:padding-box; position:relative;
+  transition:transform .12s, border-color .12s; flex-shrink:0;
+}
+.ct-color-swatch-btn:hover { transform:scale(1.08); }
+.ct-color-swatch-btn.active { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-subtle); }
+.ct-color-swatch-custom {
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-input); color:var(--text-secondary); overflow:hidden;
+}
+.ct-color-swatch-custom .material-symbols-outlined { font-size:14px; pointer-events:none; }
+.ct-color-swatch-custom input[type="color"] {
+  position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:none; padding:0;
+}
+.ct-gradient-swatch-btn {
+  width:40px; height:26px; border-radius:7px; border:2px solid var(--border);
+  cursor:pointer; padding:0; transition:transform .12s, border-color .12s; flex-shrink:0;
+}
+.ct-gradient-swatch-btn:hover { transform:scale(1.05); }
+.ct-gradient-swatch-btn.active { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-subtle); }
+.ct-grad-stops { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }
+.ct-grad-stop-row { position:relative; display:inline-flex; }
+.ct-grad-stop-row .craftools-color-swatch { width:28px; height:28px; }
+.ct-grad-stop-remove {
+  position:absolute; top:-5px; right:-5px; width:14px; height:14px; border-radius:50%;
+  background:var(--danger); color:#fff; border:1px solid var(--bg-shell); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0;
+}
+.ct-grad-stop-remove .material-symbols-outlined { font-size:10px; }
+
 /* Pill buttons */
 .craftools-pill { padding:3px 8px; border-radius:99px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .12s; white-space:nowrap; }
 .craftools-pill:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-subtle); }

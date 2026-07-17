@@ -15,6 +15,7 @@ import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { formaSection, sizePositionSection, pageAlignSection } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
+import { normalizeValue as normalizeColorValue, cssFromValue as colorPickerCss, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -121,25 +122,31 @@ export class TextTool extends BaseTool {
       patch.underline = textEl.style.textDecoration?.includes('underline') ?? false;
     }
 
-    // Color mode: detect gradient from webkitTextFillColor
-    const isGradient = textEl.style.webkitTextFillColor === 'transparent';
-    if (!('colorMode' in existing)) patch.colorMode = isGradient ? 'gradient' : 'solid';
-
+    // Color: detect gradient from webkitTextFillColor, migrate into the
+    // standardized ColorPickerValue shape (see utils/ColorPickerUI.ts).
+    // Only gates on the single 'color' key now -- a session saved before
+    // this migration may still have the old flat `color` (bare hex string)
+    // plus separate `colorMode`/`gradient` keys sitting in dataset.ctState;
+    // those are simply left as harmless orphaned JSON and never read again
+    // (normalizeColorValue() below already treats a bare string value as a
+    // solid color, so old saved sessions keep rendering correctly either way).
     if (!('color' in existing)) {
-      patch.color = isGradient
-        ? '#1a1a1a'
-        : rgbToHex(textEl.style.color || '#1a1a1a');
-    }
-
-    if (!('gradient' in existing) && isGradient && textEl.style.background) {
-      const m = textEl.style.background.match(
-        /linear-gradient\((\d+)deg,\s*(#[\da-fA-F]+),\s*(#[\da-fA-F]+)\)/
-      );
-      patch.gradient = m
-        ? { from: m[2], to: m[3], angle: Number(m[1]) }
-        : { from: '#f97316', to: '#ec4899', angle: 90 };
-    } else if (!('gradient' in existing)) {
-      patch.gradient = { from: '#f97316', to: '#ec4899', angle: 90 };
+      const isGradient = textEl.style.webkitTextFillColor === 'transparent';
+      let colorValue: ColorPickerValue;
+      if (isGradient) {
+        const m = textEl.style.background?.match(
+          /linear-gradient\((\d+)deg,\s*(#[\da-fA-F]+),\s*(#[\da-fA-F]+)\)/
+        );
+        colorValue = normalizeColorValue({
+          mode: 'gradient',
+          gradient: m
+            ? { type: 'linear', angle: Number(m[1]), stops: [m[2], m[3]] }
+            : { type: 'linear', angle: 90, stops: ['#f97316', '#ec4899'] },
+        });
+      } else {
+        colorValue = normalizeColorValue({ mode: 'solid', solid: rgbToHex(textEl.style.color || '#1a1a1a') });
+      }
+      patch.color = JSON.stringify(colorValue);
     }
 
     if (Object.keys(patch).length) {
@@ -160,10 +167,7 @@ export class TextTool extends BaseTool {
 
   // ── Schema ────────────────────────────────────────────────────────────────────
 
-  static getPropertySchema(element: HTMLElement): PropertySchema {
-    const state = PropertyRenderer._readState(element);
-    const isGradient = state.colorMode === 'gradient';
-
+  static getPropertySchema(_element: HTMLElement): PropertySchema {
     return [
       {
         section: 'Typography',
@@ -186,17 +190,10 @@ export class TextTool extends BaseTool {
         icon: 'palette',
         defaultOpen: true,
         fields: [
-          {
-            type: 'select',
-            key: 'colorMode',
-            label: 'Mode',
-            options: [
-              { value: 'solid',    label: 'Solid color' },
-              { value: 'gradient', label: 'Gradient' },
-            ],
-          },
-          { type: 'color',          key: 'color',    label: 'Color',    hidden: isGradient },
-          { type: 'color-gradient', key: 'gradient', label: 'Gradient', hidden: !isGradient },
+          // Standardized solid-or-gradient picker (see color-picker.field.ts) --
+          // owns its own Cor/Gradiente toggle internally, so no separate mode
+          // field or hidden-field pair is needed here anymore.
+          { type: 'color-picker', key: 'color', label: 'Color' },
         ],
       },
       formaSection({ margin: true }),
@@ -292,9 +289,7 @@ export class TextTool extends BaseTool {
         textEl.style.textDecoration = value ? 'underline' : 'none';
         break;
 
-      case 'colorMode':
       case 'color':
-      case 'gradient':
         TextTool._applyColor(textEl, state);
         break;
 
@@ -320,12 +315,9 @@ export class TextTool extends BaseTool {
 
   /** Applies the correct color or gradient to the text element. */
   private static _applyColor(textEl: HTMLElement, state: Record<string, unknown>): void {
-    if (state.colorMode === 'gradient') {
-      const g = state.gradient as { from: string; to: string; angle: number } | undefined;
-      const from  = g?.from  ?? '#f97316';
-      const to    = g?.to    ?? '#ec4899';
-      const angle = g?.angle ?? 90;
-      textEl.style.background           = `linear-gradient(${angle}deg, ${from}, ${to})`;
+    const value = normalizeColorValue(state.color);
+    if (value.mode === 'gradient') {
+      textEl.style.background           = colorPickerCss(value);
       textEl.style.webkitBackgroundClip = 'text';
       textEl.style.webkitTextFillColor  = 'transparent';
       textEl.style.backgroundClip       = 'text';
@@ -334,7 +326,7 @@ export class TextTool extends BaseTool {
       textEl.style.webkitBackgroundClip = '';
       textEl.style.webkitTextFillColor  = '';
       textEl.style.backgroundClip       = '';
-      textEl.style.color                = String(state.color ?? '#1a1a1a');
+      textEl.style.color                = value.solid;
     }
   }
 }

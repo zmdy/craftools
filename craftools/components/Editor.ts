@@ -33,6 +33,26 @@ import { SessionManager } from '../utils/SessionManager.js';
 import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
 
+// ── Keyboard shortcuts: element clipboard ──────────────────────────────────────
+// Holds the source element for Ctrl+C/Ctrl+V (see _initHistoryAndSession()'s
+// keydown listener below). A live element reference rather than a serialized
+// copy -- `isConnected` is checked before paste so a stale reference (source
+// deleted, or a fresh page load) safely no-ops instead of pasting a ghost.
+declare global {
+  interface Window {
+    __craftoolsElementClipboard?: HTMLElement | null;
+  }
+}
+
+/** The position/transform API every <craftools-element> instance exposes (Element.ts). */
+interface PositionedElement extends HTMLElement {
+  px: number;
+  py: number;
+  _applyTransform: () => void;
+  _craftoolsMeta?: unknown;
+  _craftoolsAutoResize?: boolean;
+}
+
 // ── Canvas-element tools: key → lazy module import ────────────────────────────
 // Every ToolRegistry key that can appear as a `data-craftool` on a live
 // `<craftools-element>` (i.e. every tool registered with a `tool:` class,
@@ -213,8 +233,54 @@ export class Craftools_Editor extends HTMLElement {
       if (tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) return;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
         e.preventDefault(); HistoryManager.undo(pagesWrapper); this._reattachAllPageEvents(pagesWrapper);
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
         e.preventDefault(); HistoryManager.redo(pagesWrapper); this._reattachAllPageEvents(pagesWrapper);
+        return;
+      }
+
+      // ── Element shortcuts: Delete, Ctrl+C / Ctrl+V, Arrow-key nudge ──────────
+      const selected = document.querySelector<PositionedElement>('craftools-element.craftools-selected');
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!selected || selected.getAttribute('data-locked') === 'true') return;
+        e.preventDefault();
+        // Reuse Element.ts's own delete-handle click handler rather than
+        // duplicating its logic here -- it already dispatches
+        // 'craftools-element-delete' (history snapshot) and correctly
+        // removes every "linked" clone sharing the same data-linked-id
+        // (Business Card mode), not just the selected one.
+        selected.querySelector<HTMLElement>('.del-handle')?.click();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (!selected) return;
+        e.preventDefault();
+        window.__craftoolsElementClipboard = selected;
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        const source = window.__craftoolsElementClipboard;
+        if (!source || !source.isConnected) return;
+        e.preventDefault();
+        this._pasteElementClipboard(source as PositionedElement);
+        return;
+      }
+
+      if (selected && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        if (selected.getAttribute('data-locked') === 'true') return;
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        if (e.key === 'ArrowUp')    selected.py -= step;
+        if (e.key === 'ArrowDown')  selected.py += step;
+        if (e.key === 'ArrowLeft') selected.px -= step;
+        if (e.key === 'ArrowRight') selected.px += step;
+        selected._applyTransform();
+        selected.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: selected } }));
       }
     });
 
@@ -253,6 +319,48 @@ export class Craftools_Editor extends HTMLElement {
         p._craftoolsEventsAttached = true;
       }
     });
+  }
+
+  /**
+   * Ctrl+V handler (see the keydown listener in _initHistoryAndSession()):
+   * clones `source` onto the same page it lives on, offset diagonally, and
+   * selects the new copy.
+   */
+  private _pasteElementClipboard(source: PositionedElement): void {
+    const page = source.closest<HTMLElement>('.craftools-page');
+    if (!page) return;
+
+    const clone = source.cloneNode(true) as PositionedElement;
+
+    // cloneNode() only copies DOM attributes/children. Tool-specific state
+    // kept as a plain JS expando on the element instance (not a DOM
+    // attribute) is silently dropped otherwise -- e.g. PaperTool.ts/
+    // ShapeTool.ts/IconTool.ts/CarimboTool.ts/TextoCurvoTool.ts/
+    // MiniCalendarTool.ts/EmojiKitchenTool.ts all set `el._craftoolsMeta`
+    // directly, and TextTool.ts's autoFit toggle lives in
+    // `_craftoolsAutoResize` the same way -- without this, pasting any of
+    // those would create a visually-blank or default-state clone.
+    clone._craftoolsMeta       = source._craftoolsMeta;
+    clone._craftoolsAutoResize = source._craftoolsAutoResize;
+
+    // The paste is a new, independent element -- it must not join the
+    // source's "linked" clone group (Business Card mode, see PageTool.ts)
+    // or inherit a locked state that would make it unmovable/undeletable
+    // the moment it appears.
+    clone.removeAttribute('data-linked-id');
+    clone.removeAttribute('data-locked');
+
+    // x/y attributes seed px/py in connectedCallback() (Element.ts) --
+    // source.px/py is its LIVE position (drag/nudge never touch the x/y
+    // attributes, only the transform), so read from there, not from
+    // source's possibly-stale x/y attributes.
+    const OFFSET = 20;
+    clone.setAttribute('x', String(source.px + OFFSET));
+    clone.setAttribute('y', String(source.py + OFFSET));
+
+    page.appendChild(clone);
+    clone.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: clone } }));
+    (clone as HTMLElement & { select?: () => void }).select?.();
   }
 
   bindEvents() {

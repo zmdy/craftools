@@ -13,6 +13,7 @@ export * from './text.field';
 export * from './number.field';
 export * from './color.field';
 export * from './color-gradient.field';
+export * from './color-picker.field';
 export * from './toggle.field';
 export * from './select.field';
 export * from './align.field';

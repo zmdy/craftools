@@ -1,0 +1,354 @@
+/**
+ * ColorPickerUI — the standardized color/gradient picker used everywhere in
+ * CrafTools: every element tool's color field (via utils/fields/color.field.ts
+ * and utils/fields/color-picker.field.ts) AND PageTool.ts's page-background
+ * "Fundo" accordion both render through this same module, so they always
+ * look and behave identically -- one picker, reused, not two similar-looking
+ * implementations that drift apart over time.
+ *
+ * Design:
+ *  - Solid mode: a palette of preset swatches + a native <input type="color">
+ *    swatch for a custom pick.
+ *  - Gradient mode: a palette of preset gradient swatches + a live editor
+ *    (linear/radial type, angle, and a stop list with add/remove -- minimum
+ *    2 stops).
+ *  - Switching between Cor/Gradiente always resets to the first preset of
+ *    the target group (GRADIENT_PRESETS[0] / COLOR_PRESETS[0]) and fires
+ *    onChange immediately, per spec -- it does not try to remember whatever
+ *    was last configured in the other mode.
+ *  - Bind-once, repaint-many: renderColorPicker() stashes the current
+ *    value/onChange/opts on the container and only attaches its delegated
+ *    listener set the FIRST time it's called for a given container; every
+ *    later call (a genuinely different value, e.g. a different element
+ *    selected) just repaints from the stash. Calling render() again to
+ *    re-render would otherwise stack a fresh listener set on top of the old
+ *    one every time (each interaction firing once per accumulated call).
+ */
+
+import { tr } from './i18nLabel';
+import './ColorPickerUI_Translations.js';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type GradientType = 'linear' | 'radial';
+
+export interface GradientValue {
+  type: GradientType;
+  /** Degrees. Ignored for 'radial'. */
+  angle: number;
+  /** >= 2 hex colors. */
+  stops: string[];
+}
+
+export interface ColorPickerValue {
+  mode: 'solid' | 'gradient';
+  solid: string;
+  gradient: GradientValue;
+}
+
+export interface ColorPickerOptions {
+  /** false renders solid-only: palette + custom swatch, no mode pills, no gradient UI. Default: true. */
+  allowGradient?: boolean;
+}
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+
+export const COLOR_PRESETS: string[] = [
+  '#ffffff', '#18181b', '#71717a', '#e4e4e7',
+  '#f97316', '#ef4444', '#22c55e', '#3b82f6',
+  '#a855f7', '#ec4899', '#eab308', '#14b8a6',
+];
+
+export const GRADIENT_PRESETS: GradientValue[] = [
+  { type: 'linear', angle: 90,  stops: ['#f97316', '#facc15'] },
+  { type: 'linear', angle: 135, stops: ['#f5f7fa', '#c3cfe2'] },
+  { type: 'linear', angle: 135, stops: ['#fddb92', '#d1fdff'] },
+  { type: 'linear', angle: 120, stops: ['#f093fb', '#f5576c'] },
+  { type: 'linear', angle: 135, stops: ['#0f2027', '#203a43', '#2c5364'] },
+  { type: 'radial', angle: 0,   stops: ['#ffecd2', '#fcb69f'] },
+  { type: 'linear', angle: 135, stops: ['#11998e', '#38ef7d'] },
+];
+
+export const DEFAULT_VALUE: ColorPickerValue = {
+  mode: 'solid',
+  solid: COLOR_PRESETS[0],
+  gradient: GRADIENT_PRESETS[0],
+};
+
+// ── CSS helpers ───────────────────────────────────────────────────────────────
+
+export function cssFromGradient(g: GradientValue): string {
+  const stops = g.stops.join(', ');
+  return g.type === 'radial' ? `radial-gradient(circle, ${stops})` : `linear-gradient(${g.angle}deg, ${stops})`;
+}
+
+/** The CSS `background`/`color` value the current mode resolves to. */
+export function cssFromValue(v: ColorPickerValue): string {
+  return v.mode === 'gradient' ? cssFromGradient(v.gradient) : v.solid;
+}
+
+/**
+ * Best-effort parse of a CSS background string (as found on
+ * `element.style.background`) back into a ColorPickerValue -- used to seed
+ * the picker's initial state from whatever's already applied (e.g.
+ * PageTool.ts priming its Background accordion from the page's current
+ * background). Returns null for anything that isn't a plain color or a
+ * linear-/radial-gradient() this module itself would have produced
+ * (notably `url(...)` image backgrounds -- callers should check for an
+ * image background themselves before falling back to this).
+ */
+export function parseCssBackground(css: string | undefined | null): ColorPickerValue | null {
+  const trimmed = (css ?? '').trim();
+  if (!trimmed || trimmed.startsWith('url(')) return null;
+
+  const linear = trimmed.match(/^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(.+)\)$/i);
+  if (linear) {
+    const stops = linear[2].split(',').map(s => s.trim()).filter(Boolean);
+    if (stops.length >= 2) {
+      return { mode: 'gradient', solid: DEFAULT_VALUE.solid, gradient: { type: 'linear', angle: Number(linear[1]), stops } };
+    }
+  }
+
+  const radial = trimmed.match(/^radial-gradient\(\s*circle[^,]*,\s*(.+)\)$/i);
+  if (radial) {
+    const stops = radial[1].split(',').map(s => s.trim()).filter(Boolean);
+    if (stops.length >= 2) {
+      return { mode: 'gradient', solid: DEFAULT_VALUE.solid, gradient: { type: 'radial', angle: 0, stops } };
+    }
+  }
+
+  if (/^#[0-9a-f]{3,8}$/i.test(trimmed) || /^rgba?\(/i.test(trimmed)) {
+    return { mode: 'solid', solid: trimmed, gradient: { ...DEFAULT_VALUE.gradient, stops: DEFAULT_VALUE.gradient.stops.slice() } };
+  }
+
+  return null;
+}
+
+// ── Value normalization ──────────────────────────────────────────────────────
+
+/**
+ * Accepts whatever's currently stored (a full ColorPickerValue object, a
+ * JSON string of one -- see the field handlers for why values are
+ * stringified -- a bare hex string from a legacy plain-color field, or
+ * nothing at all) and always returns a complete, valid ColorPickerValue.
+ */
+export function normalizeValue(raw: unknown): ColorPickerValue {
+  let v = raw;
+  if (typeof v === 'string') {
+    const trimmed = v.trim();
+    if (trimmed.startsWith('{')) {
+      try { v = JSON.parse(trimmed); } catch { v = null; }
+    } else if (trimmed) {
+      return { ...DEFAULT_VALUE, mode: 'solid', solid: trimmed };
+    } else {
+      v = null;
+    }
+  }
+
+  if (v && typeof v === 'object') {
+    const o = v as Partial<ColorPickerValue>;
+    const gradient = o.gradient && Array.isArray(o.gradient.stops) && o.gradient.stops.length >= 2
+      ? {
+          type: o.gradient.type === 'radial' ? 'radial' as const : 'linear' as const,
+          angle: typeof o.gradient.angle === 'number' ? o.gradient.angle : 90,
+          stops: o.gradient.stops.slice(),
+        }
+      : { ...DEFAULT_VALUE.gradient, stops: DEFAULT_VALUE.gradient.stops.slice() };
+    return {
+      mode: o.mode === 'gradient' ? 'gradient' : 'solid',
+      solid: typeof o.solid === 'string' && o.solid ? o.solid : DEFAULT_VALUE.solid,
+      gradient,
+    };
+  }
+
+  return { ...DEFAULT_VALUE, gradient: { ...DEFAULT_VALUE.gradient, stops: DEFAULT_VALUE.gradient.stops.slice() } };
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+const swatchesEqual = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+const gradientsEqual = (a: GradientValue, b: GradientValue): boolean =>
+  a.type === b.type && a.angle === b.angle && a.stops.length === b.stops.length &&
+  a.stops.every((s, i) => swatchesEqual(s, b.stops[i]));
+
+function paletteHtml(value: ColorPickerValue): string {
+  const swatches = COLOR_PRESETS.map(c => `
+    <button type="button" class="ct-color-swatch-btn${swatchesEqual(value.solid, c) ? ' active' : ''}"
+      data-action="pick-color" data-color="${c}" style="background:${c};" title="${c}"></button>
+  `).join('');
+
+  const isCustom = !COLOR_PRESETS.some(c => swatchesEqual(c, value.solid));
+
+  return `
+    <div class="ct-color-palette">
+      ${swatches}
+      <label class="ct-color-swatch-btn ct-color-swatch-custom${isCustom ? ' active' : ''}"
+        title="${tr('colorPicker.custom', 'Custom')}">
+        <span class="material-symbols-outlined">colorize</span>
+        <input type="color" data-action="custom-color" value="${isCustom ? value.solid : '#000000'}">
+      </label>
+    </div>`;
+}
+
+function gradientPaletteHtml(value: ColorPickerValue): string {
+  const swatches = GRADIENT_PRESETS.map((g, i) => `
+    <button type="button" class="ct-gradient-swatch-btn${gradientsEqual(value.gradient, g) ? ' active' : ''}"
+      data-action="pick-gradient" data-index="${i}" style="background:${cssFromGradient(g)};"></button>
+  `).join('');
+  return `<div class="ct-color-palette">${swatches}</div>`;
+}
+
+function gradientEditorHtml(g: GradientValue): string {
+  const stopsHtml = g.stops.map((s, i) => `
+    <div class="ct-grad-stop-row">
+      <input type="color" class="craftools-color-swatch" data-action="grad-stop" data-index="${i}" value="${s}">
+      ${g.stops.length > 2
+        ? `<button type="button" class="ct-grad-stop-remove" data-action="remove-stop" data-index="${i}" title="${tr('colorPicker.removeColor', 'Remove color')}">
+             <span class="material-symbols-outlined">close</span>
+           </button>`
+        : ''}
+    </div>`).join('');
+
+  return `
+    <div class="ct-field" style="margin-top:8px;">
+      <div class="ct-field-row" style="gap:4px;">
+        <button type="button" class="craftools-pill${g.type === 'linear' ? ' active' : ''}" data-action="grad-type" data-type="linear">${tr('colorPicker.linear', 'Linear')}</button>
+        <button type="button" class="craftools-pill${g.type === 'radial' ? ' active' : ''}" data-action="grad-type" data-type="radial">${tr('colorPicker.radial', 'Radial')}</button>
+        ${g.type === 'linear' ? `
+          <div class="ct-field-row" style="gap:2px; margin-left:auto;">
+            <input type="number" class="craftools-input" data-action="grad-angle" min="0" max="360" step="5" value="${g.angle}" style="width:52px; padding:4px 5px; font-size:11px;">
+            <span class="ct-val-badge">°</span>
+          </div>` : ''}
+      </div>
+      <span class="ct-sublabel" style="margin-top:6px;">${tr('colorPicker.colors', 'Colors')}</span>
+      <div class="ct-grad-stops">${stopsHtml}</div>
+      <button type="button" class="craftools-pill" data-action="add-stop" style="align-self:flex-start;">
+        <span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">add</span>
+        ${tr('colorPicker.addColor', 'Add color')}
+      </button>
+    </div>`;
+}
+
+function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: boolean): void {
+  const modeHtml = allowGradient ? `
+    <div class="ct-field-row" style="gap:4px; margin-bottom:8px;">
+      <button type="button" class="craftools-pill${value.mode === 'solid' ? ' active' : ''}" data-action="mode" data-mode="solid">${tr('colorPicker.color', 'Color')}</button>
+      <button type="button" class="craftools-pill${value.mode === 'gradient' ? ' active' : ''}" data-action="mode" data-mode="gradient">${tr('colorPicker.gradient', 'Gradient')}</button>
+    </div>` : '';
+
+  const bodyHtml = allowGradient && value.mode === 'gradient'
+    ? gradientPaletteHtml(value) + gradientEditorHtml(value.gradient)
+    : paletteHtml(value);
+
+  container.innerHTML = `<div class="ct-color-picker">${modeHtml}${bodyHtml}</div>`;
+}
+
+interface BoundContainer extends HTMLElement {
+  _ctColorValue?: ColorPickerValue;
+  _ctColorOnChange?: (value: ColorPickerValue) => void;
+  _ctColorAllowGradient?: boolean;
+  _ctColorBound?: boolean;
+}
+
+function repaint(container: BoundContainer, next: ColorPickerValue, opts: { silent?: boolean } = {}): void {
+  container._ctColorValue = next;
+  paint(container, next, container._ctColorAllowGradient !== false);
+  if (!opts.silent) container._ctColorOnChange?.(next);
+}
+
+function bindDelegatedEvents(container: BoundContainer): void {
+  container.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
+    if (!target) return;
+    const action  = target.dataset.action;
+    const current = container._ctColorValue ?? DEFAULT_VALUE;
+
+    if (action === 'mode') {
+      const mode = target.dataset.mode as 'solid' | 'gradient';
+      if (mode === current.mode) return;
+      // Always resets to the target group's first preset -- see file header.
+      repaint(container, mode === 'gradient'
+        ? { ...current, mode: 'gradient', gradient: { ...GRADIENT_PRESETS[0], stops: GRADIENT_PRESETS[0].stops.slice() } }
+        : { ...current, mode: 'solid', solid: COLOR_PRESETS[0] });
+    } else if (action === 'pick-color') {
+      repaint(container, { ...current, mode: 'solid', solid: target.dataset.color! });
+    } else if (action === 'pick-gradient') {
+      const preset = GRADIENT_PRESETS[Number(target.dataset.index)];
+      repaint(container, { ...current, mode: 'gradient', gradient: { ...preset, stops: preset.stops.slice() } });
+    } else if (action === 'grad-type') {
+      repaint(container, { ...current, gradient: { ...current.gradient, type: target.dataset.type as GradientType } });
+    } else if (action === 'remove-stop') {
+      const idx   = Number(target.dataset.index);
+      const stops = current.gradient.stops.filter((_, i) => i !== idx);
+      if (stops.length >= 2) repaint(container, { ...current, gradient: { ...current.gradient, stops } });
+    } else if (action === 'add-stop') {
+      const stops = [...current.gradient.stops, '#ffffff'];
+      repaint(container, { ...current, gradient: { ...current.gradient, stops } });
+    }
+  });
+
+  // Native <input type="color"> reports the live pick via 'input' (fires
+  // continuously while dragging in the OS picker) and the committed value
+  // again via 'change'. Only 'change' triggers a full repaint (refreshing
+  // which swatch shows as "active") -- repainting on every 'input' tick
+  // would tear down and rebuild the very <input> the user is still
+  // interacting with, closing the native picker mid-drag.
+  container.addEventListener('input', (e) => {
+    const target = e.target as HTMLInputElement;
+    const action = target.dataset.action;
+    if (action !== 'custom-color' && action !== 'grad-stop') return;
+    const current = container._ctColorValue ?? DEFAULT_VALUE;
+
+    if (action === 'custom-color') {
+      const next = { ...current, mode: 'solid' as const, solid: target.value };
+      repaint(container, next, { silent: true });
+      container._ctColorOnChange?.(next);
+    } else {
+      const idx   = Number(target.dataset.index);
+      const stops = current.gradient.stops.slice();
+      stops[idx]  = target.value;
+      const next  = { ...current, gradient: { ...current.gradient, stops } };
+      container._ctColorValue = next; // stash without repainting the DOM mid-drag
+      container._ctColorOnChange?.(next);
+    }
+  });
+
+  container.addEventListener('change', (e) => {
+    const target  = e.target as HTMLInputElement;
+    const action  = target.dataset.action;
+    const current = container._ctColorValue ?? DEFAULT_VALUE;
+
+    if (action === 'custom-color' || action === 'grad-stop') {
+      // Value is already current (updated on 'input' above) -- just repaint
+      // now that the pick is committed, to refresh active-swatch highlighting.
+      repaint(container, current, { silent: true });
+    } else if (action === 'grad-angle') {
+      repaint(container, { ...current, gradient: { ...current.gradient, angle: Number(target.value) || 0 } });
+    }
+  });
+}
+
+/**
+ * Renders (or repaints, if this container has already been bound once) the
+ * standardized color/gradient picker into `container`.
+ */
+export function renderColorPicker(
+  container: HTMLElement,
+  rawValue: unknown,
+  onChange: (value: ColorPickerValue) => void,
+  opts: ColorPickerOptions = {},
+): void {
+  const c = container as BoundContainer;
+  const value = normalizeValue(rawValue);
+
+  c._ctColorValue         = value;
+  c._ctColorOnChange      = onChange;
+  c._ctColorAllowGradient = opts.allowGradient !== false;
+
+  paint(c, value, c._ctColorAllowGradient);
+
+  if (!c._ctColorBound) {
+    c._ctColorBound = true;
+    bindDelegatedEvents(c);
+  }
+}

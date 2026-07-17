@@ -7,6 +7,7 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface TextoCurvoState {
@@ -15,15 +16,22 @@ interface TextoCurvoState {
   radius:        number;
   fontSize:      number;
   fontFamily:    string;
+  /**
+   * JSON-stringified ColorPickerValue (utils/ColorPickerUI.ts) -- stored as
+   * a string, not the object itself, for the same reason
+   * variable-binding.field.ts's value is: this whole state object gets
+   * JSON.stringify()'d again into dataset.ctState, and PropertyRenderer's
+   * re-render diffing compares String(value) -- a nested plain object would
+   * always stringify to "[object Object]" either way, so the color field
+   * would never refresh after the very first render. Parse with
+   * normalizeColorValue() before use (handles the old flat hex-string shape
+   * from before this field existed too, so old saved sessions still render).
+   */
   color:         string;
   letterSpacing: number;
   startOffset:   number; // 0-100, only used in full-circle mode
   bold:          boolean;
   italic:        boolean;
-  useGradient:   boolean;
-  gradFrom:      string;
-  gradTo:        string;
-  gradAngle:     number; // degrees -- maps to SVG gradient orientation
 }
 
 const DEFAULT_STATE = (): TextoCurvoState => ({
@@ -32,15 +40,11 @@ const DEFAULT_STATE = (): TextoCurvoState => ({
   radius:        70,
   fontSize:      13,
   fontFamily:    'Arial',
-  color:         '#000000',
+  color:         JSON.stringify(normalizeColorValue({ mode: 'solid', solid: '#000000' })),
   letterSpacing: 2,
   startOffset:   50,
   bold:          false,
   italic:        false,
-  useGradient:   false,
-  gradFrom:      '#f97316',
-  gradTo:        '#ec4899',
-  gradAngle:     0,
 });
 
 /** Escapes XML special characters for safe SVG embedding */
@@ -81,34 +85,41 @@ export class TextoCurvoTool extends BaseTool {
     return `M ${lx},${cy} A ${r},${r} 0 1,1 ${rx},${cy} A ${r},${r} 0 1,1 ${lx},${cy}`;
   }
 
+  /** Builds the <linearGradient>/<radialGradient> <defs> entry for a gradient color value, or '' for solid. */
+  private static _gradientDefSVG(value: ColorPickerValue, gradId: string): string {
+    if (value.mode !== 'gradient') return '';
+    const stops = value.gradient.stops;
+    const stopsXml = stops.map((c, i) => {
+      const offset = stops.length > 1 ? (i / (stops.length - 1)) * 100 : 0;
+      return `<stop offset="${offset}%" stop-color="${c}"/>`;
+    }).join('');
+
+    if (value.gradient.type === 'radial') {
+      return `<radialGradient id="${gradId}" cx="50%" cy="50%" r="50%">${stopsXml}</radialGradient>`;
+    }
+
+    const rad = (Number(value.gradient.angle) || 0) * (Math.PI / 180);
+    const x1 = 50 - Math.cos(rad) * 50;
+    const y1 = 50 - Math.sin(rad) * 50;
+    const x2 = 50 + Math.cos(rad) * 50;
+    const y2 = 50 + Math.sin(rad) * 50;
+    return `<linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stopsXml}</linearGradient>`;
+  }
+
   public static buildSVG(state: TextoCurvoState, uid: string): string {
     const {
       text, mode, radius, fontSize, fontFamily,
-      color, letterSpacing, startOffset,
-      bold, italic, useGradient, gradFrom, gradTo, gradAngle,
+      letterSpacing, startOffset, bold, italic,
     } = state;
 
+    const colorValue = normalizeColorValue(state.color);
     const pathId  = `tc-path-${uid}`;
     const gradId  = `tc-grad-${uid}`;
     const fontWeight = bold   ? 'bold'   : 'normal';
     const fontStyle  = italic ? 'italic' : 'normal';
 
-    const gradDeg  = Number(gradAngle) || 0;
-    const radGrad  = gradDeg * (Math.PI / 180);
-    const x1 = 50 - Math.cos(radGrad) * 50;
-    const y1 = 50 - Math.sin(radGrad) * 50;
-    const x2 = 50 + Math.cos(radGrad) * 50;
-    const y2 = 50 + Math.sin(radGrad) * 50;
-
-    const gradDef = useGradient ? `
-      <linearGradient id="${gradId}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%"
-                      gradientUnits="userSpaceOnUse"
-                      x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
-        <stop offset="0%"   stop-color="${gradFrom}"/>
-        <stop offset="100%" stop-color="${gradTo}"/>
-      </linearGradient>` : '';
-
-    const fillAttr = useGradient ? `fill="url(#${gradId})"` : `fill="${color}"`;
+    const gradDef  = TextoCurvoTool._gradientDefSVG(colorValue, gradId);
+    const fillAttr = colorValue.mode === 'gradient' ? `fill="url(#${gradId})"` : `fill="${colorValue.solid}"`;
     const pathD = TextoCurvoTool._pathD(mode, radius, startOffset);
 
     const offset = mode === 'full-circle'
@@ -186,7 +197,6 @@ export class TextoCurvoTool extends BaseTool {
 
   static getPropertySchema(element: HTMLElement): PropertySchema {
     const state = PropertyRenderer._readState(element);
-    const isGradient = Boolean(state.useGradient);
 
     return [
       {
@@ -220,9 +230,7 @@ export class TextoCurvoTool extends BaseTool {
       {
         section: 'Color',
         fields: [
-          { type: 'toggle',         key: 'useGradient', label: 'Use gradient' },
-          { type: 'color',          key: 'color',       label: 'Color',    hidden: isGradient },
-          { type: 'color-gradient', key: 'gradient',    label: 'Gradient', hidden: !isGradient },
+          { type: 'color-picker', key: 'color', label: 'Color' },
         ],
       },
       zIndexSection(),
@@ -234,14 +242,9 @@ export class TextoCurvoTool extends BaseTool {
     const e = element as HTMLElement & { _ctState?: TextoCurvoState };
     if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     if (!e._ctState) e._ctState = DEFAULT_STATE();
-    if (key === 'gradient') {
-      const g = value as { from: string; to: string; angle: number };
-      e._ctState.gradFrom  = g.from;
-      e._ctState.gradTo    = g.to;
-      e._ctState.gradAngle = g.angle;
-    } else {
-      (e._ctState as unknown as Record<string, unknown>)[key] = value;
-    }
+    // 'color' arrives as a JSON string already (see color-picker.field.ts /
+    // TextoCurvoState.color's own doc comment) -- plain assignment is correct.
+    (e._ctState as unknown as Record<string, unknown>)[key] = value;
     // Calls updateElement() directly (previously dispatched an unlistened
     // 'craftools-textocurvo-regenerate' custom event, so panel edits never
     // actually rebuilt the rendered SVG).
