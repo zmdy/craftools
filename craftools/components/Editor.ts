@@ -87,6 +87,12 @@ export class Craftools_Editor extends HTMLElement {
   activePage: Element | null = null;
   _savedPageHtml?: string;
   _savedPageCssText?: string;
+  // Exposed for panel-only tools (CalendarTool, GeradorTool) that take over
+  // #main-page as a live preview and need to restore it afterward -- was
+  // assigned in bindEvents() below (`this.restoreOriginalCanvas = ...`) in
+  // the pre-migration Editor.js but dropped during the TS port, silently
+  // breaking those tools' editor.restoreOriginalCanvas() calls.
+  restoreOriginalCanvas?: () => void;
 
   constructor() { super(); }
 
@@ -260,6 +266,15 @@ export class Craftools_Editor extends HTMLElement {
     };
 
     const restoreOriginalCanvas = () => {
+      // Generic tool cleanup hook -- e.g. ImageSlicerTool's preview overlay.
+      // Dropped during the TS migration along with the rest of this
+      // function's body; restored here since ImageSlicerTool.ts relies on
+      // editor.restoreOriginalCanvas() invoking it when switching tools.
+      const cleanupFn = (this as unknown as { _toolCleanup?: () => void })._toolCleanup;
+      if (typeof cleanupFn === 'function') {
+        cleanupFn();
+        delete (this as unknown as { _toolCleanup?: () => void })._toolCleanup;
+      }
       const mainPage = document.getElementById('main-page');
       if (mainPage && this._savedPageHtml !== undefined) {
         mainPage.innerHTML = this._savedPageHtml;
@@ -268,7 +283,17 @@ export class Craftools_Editor extends HTMLElement {
         delete this._savedPageCssText;
         PageTool.attachPageEvents(this, mainPage);
       }
+      // Calendar/Gerador/ImageSlicer all show this same floating "Preview"
+      // badge while taking over the canvas -- remove it here (once, in the
+      // shared restore path) rather than in each tool.
+      const badge = document.getElementById('gerador-canvas-badge');
+      if (badge) badge.remove();
     };
+    // Exposed on the instance so panel-only tools (CalendarTool.ts,
+    // GeradorTool.ts) can call `editor.restoreOriginalCanvas()` themselves
+    // right before generating real pages -- matches the pre-migration
+    // Editor.js, which assigned this the same way.
+    this.restoreOriginalCanvas = restoreOriginalCanvas;
 
     // ── Mobile menu toggle ──────────────────────────────────────────────────
     const mobileMenuBtn = this.querySelector('#mobile-menu-btn');

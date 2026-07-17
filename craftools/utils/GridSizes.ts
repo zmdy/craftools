@@ -31,6 +31,10 @@ export interface GridTemplate {
   cellLines?:   number;
   cellColumns?: number;
   cellSpacing?: number;
+  // Set by GeradorTool.ts when a template's margins were computed via its
+  // "auto-center" toggle rather than entered manually; persisted so
+  // re-editing the template in GeradorTool restores the toggle state.
+  autoCenterMargin?: boolean;
 }
 
 export const GridSizes: GridTemplate[] = [
