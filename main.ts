@@ -127,6 +127,10 @@ function initPwaProxies(): void {
     e.preventDefault();
     document.getElementById('zoom-out-btn')?.click();
   });
+  document.getElementById('pwa-zoom-reset')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('zoom-reset-btn')?.click();
+  });
 
   // Ctrl+scroll = zoom (overrides native browser zoom)
   window.addEventListener('wheel', (e: WheelEvent) => {
@@ -267,14 +271,73 @@ function initPwaProxies(): void {
       return;
     }
 
-    // Mobile: full open/close
+    // Mobile: full open/close.
+    // NOTE: on mobile, `.sidenav-panel` is `display: none !important` unless
+    // it also carries `.mobile-modal-mode` (see index.html's mobile media
+    // query) -- that class is what element-selection / Album Wizard use to
+    // show this same panel as a bottom-sheet/modal. This handler used to only
+    // toggle `panel-open` + `marginLeft`, so the CSS display gate never
+    // opened unless `.mobile-modal-mode` happened to still be set from a
+    // previous element-selection -- causing the menu icon/indicator to flip
+    // to "open" while the panel stayed invisible. Toggle both classes together.
     const isNowOpen = panel.classList.toggle('panel-open');
+    panel.classList.toggle('mobile-modal-mode', isNowOpen);
     toggleMenuIcon(isNowOpen);
     panel.style.marginLeft = isNowOpen ? '' : `-${panel.offsetWidth}px`;
 
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     if (sidebarOverlay) sidebarOverlay.classList.toggle('visible', isNowOpen);
   });
+
+  // ── Sidebar: resize handle ──────────────────────────────────────────────────
+  // The handle (`#panel-resize-handle`) has existed in index.html/CSS since
+  // the PWA migration but was never wired up to anything -- dragging it did
+  // nothing. CSS already hides it on mobile (bottom-sheet layout doesn't
+  // support horizontal resize), so this only needs to handle desktop drag.
+
+  const resizeHandle = document.getElementById('panel-resize-handle');
+  const RESIZE_MIN_WIDTH = 200;
+  const RESIZE_MAX_WIDTH = 480;
+
+  if (resizeHandle) {
+    let resizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    let resizePanel: HTMLElement | null = null;
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!resizing || !resizePanel) return;
+      const delta = e.clientX - startX;
+      const newWidth = Math.min(RESIZE_MAX_WIDTH, Math.max(RESIZE_MIN_WIDTH, startWidth + delta));
+      resizePanel.style.setProperty('width', `${newWidth}px`, 'important');
+      resizePanel.dataset.expandedWidth = `${newWidth}px`;
+    };
+
+    const stopResizing = () => {
+      if (!resizing) return;
+      resizing = false;
+      resizeHandle.classList.remove('resizing');
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', stopResizing);
+    };
+
+    resizeHandle.addEventListener('pointerdown', (e: PointerEvent) => {
+      const panel = document.getElementById('right-panel');
+      if (!panel || panel.classList.contains('sidenav-collapsed') || window.innerWidth <= 768) return;
+      e.preventDefault();
+      resizing = true;
+      resizePanel = panel;
+      startX = e.clientX;
+      startWidth = panel.getBoundingClientRect().width;
+      resizeHandle.classList.add('resizing');
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'ew-resize';
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', stopResizing);
+    });
+  }
 
   // Remove Bootstrap offcanvas backdrop (it blocks canvas drag events)
   new MutationObserver(() => {
