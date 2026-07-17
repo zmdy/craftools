@@ -348,6 +348,18 @@ export class PageTool {
             PanelUI.accordion('page-fundo',   'palette',    I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
             PanelUI.accordion('page-acoes',   'warning',    I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
 
+          // BaseTool.renderPropertiesPanel() tracks which element #panel-body
+          // last rendered (via a _ctRenderedElement expando) so it knows when
+          // to wipe stale accordions before rendering a newly-selected
+          // element's own schema. This panel bypasses that whole mechanism
+          // (raw HTML, no selected element), so clear the marker here too --
+          // otherwise selecting the same element again right after a page
+          // click could, in principle, skip the wipe since the tracked
+          // reference wouldn't have changed. Harmless today (this innerHTML
+          // assignment already clears the DOM either way) but keeps the two
+          // panel renderers' bookkeeping consistent.
+          delete (panelBody as unknown as { _ctRenderedElement?: HTMLElement })._ctRenderedElement;
+
           PanelUI.bindAccordions(panelBody);
         }
 

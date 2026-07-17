@@ -63,6 +63,28 @@ export abstract class BaseTool {
    * Override `getPropertySchema()` to change what appears in the panel.
    */
   static renderPropertiesPanel(container: HTMLElement, element: HTMLElement): void {
+    // PropertyRenderer.render() is intentionally non-destructive across
+    // re-renders of the SAME element (see its own header comment) -- it
+    // only updates sections whose data-ct-section slug already matches and
+    // appends ones that don't exist yet; it never removes stale sections.
+    // That's correct for re-rendering the same element's schema repeatedly
+    // (typing in a field shouldn't blow away focus/scroll), but breaks the
+    // moment `container` (#panel-body) is reused for a DIFFERENT element or
+    // tool: the previous selection's sections have different slugs, so
+    // they're never matched or replaced -- they just sit there while the
+    // new tool's sections get appended after them. This includes coming
+    // from PageTool.ts's page panel, which writes raw (non-schema) HTML
+    // into the same container: e.g. clicking the page and then selecting a
+    // Text element left the page's "Size & Position / Background / Actions"
+    // accordions permanently stuck above every element's own panel from
+    // then on, for every tool, since nothing ever cleared them. Track which
+    // element `container` currently shows and wipe it on change.
+    const tracked = container as unknown as { _ctRenderedElement?: HTMLElement };
+    if (tracked._ctRenderedElement !== element) {
+      container.innerHTML = '';
+      tracked._ctRenderedElement = element;
+    }
+
     // Sticky Copy/Paste/Lock bar, always rendered above the accordions --
     // matches the legacy CommonProperties.renderEstiloBar() bar every
     // .js tool got automatically via renderCommonProperties().
