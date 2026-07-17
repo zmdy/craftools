@@ -11,6 +11,8 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection, radiusSection, zIndexSection } from '../../utils/CommonSchema';
+import { ImageFilters } from './ImageFilters.js';
+import { ImageTransform } from './ImageTransform.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // Filter keys that map to CSS filter functions
@@ -48,9 +50,189 @@ const getMeta = (element: HTMLElement): ImageMeta =>
 // ── Tool ──────────────────────────────────────────────────────────────────────
 
 export class ImageTool extends BaseTool {
-  public static createElement(type: string, editor: any): HTMLElement | null {
-    const inst = new (this as any)();
-    return (inst as any).createElement(type, editor);
+
+  /**
+   * Default meta object for a freshly-created image element. Recovered from
+   * pre-migration ImageTool.js — also called directly by AlbumWizard.ts
+   * (ImageTool.getDefaultMeta()) when seeding shared meta for linked
+   * Business Card cells, so this must exist as a real method, not just be
+   * inlined into createElement().
+   */
+  static getDefaultMeta(): ImageMeta {
+    const filters = {} as Record<FilterKey, number>;
+    FILTER_KEYS.forEach(fk => {
+      filters[fk] = fk === 'brightness' || fk === 'contrast' || fk === 'saturate' || fk === 'opacity' ? 1 : 0;
+    });
+    return {
+      src: '', objectFit: 'cover', zoom: 1, posX: 0, posY: 0, rotation: 0,
+      bgBlur: 0, blendMode: 'normal',
+      borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
+      filters,
+    };
+  }
+
+  /**
+   * Builds a fresh `<craftools-element data-craftool="imagem">` with a
+   * placeholder `<img>`. Recovered from the pre-migration ImageTool.js
+   * (deleted by the "Purge legacy JS" commit without this logic being
+   * ported) — the previous createElement() here was a broken stub that
+   * called itself (`new this().createElement()`, but createElement was
+   * never an instance method), throwing "createElement is not a function"
+   * for every image element creation.
+   */
+  static createElement(_type: string, _editor?: unknown): HTMLElement {
+    const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z'/%3E%3C/svg%3E";
+
+    const el = document.createElement('craftools-element') as HTMLElement & {
+      _craftoolsMeta?: ImageMeta;
+      contentArea?: HTMLElement;
+    };
+    el.setAttribute('x', '50');
+    el.setAttribute('y', '50');
+    el.setAttribute('w', '200');
+    el.setAttribute('h', '200');
+    el.setAttribute('data-craftool', 'imagem');
+
+    el._craftoolsMeta = ImageTool.getDefaultMeta();
+    el._craftoolsMeta.src = placeholder;
+
+    const img = document.createElement('img');
+    img.src = placeholder;
+    img.style.cssText = `display:block;width:100%;height:100%;object-fit:${el._craftoolsMeta.objectFit};user-select:none;pointer-events:none;`;
+
+    el.appendChild(img);
+
+    // Wait for the web component to be connected and built before wiring
+    // transform/filter interactions (contentArea only exists post-connect).
+    const initElement = (): void => {
+      if (el.contentArea) {
+        ImageTransform.setupInteractions(el as unknown as Parameters<typeof ImageTransform.setupInteractions>[0]);
+        ImageTransform.applyTransform(el as unknown as Parameters<typeof ImageTransform.applyTransform>[0]);
+        ImageFilters.applyFilters(el as unknown as Parameters<typeof ImageFilters.applyFilters>[0]);
+        ImageTool._applyBgBlur(el);
+      } else {
+        requestAnimationFrame(initElement);
+      }
+    };
+    initElement();
+
+    // _applyProperty() dispatches these instead of calling the apply
+    // functions directly, so the element must listen for its own updates.
+    el.addEventListener('craftools-image-filters-apply', () => ImageFilters.applyFilters(el as unknown as Parameters<typeof ImageFilters.applyFilters>[0]));
+    el.addEventListener('craftools-image-transform-apply', () => ImageTransform.applyTransform(el as unknown as Parameters<typeof ImageTransform.applyTransform>[0]));
+    el.addEventListener('craftools-image-bgblur-apply', () => ImageTool._applyBgBlur(el));
+
+    return el;
+  }
+
+  /** Renders (or removes) the blurred-background layer behind a transparent/contained image. */
+  private static _applyBgBlur(element: HTMLElement & { _craftoolsMeta?: ImageMeta }): void {
+    const meta = element._craftoolsMeta;
+    if (!meta) return;
+
+    let blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
+
+    if (meta.bgBlur <= 0) {
+      if (blurBg) blurBg.remove();
+      element.style.overflow = '';
+      return;
+    }
+
+    if (!blurBg) {
+      element.style.overflow = 'hidden';
+      blurBg = document.createElement('div');
+      blurBg.className = 'craftools-element-blur-bg';
+      blurBg.style.cssText = `
+        position: absolute;
+        inset: -20px;
+        background-size: cover;
+        background-position: center;
+        opacity: 0.6;
+        pointer-events: none;
+        z-index: -1;
+      `;
+      element.insertBefore(blurBg, element.firstChild);
+    }
+
+    blurBg.style.backgroundImage = `url(${meta.src})`;
+    blurBg.style.filter = `blur(${meta.bgBlur}px)`;
+  }
+
+  /**
+   * Returns sibling image elements linked to this one (Business Card mode) —
+   * via the shared `_linkedElements` array (Album wizard multi-upload) or
+   * the `data-linked-id` attribute (PageTool.ts's card-cloning logic).
+   */
+  private static _getLinkedSiblings(element: HTMLElement & { _linkedElements?: HTMLElement[] }): HTMLElement[] {
+    if (Array.isArray(element._linkedElements)) {
+      return element._linkedElements.filter(el => el !== element);
+    }
+    const lid = element.getAttribute('data-linked-id');
+    if (!lid) return [];
+    return [...document.querySelectorAll<HTMLElement>(`craftools-element[data-linked-id="${lid}"]`)]
+      .filter(el => el !== element);
+  }
+
+  /** Copies the current meta state to a sibling element and re-applies it to the sibling's DOM. */
+  private static _pushMetaToSibling(sibling: HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement }, meta: ImageMeta): void {
+    if (sibling._craftoolsMeta !== meta) {
+      if (!sibling._craftoolsMeta) sibling._craftoolsMeta = ImageTool.getDefaultMeta();
+      Object.assign(sibling._craftoolsMeta, meta, { filters: { ...meta.filters } });
+    }
+    const sMeta = sibling._craftoolsMeta;
+    const img = sibling.contentArea?.querySelector<HTMLImageElement>('img') ?? sibling.querySelector<HTMLImageElement>('img');
+    if (img) {
+      if (img.getAttribute('src') !== meta.src) img.src = meta.src;
+      img.style.mixBlendMode  = (sMeta.blendMode && sMeta.blendMode !== 'normal') ? sMeta.blendMode : '';
+      img.style.borderWidth   = `${sMeta.borderWidth || 0}px`;
+      img.style.borderStyle   = sMeta.borderStyle || 'none';
+      img.style.borderColor   = sMeta.borderColor || '#000000';
+      img.style.borderRadius  = `${sMeta.borderRadius || 0}px`;
+    }
+    ImageTransform.applyTransform(sibling as unknown as Parameters<typeof ImageTransform.applyTransform>[0]);
+    ImageFilters.applyFilters(sibling as unknown as Parameters<typeof ImageFilters.applyFilters>[0]);
+    ImageTool._applyBgBlur(sibling);
+  }
+
+  /** Propagates the current meta to all linked sibling elements (Business Card mode). */
+  private static _propagateToSiblings(element: HTMLElement, meta: ImageMeta): void {
+    ImageTool._getLinkedSiblings(element).forEach(sibling => ImageTool._pushMetaToSibling(sibling, meta));
+  }
+
+  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+    return [
+      {
+        icon: 'published_with_changes',
+        label: 'Switch photo',
+        command: (element: HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement }) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = () => {
+            const file = input.files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const result = e.target?.result as string;
+                if (!element._craftoolsMeta) element._craftoolsMeta = ImageTool.getDefaultMeta();
+                element._craftoolsMeta.src = result;
+                const img = (element.contentArea ?? element).querySelector<HTMLImageElement>('img');
+                if (img) img.src = result;
+
+                const blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
+                if (blurBg) blurBg.style.backgroundImage = `url(${result})`;
+
+                // Propagate to other linked elements (Business Card mode)
+                // even when the properties panel was never opened for this element.
+                ImageTool._propagateToSiblings(element, element._craftoolsMeta);
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        },
+      },
+    ];
   }
 
   protected static _syncFromDOM(element: HTMLElement): void {

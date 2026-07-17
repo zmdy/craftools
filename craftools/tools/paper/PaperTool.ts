@@ -1,12 +1,13 @@
 /**
  * PaperTool.ts — Paper/lined-page element.
  * State in _craftoolsMeta (complex nested object with margins, sidebar, watermark, logo, pageSettings).
- * Dispatches 'craftools-paper-regenerate' after each property change.
+ * Calls updatePaperSVG() directly after each property change.
  */
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { PaperPatterns } from './PaperPatterns';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 type PaperMeta = {
@@ -79,7 +80,136 @@ const THEMES = [
   { value: 'creative',   label: 'Creative' },
 ];
 
+// Re-exported for PaperPatterns.ts, which imports PaperThemes from this
+// module (import { PaperThemes } from "./PaperTool.js") to resolve each
+// theme's bg/line colors when generating the pattern SVG. Recovered
+// verbatim from the pre-migration PaperTool.js -- dropping these when this
+// file was ported would break PaperPatterns.ts's build (missing export).
+export const PaperThemes: Record<string, { bg: string; line: string }> = {
+  default: { bg: '#ffffff', line: '#a1a1aa' },
+  night: { bg: '#1e1e2f', line: '#4a4a6a' },
+  sepia: { bg: '#faf0d8', line: '#cca785' },
+  vintage: { bg: '#fbf6e3', line: '#cca633' },
+  pastel: { bg: '#faf5ff', line: '#d8b4fe' },
+  classic: { bg: '#fefcf0', line: '#d2c7b5' },
+  minimalist: { bg: '#fafafa', line: '#eaeaea' },
+  ocean: { bg: '#f0f9ff', line: '#bae6fd' },
+  forest: { bg: '#f0fdf4', line: '#bbf7d0' },
+  sunset: { bg: '#fff7ed', line: '#fed7aa' },
+  tech: { bg: '#09090b', line: '#14b8a6' },
+  elegant: { bg: '#fafaf9', line: '#e7e5e4' },
+  creative: { bg: '#fff7fe', line: '#f0abfc' },
+};
+
+export const PaperPresets: Record<string, { name: string; w: number; h: number; unit: string }> = {
+  a4: { name: 'A4 (210 × 297 mm)', w: 210, h: 297, unit: 'mm' },
+  a5: { name: 'A5 (148 × 210 mm)', w: 148, h: 210, unit: 'mm' },
+  a3: { name: 'A3 (297 × 420 mm)', w: 297, h: 420, unit: 'mm' },
+  b4: { name: 'B4 (250 × 353 mm)', w: 250, h: 353, unit: 'mm' },
+  b5: { name: 'B5 (176 × 250 mm)', w: 176, h: 250, unit: 'mm' },
+  letter: { name: 'Letter (216 × 279 mm)', w: 216, h: 279, unit: 'mm' },
+  legal: { name: 'Legal (216 × 356 mm)', w: 216, h: 356, unit: 'mm' },
+  tabloid: { name: 'Tabloid (279 × 432 mm)', w: 279, h: 432, unit: 'mm' },
+  executive: { name: 'Executive (184 × 267 mm)', w: 184, h: 267, unit: 'mm' },
+  custom: { name: 'Custom Size', w: 210, h: 297, unit: 'mm' },
+};
+
 export class PaperTool extends BaseTool {
+
+  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+    return [];
+  }
+
+  /**
+   * Default meta for a freshly-created paper element. Recovered from the
+   * pre-migration PaperTool.js (deleted by the "Purge legacy JS" commit).
+   */
+  public static getDefaultMeta(): PaperMeta {
+    return {
+      paperType: 'lined',
+      paperSize: 'a4',
+      theme: 'default',
+      lineColor: '#a1a1aa',
+      lineStyle: 'solid',
+      lineSpacing: 8,
+      lineWidth: 0.5,
+      margins: { top: 25, right: 20, bottom: 25, left: 20 },
+      sidebar: { enabled: false },
+      bgColor: '#ffffff',
+      bgPattern: 'none',
+      watermark: { enabled: false },
+      logo: { enabled: false },
+      pageSettings: { pageCount: 1, showPageNumber: false },
+    };
+  }
+
+  /**
+   * Builds a fresh craftools-element (data-craftool="papeis") sized to
+   * the active page, with its pattern SVG inside. Recovered from the
+   * pre-migration PaperTool.js (deleted by the "Purge legacy JS" commit
+   * without this logic being ported) -- the previous file had no
+   * createElement() at all, throwing "createElement is not a function"
+   * for every paper/background element creation.
+   */
+  public static createElement(_type: string, editor?: unknown): HTMLElement {
+    const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsMeta?: PaperMeta };
+    el.setAttribute('data-craftool', 'papeis');
+    // The background paper is locked by default -- unlike every other tool
+    // (which start unlocked) -- so it isn't accidentally moved/resized on
+    // top of the page. See CommonSchema.ts's lock toggle and Element.ts's
+    // _syncLockUI() for the generic locking mechanism.
+    el.setAttribute('data-locked', 'true');
+
+    const meta = PaperTool.getDefaultMeta();
+    el._craftoolsMeta = meta;
+
+    // If there's an active page in the editor, size the paper to match it.
+    const editorEl = editor as (HTMLElement & { activePage?: Element | null }) | undefined;
+    const activePage = (editorEl?.activePage ?? editorEl?.querySelector?.('.craftools-page')) as HTMLElement | null | undefined;
+    let width = 210;
+    let height = 297;
+    let unit = 'mm';
+
+    if (activePage) {
+      const pageW = activePage.style.width || '210mm';
+      const pageH = activePage.style.minHeight || '297mm';
+      unit = pageW.replace(/[0-9.-]/g, '') || 'mm';
+      width = parseFloat(pageW) || 210;
+      height = parseFloat(pageH) || 297;
+    }
+
+    el.setAttribute('x', `0${unit}`);
+    el.setAttribute('y', `0${unit}`);
+    el.setAttribute('w', `${width}${unit}`);
+    el.setAttribute('h', `${height}${unit}`);
+
+    // The paper sits behind everything (low z-index)
+    el.style.zIndex = '1';
+
+    const innerDiv = document.createElement('div');
+    innerDiv.className = 'paper-content-area';
+    innerDiv.style.cssText = 'width:100%; height:100%; position:relative; overflow:hidden;';
+
+    innerDiv.innerHTML = (PaperPatterns as unknown as { generateSVG: (meta: PaperMeta, w: number, h: number) => string }).generateSVG(meta, width, height);
+    el.appendChild(innerDiv);
+
+    return el;
+  }
+
+  /** Rebuilds the pattern SVG from the element's current _craftoolsMeta and size. */
+  public static updatePaperSVG(element: HTMLElement & { _craftoolsMeta?: PaperMeta; pw?: number; ph?: number }): void {
+    const meta = element._craftoolsMeta;
+    if (!meta) return;
+
+    const container = element.querySelector<HTMLElement>('.paper-content-area') ?? (element.firstElementChild as HTMLElement | null);
+    if (container) {
+      const w = element.pw || parseFloat(element.getAttribute('w') || '') || 210;
+      const h = element.ph || parseFloat(element.getAttribute('h') || '') || 297;
+      container.innerHTML = (PaperPatterns as unknown as { generateSVG: (meta: PaperMeta, w: number, h: number) => string }).generateSVG(meta, w, h);
+    }
+
+    element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+  }
 
   protected static _syncFromDOM(element: HTMLElement): void {
     const meta = getMeta(element);
@@ -96,14 +226,12 @@ export class PaperTool extends BaseTool {
     if (!('bgColor'     in existing)) patch.bgColor     = meta.bgColor     ?? '#ffffff';
     if (!('bgPattern'   in existing)) patch.bgPattern   = meta.bgPattern   ?? 'none';
 
-    // Flatten margins
     const m = meta.margins ?? { top: 25, right: 20, bottom: 25, left: 20 };
     if (!('marginTop'    in existing)) patch.marginTop    = m.top;
     if (!('marginRight'  in existing)) patch.marginRight  = m.right;
     if (!('marginBottom' in existing)) patch.marginBottom = m.bottom;
     if (!('marginLeft'   in existing)) patch.marginLeft   = m.left;
 
-    // Flatten booleans
     if (!('sidebarEnabled'    in existing)) patch.sidebarEnabled    = meta.sidebar?.enabled   ?? false;
     if (!('watermarkEnabled'  in existing)) patch.watermarkEnabled  = meta.watermark?.enabled ?? false;
     if (!('logoEnabled'       in existing)) patch.logoEnabled       = meta.logo?.enabled      ?? false;
@@ -176,6 +304,7 @@ export class PaperTool extends BaseTool {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: PaperMeta };
     const meta = e._craftoolsMeta;
+    if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     if (meta) {
       switch (key) {
         case 'paperType':         meta.paperType        = String(value); break;
@@ -196,8 +325,11 @@ export class PaperTool extends BaseTool {
         case 'logoEnabled':       meta.logo.enabled     = Boolean(value); break;
         case 'showPageNumber':    meta.pageSettings.showPageNumber = Boolean(value); break;
       }
+      // Calls updatePaperSVG() directly (previously dispatched an
+      // unlistened 'craftools-paper-regenerate' custom event, so panel
+      // edits never actually rebuilt the rendered pattern).
+      PaperTool.updatePaperSVG(e);
     }
-    element.dispatchEvent(new CustomEvent('craftools-paper-regenerate', { bubbles: false }));
   }
 }
 

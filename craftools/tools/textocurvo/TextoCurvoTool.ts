@@ -1,6 +1,7 @@
 /**
- * TextoCurvoTool.ts — TextoCurvoTool already stores state in dataset.ctState,
- * so _syncFromDOM is a no-op. _applyProperty just persists and dispatches regenerate.
+ * TextoCurvoTool.ts — TextoCurvoTool stores state in dataset.ctState (and
+ * mirrored onto element._ctState), so _syncFromDOM is a no-op.
+ * _applyProperty persists the change and re-renders the SVG in place.
  */
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
@@ -8,9 +9,180 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import type { PropertySchema } from '../../types/PropertySchema';
 
+interface TextoCurvoState {
+  text:          string;
+  mode:          string; // 'arc-top' | 'arc-bottom' | 'full-circle'
+  radius:        number;
+  fontSize:      number;
+  fontFamily:    string;
+  color:         string;
+  letterSpacing: number;
+  startOffset:   number; // 0-100, only used in full-circle mode
+  bold:          boolean;
+  italic:        boolean;
+  useGradient:   boolean;
+  gradFrom:      string;
+  gradTo:        string;
+  gradAngle:     number; // degrees -- maps to SVG gradient orientation
+}
+
+const DEFAULT_STATE = (): TextoCurvoState => ({
+  text:          'MINHA EMPRESA',
+  mode:          'arc-top',
+  radius:        70,
+  fontSize:      13,
+  fontFamily:    'Arial',
+  color:         '#000000',
+  letterSpacing: 2,
+  startOffset:   50,
+  bold:          false,
+  italic:        false,
+  useGradient:   false,
+  gradFrom:      '#f97316',
+  gradTo:        '#ec4899',
+  gradAngle:     0,
+});
+
+/** Escapes XML special characters for safe SVG embedding */
+const escXml = (s: unknown): string =>
+  String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 export class TextoCurvoTool extends BaseTool {
 
-  // _syncFromDOM: no-op — dataset.ctState already populated by JS createElement()
+  // _syncFromDOM: no-op -- dataset.ctState already populated by createElement()
+
+  /**
+   * Returns the SVG path `d` for the requested mode. Origin of the SVG is
+   * (0,0); centrepoint is always (100,100).
+   *
+   * SVG arc geometry cheat-sheet (Y-axis points DOWN):
+   *   sweep=1 -> visually clockwise -> text placed OUTSIDE (above path)
+   *   sweep=0 -> visually CCW       -> text placed INSIDE  (above path = toward centre)
+   *
+   * We use:
+   *   arc-top:     M left A r r 0 0 1 right  (CW small-arc via top)      -> outside top, L->R
+   *   arc-bottom:  M left A r r 0 0 0 right  (CCW small-arc via bottom)  -> outside bottom, L->R
+   *   full-circle: two CW large-arcs -- startOffset controls position
+   */
+  private static _pathD(mode: string, r: number, _startOffset: number): string {
+    const cx = 100, cy = 100;
+    const lx = cx - r, rx = cx + r;
+
+    if (mode === 'arc-top') {
+      return `M ${lx},${cy} A ${r},${r} 0 0,1 ${rx},${cy}`;
+    }
+    if (mode === 'arc-bottom') {
+      return `M ${lx},${cy} A ${r},${r} 0 0,0 ${rx},${cy}`;
+    }
+    return `M ${lx},${cy} A ${r},${r} 0 1,1 ${rx},${cy} A ${r},${r} 0 1,1 ${lx},${cy}`;
+  }
+
+  public static buildSVG(state: TextoCurvoState, uid: string): string {
+    const {
+      text, mode, radius, fontSize, fontFamily,
+      color, letterSpacing, startOffset,
+      bold, italic, useGradient, gradFrom, gradTo, gradAngle,
+    } = state;
+
+    const pathId  = `tc-path-${uid}`;
+    const gradId  = `tc-grad-${uid}`;
+    const fontWeight = bold   ? 'bold'   : 'normal';
+    const fontStyle  = italic ? 'italic' : 'normal';
+
+    const gradDeg  = Number(gradAngle) || 0;
+    const radGrad  = gradDeg * (Math.PI / 180);
+    const x1 = 50 - Math.cos(radGrad) * 50;
+    const y1 = 50 - Math.sin(radGrad) * 50;
+    const x2 = 50 + Math.cos(radGrad) * 50;
+    const y2 = 50 + Math.sin(radGrad) * 50;
+
+    const gradDef = useGradient ? `
+      <linearGradient id="${gradId}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%"
+                      gradientUnits="userSpaceOnUse"
+                      x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
+        <stop offset="0%"   stop-color="${gradFrom}"/>
+        <stop offset="100%" stop-color="${gradTo}"/>
+      </linearGradient>` : '';
+
+    const fillAttr = useGradient ? `fill="url(#${gradId})"` : `fill="${color}"`;
+    const pathD = TextoCurvoTool._pathD(mode, radius, startOffset);
+
+    const offset = mode === 'full-circle'
+      ? `${Math.max(0, Math.min(100, startOffset))}%`
+      : '50%';
+
+    return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" overflow="visible">
+      <defs>
+        ${gradDef}
+        <path id="${pathId}" d="${pathD}"/>
+      </defs>
+      <text
+        font-size="${fontSize}"
+        font-family="${escXml(fontFamily)}, sans-serif"
+        font-weight="${fontWeight}"
+        font-style="${fontStyle}"
+        letter-spacing="${letterSpacing}"
+        ${fillAttr}
+      >
+        <textPath href="#${pathId}" startOffset="${offset}" text-anchor="middle">
+          ${escXml(text)}
+        </textPath>
+      </text>
+    </svg>`;
+  }
+
+  /**
+   * Builds a fresh `<craftools-element data-craftool="textocurvo">` with
+   * its curved-text SVG inside. Recovered from the pre-migration
+   * TextoCurvoTool.js (deleted by the "Purge legacy JS" commit without
+   * this logic being ported) -- the previous file had no createElement()
+   * at all, throwing "createElement is not a function" for every
+   * curved-text element creation.
+   */
+  public static createElement(_type: string, _editor?: unknown): HTMLElement {
+    const el = document.createElement('craftools-element') as HTMLElement & { _ctState?: TextoCurvoState };
+    const uid = Math.random().toString(36).slice(2, 8);
+
+    el.setAttribute('data-craftool', 'textocurvo');
+    el.setAttribute('data-ct-uid',   uid);
+    el.setAttribute('w',  '160');
+    el.setAttribute('h',  '160');
+    el.setAttribute('x',  '20');
+    el.setAttribute('y',  '20');
+
+    const state = DEFAULT_STATE();
+    el.dataset.ctState = JSON.stringify(state);
+    el._ctState = state;
+
+    el.innerHTML = TextoCurvoTool.buildSVG(state, uid);
+    return el;
+  }
+
+  /** Updates the element's SVG and persisted state in-place. */
+  public static updateElement(el: HTMLElement & { _ctState?: TextoCurvoState; contentArea?: HTMLElement }, state: TextoCurvoState): void {
+    el._ctState = state;
+    el.dataset.ctState = JSON.stringify(state);
+
+    const uid = el.getAttribute('data-ct-uid') || 'x';
+    const svgHtml = TextoCurvoTool.buildSVG(state, uid);
+
+    // Replace the SVG child (works whether content is in contentArea or directly in el)
+    const container = el.contentArea || el;
+    const existing = container.querySelector('svg');
+    if (existing) {
+      existing.outerHTML = svgHtml;
+    } else {
+      container.innerHTML = svgHtml;
+    }
+  }
+
+  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+    return [];
+  }
 
   static getPropertySchema(element: HTMLElement): PropertySchema {
     const state = PropertyRenderer._readState(element);
@@ -59,19 +231,21 @@ export class TextoCurvoTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
-    // Also write to _ctState for backward compat with JS renderer
-    const e = element as HTMLElement & { _ctState?: Record<string, unknown> };
-    if (e._ctState) {
-      if (key === 'gradient') {
-        const g = value as { from: string; to: string; angle: number };
-        e._ctState.gradFrom  = g.from;
-        e._ctState.gradTo    = g.to;
-        e._ctState.gradAngle = g.angle;
-      } else {
-        e._ctState[key] = value;
-      }
+    const e = element as HTMLElement & { _ctState?: TextoCurvoState };
+    if (key === 'zIndex') { element.style.zIndex = String(value); return; }
+    if (!e._ctState) e._ctState = DEFAULT_STATE();
+    if (key === 'gradient') {
+      const g = value as { from: string; to: string; angle: number };
+      e._ctState.gradFrom  = g.from;
+      e._ctState.gradTo    = g.to;
+      e._ctState.gradAngle = g.angle;
+    } else {
+      (e._ctState as unknown as Record<string, unknown>)[key] = value;
     }
-    element.dispatchEvent(new CustomEvent('craftools-textocurvo-regenerate', { bubbles: false }));
+    // Calls updateElement() directly (previously dispatched an unlistened
+    // 'craftools-textocurvo-regenerate' custom event, so panel edits never
+    // actually rebuilt the rendered SVG).
+    TextoCurvoTool.updateElement(e, e._ctState);
   }
 }
 

@@ -34,9 +34,58 @@ const rgbToHex = (rgb: string): string => {
 
 export class TextTool extends BaseTool {
 
-  public static createElement(type: string, editor: any): HTMLElement | null {
-    const inst = new (this as any)();
-    return (inst as any).createElement(type, editor);
+  /**
+   * Builds a fresh `<craftools-element data-craftool="titulo|paragrafo">`
+   * with a contenteditable heading/paragraph inside. Recovered from the
+   * pre-migration TextTool.js (deleted by the "Purge legacy JS" commit
+   * without this logic being ported) — the previous `createElement()` here
+   * was a broken stub that called itself (`new this().createElement()`,
+   * but createElement was never an instance method), throwing
+   * "createElement is not a function" for every text element creation.
+   */
+  static createElement(type: string, _editor?: unknown): HTMLElement {
+    let tag = 'p', size = 16, weight = 400, w = 200, h = 40;
+    const text = 'Editar texto...';
+
+    if (type === 'titulo') {
+      tag = 'h1'; size = 48; weight = 700; w = 300; h = 70;
+    } else if (type === 'paragrafo') {
+      tag = 'p'; size = 16; weight = 400; w = 200; h = 40;
+    }
+
+    const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsAutoResize?: boolean };
+    el.setAttribute('x', '50');
+    el.setAttribute('y', '50');
+    el.setAttribute('w', String(w));
+    el.setAttribute('h', String(h));
+    el.setAttribute('data-craftool', type);
+    // Auto-fit starts OFF (see AutoFitText.ts / CommonSchema.ts's
+    // sizePositionSection({ autoFit: true })) -- only `true` turns it on.
+    el._craftoolsAutoResize = false;
+
+    const content = document.createElement(tag);
+    content.setAttribute('contenteditable', 'true');
+    content.setAttribute('spellcheck', 'false');
+    content.style.cssText = `
+      font-size: ${size}px;
+      font-weight: ${weight};
+      color: #1a1a1a;
+      font-family: 'DM Sans', 'Noto Color Emoji', sans-serif;
+      display: block;
+      width: 100%;
+      height: 100%;
+      white-space: pre-wrap;
+      word-break: break-word;
+      cursor: text;
+      line-height: 1.3;
+      margin: 0;
+      outline: none;
+    `;
+    content.innerHTML = text;
+
+    el.appendChild(content);
+
+    return el;
   }
 
   // ── State sync (CSS → dataset.ctState) ──────────────────────────────────────
