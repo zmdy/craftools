@@ -12,6 +12,12 @@ import { I18n } from '../settings/Translations.js';
  * user selects a size, carrying `{ media, size }` in `detail`.
  */
 export class Craftools_Setup extends HTMLElement {
+  // See the matching comment on Craftools_Editor.TAG_NAME in Editor.ts --
+  // craftools.ts's _renderComponent() must not derive the custom-element tag
+  // name from this.screen.name (the runtime class name), since a minified
+  // production build mangles it, silently creating the wrong element.
+  static readonly TAG_NAME = 'craftools-setup';
+
   constructor() { super(); }
 
   connectedCallback(): void {
@@ -131,6 +137,6 @@ export class Craftools_Setup extends HTMLElement {
   }
 
   static init(): void {
-    customElements.define('craftools-setup', Craftools_Setup);
+    customElements.define(Craftools_Setup.TAG_NAME, Craftools_Setup);
   }
 }

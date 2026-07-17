@@ -83,6 +83,15 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
 // ── Editor custom element ──────────────────────────────────────────────────────
 
 export class Craftools_Editor extends HTMLElement {
+  // craftools.ts's _renderComponent() used to derive the tag name to
+  // document.createElement() from this.screen.name.toLowerCase().replace(...)
+  // -- reading the runtime class name. That only works unminified; a
+  // production build's minifier mangles class names (e.g. "Craftools_Editor"
+  // -> "a"), so document.createElement() silently created a plain, unknown
+  // element instead of a real <craftools-editor>, leaving the app blank with
+  // no console error. Explicit constant, read instead of the class name.
+  static readonly TAG_NAME = 'craftools-editor';
+
   ctxBar!: CtxBar;
   activePage: Element | null = null;
   _savedPageHtml?: string;
@@ -735,5 +744,5 @@ export class Craftools_Editor extends HTMLElement {
     }, { passive: true });
   }
 
-  static init() { customElements.define('craftools-editor', Craftools_Editor); }
+  static init() { customElements.define(Craftools_Editor.TAG_NAME, Craftools_Editor); }
 }

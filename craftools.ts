@@ -161,8 +161,15 @@ export class Craftools {
   }
 
   private _renderComponent(): void {
-    const name = this.screen.name.toLowerCase().replace('_', '-');
-    const el   = document.createElement(name);
+    // NOTE: this used to derive the tag name from this.screen.name (the
+    // runtime class name, e.g. "Craftools_Setup" -> "craftools-setup").
+    // That silently breaks in a minified production build, where the
+    // minifier mangles class names (e.g. down to "a") -- document.createElement()
+    // then creates a bogus, unregistered element instead of the real
+    // <craftools-setup>/<craftools-editor>, leaving the app blank with no
+    // console error. Both classes now expose an explicit TAG_NAME constant
+    // instead, which minification does not touch (see Setup.ts/Editor.ts).
+    const el = document.createElement(this.screen.TAG_NAME);
     this._setWrapperContent(el);
   }
 
