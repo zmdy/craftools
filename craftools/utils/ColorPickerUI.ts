@@ -301,7 +301,7 @@ function bindDelegatedEvents(container: BoundContainer): void {
 
     if (action === 'custom-color') {
       const next = { ...current, mode: 'solid' as const, solid: target.value };
-      repaint(container, next, { silent: true });
+      container._ctColorValue = next; // stash without repainting the DOM mid-drag (see comment above)
       container._ctColorOnChange?.(next);
     } else {
       const idx   = Number(target.dataset.index);
