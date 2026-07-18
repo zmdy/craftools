@@ -179,6 +179,35 @@ function initPwaProxies(): void {
     setInterval(syncLang, 1000);
   }
 
+  // ── Header "..." overflow menu (mobile only) ──────────────────────────────────
+  // Groups undo/redo/history, theme toggle, and language behind one trigger so
+  // the mobile header isn't 8 icons + a select crammed into ~360px. Desktop
+  // never shows the trigger (CSS), so this only matters on mobile widths.
+
+  const moreBtn  = document.getElementById('pwa-header-more-btn');
+  const moreMenu = document.getElementById('pwa-header-more-menu');
+  if (moreBtn && moreMenu) {
+    const closeMoreMenu = () => {
+      moreMenu.classList.remove('open');
+      moreBtn.setAttribute('aria-expanded', 'false');
+    };
+    moreBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = moreMenu.classList.toggle('open');
+      moreBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+    // Close on outside click, and after picking an action inside the menu.
+    document.addEventListener('click', (e) => {
+      if (!moreMenu.classList.contains('open')) return;
+      if (moreMenu.contains(e.target as Node) || moreBtn.contains(e.target as Node)) return;
+      closeMoreMenu();
+    });
+    moreMenu.querySelectorAll('a.box-icon').forEach(item => {
+      item.addEventListener('click', closeMoreMenu);
+    });
+  }
+
   // ── PWA i18n (footer and shell elements) ─────────────────────────────────────
 
   const htmlLangMap: Record<string, string> = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };

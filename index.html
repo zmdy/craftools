@@ -105,6 +105,15 @@
             width: auto;
             display: block;
         }
+        /* Favicon-only mark, shown instead of the full wordmark on mobile
+           (see media query below) -- the full logo + zoom + undo/redo +
+           theme + language all competing for a ~360px header was the
+           "poluído" (cluttered) mobile header being fixed here. */
+        .header-brand-icon {
+            height: 22px;
+            width: 22px;
+            display: none;
+        }
         .header-brand-tagline {
             font-size: 10px;
             font-weight: 500;
@@ -113,10 +122,11 @@
             white-space: nowrap;
         }
         @media (max-width: 768px) {
-            /* No mobile mantém só a logo (compacta) visível; a tagline some
-               para não disputar espaço com os ícones do header. */
+            /* No mobile, troca a logo completa pelo favicon (mais compacto)
+               e some com a tagline, para sobrar espaço para os controles. */
             .header-brand-tagline { display: none; }
-            .header-brand-logo { height: 18px; }
+            .header-brand-logo { display: none; }
+            .header-brand-icon { display: block; height: 26px; width: 26px; }
         }
 
         /* Painel direito: mesmo visual do sidenav-wrapper */
@@ -609,6 +619,9 @@
             height: 35px;
             border-radius: 50%;
             background: var(--bg-input, #f4f4f5);
+            border: none;
+            cursor: pointer;
+            font: inherit;
             transition: background 0.2s, color 0.2s;
         }
         .header-content .box-icon:hover {
@@ -625,6 +638,59 @@
         .header-content .box-icon.disabled:hover {
             background: var(--bg-input, #f4f4f5) !important;
             color: var(--text-primary, #18181b) !important;
+        }
+
+        /* "..." overflow menu (mobile only) -- groups history/theme/language
+           behind a single trigger so the mobile header only shows the brand
+           icon + zoom controls up front. Desktop: the menu wrapper is
+           `display:contents`, so its children render inline in `.right`
+           exactly as before -- zero visual change. */
+        .pwa-header-more-btn {
+            display: none;
+        }
+        .pwa-header-more-menu {
+            display: contents;
+        }
+        @media (max-width: 768px) {
+            .pwa-header-more-btn {
+                display: flex;
+            }
+            .pwa-header-more-menu {
+                display: none;
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 16px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                background: var(--primary-500, #fff);
+                border: 1px solid var(--border, #e4e4e7);
+                border-radius: 14px;
+                box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+                padding: 12px;
+                min-width: 180px;
+                z-index: 1100;
+            }
+            .pwa-header-more-menu.open {
+                display: flex;
+            }
+            .pwa-header-more-menu .box-icon {
+                width: 100%;
+                height: auto;
+                border-radius: 8px;
+                justify-content: flex-start;
+                gap: 10px;
+                padding: 9px 10px;
+            }
+            .pwa-header-more-menu #pwa-history-indicator {
+                text-align: center;
+            }
+            .pwa-header-more-menu .pwa-lang-select {
+                width: 100%;
+            }
+            [data-theme="dark"] .pwa-header-more-menu {
+                background: #18181b;
+            }
         }
 
         /* Hover do sidenav igual ao footer (laranja, transição suave) */
@@ -814,6 +880,7 @@
              the sidebar's left padding (independent of Bootstrap's max-width) -->
         <div class="header-brand">
             <img src="./assets/logo-craftools.svg" alt="CrafTools" class="header-brand-logo">
+            <img src="./assets/favicon-craftools.svg" alt="CrafTools" class="header-brand-icon">
             <span class="header-brand-tagline" data-i18n="editor.panelSubtitle">Tecnologia para criatividade</span>
         </div>
         <div class="container">
@@ -821,13 +888,6 @@
 
                 <!-- Right Actions: Zoom, Dark Mode, Language -->
                 <div class="right d-flex align-items-center gap-2">
-                    <a href="#" id="pwa-undo" class="box-icon disabled" style="text-decoration:none;" title="Desfazer (Ctrl+Z)" data-i18n-title="editor.undoTitle">
-                        <span class="material-symbols-outlined">undo</span>
-                    </a>
-                    <span id="pwa-history-indicator" title="Ações guardadas no histórico de desfazer/refazer" data-i18n-title="editor.historyIndicatorTitle" style="font-size: 10px; color: var(--text, #71717a); padding: 0 2px; user-select: none;">0/10</span>
-                    <a href="#" id="pwa-redo" class="box-icon disabled" style="text-decoration:none;" title="Refazer (Ctrl+Y)" data-i18n-title="editor.redoTitle">
-                        <span class="material-symbols-outlined">redo</span>
-                    </a>
                     <a href="#" id="pwa-zoom-out" class="box-icon" style="text-decoration:none;" title="Zoom Out" data-i18n-title="editor.zoomOut">
                         <span class="material-symbols-outlined">zoom_out</span>
                     </a>
@@ -837,14 +897,31 @@
                     <a href="#" id="pwa-zoom-reset" class="box-icon" style="text-decoration:none;" title="Restaurar Zoom (100%)" data-i18n-title="editor.zoomReset">
                         <span class="material-symbols-outlined">fit_screen</span>
                     </a>
-                    <a href="#" id="pwa-theme-btn" class="box-icon" style="text-decoration:none;" title="Alternar Tema" data-i18n-title="editor.themeToggle">
-                        <span class="material-symbols-outlined">dark_mode</span>
-                    </a>
-                    <select id="pwa-lang-select" class="pwa-lang-select" title="Selecionar Idioma" data-i18n-title="editor.selectLanguage">
-                        <option value="pt-br">PT-BR</option>
-                        <option value="en">EN-US</option>
-                        <option value="es">ES-ES</option>
-                    </select>
+
+                    <!-- Desktop: renders inline via display:contents, no visual change.
+                         Mobile: collapsed behind the "..." trigger below into a dropdown,
+                         so the cluttered mobile header (logo + 8 icons + select all
+                         competing for ~360px) only keeps the brand + zoom visible. -->
+                    <div id="pwa-header-more-menu" class="pwa-header-more-menu">
+                        <a href="#" id="pwa-undo" class="box-icon disabled" style="text-decoration:none;" title="Desfazer (Ctrl+Z)" data-i18n-title="editor.undoTitle">
+                            <span class="material-symbols-outlined">undo</span>
+                        </a>
+                        <span id="pwa-history-indicator" title="Ações guardadas no histórico de desfazer/refazer" data-i18n-title="editor.historyIndicatorTitle" style="font-size: 10px; color: var(--text, #71717a); padding: 0 2px; user-select: none;">0/10</span>
+                        <a href="#" id="pwa-redo" class="box-icon disabled" style="text-decoration:none;" title="Refazer (Ctrl+Y)" data-i18n-title="editor.redoTitle">
+                            <span class="material-symbols-outlined">redo</span>
+                        </a>
+                        <a href="#" id="pwa-theme-btn" class="box-icon" style="text-decoration:none;" title="Alternar Tema" data-i18n-title="editor.themeToggle">
+                            <span class="material-symbols-outlined">dark_mode</span>
+                        </a>
+                        <select id="pwa-lang-select" class="pwa-lang-select" title="Selecionar Idioma" data-i18n-title="editor.selectLanguage">
+                            <option value="pt-br">PT-BR</option>
+                            <option value="en">EN-US</option>
+                            <option value="es">ES-ES</option>
+                        </select>
+                    </div>
+                    <button type="button" id="pwa-header-more-btn" class="box-icon pwa-header-more-btn" title="Mais opções" data-i18n-title="editor.moreOptions" aria-haspopup="true" aria-expanded="false">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </button>
                 </div>
             </div>
         </div>
