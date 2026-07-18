@@ -393,9 +393,22 @@ export class ImageTool extends BaseTool {
       const filterKey = key.replace('filter_', '').replace('_', '-') as FilterKey;
       if (meta.filters) meta.filters[filterKey] = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-filters-apply', { bubbles: false }));
-    } else if (['zoom', 'posX', 'posY', 'rotation', 'objectFit'].includes(key)) {
+    } else if (['zoom', 'posX', 'posY', 'rotation'].includes(key)) {
       (meta as unknown as Record<string, unknown>)[key] = value;
       element.dispatchEvent(new CustomEvent('craftools-image-transform-apply', { bubbles: false }));
+    } else if (key === 'objectFit') {
+      // Was lumped in with zoom/posX/posY/rotation above, dispatching
+      // 'craftools-image-transform-apply' -- but ImageTransform.applyTransform()
+      // only ever touches the img's `transform`/`transformOrigin` (translate/
+      // scale/rotate), never `object-fit`. Only ImageFilters.applyFilters()
+      // sets `img.style.objectFit` (from meta.objectFit), and that's wired to
+      // the *filters* event, not the transform one -- so changing Fit mode
+      // (from the panel's select OR the ctx-bar's cycle button) updated meta
+      // but never touched anything visible. Set it directly instead of
+      // routing through either event.
+      meta.objectFit = String(value);
+      const img = (el.contentArea ?? element).querySelector<HTMLImageElement>('img');
+      if (img) img.style.objectFit = meta.objectFit;
     } else if (key === 'bgBlur') {
       meta.bgBlur = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-bgblur-apply', { bubbles: false }));

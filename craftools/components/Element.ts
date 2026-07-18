@@ -282,6 +282,20 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
         sel?.removeAllRanges();
         sel?.addRange(range);
       } catch (_) { /* ignore */ }
+    } else if (this._content.querySelector('img')) {
+      // Image elements (ImageTool.ts): double-click enters "adjust" mode.
+      // ImageTransform.ts's wheel/pointerdown/pointermove pan+zoom+rotate
+      // handlers all gate on `element._isImageActive` ("only allow if panel
+      // is open" per its own comments) -- but nothing anywhere else in the
+      // codebase ever sets that flag to true, so those handlers existed but
+      // silently never fired for EITHER a standalone Image element or a
+      // locked Album grid-cell image (AlbumWizard.ts's _buildCellElement()
+      // builds cells via this exact same ImageTool.createElement() +
+      // ImageTransform.setupInteractions() wiring, so both were equally
+      // broken). Reset back to false by ImageTransform.ts's own
+      // 'craftools-element-deselect' listener when the element is
+      // deselected -- images have no natural focusout to hook, unlike text.
+      (this as unknown as { _isImageActive?: boolean })._isImageActive = true;
     }
 
     const restore = (ev: FocusEvent) => {
