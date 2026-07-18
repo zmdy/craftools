@@ -100,10 +100,32 @@ type EditorEl = HTMLElement & {
 export class CalendarTool {
 
   public static setup(editor: HTMLElement): void {
-    const panelTitle = document.getElementById('panel-title');
-    const panelBody  = document.getElementById('panel-body');
+    const panelTitle  = document.getElementById('panel-title');
+    const panelBody   = document.getElementById('panel-body');
+    const defaultMenu = document.getElementById('panel-default-menu');
+    const closePanel  = document.getElementById('close-panel');
+    const rightPanel  = document.getElementById('right-panel');
     if (panelTitle) panelTitle.textContent = c('panelTitle');
     if (!panelBody) return;
+
+    // Reveal the panel body / hide the default sidebar menu -- matches
+    // AlbumWizard.ts's setup(). Previously only the title was set here, so
+    // calling this from a context that doesn't already have the panel open
+    // (Editor.ts's tool-drag flow does, via openPanelMenu(), but
+    // PageTool.ts's "click a calendar-generated page" handler calls this
+    // directly) left panelBody's real content built correctly but hidden
+    // behind the still-visible default menu -- the title changed while the
+    // body underneath looked untouched.
+    if (defaultMenu) defaultMenu.classList.add('d-none');
+    if (panelBody)   panelBody.classList.remove('d-none');
+    if (closePanel)  closePanel.classList.remove('d-none');
+    if (rightPanel) {
+      rightPanel.classList.add('panel-open');
+      rightPanel.classList.remove('sidenav-collapsed');
+      if (window.innerWidth <= 768) rightPanel.classList.add('mobile-modal-mode');
+    }
+    const menuIcon = document.getElementById('pwa-menu-icon');
+    if (menuIcon && menuIcon.textContent !== 'close') menuIcon.textContent = 'close';
 
     const ed = editor as EditorEl;
 
