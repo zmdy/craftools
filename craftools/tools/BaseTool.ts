@@ -49,6 +49,50 @@ export abstract class BaseTool {
     return [];
   }
 
+  /**
+   * Builds a standardized "auto-fit" ctx-bar quick-action button: the
+   * `arrow_range` icon, tinted accent-orange while `opts.isActive` is true
+   * (see CtxBar.ts's CtxOption.isActive). Centralizes the "flip some
+   * property via _applyProperty so state/panel/ctx-bar all stay in sync"
+   * pattern shared by every tool with an auto-fit-like quick action --
+   * started with TextTool's "auto-fit to text" toggle (element resizes to
+   * its content), generalized here so e.g. ImageTool's "fit mode" cycle
+   * (cover/contain/fill) reuses the exact same button/sync plumbing
+   * instead of a second hand-rolled implementation.
+   *
+   * `opts.toggle` should mutate state via THIS tool's own `_applyProperty`
+   * (same call the field itself would make) -- not touch the DOM/meta
+   * directly -- so the change is indistinguishable from one made through
+   * the panel. After it runs, the properties panel is re-rendered *if it's
+   * currently showing this same element*, so a select/toggle field driven
+   * by the same key reflects the new value immediately even while the
+   * panel stays open -- normally only the field the user directly
+   * interacted with refreshes itself; this covers changes made from
+   * outside the panel (the ctx-bar).
+   *
+   * @param opts.isActive  Whether the feature is currently "on".
+   * @param opts.toggle    Applies the next state for one click.
+   * @param opts.label     Tooltip text (defaults to "Auto-fit").
+   */
+  protected static _autoFitCtxOption(opts: {
+    isActive: (element: HTMLElement) => boolean;
+    toggle: (element: HTMLElement) => void;
+    label?: string;
+  }): { icon: string; label: string; command: (element: HTMLElement) => void; isActive: (element: HTMLElement) => boolean } {
+    return {
+      icon: 'arrow_range',
+      label: opts.label ?? 'Auto-fit',
+      isActive: opts.isActive,
+      command: (element: HTMLElement) => {
+        opts.toggle(element);
+        const panelBody = document.getElementById('panel-body') as (HTMLElement & { _ctRenderedElement?: HTMLElement }) | null;
+        if (panelBody && panelBody._ctRenderedElement === element) {
+          this.renderPropertiesPanel(panelBody, element);
+        }
+      },
+    };
+  }
+
   static getPropertySchema(_element: HTMLElement): PropertySchema {
     // Subclasses must override this.
     return [];

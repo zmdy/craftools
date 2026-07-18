@@ -199,7 +199,7 @@ export class ImageTool extends BaseTool {
     ImageTool._getLinkedSiblings(element).forEach(sibling => ImageTool._pushMetaToSibling(sibling, meta));
   }
 
-  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+  static getCtxOptions(): any[] {
     return [
       {
         icon: 'published_with_changes',
@@ -232,6 +232,23 @@ export class ImageTool extends BaseTool {
           input.click();
         },
       },
+      // "Auto-fit" for images means cycling the Fit mode (matches the
+      // Transform section's own `objectFit` select) rather than a boolean
+      // on/off -- reuses BaseTool's shared _autoFitCtxOption() so it gets
+      // the same icon/orange-when-active treatment as TextTool's auto-fit-
+      // to-text toggle, and automatically refreshes the "Fit mode" select
+      // in the panel if it's open. Active (orange) whenever not on the
+      // default 'cover', since that's the common case most images use.
+      this._autoFitCtxOption({
+        isActive: (el) => getMeta(el).objectFit !== 'cover',
+        toggle: (el) => {
+          const modes = ['cover', 'contain', 'fill'] as const;
+          const current = (getMeta(el).objectFit as typeof modes[number]) || 'cover';
+          const next = modes[(modes.indexOf(current) + 1) % modes.length];
+          ImageTool._applyProperty(el, 'objectFit', next);
+        },
+        label: 'Cycle fit mode (Cover / Contain / Fill)',
+      }),
     ];
   }
 
