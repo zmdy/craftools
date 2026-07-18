@@ -310,10 +310,11 @@ export class AgendaExportTool {
   }
 }
 
+// icon matches the desktop sidebar (index.html #pwa-sidebar-agenda).
 ToolRegistry.register({
   key: 'agenda',
   label: 'editor.agendaExport',
-  icon: 'export_notes',
+  icon: 'event_note',
   panelOnly: true,
   showInFooterNav: false,
   category: 'export',

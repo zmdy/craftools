@@ -18,10 +18,11 @@
  */
 import { ToolRegistry } from '../../utils/ToolRegistry';
 
+// icon matches the desktop sidebar (index.html #pwa-sidebar-album).
 ToolRegistry.register({
   key: 'album',
   label: 'editor.album',
-  icon: 'photo_album',
+  icon: 'photo_library',
   panelOnly: true,
   showInFooterNav: false,
   category: 'tools',

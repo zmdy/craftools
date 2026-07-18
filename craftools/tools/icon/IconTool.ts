@@ -340,10 +340,12 @@ export class IconTool extends BaseTool {
 
 IconTool.registeredKeys = ['icone'];
 
+// label/icon match the desktop sidebar (index.html #pwa-sidebar-icone) --
+// 'editor.icon' (singular) isn't a registered key, only 'editor.icons' is.
 ToolRegistry.register({
   key:             'icone',
-  label:           'editor.icon',
-  icon:            'emoji_symbols',
+  label:           'editor.icons',
+  icon:            'grid_view',
   tool:            IconTool,
   draggable:       true,
   showInFooterNav: true,

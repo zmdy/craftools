@@ -339,4 +339,8 @@ export class PaperTool extends BaseTool {
 }
 
 PaperTool.registeredKeys = ['papeis'];
-ToolRegistry.register({ key: 'papeis', label: 'editor.paper', icon: 'description', tool: PaperTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// label/icon match the desktop sidebar entry exactly (index.html
+// #pwa-sidebar-papeis) -- 'editor.paper' ("Artes impressas") and
+// 'description' were a different, unrelated i18n key/icon that made this
+// tool's title and the mobile footer show the wrong text/glyph.
+ToolRegistry.register({ key: 'papeis', label: 'editor.papers2', icon: 'layers', tool: PaperTool, draggable: true, showInFooterNav: false, category: 'elements' });

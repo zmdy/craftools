@@ -212,4 +212,6 @@ export class BarcodeTool extends BaseTool {
 }
 
 BarcodeTool.registeredKeys = ['barcode'];
-ToolRegistry.register({ key: 'barcode', label: 'editor.barcode', icon: 'barcode', tool: BarcodeTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// icon matches the desktop sidebar (index.html #pwa-sidebar-barcode) --
+// 'barcode' isn't a real Material Symbol name (renders blank).
+ToolRegistry.register({ key: 'barcode', label: 'editor.barcode', icon: 'barcode_reader', tool: BarcodeTool, draggable: true, showInFooterNav: false, category: 'elements' });

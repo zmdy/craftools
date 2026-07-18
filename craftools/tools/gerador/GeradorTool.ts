@@ -843,10 +843,11 @@ function showToast(msg: string, type: 'success' | 'error' = 'success'): void {
   setTimeout(() => el.remove(), 3000);
 }
 
+// icon matches the desktop sidebar (index.html #pwa-sidebar-gerador).
 ToolRegistry.register({
   key: 'gerador',
   label: 'editor.generator',
-  icon: 'auto_awesome',
+  icon: 'dashboard_customize',
   panelOnly: true,
   showInFooterNav: false,
   category: 'tools',

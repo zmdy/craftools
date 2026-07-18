@@ -284,9 +284,11 @@ export class ShapeTool extends BaseTool {
 
 ShapeTool.registeredKeys = ['shape'];
 
+// label matches the desktop sidebar (index.html #pwa-sidebar-shape) --
+// 'editor.shape' isn't a registered key, only 'shapeTool.panelTitle' is.
 ToolRegistry.register({
   key:             'shape',
-  label:           'editor.shape',
+  label:           'shapeTool.panelTitle',
   icon:            'category',
   tool:            ShapeTool,
   draggable:       true,

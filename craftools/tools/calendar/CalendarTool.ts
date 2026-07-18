@@ -708,9 +708,12 @@ export class CalendarTool {
   }
 }
 
+// label matches the desktop sidebar (index.html #pwa-sidebar-calendario) --
+// 'editor.calendar' isn't a registered translation key, so it rendered
+// literally instead of "Calendário".
 ToolRegistry.register({
   key: 'calendario',
-  label: 'editor.calendar',
+  label: 'editor.calendarTool',
   icon: 'calendar_month',
   panelOnly: true,
   showInFooterNav: false,

@@ -290,4 +290,5 @@ export class CarimboTool extends BaseTool {
 }
 
 CarimboTool.registeredKeys = ['carimbo'];
-ToolRegistry.register({ key: 'carimbo', label: 'editor.stamp', icon: 'approval', tool: CarimboTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// icon matches the desktop sidebar (index.html #pwa-sidebar-carimbo).
+ToolRegistry.register({ key: 'carimbo', label: 'editor.stamp', icon: 'verified', tool: CarimboTool, draggable: true, showInFooterNav: false, category: 'elements' });

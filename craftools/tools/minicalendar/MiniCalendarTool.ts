@@ -196,4 +196,5 @@ export class MiniCalendarTool extends BaseTool {
 }
 
 MiniCalendarTool.registeredKeys = ['minicalendario'];
-ToolRegistry.register({ key: 'minicalendario', label: 'editor.miniCalendar', icon: 'calendar_month', tool: MiniCalendarTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// icon matches the desktop sidebar (index.html #pwa-sidebar-minicalendario).
+ToolRegistry.register({ key: 'minicalendario', label: 'editor.miniCalendar', icon: 'today', tool: MiniCalendarTool, draggable: true, showInFooterNav: false, category: 'elements' });

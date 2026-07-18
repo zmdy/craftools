@@ -492,4 +492,6 @@ export class QRCodeTool extends BaseTool {
 }
 
 QRCodeTool.registeredKeys = ['qrcode'];
-ToolRegistry.register({ key: 'qrcode', label: 'editor.qrCode', icon: 'qr_code_2', tool: QRCodeTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// label matches the desktop sidebar (index.html #pwa-sidebar-qrcode) --
+// 'editor.qrCode' (capital C) isn't a registered key, only 'editor.qrcode' is.
+ToolRegistry.register({ key: 'qrcode', label: 'editor.qrcode', icon: 'qr_code_2', tool: QRCodeTool, draggable: true, showInFooterNav: false, category: 'elements' });

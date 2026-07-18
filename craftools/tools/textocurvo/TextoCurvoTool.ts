@@ -259,4 +259,5 @@ export class TextoCurvoTool extends BaseTool {
 }
 
 TextoCurvoTool.registeredKeys = ['textocurvo'];
-ToolRegistry.register({ key: 'textocurvo', label: 'editor.curvedText', icon: 'text_rotation_none', tool: TextoCurvoTool, draggable: true, showInFooterNav: false, category: 'text' });
+// icon matches the desktop sidebar (index.html #pwa-sidebar-textocurvo).
+ToolRegistry.register({ key: 'textocurvo', label: 'editor.curvedText', icon: 'change_history', tool: TextoCurvoTool, draggable: true, showInFooterNav: false, category: 'text' });
