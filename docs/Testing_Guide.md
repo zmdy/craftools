@@ -117,6 +117,21 @@ These checks apply to every canvas-element tool (Text, Image, Shape, Icon, Emoji
 | 6.5 | Border/radius sections (Barcode, QR Code, Image, Variable Content) | The shared `borderSection()`/`radiusSection()` controls (width, style, color, radius) apply consistently and render immediately. | [ ] |
 | 6.6 | Session restore re-imports tool modules on demand | Restore a session containing an element whose tool module was never loaded this session (e.g. reload mid-session, select a Shape element first). The element should still be selectable and editable — `Editor.ts`'s `craftools-element-select` handler lazily imports the tool module via `LAZY_TOOL_LOADERS` before dispatching. | [ ] |
 | 6.7 | Element reconstructed from restored session shows correct panel title/icon | Selecting a restored element (any type) shows the correct panel title and context options, not a blank/generic panel. | [ ] |
+| 6.8 | Panel closes when the selected element is deleted | Select any element and delete it (Del key or the ctx-bar/handle's delete button). | The right-panel properties panel closes immediately (reverts to the default sidebar menu) instead of staying open showing controls for the now-deleted element. | [ ] |
+| 6.9 | Panel closes on click-outside deselect | Select an element, then click empty canvas (not another element). | The right-panel properties panel closes the same way as 6.8. Selecting a *different* element directly (no intermediate empty-canvas click) opens that element's panel with no visible flicker. | [ ] |
+| 6.10 | Panel header spacing | Select any element on both desktop and mobile. | The panel header bar (tool title + close button, `.craftools-panel-head.sidenav-brand-head`) has clear breathing room above/around the title — not glued to the app header above it. | [ ] |
+| 6.11 | Only first accordion section open by default | Select an element whose schema has 2+ sections marked `defaultOpen: true` (e.g. Text, Shape). | Only the first section is actually expanded on selection; the others start collapsed but can still be expanded manually, and multiple can be open at once after manual expansion. | [ ] |
+| 6.12 | Rotate/delete handle icon centering | Select any element (desktop and mobile) and inspect the circular rotate handle and the red delete (×) handle. | Both icons are visually centered inside their circular buttons — no off-center glyph. | [ ] |
+| 6.13 | Ctx-bar appears below the element, Canva-style | Select any element. | The floating quick-actions bar (ctx-bar) appears **below** the element's bounding box, horizontally centered on it; the rotate/delete handles stay **above** the element as before. | [ ] |
+| 6.14 | Ctx-bar tracks the element during scroll (desktop) | Select an element, then scroll `#canvas-area` without deselecting. | The ctx-bar (and the selection handles) move together with the element — no lag or fixed-position drift relative to the page. | [ ] |
+| 6.15 | Ctx-bar falls back above when there's no room below | Select an element positioned near the bottom edge of the visible canvas area. | The ctx-bar renders **above** the element instead of below when there isn't enough room below (no bar clipped off-screen or hidden behind the footer/toolbar). | [ ] |
+| 6.16 | Auto-fit quick-toggle on the ctx-bar (Text) | Select a Text element; click the `arrow_range` ctx-bar button. | Toggles "Auto-fit to text" the same as the Size & Position panel's own toggle; the icon tints orange (`var(--accent)`) while active, and the open properties panel (if showing this element) refreshes to reflect the new state. | [ ] |
+| 6.17 | Auto-fit quick-toggle on the ctx-bar (Image) | Select an Image element; click the `arrow_range` ctx-bar button repeatedly. | Cycles the Transform section's "Fit mode" through Cover → Contain → Fill → Cover; icon is orange whenever the mode isn't the default "Cover"; the "Fit mode" select in the panel (if open) updates to match. | [ ] |
+| 6.18 | Background fill section (Text, Image, QR Code, Variable Content) | Open the "Background" accordion (a standalone section on Text/QR/Variable Content; merged into Image's existing "Background" blur/blend-mode accordion under a "Fill" sub-header). | A solid-or-gradient color-picker ("Fill") and an independent "Opacity" slider (0–1) are present; changing either repaints a fill layer behind the element's real content (text/image/etc. never fades, only the fill does). Default is transparent/fully-opaque for elements that never had one set. | [ ] |
+| 6.19 | Background fill does not appear on Barcode | Open the Barcode panel's Border section area. | No separate "Background (Fill/Opacity)" section is offered — Barcode already has its own "Background" color field (the bars' background color) and intentionally isn't wired to the new generic section to avoid a key collision. | [ ] |
+| 6.20 | Border color can be a gradient | Open any tool's Border section and switch the Color field to Gradient mode. | The border renders the gradient (via `border-image`) instead of a solid color; switching back to Solid restores a normal `border-color` border. Requires border width > 0 and style ≠ None to be visible, same as a solid border. | [ ] |
+| 6.21 | Border style — full option set | Open any tool's Border section and check the Style dropdown. | All CSS border-style keywords are offered: Solid, Dashed, Dotted, Double, Groove, Ridge, Inset, Outset, None (previously only Solid/Dashed/Dotted/None). | [ ] |
+| 6.22 | Border actually renders on QR Code / Barcode / Variable Content | Set a border width/color/style on a QR Code, Barcode, and Variable Content element. | The border is visibly painted on the element in all three cases (previously these fields existed in the panel and were stored, but nothing ever painted them — editing border here used to be a silent no-op). | [ ] |
 
 ---
 
@@ -134,6 +149,9 @@ Applies to both `titulo` (H1, 48px/700 default) and `paragrafo` (P, 16px/400 def
 | 7.6 | Auto-fit | Enable Auto-fit and type a long string; font shrinks so the text never overflows the original bounding box (`AutoFitText.applyAutoSize`). | [ ] |
 | 7.7 | Shape/margin section (`formaSection`) | Adjust the shared shape/margin controls; box padding updates. | [ ] |
 | 7.8 | Size/position + page-align | Resize/move via the panel; use the page-align actions (center horizontally/vertically on page) — this is a fire-and-forget action (no persisted value), delegates to `SnapEngine.align()`. | [ ] |
+| 7.9 | Default text color is black | Create a fresh Text element and open its Color section. | The color swatch defaults to near-black (`#18181b`), not white — text is legible immediately against the default white page. | [ ] |
+| 7.10 | Emoji renders in color | Type an emoji character (e.g. 😀) into a Text/Título/Parágrafo element. | The emoji renders as a normal color emoji glyph (Noto Color Emoji font fallback), not a black-and-white "tofu" box, both on initial creation and after changing the font family afterward. | [ ] |
+| 7.11 | Emoji still renders after changing font | Type an emoji, then change the Font field to a different typeface. | The emoji stays in color after the font change (regression: the font-family fallback stack previously dropped the emoji font when the `font` property changed, even though it was present at element creation). | [ ] |
 
 ---
 
@@ -191,6 +209,7 @@ Applies to both `titulo` (H1, 48px/700 default) and `paragrafo` (P, 16px/400 def
 | 11.3 | Search | Typing filters the grid live. | [ ] |
 | 11.4 | Create via click / drag | Places a new emoji element (same centered-click / drag-drop pattern as Shape/Icon). | [ ] |
 | 11.5 | Panel fields | "Emoji character" text field and "Size" slider (16–256px) both apply live. | [ ] |
+| 11.6 | Sidebar/footer icon is a real emoji | Look at the Emoji tool's entry in the desktop sidebar and the mobile footer. | Both show an actual emoji glyph (😊), not a generic Material Symbol icon or a raw translation key as the label. | [ ] |
 
 ---
 
@@ -203,6 +222,7 @@ Applies to both `titulo` (H1, 48px/700 default) and `paragrafo` (P, 16px/400 def
 | 12.3 | Right mode — Manual | With Right mode = Manual, the "Right emoji" text field is used directly as the combo partner. | [ ] |
 | 12.4 | Right mode — Auto | With Right mode = Auto, the right side is chosen automatically (falls back to `left` emoji itself if no explicit right emoji set). | [ ] |
 | 12.5 | Combo fetch failure | If the API call fails/returns no combo, `imageUrl` stays empty and the `<img>` shows a broken/empty image gracefully (no console crash). | [ ] |
+| 12.6 | Mobile footer icon matches desktop | Compare the Emoji Kitchen entry's icon in the desktop sidebar vs. the mobile footer. | Both show the same live combo-preview thumbnail image, not a generic Material Symbol (`blender`) on mobile. | [ ] |
 
 ---
 
@@ -436,6 +456,16 @@ Panel-only tool (`fatiador`) — upload + R×C image slicer with live canvas-ove
 | 26.2 | Mobile element panel | Selecting an element on mobile shows `MobileToolbar`'s per-element mini-panel instead of the desktop right-panel. | [ ] |
 | 26.3 | Mobile menu toggle | Hamburger icon opens/closes the sidebar overlay; icon glyph toggles between `menu`/`close`. | [ ] |
 | 26.4 | Panel-only tools on mobile | Confirm current behavior (documented gap): Agenda/Calendar/Gerador/Image Slicer are not specially wired into `MobileToolbar.ts` — note whether opening them on mobile is usable or needs a follow-up fix. | [ ] |
+| 26.5 | Mobile footer shows every tool | Open the app on mobile and scroll the bottom footer horizontally. | Every tool registered in `ToolRegistry` appears (Papéis, Título, Texto, Conteúdo Variável, Imagem, Álbum, Fatiador, Texto em Curva, Carimbo, Calendário, Mini Calendário, Emoji Kitchen, QR Code, Código de Barras, Emojis, Forma, Ícones — plus Nova Página/Exportar PDF/Exportar PNG actions), not just a hardcoded subset of ~5. | [ ] |
+| 26.6 | Mobile footer icons match the desktop sidebar | Compare every tool's icon in the mobile footer against its entry in the desktop sidebar (`#sidenav-nav-list`). | Icons match exactly for every tool — no mismatched/generic Material Symbol standing in for the real one (previously wrong for Papéis, Gerador, Exportar Agenda, Álbum, Texto em Curva, Carimbo, Mini Calendário, Código de Barras, Ícones). | [ ] |
+| 26.7 | Mobile footer labels match the desktop sidebar | Compare every tool's label text in the mobile footer against the desktop sidebar. | Labels show real translated text in every language — no raw i18n key visible as literal text (previously happened for Forma, Ícones, QR Code, Calendário, Papéis, Emojis, since those `ToolRegistry` labels pointed at nonexistent or wrong translation keys). | [ ] |
+| 26.8 | Panel-only tool panel titles also fixed | On desktop, open Calendário, Gerador, and Papéis from the sidebar. | Each panel's title bar shows correctly translated text (same underlying `ToolRegistry.label` fix as 26.7 — these tools' titles were affected too, not just the mobile footer). | [ ] |
+| 26.9 | Simplified mobile header | Open the app on mobile and inspect the top header bar. | Shows only the favicon (not the full logo), zoom controls, and a "⋮" overflow-menu button — undo/redo/history/theme/language controls are grouped inside the overflow menu instead of cluttering the main header row. | [ ] |
+| 26.10 | Mobile header overflow menu | Tap the "⋮" button in the mobile header. | A dropdown opens containing Undo, Redo, History, Theme toggle, and Language select; tapping outside or selecting an item closes it. | [ ] |
+| 26.11 | Setup size-picker back button | Open Setup → size selection screen on mobile (or desktop). | The back button has a subtle, well-positioned style (not overlapping/awkwardly placed as before) — left-aligned above the size grid, not absolutely positioned over content. | [ ] |
+| 26.12 | Footer switches to per-element tools on tap | On mobile, tap a canvas element to select it. | The bottom footer switches from the tool list to that element's property mini-panel buttons (regression: this previously silently no-op'd because `MobileToolbar.init(this)` was never called after the JS→TS migration). | [ ] |
+| 26.13 | Ctx-bar position on mobile | On mobile, select an element. | The ctx-bar appears near the element (below it, same as desktop — see 6.13), not stuck behind/underneath the bottom footer bar. | [ ] |
+| 26.14 | Auto-scroll to newly created element | On mobile, tap a draggable tool to create a new element (not select an existing one). | The canvas auto-scrolls/centers on the newly created element, the same way it already does when selecting an existing element. | [ ] |
 
 ---
 
@@ -462,6 +492,12 @@ This section re-verifies specific regressions found and fixed in past sessions. 
 | 27.15 | Auto-fit toggle default-on bug | Create a new Text or Variable Content element. | Auto-fit starts **off** by default (must be explicitly enabled), not on. | [ ] |
 | 27.16 | Auto-fit size reverting on drag | Enable Auto-fit on a text element, then drag-resize it. | The manually-set size is respected and does not snap back to the auto-fit computed size mid-drag. | [ ] |
 | 27.17 | Mini Calendar gap/centering in Variable Content preview | Bind a Variable Content element to a `miniCalendar` variable. | The calendar card renders without an unwanted top gap, and its title bar height/centering look correct (not inflated by literal whitespace). | [ ] |
+| 27.18 | Mobile panel appeared as a broken sliver by default | Open the app fresh on mobile without selecting anything. | No stray/misconfigured `.craftools-panel.sidenav-panel` sliver is visible — legacy bottom-sheet CSS rules that conflicted with the current panel design have been removed. | [ ] |
+| 27.19 | ToolRegistry label/icon drift from the desktop sidebar | See 26.6/26.7/26.8 above. | Fixed for: Papéis, Gerador, Exportar Agenda, Álbum, Texto em Curva, Carimbo, Calendário, Mini Calendário, QR Code, Código de Barras, Emojis, Forma, Ícones. | [ ] |
+| 27.20 | Emoji Kitchen's own tool icon wrong everywhere | See 12.6/26.6 above. | Fixed — now shows the live combo thumbnail on both desktop and mobile. | [ ] |
+| 27.21 | Properties panel stuck open after delete/deselect | See 6.8/6.9 above. | Fixed — the panel now closes correctly in both cases. | [ ] |
+| 27.22 | QR Code / Barcode / Variable Content border fields were a silent no-op | See 6.22 above. | Fixed — border width/style/color now actually paint on all three tools (previously stored in state/meta but never applied to any DOM node). | [ ] |
+| 27.23 | Text/Variable Content/Curved Text font-change dropped emoji color rendering | See 7.10/7.11 above. | Fixed — `withEmojiFallback()` is now used consistently at element creation *and* on every subsequent font change across all three tools. | [ ] |
 
 ---
 
