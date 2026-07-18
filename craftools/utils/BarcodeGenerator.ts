@@ -3,6 +3,8 @@
  * Formatos: CODE 39 e EAN-13 (sem dependências externas).
  */
 
+import { normalizeValue, svgPaintFromValue } from './ColorPickerUI.js';
+
 export interface BarcodeOptions {
     format?:     'code39' | 'ean13';
     color?:      string;
@@ -145,20 +147,33 @@ export class BarcodeGenerator {
             } else { i++; }
         }
 
-        const bg = (background === 'transparent')
-            ? ''
-            : `<rect width="${totalWidth}" height="${totalHeight}" fill="${this._escapeAttr(background)}"/>`;
+        // color/background hold whatever the standardized color-picker
+        // field reports: a bare hex string (legacy value / default meta) or
+        // a JSON ColorPickerValue string when the user has picked a
+        // gradient -- normalizeValue() accepts either, and
+        // svgPaintFromValue() turns a gradient into a <defs> entry + a
+        // `url(#id)` fill reference (or just passes a solid color straight
+        // through). Same technique as ShapeGenerator.ts/IconLibrary.ts.
+        // 'transparent' was never actually reachable from the panel (the
+        // color field's swatch palette/native picker can't produce it), so
+        // always drawing the bg rect (fill="transparent" renders exactly
+        // the same as omitting it) is a safe simplification.
+        const bgPaint    = svgPaintFromValue(normalizeValue(background), 'barcode-bg');
+        const colorPaint = svgPaintFromValue(normalizeValue(color), 'barcode-fg');
+
+        const bg = `<rect width="${totalWidth}" height="${totalHeight}" fill="${this._escapeAttr(bgPaint.paint)}"/>`;
 
         const textSvg = showText
             ? `<text x="${totalWidth / 2}" y="${barHeight + 12}" text-anchor="middle" ` +
               `font-family="'DM Mono', monospace" font-size="12" letter-spacing="1" ` +
-              `fill="${this._escapeAttr(color)}">${this._escXml(displayText)}</text>`
+              `fill="${this._escapeAttr(colorPaint.paint)}">${this._escXml(displayText)}</text>`
             : '';
 
+        const defs = bgPaint.defs + colorPaint.defs;
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" ` +
             `preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" ` +
             `style="display:block;width:100%;height:100%;">` +
-            `${bg}<path d="${path}" fill="${this._escapeAttr(color)}"/>${textSvg}</svg>`;
+            `${defs ? `<defs>${defs}</defs>` : ''}${bg}<path d="${path}" fill="${this._escapeAttr(colorPaint.paint)}"/>${textSvg}</svg>`;
     }
 
     static buildSvgElement(text: string, options: BarcodeOptions = {}): SVGElement {

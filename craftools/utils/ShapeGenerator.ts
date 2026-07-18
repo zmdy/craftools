@@ -2,6 +2,8 @@
  * ShapeGenerator.ts
  */
 
+import { normalizeValue, svgPaintFromValue } from './ColorPickerUI.js';
+
 export interface ShapeMeta {
   shapeType?:      string;
   fillColor?:      string;
@@ -42,11 +44,23 @@ export class ShapeGenerator {
    */
   static buildSvgString(meta?: ShapeMeta): string {
       const m = { ...this.defaultMeta(meta?.shapeType), ...meta };
-      const fill = m.fillColor || '#6366f1';
+
+      // fillColor/strokeColor hold whatever the standardized color-picker
+      // field reports: a bare hex string (legacy value / defaultMeta()) or a
+      // JSON ColorPickerValue string when the user has picked a gradient.
+      // normalizeValue() accepts either; svgPaintFromValue() turns a
+      // gradient into a <defs> entry + a `url(#id)` fill/stroke reference,
+      // or just passes a solid color straight through.
+      const fillPaint = svgPaintFromValue(normalizeValue(m.fillColor ?? '#6366f1'), 'shape-fill');
+
       const hasStroke = (parseFloat(String(m.strokeWidth)) || 0) > 0;
-      const strokeAttr = hasStroke
-          ? `stroke="${this._esc(m.strokeColor || '#000000')}" stroke-width="${m.strokeWidth}"`
-          : 'stroke="none"';
+      let strokeAttr = 'stroke="none"';
+      let strokeDefs = '';
+      if (hasStroke) {
+          const strokePaint = svgPaintFromValue(normalizeValue(m.strokeColor ?? '#000000'), 'shape-stroke');
+          strokeDefs  = strokePaint.defs;
+          strokeAttr  = `stroke="${this._esc(strokePaint.paint)}" stroke-width="${m.strokeWidth}"`;
+      }
 
       let inner = '';
       switch (m.shapeType) {
@@ -61,8 +75,10 @@ export class ShapeGenerator {
           default:         inner = this._square(m);
       }
 
+      const defs = fillPaint.defs + strokeDefs;
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;width:100%;height:100%;">` +
-          `<g fill="${this._esc(fill)}" ${strokeAttr} stroke-linejoin="round">${inner}</g></svg>`;
+          (defs ? `<defs>${defs}</defs>` : '') +
+          `<g fill="${this._esc(fillPaint.paint)}" ${strokeAttr} stroke-linejoin="round">${inner}</g></svg>`;
   }
 
   static buildSvgElement(meta?: ShapeMeta): SVGElement {

@@ -96,6 +96,51 @@ export function cssFromValue(v: ColorPickerValue): string {
   return v.mode === 'gradient' ? cssFromGradient(v.gradient) : v.solid;
 }
 
+// ── SVG helpers ──────────────────────────────────────────────────────────────
+
+let _svgGradientCounter = 0;
+
+/**
+ * SVG-flavored counterpart to cssFromValue()/cssFromGradient() -- used by
+ * every SVG-based tool (Shape/Icon/Barcode/QRCode) so a gradient fill/stroke
+ * on an SVG shape renders with the same stop colors and angle convention as
+ * a CSS gradient elsewhere in the app. SVG has no equivalent of
+ * `fill: linear-gradient(...)`: a gradient must be declared once as a
+ * `<linearGradient>`/`<radialGradient>` in `<defs>` and referenced via
+ * `fill="url(#id)"` -- so this returns both pieces: the `<defs>` markup to
+ * embed once per rendered SVG, and the attribute value to put on
+ * `fill`/`stroke`. Solid mode needs no `<defs>` at all -- `defs` is `''` and
+ * `paint` is just the plain color, so callers can always do
+ * `fill="${paint}"` unconditionally.
+ *
+ * `idPrefix` only needs to be unique *within* one `<svg>` (fill vs. stroke
+ * on the same shape, say) -- an internal monotonic counter is appended so
+ * repeated calls across the whole page (e.g. re-rendering a picker grid of
+ * many preview buttons, each its own tiny `<svg>`) never collide on id,
+ * which would otherwise make every instance silently point at whichever
+ * `<linearGradient>` happened to be defined last in the document.
+ */
+export function svgPaintFromValue(v: ColorPickerValue, idPrefix: string): { defs: string; paint: string } {
+  if (v.mode !== 'gradient') return { defs: '', paint: v.solid };
+
+  const id = `${idPrefix}-${++_svgGradientCounter}`;
+  const stops = v.gradient.stops;
+  const stopsMarkup = stops.map((s, i) => {
+    const offset = stops.length === 1 ? 0 : Math.round((i / (stops.length - 1)) * 100);
+    return `<stop offset="${offset}%" stop-color="${String(s).replace(/"/g, '&quot;')}" />`;
+  }).join('');
+
+  const defs = v.gradient.type === 'radial'
+    ? `<radialGradient id="${id}" cx="50%" cy="50%" r="50%">${stopsMarkup}</radialGradient>`
+    // SVG's default linear gradient (no gradientTransform) runs left-to-right
+    // across the shape's bounding box -- that's what CSS calls a 90deg
+    // linear-gradient, so rotating by (angle - 90) around the box center
+    // reproduces the same angle convention cssFromGradient() uses.
+    : `<linearGradient id="${id}" gradientTransform="rotate(${v.gradient.angle - 90} 0.5 0.5)">${stopsMarkup}</linearGradient>`;
+
+  return { defs, paint: `url(#${id})` };
+}
+
 /**
  * Best-effort parse of a CSS background string (as found on
  * `element.style.background`) back into a ColorPickerValue -- used to seed

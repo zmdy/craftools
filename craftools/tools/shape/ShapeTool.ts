@@ -182,8 +182,8 @@ export class ShapeTool extends BaseTool {
         icon: 'format_shapes',
         defaultOpen: true,
         fields: [
-          { type: 'color',  key: 'fillColor',    label: 'Fill' },
-          { type: 'color',  key: 'strokeColor',  label: 'Stroke' },
+          { type: 'color-picker', key: 'fillColor',   label: 'Fill' },
+          { type: 'color-picker', key: 'strokeColor', label: 'Stroke' },
           { type: 'slider', key: 'strokeWidth',  label: 'Stroke width', min: 0, max: 10, step: 0.5 },
         ],
       },

@@ -27,6 +27,8 @@
  * multi-subpath icons (e.g. a pack that needs more than one <path> per glyph)
  * are supported without any format change.
  */
+import { normalizeValue, svgPaintFromValue } from './ColorPickerUI.js';
+
 export class IconLibrary {
     static _packs = new Map();
 
@@ -92,15 +94,27 @@ export class IconLibrary {
         const icon = pack && pack.icons.find(i => i.id === iconId);
         if (!pack || !icon) return '';
 
-        const fillColor = meta.fillColor || '#1a1a1a';
-        const strokeColor = meta.strokeColor || '#000000';
+        // fillColor/strokeColor hold whatever the standardized color-picker
+        // field reports: a bare hex string (legacy value / defaultMeta()) or
+        // a JSON ColorPickerValue string when the user has picked a
+        // gradient -- normalizeValue() accepts either, and
+        // svgPaintFromValue() turns a gradient into a <defs> entry + a
+        // `url(#id)` fill/stroke reference (or just passes a solid color
+        // straight through). Same technique as ShapeGenerator.ts.
+        const fillPaint = svgPaintFromValue(normalizeValue(meta.fillColor || '#1a1a1a'), 'icon-fill');
+
         const strokeWidth = parseFloat(meta.strokeWidth) || 0;
-        const strokeAttrs = strokeWidth > 0
-            ? `stroke="${this._esc(strokeColor)}" stroke-width="${strokeWidth}"`
-            : `stroke="none"`;
+        let strokeAttrs = `stroke="none"`;
+        let strokeDefs = '';
+        if (strokeWidth > 0) {
+            const strokePaint = svgPaintFromValue(normalizeValue(meta.strokeColor || '#000000'), 'icon-stroke');
+            strokeDefs  = strokePaint.defs;
+            strokeAttrs = `stroke="${this._esc(strokePaint.paint)}" stroke-width="${strokeWidth}"`;
+        }
 
         const pathsHtml = icon.paths.map(d => `<path d="${this._esc(d)}"/>`).join('');
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this._esc(pack.viewBox)}" preserveAspectRatio="xMidYMid meet"><g fill="${this._esc(fillColor)}" ${strokeAttrs} stroke-linejoin="round">${pathsHtml}</g></svg>`;
+        const defs = fillPaint.defs + strokeDefs;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this._esc(pack.viewBox)}" preserveAspectRatio="xMidYMid meet">${defs ? `<defs>${defs}</defs>` : ''}<g fill="${this._esc(fillPaint.paint)}" ${strokeAttrs} stroke-linejoin="round">${pathsHtml}</g></svg>`;
     }
 
     /** Same as buildSvgString, but returns an SVGElement ready to append to the DOM. */

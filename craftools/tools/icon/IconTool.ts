@@ -286,8 +286,8 @@ export class IconTool extends BaseTool {
         icon: 'interests',
         defaultOpen: true,
         fields: [
-          { type: 'color',  key: 'fillColor',   label: 'Fill color' },
-          { type: 'color',  key: 'strokeColor', label: 'Stroke color' },
+          { type: 'color-picker', key: 'fillColor',   label: 'Fill color' },
+          { type: 'color-picker', key: 'strokeColor', label: 'Stroke color' },
           { type: 'slider', key: 'strokeWidth', label: 'Stroke width', min: 0, max: 10, step: 0.5 },
         ],
       },
