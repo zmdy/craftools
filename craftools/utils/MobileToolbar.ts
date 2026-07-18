@@ -86,17 +86,33 @@ export class MobileToolbar {
     this.closeMiniPanel();
     this._updateScrollReserve();
 
-    const items: FooterItem[] = [
-      { icon: 'title',           label: I18n.t('mobileToolbar.toolTitle'),   action: () => this._triggerTool('titulo') },
-      { icon: 'notes',           label: I18n.t('mobileToolbar.toolText'),    action: () => this._triggerTool('paragrafo') },
-      { icon: 'image',           label: I18n.t('mobileToolbar.toolImage'),   action: () => this._triggerTool('imagem') },
-      { icon: 'photo_library',   label: I18n.t('mobileToolbar.toolAlbum'),   action: () => this._triggerTool('album') },
-      { icon: 'qr_code_2',       label: I18n.t('mobileToolbar.toolQrCode'),  action: () => this._triggerTool('qrcode') },
-      { icon: 'note_add',        label: I18n.t('mobileToolbar.toolNewPage'), action: () => this._triggerAction('newpage') },
-      { icon: 'picture_as_pdf',  label: I18n.t('mobileToolbar.toolPdf'),     action: () => this._triggerAction('export') },
-      { icon: 'layers',          label: I18n.t('mobileToolbar.toolPapers'),  action: () => this._triggerAction('papeis') },
+    // Was a hardcoded 5-tool + 3-action list -- most of the sidebar's tools
+    // (barcode, shape, icons, emoji, curved text, stamp, calendars, variable
+    // content, paper...) were simply unreachable from mobile. Every tool
+    // already has a fully-working `#pwa-sidebar-{key}` link in the desktop
+    // sidebar (`#sidenav-nav-list` in index.html) with click handlers in
+    // Editor.ts that already do the right thing per tool (direct
+    // tap-to-add, open a picker panel, or take over the panel for
+    // panel-only tools) -- and those handlers are NOT desktop-gated. So
+    // instead of re-implementing tool creation here (the old `_triggerTool`
+    // only special-cased 'imagem'/'qrcode'/'album' and silently mis-created
+    // a TextTool element for anything else), every tool button just proxy-
+    // clicks its real sidebar link. ToolRegistry is the single source of
+    // truth for which tools exist, so this list can never drift out of
+    // sync with the sidebar again.
+    const toolItems: FooterItem[] = ToolRegistry.all().map(def => ({
+      icon:   def.icon,
+      label:  I18n.t(def.label) || def.label,
+      action: () => document.querySelector<HTMLElement>(`#pwa-sidebar-${def.key}`)?.click(),
+    }));
+
+    const actionItems: FooterItem[] = [
+      { icon: 'note_add',       label: I18n.t('mobileToolbar.toolNewPage'), action: () => document.getElementById('pwa-sidebar-newpage')?.click() },
+      { icon: 'picture_as_pdf', label: I18n.t('mobileToolbar.toolPdf'),     action: () => document.getElementById('pwa-sidebar-export')?.click() },
+      { icon: 'image',          label: I18n.t('mobileToolbar.toolPng'),     action: () => document.getElementById('pwa-sidebar-png')?.click() },
     ];
-    this._renderFooterItems(items);
+
+    this._renderFooterItems([...toolItems, ...actionItems]);
   }
 
   /**
@@ -238,52 +254,4 @@ export class MobileToolbar {
     });
   }
 
-  // ─── Tool actions ─────────────────────────────────────────────────────────────
-
-  private static _triggerTool(type: string): void {
-    const mainPage = this._editor?.querySelector<HTMLElement>('.craftools-page');
-    if (!mainPage) return;
-
-    if (type === 'album') { this._openAlbumModal(); return; }
-
-    const rect = mainPage.getBoundingClientRect();
-    const cx = rect.width / 2;
-    const cy = rect.height / 2;
-
-    if (type === 'imagem') {
-      import('../tools/image/ImageTool.js').then(({ ImageTool }) => {
-        const e = ImageTool.createElement(type, this._editor);
-        e.setAttribute('x', String(cx - 100)); e.setAttribute('y', String(cy - 100));
-        mainPage.appendChild(e);
-      });
-    } else if (type === 'qrcode') {
-      import('../tools/qrcode/QRCodeTool.js').then(({ QRCodeTool }) => {
-        const e = QRCodeTool.createElement(type, this._editor);
-        e.setAttribute('x', String(cx - 90)); e.setAttribute('y', String(cy - 90));
-        mainPage.appendChild(e);
-      });
-    } else {
-      import('../tools/text/TextTool.js').then(({ TextTool }) => {
-        const e = TextTool.createElement(type, this._editor);
-        e.setAttribute('x', String(cx - 100)); e.setAttribute('y', String(cy - 30));
-        mainPage.appendChild(e);
-      });
-    }
-  }
-
-  private static _triggerAction(action: string): void {
-    const map: Record<string, string> = {
-      newpage: '#pwa-sidebar-newpage',
-      export:  '#pwa-sidebar-export',
-      papeis:  '#pwa-sidebar-papeis',
-    };
-    document.querySelector<HTMLElement>(map[action])?.click();
-  }
-
-  private static _openAlbumModal(): void {
-    import('../tools/album/AlbumWizard').then(({ AlbumTool }) => {
-      const mainPage = this._editor?.querySelector<HTMLElement>('.craftools-page');
-      if (mainPage) AlbumTool.setup(this._editor!, mainPage);
-    });
-  }
 }
