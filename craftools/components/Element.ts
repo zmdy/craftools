@@ -15,6 +15,9 @@ import { SnapEngine, type CraftoolsSnapTarget } from '../utils/SnapEngine.js';
 
 const MM_PX = 3.7795275591; // CSS pixels per mm at 96 dpi
 
+/** Default rotate-handle snap increment, in degrees (see _handleMove()'s isRotating branch). */
+const ROTATE_SNAP_DEG = 5;
+
 declare global {
   interface Window {
     /** Set false to disable auto-snap-to-grid-cell on drag-end. */
@@ -128,6 +131,15 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     this._ctrlbar.style.cssText = 'position:absolute;inset:0;pointer-events:none;display:none;z-index:10;';
 
     const accentCol = 'var(--accent, #f97316)';
+    // The rotate handle's icon used to be the Material Symbols 'sync'
+    // glyph -- centered by the flex box around it, but the glyph's own ink
+    // within its font-reported em-square isn't visually symmetric, so it
+    // still looked slightly off-center inside the circle regardless of how
+    // the surrounding flex centering was tuned. Swapped for a hand-drawn
+    // inline SVG (a standard "refresh" arc, same family as Lucide's
+    // refresh-cw) instead of a font glyph -- its geometry is exact, so
+    // centering it via flex is now pixel-precise rather than dependent on
+    // font metrics that vary by platform/browser.
     this._ctrlbar.innerHTML = `
       <div style="position:absolute;inset:-2px;border:2px solid ${accentCol};border-radius:3px;pointer-events:none;"></div>
       <div class="rsz-handle" data-dir="tl" style="position:absolute;top:-7px;left:-7px;width:14px;height:14px;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:nwse-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
@@ -139,7 +151,10 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       <div class="rsz-handle" data-dir="l"  style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:w-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rsz-handle" data-dir="r"  style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:e-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rot-handle" style="position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:26px;height:26px;padding:0;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:crosshair;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);">
-        <span class="material-symbols-outlined" style="font-size:14px;color:${accentCol};line-height:1;display:flex;align-items:center;justify-content:center;">sync</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${accentCol}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;pointer-events:none;">
+          <path d="M20 12a8 8 0 1 1-2.34-5.66"/>
+          <path d="M20 4v5h-5"/>
+        </svg>
       </div>
       <button class="del-handle" style="position:absolute;top:-12px;right:-12px;width:24px;height:24px;padding:0;margin:0;font:inherit;background:#ef4444;color:#fff;border:none;border-radius:50%;pointer-events:auto;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4);">
         <span class="material-symbols-outlined" style="font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">close</span>
@@ -448,7 +463,13 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       const r  = this.getBoundingClientRect();
       const cx = r.left + r.width  / 2;
       const cy = r.top  + r.height / 2;
-      this.pr  = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) + 90;
+      const raw = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) + 90;
+      // Snap to 5° increments by default -- makes it easy to land on
+      // common angles (0/45/90/...) without pixel-hunting the pointer.
+      // Hold Shift for the previous unsnapped/free-angle behavior when
+      // fine-grained control is actually wanted. Applies to every element
+      // type uniformly, since all of them share this one drag handler.
+      this.pr = e.shiftKey ? raw : Math.round(raw / ROTATE_SNAP_DEG) * ROTATE_SNAP_DEG;
     }
 
     this._applyTransform();
