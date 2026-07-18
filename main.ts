@@ -325,8 +325,20 @@ function initPwaProxies(): void {
   // support horizontal resize), so this only needs to handle desktop drag.
 
   const resizeHandle = document.getElementById('panel-resize-handle');
-  const RESIZE_MIN_WIDTH = 200;
+  // Raised from 200 -- #right-panel isn't only the element-properties
+  // accordion, it's reused as-is for the page panel (PageTool.ts's "Size &
+  // Position"/"Fundo"/"Ações" accordions, with a "Predefinições" pill row
+  // and labelled rows) and other non-element content. Those weren't
+  // designed for anywhere near 200px: dragged that narrow, their icon+label
+  // rows and pill buttons visibly clip/truncate (reported as "the panel
+  // looks broken/stuck"). 260 stays close to the CSS default (272px, see
+  // craftools.css's `.craftools-panel`) but still lets the handle do
+  // something, while every known content type stays legible.
+  const RESIZE_MIN_WIDTH = 260;
   const RESIZE_MAX_WIDTH = 480;
+  // Matches `.craftools-panel`'s own CSS width (craftools.css) -- what
+  // double-clicking the handle resets back to.
+  const RESIZE_DEFAULT_WIDTH = 272;
 
   if (resizeHandle) {
     let resizing = false;
@@ -365,6 +377,19 @@ function initPwaProxies(): void {
       document.body.style.cursor = 'ew-resize';
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', stopResizing);
+    });
+
+    // Double-click resets to the default width -- a discoverable, reliable
+    // "put it back to normal" escape hatch (standard pattern for resizable
+    // panels/columns), on top of the safer minimum above. Also clears
+    // `dataset.expandedWidth` so re-collapsing/re-expanding the sidebar
+    // (`setSidebarCollapsed()` above) doesn't resurrect the old width.
+    resizeHandle.addEventListener('dblclick', (e: MouseEvent) => {
+      const panel = document.getElementById('right-panel');
+      if (!panel || panel.classList.contains('sidenav-collapsed') || window.innerWidth <= 768) return;
+      e.preventDefault();
+      panel.style.setProperty('width', `${RESIZE_DEFAULT_WIDTH}px`, 'important');
+      delete panel.dataset.expandedWidth;
     });
   }
 
