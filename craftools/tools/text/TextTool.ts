@@ -205,6 +205,28 @@ export class TextTool extends BaseTool {
     ];
   }
 
+  // ── Context bar ───────────────────────────────────────────────────────────────
+
+  /**
+   * Quick "auto-fit to text" toggle in the floating ctx-bar, mirroring the
+   * Size & Position panel's own toggle (sizePositionSection({autoFit:true}))
+   * so it can be flipped without opening the panel. Reuses _applyProperty's
+   * 'autoFit' case directly (persists state + resizes to fit immediately
+   * when turning on) rather than duplicating that logic here.
+   */
+  static getCtxOptions(element?: HTMLElement): Array<{
+    icon: string; label: string; command: (element: HTMLElement) => void; isActive?: (element: HTMLElement) => boolean;
+  }> {
+    if (!element) return [];
+    const isOn = (el: HTMLElement) => (el as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize === true;
+    return [{
+      icon:  'arrow_range',
+      label: 'Auto-fit to text',
+      command: (el: HTMLElement) => TextTool._applyProperty(el, 'autoFit', !isOn(el)),
+      isActive: isOn,
+    }];
+  }
+
   // ── Apply ─────────────────────────────────────────────────────────────────────
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {

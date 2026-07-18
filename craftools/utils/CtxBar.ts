@@ -8,6 +8,14 @@ export interface CtxOption {
   icon:    string;
   label:   string;
   command: (el: HTMLElement) => void;
+  /**
+   * When provided, the button gets an "active" visual state (icon/label
+   * tinted accent orange) whenever this returns true. Checked once when the
+   * ctx-bar is built, and re-checked right after this option's own command
+   * runs, so a toggle button reflects its new state immediately without
+   * waiting for the element to be re-selected.
+   */
+  isActive?: (el: HTMLElement) => boolean;
 }
 
 export interface CraftoolsCtxElement extends HTMLElement {
@@ -40,26 +48,26 @@ export class CtxBar {
       btn.className = `craftools-ctx-btn ${extraClass}`;
       btn.title = label;
       btn.style.cssText = 'display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background 0.1s, color 0.1s;';
-      
+
       btn.addEventListener('mouseover', () => {
           if(extraClass === 'danger') {
               btn.style.background = 'rgba(239,68,68,0.1)';
               btn.style.color = '#ef4444';
           } else {
               btn.style.background = 'var(--bg-input)';
-              btn.style.color = 'var(--text-primary)';
+              btn.style.color = btn.classList.contains('active') ? 'var(--accent, #f97316)' : 'var(--text-primary)';
           }
       });
       btn.addEventListener('mouseout', () => {
           btn.style.background = 'transparent';
-          btn.style.color = 'var(--text-secondary)';
+          btn.style.color = btn.classList.contains('active') ? 'var(--accent, #f97316)' : 'var(--text-secondary)';
       });
 
       const icon = document.createElement('span');
       icon.className = 'material-symbols-outlined';
       icon.style.cssText = 'font-size:18px; line-height:1;';
       icon.textContent = iconName;
-      
+
       btn.appendChild(icon);
 
       btn.addEventListener('mousedown', (e: MouseEvent) => {
@@ -69,6 +77,12 @@ export class CtxBar {
       });
 
       return btn;
+  }
+
+  /** Toggles a button's "active" styling (accent-orange icon, per CtxOption.isActive). */
+  private _setButtonActive(btn: HTMLButtonElement, active: boolean): void {
+      btn.classList.toggle('active', active);
+      btn.style.color = active ? 'var(--accent, #f97316)' : 'var(--text-secondary)';
   }
 
   createSeparator(): HTMLDivElement {
@@ -149,9 +163,15 @@ export class CtxBar {
       if (options && options.length > 0) {
           this.el.appendChild(this.createSeparator());
           options.forEach(opt => {
-              this.el.appendChild(this.createButton(opt.icon, opt.label, () => {
+              const btn = this.createButton(opt.icon, opt.label, () => {
                   if (opt.command) opt.command(element);
-              }));
+                  // Re-check right after the command runs so a toggle (e.g.
+                  // TextTool's "auto-fit to text") flips its icon color
+                  // immediately, without waiting for a re-select.
+                  if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
+              });
+              if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
+              this.el.appendChild(btn);
           });
       }
 
@@ -190,7 +210,8 @@ export class CtxBar {
       const maxTop = window.innerHeight - this.el.offsetHeight - bottomReserve;
 
       let top  = rect.bottom + 12;
-      let left = rect.left;
+      // Centered horizontally on the element, not left-aligned to it.
+      let left = rect.left + rect.width / 2 - this.el.offsetWidth / 2;
 
       if (top > maxTop) {
           top = rect.top - this.el.offsetHeight - 12;
