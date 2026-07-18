@@ -99,7 +99,27 @@ export class EmojiTool extends BaseTool {
       }
     };
 
-    renderEmojiPicker(panelBody, { onSelect: applyEmoji, draggable: true });
+    // Renders into a dedicated child wrapper rather than `panelBody` itself.
+    // renderEmojiPicker() stashes its options and binds its delegated click
+    // listener directly on whatever container it's given (see
+    // EmojiPickerUI.ts's bind-once contract) -- and while
+    // BaseTool.renderPropertiesPanel() clears #panel-body's `innerHTML` when
+    // switching to a different element/tool, that only destroys DESCENDANT
+    // nodes (and their listeners); a listener bound to #panel-body itself
+    // survives forever. Previously this called
+    // `renderEmojiPicker(panelBody, ...)` directly, so opening this sidebar
+    // picker even once left a permanent listener on #panel-body whose
+    // closure still pointed at this `applyEmoji` (create a brand-new plain
+    // emoji element on the page). Any LATER click on an emoji button
+    // anywhere else inside the panel -- e.g. EmojiKitchenTool's own
+    // "emoji-kitchen-pair" field's left-emoji picker -- bubbled up past its
+    // own (correct) listener and also hit this stale one, silently dropping
+    // an extra "pure emoji" element onto the page every time.
+    if (!panelBody.querySelector('.ct-emoji-sidebar-wrap')) {
+      panelBody.innerHTML = '<div class="ct-emoji-sidebar-wrap"></div>';
+    }
+    const wrap = panelBody.querySelector<HTMLElement>('.ct-emoji-sidebar-wrap')!;
+    renderEmojiPicker(wrap, { onSelect: applyEmoji, draggable: true });
   }
 
   static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
