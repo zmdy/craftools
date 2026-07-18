@@ -10,139 +10,11 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { renderEmojiPicker } from '../../utils/EmojiPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 /** EmojiTool stores emoji char in inner.dataset.emojiChar and size in inner.style.fontSize */
 const getInner = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-emoji-char], .ct-emoji-inner');
-
-interface EmojiCategory {
-  id:     string;
-  label:  string;
-  icon:   string;
-  emojis: string[];
-}
-
-const EMOJI_CATEGORIES: EmojiCategory[] = [
-  {
-    id: 'rostos', label: 'Rostos', icon: '😊',
-    emojis: ['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😉','😊','🙂','🙃','😌','😍','🥰','😘','😋','😛','😎','🤩','🥳','😏','😒','😔','😟','🙁','☹️','😣','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','😱','😨','😰','😥','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😮','😲','🥱','😴','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑']
-  },
-  {
-    id: 'gestos', label: 'Gestos', icon: '👍',
-    emojis: ['👋','🤚','✋','🖖','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤝','🙏','💪','💅','🤳','👀','👁️','👅','💋','👂','👃','🫀','🧠','🦷']
-  },
-  {
-    id: 'animais', label: 'Animais', icon: '🐶',
-    emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🦆','🦉','🦇','🐝','🦋','🐌','🐞','🐜','🦅','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐟','🐬','🐳','🦈','🐊','🦓','🦒','🐘','🦛','🦏','🦬','🐕','🐈','🐇','🦔','🦝','🦦']
-  },
-  {
-    id: 'natureza', label: 'Natureza', icon: '🌸',
-    emojis: ['🌸','🌼','🌻','🌺','🌹','🥀','🌷','🌱','🪴','🌿','☘️','🍀','🍃','🍂','🍁','🌾','🍄','🌍','🌎','🌏','🌋','⛰️','🏔️','🏖️','🏜️','🏝️','🌅','🌄','🌠','🌈','❄️','⛄','☃️','💧','💦','🔥','🌊','☁️','⛅','🌤️','🌧️','⛈️','🌩️','🌬️','💨','🌀','⚡','🌿']
-  },
-  {
-    id: 'comida', label: 'Comida', icon: '🍕',
-    emojis: ['🍕','🍔','🍟','🌭','🌮','🌯','🥙','🍳','🥘','🍲','🥞','🧇','🥓','🍗','🍖','🌽','🥕','🍆','🥑','🍅','🍓','🍇','🍉','🍊','🍋','🍌','🍍','🥭','🍎','🍏','🍐','🍑','🍒','🥝','🍯','🧀','🍞','🥐','🥖','🧁','🍰','🎂','🍭','🍬','🍫','🍩','🍪','☕','🍵','🧋','🍺','🍷','🍸','🍾','🥂']
-  },
-  {
-    id: 'atividades', label: 'Atividades', icon: '⚽',
-    emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','⛳','🎣','🥊','🥋','🎿','⛷️','🏂','🏋️','🧘','🏊','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🎪','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🎷','🎺','🎸','🎻','🎲','🎯','🎮','🎰','🧩','🪁','🤿','🧗','🏄','🚣']
-  },
-  {
-    id: 'viagem', label: 'Viagem', icon: '✈️',
-    emojis: ['✈️','🛫','🛬','🚗','🚕','🚙','🛻','🚌','🏎️','🚓','🚑','🚒','🛵','🚲','🛴','🚁','🛸','🚢','🛳️','⛵','🚤','🚂','🚃','🚄','🚅','🚆','🚇','🚊','🚞','🗼','🏰','🗽','⛩️','🏯','🏕️','🌁','🌃','🏙️','🌆','🌇','🌉','⛺','🏖️','🏜️','🏝️','🗺️','🧭']
-  },
-  {
-    id: 'objetos', label: 'Objetos', icon: '📱',
-    emojis: ['📱','💻','⌨️','🖥️','🖨️','🖱️','📷','📸','📹','🎥','📞','☎️','📺','📻','⌚','🕰️','📡','🔋','🔌','💡','🔦','🕯️','🛋️','🛏️','🚿','🛁','💊','💉','🔬','🔭','📚','📖','📝','✏️','🖊️','✂️','🔑','🗝️','🔐','🔒','🔓','🗑️','💰','💳','💎','💍','👑','🎩','🪄','🧸','🎁']
-  },
-  {
-    id: 'simbolos', label: 'Símbolos', icon: '❤️',
-    emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','💕','💞','💓','💗','💖','💘','💝','✨','⭐','🌟','💫','⚡','🔥','🎵','🎶','💬','💭','🗯️','💤','🔔','🔕','🔊','🔇','📢','📣','✅','❌','⭕','🚫','💯','♻️','⚠️','🆕','🆒','🆓','🔴','🟠','🟡','🟢','🔵','🟣','⬛','⬜','🏳️','🏴','🎌','🏳️‍🌈']
-  },
-  {
-    id: 'celebracao', label: 'Celebração', icon: '🎉',
-    emojis: ['🎉','🎊','🎈','🎁','🎀','🎗️','🎟️','🎫','🏆','🥇','🥈','🥉','🎯','🎪','🎆','🎇','🧨','✨','🎃','🎄','🎋','🎍','🎑','🎎','🎏','🎐','🧧','🥳','🍾','🥂','🎂','🕯️','🎠','🎡','🎢','🎭']
-  },
-];
-
-const PICKER_STYLE_ID = 'ct-emoji-picker-styles';
-
-function ensurePickerStyles(): void {
-  if (document.getElementById(PICKER_STYLE_ID)) return;
-  const s = document.createElement('style');
-  s.id = PICKER_STYLE_ID;
-  s.textContent = `
-    .ct-emoji-tab-bar {
-      display: flex; gap: 2px; overflow-x: auto; padding: 8px 10px 0;
-      border-bottom: 1px solid var(--border); scrollbar-width: none;
-    }
-    .ct-emoji-tab-bar::-webkit-scrollbar { display: none; }
-    .ct-emoji-tab {
-      background: none; border: none; cursor: pointer;
-      font-size: 18px; padding: 5px 7px; border-radius: 6px;
-      transition: background 0.12s; flex-shrink: 0;
-      font-family: 'Noto Color Emoji', sans-serif;
-      line-height: 1; border-bottom: 2px solid transparent;
-    }
-    .ct-emoji-tab.active {
-      background: var(--bg-hover, rgba(0,0,0,.06));
-      border-bottom-color: var(--accent, #f97316);
-    }
-    .ct-emoji-tab:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
-    .ct-emoji-search {
-      padding: 8px 10px 4px;
-    }
-    .ct-emoji-search input {
-      width: 100%; padding: 6px 10px; border-radius: 8px;
-      border: 1px solid var(--border, #e4e4e7);
-      background: var(--bg-input, #f4f4f5);
-      color: var(--text-primary, #18181b);
-      font-size: 12px; font-family: 'DM Sans', sans-serif;
-      outline: none;
-    }
-    .ct-emoji-search input:focus {
-      border-color: var(--accent, #f97316);
-    }
-    .ct-emoji-cat-label {
-      font-size: 10px; font-weight: 600; color: var(--text-secondary, #71717a);
-      text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 8px 10px 2px;
-    }
-    .ct-emoji-grid {
-      display: grid; grid-template-columns: repeat(7, 1fr);
-      gap: 1px; padding: 4px 6px 12px; min-height: 80px;
-    }
-    .ct-emoji-btn {
-      background: none; border: none; cursor: grab;
-      font-size: 22px; line-height: 1; padding: 5px 2px;
-      border-radius: 6px; text-align: center;
-      transition: background 0.1s, transform 0.1s;
-      font-family: 'Noto Color Emoji', sans-serif;
-      user-select: none; touch-action: none;
-    }
-    .ct-emoji-btn:hover {
-      background: var(--bg-hover, rgba(0,0,0,.06));
-      transform: scale(1.18);
-    }
-    .ct-emoji-btn:active { cursor: grabbing; transform: scale(0.9); }
-    .ct-emoji-empty {
-      grid-column: 1/-1; text-align: center;
-      font-size: 12px; color: var(--text-secondary, #71717a);
-      padding: 20px 0;
-    }
-    .ct-emoji-preview {
-      text-align: center;
-      font-size: 72px;
-      line-height: 1;
-      padding: 12px 0 6px;
-      font-family: 'Noto Color Emoji', sans-serif;
-    }
-    .ct-emoji-change-picker {
-      max-height: 260px; overflow-y: auto;
-    }
-  `;
-  document.head.appendChild(s);
-}
 
 export class EmojiTool extends BaseTool {
 
@@ -205,63 +77,6 @@ export class EmojiTool extends BaseTool {
     editor: HTMLElement,
     targetElement: (HTMLElement & { select?: () => void }) | null = null,
   ): void {
-    ensurePickerStyles();
-
-    let activeCat = 0;
-    let searchQuery = '';
-
-    const buildGrid = (): string => {
-      if (searchQuery) {
-        // Search across all categories -- simple UX for now (no per-emoji
-        // keywords yet), just lists every emoji across all categories.
-        const all = EMOJI_CATEGORIES.flatMap(c => c.emojis);
-        const unique = [...new Set(all)];
-        return `
-          <div class="ct-emoji-cat-label">Resultados</div>
-          <div class="ct-emoji-grid" id="ct-emoji-grid">
-            ${unique.length
-              ? unique.map(e => `<button class="ct-emoji-btn" data-emoji="${e}" draggable="true" title="${e}">${e}</button>`).join('')
-              : '<div class="ct-emoji-empty">Nenhum emoji encontrado</div>'}
-          </div>`;
-      }
-      const cat = EMOJI_CATEGORIES[activeCat];
-      return `
-        <div class="ct-emoji-cat-label">${cat.label}</div>
-        <div class="ct-emoji-grid" id="ct-emoji-grid">
-          ${cat.emojis.map(e => `<button class="ct-emoji-btn" data-emoji="${e}" draggable="true" title="${e}">${e}</button>`).join('')}
-        </div>`;
-    };
-
-    const bindGridEvents = (): void => {
-      panelBody.querySelectorAll<HTMLButtonElement>('.ct-emoji-btn').forEach(btn => {
-        const emoji = btn.dataset.emoji as string;
-        btn.addEventListener('click', (e) => { e.preventDefault(); applyEmoji(emoji); });
-        btn.addEventListener('dragstart', (ev: Event) => {
-          const dt = (ev as DragEvent).dataTransfer;
-          dt?.setData('ToolType', 'emoji');
-          dt?.setData('EmojiChar', emoji);
-          if (dt) dt.effectAllowed = 'copy';
-          dt?.setDragImage(btn, 12, 12);
-        });
-      });
-    };
-
-    const rebuildGrid = (): void => {
-      const container = panelBody.querySelector('#ct-emoji-tabs');
-      if (!container) return;
-      panelBody.querySelectorAll('.ct-emoji-tab').forEach((t, i) => {
-        t.classList.toggle('active', i === activeCat);
-      });
-      const gridWrap = panelBody.querySelector('.ct-emoji-cat-label');
-      if (gridWrap) {
-        const newHtml = buildGrid();
-        const tmp = document.createElement('div');
-        tmp.innerHTML = newHtml;
-        gridWrap.replaceWith(...tmp.childNodes);
-      }
-      bindGridEvents();
-    };
-
     const applyEmoji = (emoji: string): void => {
       if (targetElement) {
         const inner = targetElement.querySelector<HTMLElement>('[data-emoji-char]');
@@ -284,45 +99,7 @@ export class EmojiTool extends BaseTool {
       }
     };
 
-    const bindEvents = (): void => {
-      panelBody.querySelectorAll<HTMLButtonElement>('.ct-emoji-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          activeCat = parseInt(tab.dataset.cat as string, 10);
-          searchQuery = '';
-          const si = panelBody.querySelector<HTMLInputElement>('#ct-emoji-search-input');
-          if (si) si.value = '';
-          rebuildGrid();
-        });
-      });
-
-      const searchInput = panelBody.querySelector<HTMLInputElement>('#ct-emoji-search-input');
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          searchQuery = (e.target as HTMLInputElement).value.trim();
-          rebuildGrid();
-        });
-        requestAnimationFrame(() => searchInput.focus());
-      }
-
-      bindGridEvents();
-    };
-
-    const renderAll = (): void => {
-      panelBody.innerHTML = `
-        <div class="ct-emoji-tab-bar" id="ct-emoji-tabs">
-          ${EMOJI_CATEGORIES.map((c, i) => `
-            <button class="ct-emoji-tab ${i === activeCat ? 'active' : ''}"
-              data-cat="${i}" title="${c.label}">${c.icon}</button>`).join('')}
-        </div>
-        <div class="ct-emoji-search">
-          <input type="search" placeholder="🔍 Pesquisar emoji..." id="ct-emoji-search-input" value="${searchQuery}">
-        </div>
-        ${buildGrid()}
-      `;
-      bindEvents();
-    };
-
-    renderAll();
+    renderEmojiPicker(panelBody, { onSelect: applyEmoji, draggable: true });
   }
 
   static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
@@ -336,7 +113,10 @@ export class EmojiTool extends BaseTool {
         icon: 'emoji_emotions',
         defaultOpen: true,
         fields: [
-          { type: 'text',   key: 'emoji',    label: 'Emoji character' },
+          // Same category-tab + search + grid picker as the sidebar
+          // "insert emoji" panel (utils/EmojiPickerUI.ts), embedded inline
+          // instead of a bare text input for the raw character.
+          { type: 'emoji-picker', key: 'emoji' },
           { type: 'slider', key: 'fontSize', label: 'Size', min: 16, max: 256, step: 4 },
         ],
       },

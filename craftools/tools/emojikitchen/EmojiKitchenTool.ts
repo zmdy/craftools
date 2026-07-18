@@ -3,6 +3,7 @@ import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import { loadEmojiKitchenCombo, loadEmojiKitchenSupported } from '../../utils/ApiDataLoader';
+import { stringifyEmojiKitchenPair, parseEmojiKitchenPair } from '../../utils/fields/emoji-kitchen-pair.field';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface EmojiKitchenMeta {
@@ -20,12 +21,21 @@ const getMeta = (el: HTMLElement): EmojiKitchenMeta =>
 export class EmojiKitchenTool extends BaseTool {
 
   protected static _syncFromDOM(element: HTMLElement): void {
-    const meta = getMeta(element) as unknown as Record<string, unknown>;
+    const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
-    ['leftEmoji','rightEmoji','rightMode','imageUrl'].forEach(k => {
-      if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k];
-    });
+    // leftEmoji/rightEmoji are now driven together by the single
+    // 'emoji-kitchen-pair' field (see getPropertySchema()) -- primed as one
+    // JSON-stringified pair, same convention as variable-binding.field.ts.
+    // 'rightMode' (manual/auto) is no longer surfaced in the panel: it was
+    // stored but never actually read anywhere in _resolveAndRender() below,
+    // so it never had any effect -- the new right-emoji select (defaulting
+    // to "combine with itself" when empty) already covers both cases it was
+    // meant to distinguish.
+    if (!('emojiPair' in existing)) {
+      patch.emojiPair = stringifyEmojiKitchenPair({ leftEmoji: meta.leftEmoji, rightEmoji: meta.rightEmoji });
+    }
+    if (!('imageUrl' in existing) && meta.imageUrl !== undefined) patch.imageUrl = meta.imageUrl;
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -118,12 +128,13 @@ export class EmojiKitchenTool extends BaseTool {
         icon: 'sentiment_very_satisfied',
         defaultOpen: true,
         fields: [
-          { type: 'text',   key: 'leftEmoji',  label: 'Left emoji' },
-          {
-            type: 'select', key: 'rightMode', label: 'Right mode',
-            options: [{ value: 'manual', label: 'Manual' }, { value: 'auto', label: 'Auto' }],
-          },
-          { type: 'text', key: 'rightEmoji', label: 'Right emoji' },
+          // Left emoji: the same category-tab + search + grid picker as
+          // EmojiTool.ts, filtered to only emojis that actually have Emoji
+          // Kitchen combos. Right emoji: a <select> of the combo partners
+          // actually available for whichever left emoji is picked. Both
+          // values change together, so they're one field -- see
+          // utils/fields/emoji-kitchen-pair.field.ts.
+          { type: 'emoji-kitchen-pair', key: 'emojiPair' },
         ],
       },
       zIndexSection(),
@@ -133,8 +144,16 @@ export class EmojiKitchenTool extends BaseTool {
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: EmojiKitchenMeta };
-    if (e._craftoolsMeta) (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
     if (key === 'zIndex') { element.style.zIndex = String(value); return; }
+    if (key === 'emojiPair') {
+      const pair = parseEmojiKitchenPair(value);
+      if (e._craftoolsMeta) {
+        e._craftoolsMeta.leftEmoji  = pair.leftEmoji;
+        e._craftoolsMeta.rightEmoji = pair.rightEmoji;
+      }
+    } else if (e._craftoolsMeta) {
+      (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
+    }
     // Calls _resolveAndRender() directly (previously dispatched an
     // unlistened 'craftools-emojikitchen-regenerate' custom event, so
     // panel edits never actually re-fetched/re-rendered the combo image).

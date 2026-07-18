@@ -25,6 +25,8 @@ export type FieldType =
   | 'divider'
   | 'page-align'
   | 'variable-binding'
+  | 'emoji-picker'
+  | 'emoji-kitchen-pair'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -174,6 +176,37 @@ export interface VariableBindingField extends BaseField {
   // _syncFromDOM() when priming dataset.ctState.
 }
 
+/**
+ * The standardized category-tab + search + grid emoji picker (see
+ * utils/EmojiPickerUI.ts / utils/fields/emoji-picker.field.ts) -- the same
+ * UI EmojiTool.ts's sidebar "insert emoji" panel uses to create a new
+ * element, now embeddable inline as a field so an already-selected emoji
+ * element's own properties panel offers the identical picker instead of a
+ * bare text input for the raw character. Stored/reported value is a plain
+ * emoji string (unlike color-picker/variable-binding, there's no composite
+ * shape to serialize here).
+ */
+export interface EmojiPickerField extends BaseField {
+  type: 'emoji-picker';
+}
+
+/**
+ * EmojiKitchenTool.ts's combined left-emoji-picker + right-emoji-select
+ * field (see utils/fields/emoji-kitchen-pair.field.ts). The left emoji
+ * reuses the same EmojiPickerUI.ts grid as EmojiPickerField above, filtered
+ * to only emojis that actually have Emoji Kitchen combos; the right emoji
+ * is a plain `<select>` populated from the *available* combo partners for
+ * whichever left emoji is currently picked (mirrors utils/VariablePanel.ts's
+ * existing 'emojiKitchen' variable-binding UI, which solves the identical
+ * left-drives-right-options problem). Both values only ever change
+ * together, so they're stored as ONE JSON-stringified
+ * `{ leftEmoji, rightEmoji }` object for the same diffing reason
+ * VariableBindingField's value is stringified (see its own comment above).
+ */
+export interface EmojiKitchenPairField extends BaseField {
+  type: 'emoji-kitchen-pair';
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -202,6 +235,8 @@ export type Field =
   | DividerField
   | PageAlignField
   | VariableBindingField
+  | EmojiPickerField
+  | EmojiKitchenPairField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

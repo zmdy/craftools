@@ -23,3 +23,5 @@ export * from './divider.field';
 export * from './image-upload.field';
 export * from './page-align.field';
 export * from './variable-binding.field';
+export * from './emoji-picker.field';
+export * from './emoji-kitchen-pair.field';
