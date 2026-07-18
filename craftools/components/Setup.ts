@@ -100,9 +100,11 @@ export class Craftools_Setup extends HTMLElement {
             </select>
         </div>
         <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 800px; text-align: center; position: relative; margin: auto;">
-            <button id="back-btn" class="craftools-topbtn" style="position: absolute; top: 20px; left: 20px;">
-                <span class="material-symbols-outlined">arrow_back</span> ${I18n.t('setup.back')}
-            </button>
+            <div style="text-align: left; margin-bottom: 18px;">
+                <button id="back-btn" class="setup-back-btn">
+                    <span class="material-symbols-outlined">arrow_back</span> ${I18n.t('setup.back')}
+                </button>
+            </div>
             <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-family: 'DM Serif Display', serif;">${I18n.t('setup.chooseSize')}</h2>
             <p style="color: var(--text-secondary); font-size: 14px;">${I18n.t('setup.availableSizes')} ${I18n.t('mediaTypes.' + mediaKey)}</p>
             ${sizesHtml}
@@ -110,6 +112,26 @@ export class Craftools_Setup extends HTMLElement {
     </div>
     <style>
         .media-btn:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: var(--shadow-lg) !important; }
+        /* Subtle ghost link instead of a bordered pill floating in the
+           corner (position:absolute made it look disconnected from the
+           heading, especially on narrow/mobile widths) -- now sits inline
+           in its own left-aligned row above the title. */
+        .setup-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 8px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .setup-back-btn:hover { background: var(--bg-input); color: var(--text-primary); }
+        .setup-back-btn .material-symbols-outlined { font-size: 16px; }
     </style>
     `;
 
