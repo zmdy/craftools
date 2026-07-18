@@ -1,6 +1,7 @@
 import { I18n }           from '../settings/Translations.js';
 import { VariableEngine, type VariableBinding } from './VariableEngine.js';
-import { loadEmojiKitchenPartners } from './ApiDataLoader.js';
+import { loadEmojiKitchenPartners, loadEmojiKitchenSupported } from './ApiDataLoader.js';
+import { renderEmojiPicker } from './EmojiPickerUI';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -268,6 +269,7 @@ export class VariablePanel {
                 <span class="craftools-label">${I18n.t('variablePanel.emojiValuesLabel')}</span>
                 <textarea id="var-emoji-values" class="craftools-input" rows="2" placeholder="${this._esc(I18n.t('variablePanel.emojiValuesPlaceholder'))}" style="width:100%; resize:vertical; font-family:'Noto Color Emoji', sans-serif; font-size:16px;">${this._esc(b.values)}</textarea>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiValuesHelp')}</span>
+                <div id="var-emoji-picker-wrap" style="margin-top:8px; border:1px solid var(--border, #e4e4e7); border-radius:8px; overflow:hidden;"></div>
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
@@ -332,11 +334,11 @@ export class VariablePanel {
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
-                <input type="text" id="var-kitchen-left" class="craftools-input" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;" placeholder="${this._esc(I18n.t('variablePanel.emojiKitchenPlaceholder'))}" value="${this._esc(b.leftEmoji)}" maxlength="8">
+                <div id="var-kitchen-left-wrap"></div>
             </div>
             <div class="ct-field" id="var-kitchen-right-wrap" style="${hasLeft ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenRightLabel')}</span>
-                <select id="var-kitchen-right" class="craftools-select" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:16px;">
+                <select id="var-kitchen-right" class="craftools-select" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:20px;">
                     <option value="">${I18n.t('variablePanel.previewLoading')}</option>
                 </select>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
@@ -499,8 +501,26 @@ export class VariablePanel {
                 case 'emoji': {
                     const valuesInput = container.querySelector<HTMLTextAreaElement>('#var-emoji-values');
                     const modeSel     = container.querySelector<HTMLSelectElement>('#var-emoji-mode');
+                    const pickerWrap  = container.querySelector<HTMLElement>('#var-emoji-picker-wrap');
                     if (valuesInput) valuesInput.oninput = () => { binding!.values = valuesInput.value; notify(); };
                     if (modeSel)     modeSel.onchange    = () => { binding!.mode   = modeSel.value;    notify(); };
+                    // Same standardized grid picker as EmojiTool/EmojiKitchenTool
+                    // (utils/EmojiPickerUI.ts) instead of a bare text field --
+                    // appends the picked emoji to the end of the free-form list
+                    // textarea rather than replacing it (this field holds a LIST
+                    // of emojis, unlike EmojiTool's single-character field).
+                    if (pickerWrap) {
+                        renderEmojiPicker(pickerWrap, {
+                            draggable: false,
+                            onSelect: (emoji) => {
+                                if (valuesInput) {
+                                    valuesInput.value = (valuesInput.value || '') + emoji;
+                                    binding!.values = valuesInput.value;
+                                }
+                                notify();
+                            },
+                        });
+                    }
                     break;
                 }
                 case 'apiPhrase': {
@@ -570,13 +590,14 @@ export class VariablePanel {
                     break;
                 }
                 case 'emojiKitchen': {
-                    const leftInput  = container.querySelector<HTMLInputElement>('#var-kitchen-left');
+                    const leftWrap   = container.querySelector<HTMLElement>('#var-kitchen-left-wrap');
                     const rightSel   = container.querySelector<HTMLSelectElement>('#var-kitchen-right');
                     const rightWrap  = container.querySelector<HTMLElement>('#var-kitchen-right-wrap');
                     const modeWrap   = container.querySelector<HTMLElement>('#var-kitchen-mode-wrap');
                     const modeSel    = container.querySelector<HTMLSelectElement>('#var-kitchen-mode');
 
                     let currentPartners: string[] = [];
+                    let supportedSet: Set<string> | null = null;
 
                     const renderRightOptions = (): void => {
                         if (!rightSel) return;
@@ -595,18 +616,38 @@ export class VariablePanel {
                         renderRightOptions();
                     };
 
-                    if (leftInput) {
-                        leftInput.oninput = () => {
-                            binding!.leftEmoji  = leftInput.value;
-                            binding!.rightEmoji = '';
-                            const hasLeft       = !!leftInput.value.trim();
-                            if (rightWrap) rightWrap.style.display = hasLeft ? '' : 'none';
-                            if (modeWrap)  modeWrap.style.display  = hasLeft ? '' : 'none';
-                            notify();
-                            loadPartners();
-                        };
-                        loadPartners();
-                    }
+                    // Same standardized category-tab + search + grid picker as
+                    // EmojiTool.ts / EmojiKitchenTool.ts (utils/EmojiPickerUI.ts,
+                    // via utils/fields/emoji-kitchen-pair.field.ts's identical
+                    // pattern) instead of a bare text input, filtered down to
+                    // only emojis that actually have Emoji Kitchen combos.
+                    const paintLeft = (): void => {
+                        if (!leftWrap) return;
+                        renderEmojiPicker(leftWrap, {
+                            selected:  binding!.leftEmoji ?? '',
+                            draggable: false,
+                            loading:   supportedSet === null,
+                            filter:    supportedSet ? (e) => supportedSet!.has(e) : undefined,
+                            onSelect:  (emoji) => {
+                                binding!.leftEmoji  = emoji;
+                                binding!.rightEmoji = '';
+                                const hasLeftNow    = !!emoji;
+                                if (rightWrap) rightWrap.style.display = hasLeftNow ? '' : 'none';
+                                if (modeWrap)  modeWrap.style.display  = hasLeftNow ? '' : 'none';
+                                notify();
+                                loadPartners();
+                                // Repaint immediately so the "selected" highlight
+                                // shows without waiting on the supported-set
+                                // promise again (already resolved by this point).
+                                paintLeft();
+                            },
+                        });
+                    };
+
+                    paintLeft(); // loading placeholder first
+                    loadEmojiKitchenSupported().then(list => { supportedSet = new Set(list as string[]); paintLeft(); });
+                    loadPartners();
+
                     if (rightSel) rightSel.onchange = () => { binding!.rightEmoji = rightSel.value; notify(); };
                     if (modeSel)  modeSel.onchange  = () => { binding!.mode       = modeSel.value;  notify(); };
                     break;
