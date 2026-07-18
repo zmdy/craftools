@@ -519,49 +519,23 @@ input[type="number"] { -moz-appearance:textfield; }
         gap: 20px;
     }
 
-    /* Panel: bottom sheet no mobile */
-    .craftools-panel {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        width: 100%;
-        max-height: 75dvh;
-        border-radius: 20px 20px 0 0;
-        border-left: none;
-        border-top: 1px solid var(--border);
-        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
-        z-index: 600;
-        /* Transição via transform ao invés de display:none */
-        display: flex !important;
-        transform: translateY(100%);
-        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-        pointer-events: none;
-    }
-
-    .craftools-panel:not(.hidden) {
-        transform: translateY(0);
-        pointer-events: auto;
-    }
-
-    /* Handle visual do bottom sheet */
-    .craftools-panel-drag-indicator {
-        display: block;
-        width: 40px;
-        height: 4px;
-        background: var(--border);
-        border-radius: 2px;
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        flex-shrink: 0;
-    }
-
-    .craftools-panel-head {
-        padding-top: 24px; /* espaço para o indicator */
-    }
+    /* NOTE: this used to force #right-panel (.craftools-panel.sidenav-panel)
+       into a legacy "bottom sheet" layout on mobile (position:fixed +
+       display:flex !important, shown by default via `:not(.hidden)` since
+       nothing in the current codebase ever adds `.hidden` to this panel).
+       That directly fought index.html's own mobile rule for the SAME
+       element (`.sidenav-panel { display:none !important }`, only shown via
+       `.panel-open`/`.mobile-modal-mode`) -- and because this bundled
+       stylesheet's <link> is injected after index.html's inline <style> in
+       the built dist/, this block's `display:flex !important` won the
+       cascade, while its `margin-left` was left untouched from the inline
+       rule's `-272px`, producing a broken sliver of the panel bleeding in
+       from the left edge on every mobile load. `.craftools-panel` is only
+       ever applied to #right-panel (see index.html), so this whole block
+       was always fighting `.sidenav-panel` for the same element; removed
+       rather than reconciled since `.sidenav-panel`'s panel-open/
+       mobile-modal-mode system is the one every tool (Editor.ts,
+       AlbumWizard.ts, main.ts) actually drives. */
 
     /* Context bar: fixa no bottom center, acima do panel */
     .craftools-ctxbar {
