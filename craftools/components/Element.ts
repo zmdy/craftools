@@ -389,7 +389,16 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
         // never opened, sliders lost drag tracking, etc).
         !t?.closest?.('#bottom-sheet') &&
         !t?.closest?.('#sheet-overlay') &&
-        !t?.closest?.('#api-picker-backdrop')
+        !t?.closest?.('#api-picker-backdrop') &&
+        // The font <ct-font-select> dropdown list is appended straight to
+        // document.body (so it can float above everything, positioned via
+        // getBoundingClientRect), not nested inside '.craftools-panel'.
+        // Without this exclusion, pointerdown on a font option in the list
+        // was read as an "outside" click and deselected the element (and,
+        // via 'craftools-element-deselect', closed its properties panel)
+        // the instant a font was picked, before the 'change' handler that
+        // actually applies the font even ran.
+        !t?.closest?.('.ct-font-select-dropdown')
       ) {
         this.deselect();
       }

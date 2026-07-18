@@ -812,6 +812,37 @@ export class Craftools_Editor extends HTMLElement {
     // Close-panel button
     if (closePanel) closePanel.addEventListener('click', () => closePanelMenu());
 
+    // Close the page-properties panel when clicking outside the active page.
+    // Unlike craftools-element (which owns its own per-instance outside-click
+    // handler in Element.ts, wired up on select()), the page panel opened by
+    // PageTool.ts's pageEl click handler never had an outside-click listener
+    // at all -- clicking empty canvas or a different page left the page
+    // panel showing forever, unlike every other element type which already
+    // closes correctly (see the 'craftools-element-deselect' handler above).
+    document.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (!this.activePage) return;
+      const t = e.target as Element | null;
+      if (
+        this.activePage.contains(t) ||
+        t?.closest?.('craftools-element') ||
+        t?.closest?.('.craftools-ctxbar') ||
+        t?.closest?.('.craftools-panel') ||
+        t?.closest?.('.footer-nav-area') ||
+        t?.closest?.('#mobile-mini-panel') ||
+        t?.closest?.('#mobile-mini-overlay') ||
+        t?.closest?.('#bottom-sheet') ||
+        t?.closest?.('#sheet-overlay') ||
+        t?.closest?.('#api-picker-backdrop') ||
+        // Same reasoning as the exclusion in Element.ts's outside handler:
+        // the font dropdown list renders in document.body, outside
+        // '.craftools-panel'.
+        t?.closest?.('.ct-font-select-dropdown')
+      ) {
+        return;
+      }
+      closePanelMenu();
+    }, { capture: true });
+
     // ── New Page ────────────────────────────────────────────────────────────
     document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage').forEach(btn => {
       btn.addEventListener('click', (e) => {
