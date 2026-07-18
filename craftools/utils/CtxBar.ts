@@ -19,6 +19,8 @@ export class CtxBar {
   public el:            HTMLDivElement;
   public activeElement: CraftoolsCtxElement | null;
   private _moveHandler?: () => void;
+  private _trackHandler?: () => void;
+  private _trackTarget?: HTMLElement | null;
 
   constructor(container: HTMLElement) {
       this.container = container; // Should be document.body or the app wrapper
@@ -156,29 +158,45 @@ export class CtxBar {
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';
       this.position(element);
-      
+
       // Auto-update position on move
       this._moveHandler = () => this.position(element);
       element.addEventListener('craftools-element-change', this._moveHandler);
+
+      // Keep the bar glued to the element while the canvas scrolls. It used
+      // to be positioned once (on select/move) and never re-measured, so
+      // scrolling #canvas-area desynchronized it from the element --
+      // getBoundingClientRect() is viewport-relative and changes on every
+      // scroll tick, but nothing was calling position() again to react to
+      // that. Also re-checked on window resize for the same reason.
+      const canvasArea = document.getElementById('canvas-area');
+      this._trackTarget  = canvasArea;
+      this._trackHandler = () => this.position(element);
+      canvasArea?.addEventListener('scroll', this._trackHandler, { passive: true });
+      window.addEventListener('resize', this._trackHandler);
   }
 
   position(element: CraftoolsCtxElement): void {
       if(!this.activeElement || this.activeElement !== element) return;
 
       const rect = element.getBoundingClientRect();
-      let top = rect.top - this.el.offsetHeight - 56;
+
+      // Canva-style: sits directly below the element by default -- the
+      // rotate/delete handles float above it (Element.ts's own ctrlbar), so
+      // there's no overlap risk placing the bar underneath. Falls back
+      // above only when there's no room below (element near the bottom of
+      // the viewport).
+      const bottomReserve = window.innerWidth <= 768 ? 76 : 10;
+      const maxTop = window.innerHeight - this.el.offsetHeight - bottomReserve;
+
+      let top  = rect.bottom + 12;
       let left = rect.left;
 
-      if (top < 10) {
-          top = rect.bottom + 12;
+      if (top > maxTop) {
+          top = rect.top - this.el.offsetHeight - 12;
       }
-
-      // Keep clear of the fixed mobile footer nav (~62-82px tall) so the bar
-      // never renders underneath it when the element sits near the bottom
-      // of the viewport. Desktop has no such fixed bottom chrome.
-      const bottomReserve = window.innerWidth <= 768 ? 76 : 10;
-      top = Math.min(top, window.innerHeight - this.el.offsetHeight - bottomReserve);
       top = Math.max(top, 10);
+      top = Math.min(top, maxTop);
 
       left = Math.min(Math.max(left, 10), window.innerWidth - this.el.offsetWidth - 10);
 
@@ -192,6 +210,12 @@ export class CtxBar {
       if (this.activeElement && this._moveHandler) {
           this.activeElement.removeEventListener('craftools-element-change', this._moveHandler);
       }
+      if (this._trackHandler) {
+          this._trackTarget?.removeEventListener('scroll', this._trackHandler);
+          window.removeEventListener('resize', this._trackHandler);
+      }
+      this._trackHandler = undefined;
+      this._trackTarget  = undefined;
       this.activeElement = null;
   }
 }
