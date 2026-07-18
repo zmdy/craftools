@@ -6,6 +6,7 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { normalizeValue, svgPaintFromValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface CarimboState {
@@ -93,27 +94,37 @@ export class CarimboTool extends BaseTool {
     const outerPathId = `cb-op-${uid}`;
     const innerPathId = `cb-ip-${uid}`;
 
+    // `color` holds whatever the standardized color-picker field reports: a
+    // bare hex string (legacy value / DEFAULT_STATE()) or a JSON
+    // ColorPickerValue string when the user has picked a gradient -- same
+    // technique as ShapeGenerator.ts/IconLibrary.ts. Resolved once and
+    // reused everywhere below (rings, both text arcs, separators, center
+    // text) so the whole stamp shares a single gradient definition instead
+    // of one per element.
+    const colorPaint = svgPaintFromValue(normalizeValue(color), `cb-color-${uid}`);
+    const paint = colorPaint.paint;
+
     // Arc paths (see TextoCurvoTool.ts for the geometry proof):
     //   Top arc (CW, sweep=1):  M left A r r 0 0,1 right -> outside top, L->R
     //   Bot arc (CCW, sweep=0): M left A r r 0 0,0 right -> outside bottom, L->R
     const outerTopPath = `M ${cx - outerTextR},${cy} A ${outerTextR},${outerTextR} 0 0,1 ${cx + outerTextR},${cy}`;
     const innerBotPath = `M ${cx - innerTextR},${cy} A ${innerTextR},${innerTextR} 0 0,0 ${cx + innerTextR},${cy}`;
 
-    const ring1 = `<circle cx="${cx}" cy="${cy}" r="${outerBorderR}" fill="none" stroke="${color}" stroke-width="${ringWidth}"/>`;
+    const ring1 = `<circle cx="${cx}" cy="${cy}" r="${outerBorderR}" fill="none" stroke="${paint}" stroke-width="${ringWidth}"/>`;
     const ring2 = rings >= 2
-      ? `<circle cx="${cx}" cy="${cy}" r="${outerBorderR2}" fill="none" stroke="${color}" stroke-width="${ringWidth * 0.4}"/>`
+      ? `<circle cx="${cx}" cy="${cy}" r="${outerBorderR2}" fill="none" stroke="${paint}" stroke-width="${ringWidth * 0.4}"/>`
       : '';
     const ring3 = rings >= 3
-      ? `<circle cx="${cx}" cy="${cy}" r="${innerBorderR}" fill="none" stroke="${color}" stroke-width="${ringWidth * 0.4}"/>`
+      ? `<circle cx="${cx}" cy="${cy}" r="${innerBorderR}" fill="none" stroke="${paint}" stroke-width="${ringWidth * 0.4}"/>`
       : '';
 
     const glyph = SEP_GLYPHS[separator] || '';
     const sepHtml = glyph ? `
-      <text font-size="8" fill="${color}" font-family="${escXml(fontFamily)},sans-serif"
+      <text font-size="8" fill="${paint}" font-family="${escXml(fontFamily)},sans-serif"
             text-anchor="middle" dominant-baseline="middle">
         <tspan x="${cx - outerTextR}" y="${cy}">${glyph}</tspan>
       </text>
-      <text font-size="8" fill="${color}" font-family="${escXml(fontFamily)},sans-serif"
+      <text font-size="8" fill="${paint}" font-family="${escXml(fontFamily)},sans-serif"
             text-anchor="middle" dominant-baseline="middle">
         <tspan x="${cx + outerTextR}" y="${cy}">${glyph}</tspan>
       </text>` : '';
@@ -128,7 +139,7 @@ export class CarimboTool extends BaseTool {
       <text font-family="${escXml(fontFamily)},sans-serif"
             font-size="${centerFontSize}"
             font-weight="${centerBold ? 'bold' : 'normal'}"
-            fill="${color}"
+            fill="${paint}"
             text-anchor="middle">
         ${lines.map((line, i) =>
           `<tspan x="${cx}" y="${startY + i * lineH}">${escXml(line)}</tspan>`
@@ -141,6 +152,7 @@ export class CarimboTool extends BaseTool {
       <defs>
         <path id="${outerPathId}" d="${outerTopPath}"/>
         <path id="${innerPathId}" d="${innerBotPath}"/>
+        ${colorPaint.defs}
       </defs>
 
       ${ring1}
@@ -150,7 +162,7 @@ export class CarimboTool extends BaseTool {
       <text font-size="${outerFontSize}"
             font-family="${escXml(fontFamily)},sans-serif"
             font-weight="${outerBold ? 'bold' : 'normal'}"
-            fill="${color}">
+            fill="${paint}">
         <textPath href="#${outerPathId}" startOffset="50%" text-anchor="middle">
           ${escXml(outerText)}
         </textPath>
@@ -159,7 +171,7 @@ export class CarimboTool extends BaseTool {
       ${showInnerText ? `
       <text font-size="${innerFontSize}"
             font-family="${escXml(fontFamily)},sans-serif"
-            fill="${color}">
+            fill="${paint}">
         <textPath href="#${innerPathId}" startOffset="50%" text-anchor="middle">
           ${escXml(innerText)}
         </textPath>
@@ -256,7 +268,7 @@ export class CarimboTool extends BaseTool {
         icon: 'style',
         fields: [
           { type: 'font-select', key: 'fontFamily',  label: 'Font' },
-          { type: 'color',       key: 'color',        label: 'Color' },
+          { type: 'color-picker', key: 'color',      label: 'Color' },
           { type: 'slider',      key: 'outerRadius',  label: 'Radius',    min: 45, max: 93, step: 1 },
           { type: 'select',      key: 'rings',         label: 'Rings',
             options: [{ value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3' }] },

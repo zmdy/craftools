@@ -281,6 +281,41 @@ export abstract class BaseTool {
     }
   }
 
+  // ── Text color (solid-or-gradient, CommonSchema-free -- see each tool's own 'color' field) ──
+
+  /**
+   * Paints solid-or-gradient text color onto `target` from an
+   * already-resolved value -- no reading or writing of `dataset.ctState`,
+   * same storage-agnostic shape as `_paintBackground()`/`_paintBorder()`.
+   * CSS has no native gradient `color`, so gradient mode fakes it with the
+   * standard `background-clip: text` trick (paint the gradient as a
+   * background, clip it to the glyph shapes, and make the real text color
+   * transparent so the clipped background shows through instead).
+   *
+   * Originated in TextTool.ts (typed text always needed this); extracted
+   * here so VariableContentTool.ts and any other plain-text tool get
+   * identical gradient-text rendering for free instead of re-implementing
+   * the same four-property dance.
+   *
+   * @param colorRaw  A ColorPickerValue object, a JSON string of one, a
+   *   bare hex string, or nothing -- anything `normalizeValue()` accepts.
+   */
+  protected static _paintTextColor(target: HTMLElement, colorRaw: unknown): void {
+    const value = normalizeValue(colorRaw);
+    if (value.mode === 'gradient') {
+      target.style.background           = cssFromValue(value);
+      target.style.webkitBackgroundClip = 'text';
+      target.style.webkitTextFillColor  = 'transparent';
+      target.style.backgroundClip       = 'text';
+    } else {
+      target.style.background           = '';
+      target.style.webkitBackgroundClip = '';
+      target.style.webkitTextFillColor  = '';
+      target.style.backgroundClip       = '';
+      target.style.color                = value.solid;
+    }
+  }
+
   // ── Rendering (do NOT override) ─────────────────────────────────────────────
 
   /**

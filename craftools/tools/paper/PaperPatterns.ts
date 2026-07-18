@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { PaperThemes } from "./PaperTool.js"; // Importa os temas se necessário
+import { normalizeValue, svgPaintFromValue } from "../../utils/ColorPickerUI.js";
 
 export class PaperPatterns {
     
@@ -11,10 +12,20 @@ export class PaperPatterns {
         const theme = meta.theme || 'default';
         const themeConfig = PaperThemes[theme] || PaperThemes['default'];
         
-        // Cores do tema como fallback
-        const bgColor = meta.bgColor || themeConfig.bg;
-        const lineColor = meta.lineColor || themeConfig.line;
-        
+        // Cores do tema como fallback. bgColor/lineColor may be a bare hex
+        // (legacy value / theme default) or a JSON ColorPickerValue string
+        // when the user has picked a gradient (standardized color-picker
+        // field, same as ShapeGenerator.ts/IconLibrary.ts) -- resolved once
+        // here into either a plain color or a `url(#id)` gradient reference,
+        // so every _render*() call/interpolation below keeps working
+        // completely unchanged (they only ever treat these as opaque
+        // fill/stroke strings). The matching <defs> entries are spliced into
+        // the final <svg> in the `return` below.
+        const bgPaint   = svgPaintFromValue(normalizeValue(meta.bgColor   || themeConfig.bg),   'paper-bg');
+        const linePaint = svgPaintFromValue(normalizeValue(meta.lineColor || themeConfig.line), 'paper-line');
+        const bgColor   = bgPaint.paint;
+        const lineColor = linePaint.paint;
+
         const spacing = parseFloat(meta.lineSpacing) || 8;
         const lWidth = parseFloat(meta.lineWidth) || 0.5;
         const lStyle = meta.lineStyle || 'solid';
@@ -143,7 +154,8 @@ export class PaperPatterns {
                 style="font-family:'DM Sans', sans-serif; font-size: 8px; fill:${lineColor}; opacity: 0.7;">1</text>`;
         }
 
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block; overflow:hidden; position:absolute; inset:0;">${svgContent}</svg>`;
+        const defs = bgPaint.defs + linePaint.defs;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block; overflow:hidden; position:absolute; inset:0;">${defs ? `<defs>${defs}</defs>` : ''}${svgContent}</svg>`;
     }
 
     // ── Métodos de Renderização de Papéis ─────────────────────────────────────

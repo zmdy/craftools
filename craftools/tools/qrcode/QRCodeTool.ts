@@ -476,8 +476,12 @@ export class QRCodeTool extends BaseTool {
         section: 'Appearance',
         icon: 'palette',
         fields: [
-          { type: 'color', key: 'darkColor',  label: 'QR color' },
-          { type: 'color', key: 'lightColor', label: 'Background' },
+          // Gradient-capable (see QrCode.ts's buildSvgString) -- unlike
+          // spotifyBg above, which stays solid-only: it's sent as a plain
+          // hex query param to Spotify's external scannables.scdn.co
+          // service and can't be a gradient.
+          { type: 'color-picker', key: 'darkColor',  label: 'QR color' },
+          { type: 'color-picker', key: 'lightColor', label: 'Background' },
           { type: 'select', key: 'ecLevel', label: 'Error correction',
             options: [
               { value: 'L', label: 'L (7%)' }, { value: 'M', label: 'M (15%)' },

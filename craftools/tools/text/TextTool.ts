@@ -16,7 +16,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { formaSection, sizePositionSection, pageAlignSection, backgroundSection } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
-import { normalizeValue as normalizeColorValue, cssFromValue as colorPickerCss, type ColorPickerValue } from '../../utils/ColorPickerUI';
+import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -353,7 +353,7 @@ export class TextTool extends BaseTool {
         break;
 
       case 'color':
-        TextTool._applyColor(textEl, state);
+        this._paintTextColor(textEl, state.color);
         break;
 
       case 'borderRadius':
@@ -374,23 +374,6 @@ export class TextTool extends BaseTool {
     // on, so this is always safe/cheap to call).
     if (AUTOFIT_RELEVANT_KEYS.has(key)) {
       AutoFitText.applyAutoSize(element, textEl);
-    }
-  }
-
-  /** Applies the correct color or gradient to the text element. */
-  private static _applyColor(textEl: HTMLElement, state: Record<string, unknown>): void {
-    const value = normalizeColorValue(state.color);
-    if (value.mode === 'gradient') {
-      textEl.style.background           = colorPickerCss(value);
-      textEl.style.webkitBackgroundClip = 'text';
-      textEl.style.webkitTextFillColor  = 'transparent';
-      textEl.style.backgroundClip       = 'text';
-    } else {
-      textEl.style.background           = '';
-      textEl.style.webkitBackgroundClip = '';
-      textEl.style.webkitTextFillColor  = '';
-      textEl.style.backgroundClip       = '';
-      textEl.style.color                = value.solid;
     }
   }
 }

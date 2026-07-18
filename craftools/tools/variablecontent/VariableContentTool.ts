@@ -230,7 +230,9 @@ export class VariableContentTool extends BaseTool {
           { type: 'align',       key: 'textAlign' },
           { type: 'toggle',      key: 'bold',      label: 'Bold' },
           { type: 'toggle',      key: 'italic',    label: 'Italic' },
-          { type: 'color',       key: 'color',     label: 'Color' },
+          // Gradient-capable (BaseTool._paintTextColor(), the same
+          // background-clip:text technique TextTool.ts uses).
+          { type: 'color-picker', key: 'color',    label: 'Color', defaultSolid: '#18181b' },
         ],
       },
       backgroundSection(),
@@ -267,7 +269,7 @@ export class VariableContentTool extends BaseTool {
       // TextTool.ts's matching 'font' case for the regression this avoids.
       case 'font':      content.style.fontFamily = withEmojiFallback(String(value)); break;
       case 'fontSize':  content.style.fontSize   = `${value}px`; break;
-      case 'color':     content.style.color       = String(value); break;
+      case 'color':     this._paintTextColor(content, value); break;
       case 'textAlign': content.style.textAlign   = String(value); break;
       case 'bold':      content.style.fontWeight  = value ? 'bold' : 'normal'; break;
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;

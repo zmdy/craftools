@@ -5,6 +5,7 @@
 import { qrcode } from "../../vendor/qrcode-generator/qrcode.mjs";
 // @ts-ignore - Vendor files lack types
 import { stringToBytes } from "../../vendor/qrcode-generator/qrcode-utf8.mjs";
+import { normalizeValue, svgPaintFromValue } from './ColorPickerUI.js';
 
 qrcode.stringToBytes = stringToBytes;
 
@@ -53,14 +54,23 @@ export class QrCode {
           }
       }
 
-      const bg = (lightColor === 'transparent')
-          ? ''
-          : `<rect width="${size}" height="${size}" fill="${this._escapeAttr(lightColor)}"/>`;
+      // darkColor/lightColor hold whatever the standardized color-picker
+      // field reports: a bare hex string (legacy value / default meta) or a
+      // JSON ColorPickerValue string when the user has picked a gradient --
+      // same technique as BarcodeGenerator.ts. 'transparent' was never
+      // actually reachable from the panel (the color field's swatch
+      // palette/native picker can't produce it), so always drawing the bg
+      // rect (fill="transparent" renders identically to omitting it) is a
+      // safe simplification.
+      const bgPaint   = svgPaintFromValue(normalizeValue(lightColor), 'qr-bg');
+      const darkPaint = svgPaintFromValue(normalizeValue(darkColor), 'qr-fg');
+      const bg = `<rect width="${size}" height="${size}" fill="${this._escapeAttr(bgPaint.paint)}"/>`;
+      const defs = bgPaint.defs + darkPaint.defs;
 
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" ` +
           `preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" ` +
           `style="display:block;width:100%;height:100%;">` +
-          `${bg}<path d="${path}" fill="${this._escapeAttr(darkColor)}"/></svg>`;
+          `${defs ? `<defs>${defs}</defs>` : ''}${bg}<path d="${path}" fill="${this._escapeAttr(darkPaint.paint)}"/></svg>`;
   }
 
   static buildSvgElement(text: string, options: QrCodeOptions = {}): SVGElement {

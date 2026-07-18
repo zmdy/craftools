@@ -257,7 +257,7 @@ export class PaperTool extends BaseTool {
         section: 'Lines',
         icon: 'table_rows',
         fields: [
-          { type: 'color',  key: 'lineColor',   label: 'Line color' },
+          { type: 'color-picker', key: 'lineColor', label: 'Line color' },
           { type: 'select', key: 'lineStyle',   label: 'Line style',
             options: [{ value: 'solid', label: 'Solid' }, { value: 'dashed', label: 'Dashed' }, { value: 'dotted', label: 'Dotted' }] },
           { type: 'slider', key: 'lineSpacing', label: 'Spacing',   min: 4, max: 20, step: 0.5 },
@@ -278,7 +278,7 @@ export class PaperTool extends BaseTool {
         section: 'Background',
         icon: 'gradient',
         fields: [
-          { type: 'color',  key: 'bgColor',   label: 'Color' },
+          { type: 'color-picker', key: 'bgColor', label: 'Color' },
           { type: 'select', key: 'bgPattern', label: 'Pattern',
             options: [
               { value: 'none',       label: 'None' },
