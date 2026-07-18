@@ -12,6 +12,7 @@
  */
 
 import { SnapEngine, type CraftoolsSnapTarget } from '../utils/SnapEngine.js';
+import { AutoFitText } from '../utils/AutoFitText.js';
 
 const MM_PX = 3.7795275591; // CSS pixels per mm at 96 dpi
 
@@ -150,11 +151,8 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       <div class="rsz-handle" data-dir="b"  style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:24px;height:12px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:s-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rsz-handle" data-dir="l"  style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:w-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rsz-handle" data-dir="r"  style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:e-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-      <div class="rot-handle" style="position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:26px;height:26px;padding:0;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:crosshair;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${accentCol}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;pointer-events:none;">
-          <path d="M20 12a8 8 0 1 1-2.34-5.66"/>
-          <path d="M20 4v5h-5"/>
-        </svg>
+      <div class="rot-handle" style="position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:26px;height:26px;padding:0;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:crosshair;z-index:15;text-align:center;line-height:26px;box-shadow:0 2px 6px rgba(0,0,0,.15);">
+        <span class="material-symbols-outlined" style="font-size:15px;line-height:26px;color:${accentCol};pointer-events:none;">sync</span>
       </div>
       <button class="del-handle" style="position:absolute;top:-12px;right:-12px;width:24px;height:24px;padding:0;margin:0;font:inherit;background:#ef4444;color:#fff;border:none;border-radius:50%;pointer-events:auto;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4);">
         <span class="material-symbols-outlined" style="font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">close</span>
@@ -287,6 +285,18 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       };
       editable.addEventListener('input', syncText);
       editable.addEventListener('blur', () => editable.removeEventListener('input', syncText), { once: true });
+
+      // Keep the box tracking the content live while typing, same as
+      // TextTool.ts's own panel-driven fields already do for auto-fit
+      // (font/size/etc.) -- previously nothing re-measured on typed input,
+      // so auto-fit only ever resized once, at the moment it was toggled
+      // on, and typing more/less text afterward left the box exactly where
+      // it was. AutoFitText.applyAutoSize() itself already guards on
+      // `_craftoolsAutoResize === true`, so this is a safe no-op for every
+      // element that doesn't have auto-fit on.
+      const resizeToFit = () => AutoFitText.applyAutoSize(this, editable);
+      editable.addEventListener('input', resizeToFit);
+      editable.addEventListener('blur', () => editable.removeEventListener('input', resizeToFit), { once: true });
 
       // Place cursor at end
       try {
