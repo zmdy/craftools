@@ -75,6 +75,14 @@ export interface ColorGradientField extends BaseField {
  */
 export interface ColorPickerField extends BaseField {
   type: 'color-picker';
+  /**
+   * Which preset counts as "first" for this field: shown first in the
+   * solid palette, and what solid mode resets to when switching back from
+   * gradient (see ColorPickerOptions.defaultSolid in utils/ColorPickerUI.ts).
+   * Omit to use the shared default (white) -- text tools pass '#18181b' so a
+   * fresh text element doesn't default to white-on-white.
+   */
+  defaultSolid?: string;
 }
 
 export interface ToggleField extends BaseField {

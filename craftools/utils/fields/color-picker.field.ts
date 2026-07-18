@@ -53,7 +53,7 @@ FieldRegistry.register('color-picker', {
     const wrap = container.querySelector<HTMLElement>('.ct-color-picker-wrap')!;
     renderColorPicker(wrap, value, (next: ColorPickerValue) => {
       f._ctFieldOnChange?.(JSON.stringify(next));
-    }, { allowGradient: true });
+    }, { allowGradient: true, defaultSolid: (field as ColorPickerField).defaultSolid });
   },
 
   bind(container, _field, onChange) {

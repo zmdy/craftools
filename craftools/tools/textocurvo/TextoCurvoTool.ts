@@ -233,7 +233,9 @@ export class TextoCurvoTool extends BaseTool {
         section: 'Color',
         icon: 'palette',
         fields: [
-          { type: 'color-picker', key: 'color', label: 'Color' },
+          // defaultSolid: '#18181b' -- see TextTool.ts's color-picker field
+          // for why text tools override the shared white default.
+          { type: 'color-picker', key: 'color', label: 'Color', defaultSolid: '#18181b' },
         ],
       },
       zIndexSection(),

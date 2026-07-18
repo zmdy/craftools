@@ -49,6 +49,15 @@ export interface ColorPickerValue {
 export interface ColorPickerOptions {
   /** false renders solid-only: palette + custom swatch, no mode pills, no gradient UI. Default: true. */
   allowGradient?: boolean;
+  /**
+   * Which COLOR_PRESETS entry counts as "first" for this instance: shown
+   * first in the palette grid, and what solid mode resets to when switching
+   * back from gradient. Must be one of COLOR_PRESETS' own values (falls back
+   * to COLOR_PRESETS[0] otherwise). Default: COLOR_PRESETS[0] (white) -- the
+   * right choice for page/shape backgrounds, but text tools pass '#18181b'
+   * so a fresh text element's default isn't white-on-white.
+   */
+  defaultSolid?: string;
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────────
@@ -171,8 +180,11 @@ const gradientsEqual = (a: GradientValue, b: GradientValue): boolean =>
   a.type === b.type && a.angle === b.angle && a.stops.length === b.stops.length &&
   a.stops.every((s, i) => swatchesEqual(s, b.stops[i]));
 
-function paletteHtml(value: ColorPickerValue): string {
-  const swatches = COLOR_PRESETS.map(c => `
+function paletteHtml(value: ColorPickerValue, defaultSolid?: string): string {
+  const presets = defaultSolid && COLOR_PRESETS.includes(defaultSolid)
+    ? [defaultSolid, ...COLOR_PRESETS.filter(c => c !== defaultSolid)]
+    : COLOR_PRESETS;
+  const swatches = presets.map(c => `
     <button type="button" class="ct-color-swatch-btn${swatchesEqual(value.solid, c) ? ' active' : ''}"
       data-action="pick-color" data-color="${c}" style="background:${c};" title="${c}"></button>
   `).join('');
@@ -229,7 +241,7 @@ function gradientEditorHtml(g: GradientValue): string {
     </div>`;
 }
 
-function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: boolean): void {
+function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: boolean, defaultSolid?: string): void {
   const modeHtml = allowGradient ? `
     <div class="ct-field-row" style="gap:4px; margin-bottom:8px;">
       <button type="button" class="craftools-pill${value.mode === 'solid' ? ' active' : ''}" data-action="mode" data-mode="solid">${tr('colorPicker.color', 'Color')}</button>
@@ -238,7 +250,7 @@ function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: b
 
   const bodyHtml = allowGradient && value.mode === 'gradient'
     ? gradientPaletteHtml(value) + gradientEditorHtml(value.gradient)
-    : paletteHtml(value);
+    : paletteHtml(value, defaultSolid);
 
   container.innerHTML = `<div class="ct-color-picker">${modeHtml}${bodyHtml}</div>`;
 }
@@ -247,12 +259,13 @@ interface BoundContainer extends HTMLElement {
   _ctColorValue?: ColorPickerValue;
   _ctColorOnChange?: (value: ColorPickerValue) => void;
   _ctColorAllowGradient?: boolean;
+  _ctColorDefaultSolid?: string;
   _ctColorBound?: boolean;
 }
 
 function repaint(container: BoundContainer, next: ColorPickerValue, opts: { silent?: boolean } = {}): void {
   container._ctColorValue = next;
-  paint(container, next, container._ctColorAllowGradient !== false);
+  paint(container, next, container._ctColorAllowGradient !== false, container._ctColorDefaultSolid);
   if (!opts.silent) container._ctColorOnChange?.(next);
 }
 
@@ -267,9 +280,11 @@ function bindDelegatedEvents(container: BoundContainer): void {
       const mode = target.dataset.mode as 'solid' | 'gradient';
       if (mode === current.mode) return;
       // Always resets to the target group's first preset -- see file header.
+      // "First" for solid is per-instance (see ColorPickerOptions.defaultSolid);
+      // text tools pass '#18181b' instead of the global COLOR_PRESETS[0] white.
       repaint(container, mode === 'gradient'
         ? { ...current, mode: 'gradient', gradient: { ...GRADIENT_PRESETS[0], stops: GRADIENT_PRESETS[0].stops.slice() } }
-        : { ...current, mode: 'solid', solid: COLOR_PRESETS[0] });
+        : { ...current, mode: 'solid', solid: container._ctColorDefaultSolid ?? COLOR_PRESETS[0] });
     } else if (action === 'pick-color') {
       repaint(container, { ...current, mode: 'solid', solid: target.dataset.color! });
     } else if (action === 'pick-gradient') {
@@ -344,8 +359,9 @@ export function renderColorPicker(
   c._ctColorValue         = value;
   c._ctColorOnChange      = onChange;
   c._ctColorAllowGradient = opts.allowGradient !== false;
+  c._ctColorDefaultSolid  = opts.defaultSolid;
 
-  paint(c, value, c._ctColorAllowGradient);
+  paint(c, value, c._ctColorAllowGradient, c._ctColorDefaultSolid);
 
   if (!c._ctColorBound) {
     c._ctColorBound = true;
