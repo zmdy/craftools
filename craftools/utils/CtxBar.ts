@@ -24,7 +24,10 @@ export class CtxBar {
       this.container = container; // Should be document.body or the app wrapper
       this.el = document.createElement('div');
       this.el.className = 'craftools-ctxbar hidden';
-      this.el.style.cssText = 'position:fixed; z-index:500; display:none; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
+      // z-index bumped from 500 to clear the mobile footer (.footer-nav-area
+      // is 1050) and mini-panel (#mobile-mini-panel is 1065) -- the ctx-bar
+      // used to render fully behind both on mobile.
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
       this.container.appendChild(this.el);
       
       this.activeElement = null;
@@ -161,7 +164,7 @@ export class CtxBar {
 
   position(element: CraftoolsCtxElement): void {
       if(!this.activeElement || this.activeElement !== element) return;
-      
+
       const rect = element.getBoundingClientRect();
       let top = rect.top - this.el.offsetHeight - 56;
       let left = rect.left;
@@ -170,8 +173,15 @@ export class CtxBar {
           top = rect.bottom + 12;
       }
 
+      // Keep clear of the fixed mobile footer nav (~62-82px tall) so the bar
+      // never renders underneath it when the element sits near the bottom
+      // of the viewport. Desktop has no such fixed bottom chrome.
+      const bottomReserve = window.innerWidth <= 768 ? 76 : 10;
+      top = Math.min(top, window.innerHeight - this.el.offsetHeight - bottomReserve);
+      top = Math.max(top, 10);
+
       left = Math.min(Math.max(left, 10), window.innerWidth - this.el.offsetWidth - 10);
-      
+
       this.el.style.top = `${top}px`;
       this.el.style.left = `${left}px`;
   }

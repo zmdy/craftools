@@ -537,12 +537,17 @@ input[type="number"] { -moz-appearance:textfield; }
        mobile-modal-mode system is the one every tool (Editor.ts,
        AlbumWizard.ts, main.ts) actually drives. */
 
-    /* Context bar: fixa no bottom center, acima do panel */
+    /* NOTE: this used to hard-pin the ctx-bar to bottom-center via
+       !important, completely ignoring CtxBar.position()'s near-element
+       top/left calculation (leftover from when the properties panel was a
+       fixed bottom sheet -- see the removed .craftools-panel block above).
+       Combined with the ctx-bar's z-index:500 (CtxBar.ts / line ~330 below)
+       being lower than .footer-nav-area's 1050, the bar rendered behind the
+       footer instead of near the selected element. Removed the forced
+       position (CtxBar.position() already keeps clear of the mobile footer,
+       see its bottomReserve comment); kept the width clamp since the bar's
+       own horizontal clamp doesn't know about narrow-viewport padding. */
     .craftools-ctxbar {
-        bottom: 16px !important;
-        left: 50% !important;
-        top: auto !important;
-        transform: translateX(-50%) !important;
         max-width: calc(100vw - 32px);
     }
 
