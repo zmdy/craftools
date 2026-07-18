@@ -13,7 +13,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { formaSection, sizePositionSection, pageAlignSection } from '../../utils/CommonSchema';
+import { formaSection, sizePositionSection, pageAlignSection, backgroundSection } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, cssFromValue as colorPickerCss, type ColorPickerValue } from '../../utils/ColorPickerUI';
@@ -153,6 +153,19 @@ export class TextTool extends BaseTool {
     if (Object.keys(patch).length) {
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
     }
+
+    // Background fill + border (CommonSchema.ts's backgroundSection()/
+    // borderSection(), applied via BaseTool.ts's shared helpers) -- seed
+    // border from whatever's already inline on textEl (may be a plain hex
+    // from before the gradient-capable color-picker existed; _syncBorderState
+    // wraps it in a solid ColorPickerValue, which normalizeValue() also
+    // accepts directly for elements saved even before that).
+    this._syncBackgroundState(element);
+    this._syncBorderState(element, {
+      width: parseFloat(textEl.style.borderWidth) || 0,
+      color: textEl.style.borderColor || '#000000',
+      style: textEl.style.borderStyle || 'none',
+    });
   }
 
   // ── Style bar target ─────────────────────────────────────────────────────────
@@ -200,6 +213,7 @@ export class TextTool extends BaseTool {
           { type: 'color-picker', key: 'color', label: 'Color', defaultSolid: '#18181b' },
         ],
       },
+      backgroundSection(),
       formaSection({ margin: true }),
       sizePositionSection({ autoFit: true }),
       pageAlignSection(),
@@ -238,11 +252,21 @@ export class TextTool extends BaseTool {
       return;
     }
 
-    // Persist to state store
-    PropertyRenderer.applyChange(element, key, value);
+    // Background fill (backgroundSection()) -- whole-element concept, always
+    // handled generically regardless of this tool's own style target.
+    if (this._applyBackground(element, key, value)) return;
 
     const textEl = getTextEl(element);
     if (!textEl) return;
+
+    // Border (borderSection(), now gradient-capable) -- _getStyleTarget()
+    // already points at textEl for this tool, so this replaces the
+    // hand-rolled borderWidth/borderStyle/borderColor cases below with the
+    // shared, gradient-aware implementation.
+    if (this._applyBorder(element, key, value)) return;
+
+    // Persist to state store
+    PropertyRenderer.applyChange(element, key, value);
 
     const state = PropertyRenderer._readState(element);
 
@@ -322,17 +346,6 @@ export class TextTool extends BaseTool {
         TextTool._applyColor(textEl, state);
         break;
 
-      case 'borderWidth':
-        textEl.style.borderWidth  = `${value}px`;
-        textEl.style.borderStyle  = String(state.borderStyle  ?? 'solid');
-        textEl.style.borderColor  = String(state.borderColor  ?? '#000');
-        break;
-      case 'borderStyle':
-        textEl.style.borderStyle = String(value);
-        break;
-      case 'borderColor':
-        textEl.style.borderColor = String(value);
-        break;
       case 'borderRadius':
         textEl.style.borderRadius = `${value}px`;
         break;

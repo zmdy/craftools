@@ -1,7 +1,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, variableBindingSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, variableBindingSection, backgroundSection } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { QrCode, type EcLevel } from '../../utils/QrCode';
 import type { VariableBinding } from '../../utils/VariableEngine';
@@ -76,9 +76,17 @@ export class QRCodeTool extends BaseTool {
       'phone','email','emailSubject','emailBody','smsPhone','smsBody',
       'pixKey','pixName','pixCity','pixAmount','pixTxid','pixMessage',
       'spotifyInput','spotifyBg','spotifyBarColor',
-      'ecLevel','darkColor','lightColor','borderWidth','borderStyle','borderColor','borderRadius',
+      'ecLevel','darkColor','lightColor','borderWidth','borderStyle','borderRadius',
     ];
     keys.forEach(k => { if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k]; });
+    // borderColor: meta stores a bare hex (pre-gradient-border); wrap it in
+    // the JSON ColorPickerValue shape the color-picker field expects (same
+    // as ImageTool.ts's matching case) -- normalizeValue() also accepts the
+    // bare hex directly, but this makes the panel's swatch/mode correct on
+    // first render.
+    if (!('borderColor' in existing)) {
+      patch.borderColor = JSON.stringify({ mode: 'solid', solid: (meta.borderColor as string) || '#000000', gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } });
+    }
     // variableBinding is stored as a JSON *string* in ctState (see
     // variable-binding.field.ts for why), unlike every other key above which
     // is copied as-is -- meta.variableBinding itself stays a real object.
@@ -87,6 +95,10 @@ export class QRCodeTool extends BaseTool {
     }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
+
+    // Background fill (backgroundSection()) -- dataset.ctState-based,
+    // independent of this tool's meta-based payload/appearance state.
+    this._syncBackgroundState(element);
   }
 
   /**
@@ -474,6 +486,7 @@ export class QRCodeTool extends BaseTool {
           },
         ],
       },
+      backgroundSection(),
       borderSection(),
       radiusSection(),
       variableBindingSection(),
@@ -481,12 +494,34 @@ export class QRCodeTool extends BaseTool {
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
+    // Background fill (backgroundSection()) -- dataset.ctState-based,
+    // independent of this tool's meta store.
+    if (this._applyBackground(element, key, value)) return;
+
     PropertyRenderer.applyChange(element, key, value);
     if (key === 'variableBinding') {
       setMeta(element, { variableBinding: parseVariableBinding(value) });
     } else {
       setMeta(element, { [key]: value } as Partial<QRCodeMeta>);
     }
+
+    // Border/radius are purely visual (never rebuild the QR SVG for them,
+    // unlike every other key) -- previously these fields were stored in
+    // meta but NEVER actually painted onto any node at all (no border/
+    // radius application code existed anywhere in this file), so changing
+    // them in the panel silently did nothing visible. Painted onto
+    // `element` itself (the outer host, framing the QR SVG/Spotify <img>
+    // inside it) since this tool has no separate style target.
+    if (key === 'borderWidth' || key === 'borderStyle' || key === 'borderColor') {
+      const meta = getMeta(element);
+      this._paintBorder(element, meta.borderWidth, meta.borderStyle, meta.borderColor);
+      return;
+    }
+    if (key === 'borderRadius') {
+      element.style.borderRadius = `${value}px`;
+      return;
+    }
+
     QRCodeTool._regenerate(element);
   }
 }

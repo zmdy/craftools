@@ -42,8 +42,14 @@ export class BarcodeTool extends BaseTool {
     const meta = getMeta(element) as unknown as Record<string, unknown>;
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
-    ['format','text','color','background','showText','borderWidth','borderStyle','borderColor','borderRadius']
+    ['format','text','color','background','showText','borderWidth','borderStyle','borderRadius']
       .forEach(k => { if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k]; });
+    // borderColor: meta stores a bare hex (pre-gradient-border); wrap it in
+    // the JSON ColorPickerValue shape the color-picker field expects (same
+    // as ImageTool.ts/QRCodeTool.ts's matching case).
+    if (!('borderColor' in existing)) {
+      patch.borderColor = JSON.stringify({ mode: 'solid', solid: (meta.borderColor as string) || '#000000', gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } });
+    }
     // variableBinding is stored as a JSON *string* in ctState (see
     // variable-binding.field.ts) -- meta.variableBinding itself stays a
     // real object, unlike the plain keys copied above.
@@ -207,6 +213,27 @@ export class BarcodeTool extends BaseTool {
     } else {
       setMeta(element, { [key]: value } as Partial<BarcodeMeta>);
     }
+
+    // Border/radius are purely visual (never rebuild the barcode SVG for
+    // them, unlike every other key) -- previously these fields were stored
+    // in meta but NEVER actually painted onto any node (no border/radius
+    // application code existed anywhere in this file), so changing them in
+    // the panel silently did nothing visible. Painted onto `element` itself
+    // (the outer host, framing the barcode SVG inside it) since this tool
+    // has no separate style target. (This tool's own `background` field --
+    // the barcode's SVG fill color -- is unrelated to CommonSchema.ts's new
+    // backgroundSection(); the key name collision is why that generic
+    // fill/opacity section isn't offered here, unlike Text/Image/QRCode.)
+    if (key === 'borderWidth' || key === 'borderStyle' || key === 'borderColor') {
+      const meta = getMeta(element);
+      this._paintBorder(element, meta.borderWidth, meta.borderStyle, meta.borderColor);
+      return;
+    }
+    if (key === 'borderRadius') {
+      element.style.borderRadius = `${value}px`;
+      return;
+    }
+
     BarcodeTool._regenerate(element);
   }
 }

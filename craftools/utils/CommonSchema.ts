@@ -22,6 +22,21 @@ import type { Section } from '../types/PropertySchema';
 
 // ── Shape ─────────────────────────────────────────────────────────────────────
 
+/**
+ * `borderColor` is the standardized solid-OR-gradient picker (see
+ * utils/fields/color-picker.field.ts / utils/ColorPickerUI.ts) -- same
+ * field type PageTool.ts's page background and every tool's `color` field
+ * already use. A gradient border renders via CSS `border-image` (there's no
+ * native gradient `border-color`); see BaseTool.ts's `_applyBorder()`
+ * helper, which any tool spreading this section into its schema should call
+ * from `_applyProperty()`/`_syncFromDOM()` to get solid-and-gradient border
+ * handling with zero extra per-tool code.
+ *
+ * `borderStyle` lists every CSS `border-style` keyword (minus `hidden`,
+ * which is visually identical to `none` and not worth a second entry) --
+ * previously only solid/dashed/dotted/none were offered even though the
+ * others are just as valid CSS.
+ */
 export const borderSection = (): Section => ({
   section: 'Border',
   i18nKey: 'common.border',
@@ -39,7 +54,7 @@ export const borderSection = (): Section => ({
       unit: 'px',
     },
     {
-      type: 'color',
+      type: 'color-picker',
       key: 'borderColor',
       label: 'Color',
       i18nKey: 'common.borderColor',
@@ -53,6 +68,11 @@ export const borderSection = (): Section => ({
         { value: 'solid',  label: 'Solid',  i18nKey: 'common.borderSolid' },
         { value: 'dashed', label: 'Dashed', i18nKey: 'common.borderDashed' },
         { value: 'dotted', label: 'Dotted', i18nKey: 'common.borderDotted' },
+        { value: 'double', label: 'Double', i18nKey: 'common.borderDouble' },
+        { value: 'groove', label: 'Groove', i18nKey: 'common.borderGroove' },
+        { value: 'ridge',  label: 'Ridge',  i18nKey: 'common.borderRidge' },
+        { value: 'inset',  label: 'Inset',  i18nKey: 'common.borderInset' },
+        { value: 'outset', label: 'Outset', i18nKey: 'common.borderOutset' },
         { value: 'none',   label: 'None',   i18nKey: 'common.borderNone' },
       ],
     },
@@ -184,6 +204,50 @@ export const sizePositionSection = (opts: { autoFit?: boolean } = {}): Section =
     fields,
   };
 };
+
+// ── Background fill ──────────────────────────────────────────────────────────
+
+/**
+ * Solid-or-gradient background fill + an independent opacity slider for
+ * JUST that fill (not the whole element -- text/icons/other content drawn
+ * on top stay fully opaque). Any tool can spread this into its schema; wire
+ * it up by calling BaseTool.ts's `_applyBackground()` helper from
+ * `_applyProperty()` for the 'background'/'backgroundOpacity' keys (and
+ * `_syncFromDOM()`'s companion helper to prime initial values) -- see
+ * TextTool.ts/ImageTool.ts for the reference wiring.
+ *
+ * Implemented as a dedicated `.ct-bg-layer` div painted behind the
+ * element's own content (see BaseTool.ts) rather than setting
+ * `background`+`opacity` directly on the style target, specifically so the
+ * opacity slider only fades the fill -- setting a bare CSS `opacity` on a
+ * node that also contains the tool's real content would fade that content
+ * too.
+ */
+export const backgroundSection = (): Section => ({
+  section: 'Background',
+  i18nKey: 'common.sectionBackground',
+  icon: 'format_color_fill',
+  collapsible: true,
+  defaultOpen: false,
+  fields: [
+    {
+      type: 'color-picker',
+      key: 'background',
+      label: 'Fill',
+      i18nKey: 'common.background',
+      defaultSolid: 'transparent',
+    },
+    {
+      type: 'slider',
+      key: 'backgroundOpacity',
+      label: 'Opacity',
+      i18nKey: 'common.backgroundOpacity',
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
+  ],
+});
 
 export const opacitySection = (): Section => ({
   section: 'Opacity',

@@ -5,7 +5,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection, variableBindingSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
@@ -49,6 +49,19 @@ export class VariableContentTool extends BaseTool {
     }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
+
+    // Background fill + border (CommonSchema.ts's backgroundSection()/
+    // borderSection(), applied via BaseTool.ts's shared helpers). Seeds
+    // border from whatever's already inline on `content` -- this tool's
+    // border fields existed in the schema before but were never actually
+    // painted anywhere (see _applyProperty() below), so this is effectively
+    // priming from blank/default the first time an old element is opened.
+    this._syncBackgroundState(element);
+    this._syncBorderState(element, {
+      width: parseFloat(content.style.borderWidth) || 0,
+      color: content.style.borderColor || '#000000',
+      style: content.style.borderStyle || 'none',
+    });
   }
 
   /** Escapes a value for safe use inside an HTML attribute (emojiKitchen <img src>). */
@@ -124,6 +137,14 @@ export class VariableContentTool extends BaseTool {
     text.style[cssProp] = (text.style[cssProp] === onValue) ? offValue : onValue;
     AutoFitText.applyAutoSize(element, text);
     element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+  }
+
+  // Border styling lives on the resolved-content child, not the outer
+  // craftools-element (matches TextTool.ts's same override) -- so the
+  // Copy/Paste style bar and the new gradient-capable border helpers read/
+  // write the right node.
+  protected static _getStyleTarget(element: HTMLElement): HTMLElement {
+    return getContent(element) ?? element;
   }
 
   static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
@@ -212,6 +233,7 @@ export class VariableContentTool extends BaseTool {
           { type: 'color',       key: 'color',     label: 'Color' },
         ],
       },
+      backgroundSection(),
       borderSection(),
       radiusSection(),
       zIndexSection(),
@@ -219,6 +241,14 @@ export class VariableContentTool extends BaseTool {
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
+    // Background fill (backgroundSection()) -- whole-element concept.
+    if (this._applyBackground(element, key, value)) return;
+    // Border (borderSection(), now gradient-capable) -- _getStyleTarget()
+    // points at the resolved-content child; this replaces the previous gap
+    // where borderWidth/borderStyle/borderColor were stored but never
+    // actually painted (only borderRadius below was applied).
+    if (this._applyBorder(element, key, value)) return;
+
     PropertyRenderer.applyChange(element, key, value);
 
     if (key === 'variableBinding') {

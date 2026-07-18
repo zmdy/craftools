@@ -19,6 +19,7 @@ import { SnapEngine } from '../utils/SnapEngine.js';
 import type { CraftoolsSnapTarget } from '../utils/SnapEngine';
 import { Notify } from '../utils/Notify.js';
 import { tr } from '../utils/i18nLabel';
+import { normalizeValue, cssFromValue, cssFromGradient, DEFAULT_VALUE } from '../utils/ColorPickerUI.js';
 
 // Shape of the clipboard payload copied by the style bar. Kept loose
 // (unknown meta) since `_craftoolsMeta`'s shape varies per tool.
@@ -96,6 +97,188 @@ export abstract class BaseTool {
   static getPropertySchema(_element: HTMLElement): PropertySchema {
     // Subclasses must override this.
     return [];
+  }
+
+  // ── Background fill (CommonSchema.ts's backgroundSection()) ────────────────
+
+  /**
+   * Finds (or creates) the dedicated background-fill layer for `element` --
+   * a plain div painted BEHIND everything else in the element (inserted as
+   * the very first child, `position:absolute;inset:0`), so a solid/gradient
+   * fill + its own opacity can be applied without touching -- or fading --
+   * the tool's real content (text, image, SVG, ...) painted on top of it.
+   *
+   * Always attached to `element` itself (the `<craftools-element>` host,
+   * which Element.ts always keeps `position:absolute`), not to
+   * `_getStyleTarget()` -- background is a whole-element concept, and the
+   * host is guaranteed to be a stable positioned ancestor regardless of
+   * which inner node a given tool uses as its border/radius style target.
+   */
+  private static _getOrCreateBgLayer(element: HTMLElement): HTMLElement {
+    let layer = element.querySelector<HTMLElement>(':scope > .ct-bg-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'ct-bg-layer';
+      layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;';
+      element.insertBefore(layer, element.firstChild);
+    }
+    return layer;
+  }
+
+  /**
+   * Paints the background-fill layer from already-resolved values -- no
+   * reading or writing of `dataset.ctState`. Storage-agnostic on purpose:
+   * most tools keep their properties in `dataset.ctState` (see
+   * `_applyBackground()` below, the convenience wrapper for those), but a
+   * few (ImageTool.ts, QRCodeTool.ts, BarcodeTool.ts) keep their own
+   * `_craftoolsMeta` object as the source of truth instead -- those call
+   * this directly with values read from their own meta, so background
+   * painting stays identical either way without forcing a second,
+   * conflicting state store on tools that already have one.
+   *
+   * @param fillRaw  Whatever's stored for the fill: a ColorPickerValue
+   *   object, a JSON string of one, a bare hex string, or nothing --
+   *   anything `normalizeValue()` (utils/ColorPickerUI.ts) accepts.
+   * @param opacity  0-1. Non-numeric/missing defaults to fully opaque.
+   */
+  protected static _paintBackground(element: HTMLElement, fillRaw: unknown, opacity: unknown): void {
+    const layer = this._getOrCreateBgLayer(element);
+    layer.style.background = cssFromValue(normalizeValue(fillRaw));
+    const n = Number(opacity);
+    layer.style.opacity = String(Number.isFinite(n) ? n : 1);
+  }
+
+  /**
+   * Applies the 'background'/'backgroundOpacity' keys from
+   * CommonSchema.ts's backgroundSection() for tools using the default
+   * `dataset.ctState` store. Call from a tool's own `_applyProperty()`
+   * override for those two keys -- returns `true` when it handled the key
+   * (so the caller can early-return) and `false` for anything else, so it
+   * composes with a tool's existing switch:
+   *
+   *   protected static _applyProperty(element, key, value) {
+   *     if (this._applyBackground(element, key, value)) return;
+   *     ...tool-specific keys...
+   *   }
+   *
+   * Persists the raw value via PropertyRenderer.applyChange() itself (same
+   * as every other field), then repaints via `_paintBackground()` from the
+   * combined state -- so changing either the fill or the opacity alone
+   * still reads the other's current value correctly. Tools with their own
+   * meta store should call `_paintBackground()` directly instead (see its
+   * own doc comment).
+   */
+  protected static _applyBackground(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'background' && key !== 'backgroundOpacity') return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+    const state = this._readState(element);
+    this._paintBackground(element, state.background, state.backgroundOpacity);
+    return true;
+  }
+
+  /**
+   * Primes the 'background'/'backgroundOpacity' keys in `dataset.ctState`
+   * with a transparent, fully-opaque default -- call once from a tool's
+   * `_syncFromDOM()` override (only fills in keys that aren't already
+   * present, same "safe to call repeatedly" contract as the rest of
+   * `_syncFromDOM`). Elements created before this feature existed simply
+   * have no background layer painted until the user picks one.
+   */
+  protected static _syncBackgroundState(element: HTMLElement): void {
+    const existing = this._readState(element);
+    const patch: Record<string, unknown> = {};
+    if (!('background' in existing)) {
+      patch.background = JSON.stringify({ mode: 'solid', solid: 'transparent', gradient: { ...DEFAULT_VALUE.gradient, stops: DEFAULT_VALUE.gradient.stops.slice() } });
+    }
+    if (!('backgroundOpacity' in existing)) {
+      patch.backgroundOpacity = 1;
+    }
+    if (Object.keys(patch).length) {
+      element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
+    }
+  }
+
+  // ── Border (CommonSchema.ts's borderSection(), gradient-capable) ───────────
+
+  /**
+   * Paints border width/style/color from already-resolved values -- no
+   * reading or writing of `dataset.ctState` (same storage-agnostic split as
+   * `_paintBackground()`; see its doc comment for why). ImageTool.ts/
+   * QRCodeTool.ts/BarcodeTool.ts, which keep border state in their own
+   * `_craftoolsMeta`, call this directly with values read from that meta
+   * instead of going through `_applyBorder()`/`dataset.ctState`.
+   *
+   * `colorRaw` is stored the same way a `background` fill is (a JSON
+   * ColorPickerValue string, a bare hex string, or a ColorPickerValue
+   * object -- anything `normalizeValue()` accepts) so a gradient border is
+   * possible: CSS has no gradient `border-color`, so gradient mode renders
+   * via `border-image` instead (`border-image-source` +
+   * `border-image-slice:1`), which requires `border-style` to not be `none`
+   * and `border-width` > 0 to be visible, same as a normal solid border.
+   * Solid mode clears any leftover `border-image` so it doesn't mask a
+   * later plain-color change.
+   */
+  protected static _paintBorder(target: HTMLElement, widthRaw: unknown, styleRaw: unknown, colorRaw: unknown): void {
+    target.style.borderWidth = `${Number(widthRaw) || 0}px`;
+    target.style.borderStyle = String(styleRaw || 'none');
+
+    const colorValue = normalizeValue(colorRaw);
+    if (colorValue.mode === 'gradient') {
+      target.style.borderColor       = 'transparent';
+      target.style.borderImageSlice  = '1';
+      target.style.borderImageSource = cssFromGradient(colorValue.gradient);
+    } else {
+      target.style.borderImageSource = 'none';
+      target.style.borderColor       = colorValue.solid;
+    }
+  }
+
+  /**
+   * Applies the 'borderWidth'/'borderColor'/'borderStyle' keys from
+   * CommonSchema.ts's borderSection() to `_getStyleTarget(element)`, for
+   * tools using the default `dataset.ctState` store. Call from a tool's own
+   * `_applyProperty()` override the same way as `_applyBackground()`
+   * (returns `true` when it handled the key):
+   *
+   *   protected static _applyProperty(element, key, value) {
+   *     if (this._applyBorder(element, key, value)) return;
+   *     ...tool-specific keys...
+   *   }
+   *
+   * Tools with their own meta store should call `_paintBorder()` directly
+   * instead (see its own doc comment).
+   */
+  protected static _applyBorder(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'borderWidth' && key !== 'borderColor' && key !== 'borderStyle') return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+    const state = this._readState(element);
+    this._paintBorder(this._getStyleTarget(element), state.borderWidth, state.borderStyle, state.borderColor);
+    return true;
+  }
+
+  /**
+   * Primes the 'borderWidth'/'borderColor'/'borderStyle' keys in
+   * `dataset.ctState` -- call once from a tool's `_syncFromDOM()` override.
+   * `opts` lets a tool seed from its own pre-existing meta (e.g. ImageTool's
+   * `_craftoolsMeta.borderColor`, a plain hex string) instead of always
+   * defaulting to black/none; omit for a tool with no prior border state.
+   */
+  protected static _syncBorderState(
+    element: HTMLElement,
+    opts: { width?: number; color?: string; style?: string } = {},
+  ): void {
+    const existing = this._readState(element);
+    const patch: Record<string, unknown> = {};
+    if (!('borderWidth' in existing)) patch.borderWidth = opts.width ?? 0;
+    if (!('borderStyle' in existing)) patch.borderStyle = opts.style ?? 'none';
+    if (!('borderColor' in existing)) {
+      patch.borderColor = JSON.stringify({ mode: 'solid', solid: opts.color ?? '#000000', gradient: { ...DEFAULT_VALUE.gradient, stops: DEFAULT_VALUE.gradient.stops.slice() } });
+    }
+    if (Object.keys(patch).length) {
+      element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
+    }
   }
 
   // ── Rendering (do NOT override) ─────────────────────────────────────────────

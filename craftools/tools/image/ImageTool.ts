@@ -10,7 +10,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, backgroundSection } from '../../utils/CommonSchema';
 import { ImageFilters } from './ImageFilters.js';
 import { ImageTransform } from './ImageTransform.js';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -184,9 +184,7 @@ export class ImageTool extends BaseTool {
     if (img) {
       if (img.getAttribute('src') !== meta.src) img.src = meta.src;
       img.style.mixBlendMode  = (sMeta.blendMode && sMeta.blendMode !== 'normal') ? sMeta.blendMode : '';
-      img.style.borderWidth   = `${sMeta.borderWidth || 0}px`;
-      img.style.borderStyle   = sMeta.borderStyle || 'none';
-      img.style.borderColor   = sMeta.borderColor || '#000000';
+      this._paintBorder(img, sMeta.borderWidth, sMeta.borderStyle, sMeta.borderColor);
       img.style.borderRadius  = `${sMeta.borderRadius || 0}px`;
     }
     ImageTransform.applyTransform(sibling as unknown as Parameters<typeof ImageTransform.applyTransform>[0]);
@@ -252,6 +250,15 @@ export class ImageTool extends BaseTool {
     ];
   }
 
+  // Border is painted onto the `<img>` itself (matches the pre-existing
+  // behavior in _applyProperty()/_pushMetaToSibling() below), not the outer
+  // `<craftools-element>` host -- overriding this keeps the Copy/Paste style
+  // bar (BaseTool.ts's _renderStyleBar()) reading/writing the same node.
+  protected static _getStyleTarget(element: HTMLElement): HTMLElement {
+    const el = element as HTMLElement & { contentArea?: HTMLElement };
+    return (el.contentArea ?? element).querySelector<HTMLElement>('img') ?? element;
+  }
+
   protected static _syncFromDOM(element: HTMLElement): void {
     const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
@@ -259,12 +266,21 @@ export class ImageTool extends BaseTool {
 
     const topKeys: (keyof ImageMeta)[] = [
       'src', 'objectFit', 'zoom', 'posX', 'posY', 'rotation',
-      'bgBlur', 'blendMode', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius',
+      'bgBlur', 'blendMode', 'borderWidth', 'borderStyle', 'borderRadius',
     ];
 
     topKeys.forEach(k => {
       if (!(k in existing)) patch[k] = meta[k];
     });
+
+    // borderColor: meta stores a bare hex (pre-gradient-border); normalizeValue()
+    // (utils/ColorPickerUI.ts) already accepts that directly wherever it's
+    // read, but the color-picker field itself expects the JSON
+    // ColorPickerValue shape -- wrap it here so the panel's swatch/mode
+    // reflects the current color correctly on first render.
+    if (!('borderColor' in existing)) {
+      patch.borderColor = JSON.stringify({ mode: 'solid', solid: meta.borderColor || '#000000', gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } });
+    }
 
     // Flatten filters into top-level keys for simpler schema access
     if (meta.filters) {
@@ -277,6 +293,12 @@ export class ImageTool extends BaseTool {
     if (Object.keys(patch).length) {
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
     }
+
+    // Background fill (backgroundSection(), merged into this tool's own
+    // "Background" section alongside bgBlur/blendMode) -- dataset.ctState-
+    // based like every other tool using it, independent of this tool's
+    // meta-based border/filter state.
+    this._syncBackgroundState(element);
   }
 
   static getPropertySchema(_element: HTMLElement): PropertySchema {
@@ -333,6 +355,13 @@ export class ImageTool extends BaseTool {
             type: 'select', key: 'blendMode', label: 'Blend mode',
             options: BLEND_MODES.map(m => ({ value: m, label: m })),
           },
+          // backgroundSection()'s fields (Fill + Opacity), merged into this
+          // existing "Background" accordion instead of spread as a second
+          // top-level section -- this tool already has one titled
+          // "Background" for the blur/blend-mode effect, and two
+          // same-titled accordions would be confusing.
+          { type: 'divider', key: 'div-bg-fill', icon: 'format_color_fill', label: 'Fill', i18nKey: 'common.background' },
+          ...backgroundSection().fields,
         ],
       },
       borderSection(),
@@ -342,6 +371,10 @@ export class ImageTool extends BaseTool {
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
+    // Background fill (backgroundSection()) -- dataset.ctState-based,
+    // independent of this tool's own meta store (see _syncFromDOM()).
+    if (this._applyBackground(element, key, value)) return;
+
     PropertyRenderer.applyChange(element, key, value);
 
     const el = element as HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement };
@@ -370,15 +403,18 @@ export class ImageTool extends BaseTool {
       meta.blendMode = String(value);
       const img = element.querySelector<HTMLElement>('img');
       if (img) img.style.mixBlendMode = String(value);
-    } else if (['borderWidth', 'borderStyle', 'borderColor', 'borderRadius'].includes(key)) {
+    } else if (key === 'borderWidth' || key === 'borderStyle' || key === 'borderColor') {
+      // borderColor is now the standardized solid-OR-gradient value (a JSON
+      // ColorPickerValue string from the color-picker field) -- still just a
+      // `string` as far as ImageMeta's type is concerned, _paintBorder()
+      // (BaseTool.ts) is what actually interprets it.
       (meta as unknown as Record<string, unknown>)[key] = value;
       const img = element.querySelector<HTMLElement>('img');
-      if (img) {
-        img.style.borderWidth  = `${meta.borderWidth}px`;
-        img.style.borderStyle  = meta.borderStyle;
-        img.style.borderColor  = meta.borderColor;
-        img.style.borderRadius = `${meta.borderRadius}px`;
-      }
+      if (img) this._paintBorder(img, meta.borderWidth, meta.borderStyle, meta.borderColor);
+    } else if (key === 'borderRadius') {
+      meta.borderRadius = value as number;
+      const img = element.querySelector<HTMLElement>('img');
+      if (img) img.style.borderRadius = `${meta.borderRadius}px`;
     } else if (key === 'zIndex') {
       element.style.zIndex = String(value);
     }
