@@ -138,11 +138,11 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       <div class="rsz-handle" data-dir="b"  style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:24px;height:12px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:s-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rsz-handle" data-dir="l"  style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:w-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
       <div class="rsz-handle" data-dir="r"  style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:24px;background:#fff;border:2px solid ${accentCol};border-radius:6px;pointer-events:auto;cursor:e-resize;z-index:15;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-      <div class="rot-handle" style="position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:26px;height:26px;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:crosshair;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);">
-        <span class="material-symbols-outlined" style="font-size:14px;color:${accentCol};line-height:1;">sync</span>
+      <div class="rot-handle" style="position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:26px;height:26px;padding:0;background:#fff;border:2px solid ${accentCol};border-radius:50%;pointer-events:auto;cursor:crosshair;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);">
+        <span class="material-symbols-outlined" style="font-size:14px;color:${accentCol};line-height:1;display:flex;align-items:center;justify-content:center;">sync</span>
       </div>
-      <button class="del-handle" style="position:absolute;top:-12px;right:-12px;width:24px;height:24px;background:#ef4444;color:#fff;border:none;border-radius:50%;pointer-events:auto;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4);">
-        <span class="material-symbols-outlined" style="font-size:14px;line-height:1;">close</span>
+      <button class="del-handle" style="position:absolute;top:-12px;right:-12px;width:24px;height:24px;padding:0;margin:0;font:inherit;background:#ef4444;color:#fff;border:none;border-radius:50%;pointer-events:auto;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4);">
+        <span class="material-symbols-outlined" style="font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">close</span>
       </button>
     `;
 
