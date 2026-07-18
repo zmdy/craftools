@@ -24,6 +24,8 @@ import './MobileToolbar_Translations.js';
 
 interface FooterItem {
   icon: string;
+  /** Literal glyph to render instead of `icon` (see ToolDefinition.emojiIcon). */
+  emojiIcon?: string;
   label: string;
   action: () => void;
 }
@@ -101,9 +103,10 @@ export class MobileToolbar {
     // truth for which tools exist, so this list can never drift out of
     // sync with the sidebar again.
     const toolItems: FooterItem[] = ToolRegistry.all().map(def => ({
-      icon:   def.icon,
-      label:  I18n.t(def.label) || def.label,
-      action: () => document.querySelector<HTMLElement>(`#pwa-sidebar-${def.key}`)?.click(),
+      icon:      def.icon,
+      emojiIcon: def.emojiIcon,
+      label:     I18n.t(def.label) || def.label,
+      action:    () => document.querySelector<HTMLElement>(`#pwa-sidebar-${def.key}`)?.click(),
     }));
 
     const actionItems: FooterItem[] = [
@@ -177,9 +180,14 @@ export class MobileToolbar {
     items.forEach(item => {
       const li = document.createElement('li');
       li.className = 'mobile-toolbar-item';
+      // Emoji tool's icon is a literal glyph (ct-emoji-icon, var(--font-emoji)
+      // in index.html), not a Material Symbol -- see ToolDefinition.emojiIcon.
+      const iconHtml = item.emojiIcon
+        ? `<span class="ct-emoji-icon">${item.emojiIcon}</span>`
+        : `<span class="material-symbols-outlined">${item.icon}</span>`;
       li.innerHTML = `
         <button class="mobile-toolbar-btn" title="${item.label}">
-          <span class="material-symbols-outlined">${item.icon}</span>
+          ${iconHtml}
           <span class="mobile-toolbar-label">${item.label}</span>
         </button>
       `;

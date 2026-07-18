@@ -27,6 +27,13 @@
     --shadow-xl:   0 8px 48px rgba(0,0,0,.16);
     --canvas-bg:   #e4e4e7;
     --page-shadow: 0 4px 32px rgba(0,0,0,.14);
+    /* Emoji-capable font fallback stack -- mirrors craftools/utils/EmojiFont.ts's
+       EMOJI_FONT_STACK exactly (that file is the source of truth for TS/DOM
+       code; this variable exists so plain HTML/CSS -- the sidebar/footer's
+       literal-emoji icon spans in index.html, which don't go through any TS
+       font logic -- can reference the same stack instead of a second
+       hardcoded copy). Keep both in sync if this ever changes. */
+    --font-emoji: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Android Emoji', sans-serif;
 }
 
 [data-theme="dark"] {

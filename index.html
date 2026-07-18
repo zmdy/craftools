@@ -417,6 +417,15 @@
                 font-size: 28px;
                 margin-bottom: 5px;
             }
+            /* Emoji tool's footer icon is a literal glyph, not a Material
+               Symbol (see MobileToolbar.ts's emojiIcon handling) -- sized to
+               match .material-symbols-outlined above for visual parity. */
+            .mobile-toolbar-btn .ct-emoji-icon {
+                font-family: var(--font-emoji);
+                font-size: 24px;
+                line-height: 1;
+                margin-bottom: 5px;
+            }
             .mobile-toolbar-label {
                 font-size: 11px;
                 font-weight: 600;
@@ -975,7 +984,7 @@
                         <li><a href="#" id="pwa-sidebar-emojikitchen" draggable="true" data-tool="emojikitchen"><img src="https://www.gstatic.com/android/keyboard/emojikitchen/20241023/u1f614/u1f614_u1f614.png" alt="" style="width:20px; height:20px; object-fit:contain; flex-shrink:0;"> <span data-i18n="editor.emojiKitchen">Emoji Kitchen</span></a></li>
                         <li><a href="#" id="pwa-sidebar-qrcode" draggable="true" data-tool="qrcode"><span class="material-symbols-outlined">qr_code_2</span> <span data-i18n="editor.qrcode">QR Code</span></a></li>
                         <li><a href="#" id="pwa-sidebar-barcode" draggable="true" data-tool="barcode"><span class="material-symbols-outlined">barcode_reader</span> <span data-i18n="editor.barcode">Código de Barras</span></a></li>
-                        <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:'Noto Color Emoji',sans-serif;font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-emoji" data-tool="emoji"><span style="font-family:var(--font-emoji);font-size:16px;line-height:1;">😊</span> <span>Emojis</span></a></li>
                         <li><a href="#" id="pwa-sidebar-shape" data-tool="shape"><span class="material-symbols-outlined">category</span> <span data-i18n="shapeTool.panelTitle">Forma</span></a></li>
                         <li><a href="#" id="pwa-sidebar-icone" data-tool="icone"><span class="material-symbols-outlined">grid_view</span> <span data-i18n="editor.icons">Ícones</span></a></li>
                     </ul>
@@ -1013,7 +1022,7 @@
                     </li>
                     <li>
                         <button id="pwa-btn-emoji" class="footer-nav-btn" title="Emojis" data-tool="emoji">
-                            <span style="font-family:'Noto Color Emoji',sans-serif;font-size:20px;line-height:1;display:block;">😊</span>
+                            <span style="font-family:var(--font-emoji);font-size:20px;line-height:1;display:block;">😊</span>
                             <span>Emojis</span>
                         </button>
                     </li>

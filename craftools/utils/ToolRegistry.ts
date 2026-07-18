@@ -21,6 +21,17 @@ export interface ToolDefinition {
   /** Material Symbol icon name. */
   icon: string;
   /**
+   * A literal character (or short string) to render instead of `icon` as
+   * this tool's sidebar/footer glyph, for tools whose "icon" is more
+   * honest as an actual emoji than a Material Symbol stand-in (e.g. the
+   * Emoji tool itself: `icon: 'emoji_emotions'` still exists as a Material
+   * Symbol fallback for any UI that doesn't special-case this field, but
+   * emojiIcon: '😊' is what actually renders in the sidebar/footer -- see
+   * MobileToolbar.ts's _renderFooterItems()). Rendered with
+   * `var(--font-emoji)` (see EmojiFont.ts) rather than the icon font.
+   */
+  emojiIcon?: string;
+  /**
    * The tool class. Must extend BaseTool.
    * Undefined for panel-only tools (use panelOnly: true instead).
    */

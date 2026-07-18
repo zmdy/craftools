@@ -355,4 +355,4 @@ export class EmojiTool extends BaseTool {
 }
 
 EmojiTool.registeredKeys = ['emoji'];
-ToolRegistry.register({ key: 'emoji', label: 'editor.emoji', icon: 'emoji_emotions', tool: EmojiTool, draggable: true, showInFooterNav: false, category: 'elements' });
+ToolRegistry.register({ key: 'emoji', label: 'editor.emoji', icon: 'emoji_emotions', emojiIcon: '😊', tool: EmojiTool, draggable: true, showInFooterNav: false, category: 'elements' });
