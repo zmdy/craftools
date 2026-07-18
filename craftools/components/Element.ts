@@ -215,6 +215,24 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       h.addEventListener('pointerdown', (e: PointerEvent) => {
         e.stopPropagation();
         e.preventDefault();
+
+        // Manually resizing a text/variable-content box is a deliberate
+        // override of "auto-fit to content" -- without turning the flag
+        // off here, AutoFitText.applyAutoSize() (now live-tracking every
+        // keystroke/panel edit, see the 'input' listener in _enterEdit())
+        // would immediately snap the box back to its content-measured size
+        // on the very next change, silently undoing the manual resize.
+        // Re-dispatching 'craftools-element-select' reuses Editor.ts's
+        // existing select handler to refresh the open properties panel
+        // (W/H fields re-enable, "Ativado/Desativado" pill flips) and the
+        // ctx-bar's auto-fit toggle icon, exactly as if the user had
+        // turned it off through the panel/ctx-bar themselves.
+        const self = this as unknown as { _craftoolsAutoResize?: boolean };
+        if (self._craftoolsAutoResize === true) {
+          self._craftoolsAutoResize = false;
+          this.dispatchEvent(new CustomEvent('craftools-element-select', { bubbles: true, detail: { element: this } }));
+        }
+
         this.isResizing = true;
         this.resizeDir  = h.dataset.dir ?? '';
         this.startX     = e.clientX;

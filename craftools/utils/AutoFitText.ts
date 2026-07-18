@@ -84,5 +84,13 @@ export class AutoFitText {
     const hInput = document.getElementById('ct-sz-h') as HTMLInputElement | null;
     if (wInput) wInput.value = String(newW);
     if (hInput) hInput.value = String(newH);
+
+    // Tell everything that tracks the element's box (chiefly CtxBar, which
+    // only repositions itself in response to this event) that it just
+    // changed size. Without this, the resize handles/rotate handle -- being
+    // simple CSS-positioned children of the element -- moved for free, but
+    // the ctx-bar (a fixed-position sibling elsewhere in the DOM) stayed
+    // exactly where the box used to be every time auto-fit resized it.
+    element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
   }
 }
