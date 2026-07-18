@@ -143,4 +143,17 @@ export class EmojiKitchenTool extends BaseTool {
 }
 
 EmojiKitchenTool.registeredKeys = ['emojikitchen'];
-ToolRegistry.register({ key: 'emojikitchen', label: 'editor.emojiKitchen', icon: 'blender', tool: EmojiKitchenTool, draggable: true, showInFooterNav: false, category: 'elements' });
+// iconImg matches the desktop sidebar exactly (index.html
+// #pwa-sidebar-emojikitchen uses a live combo thumbnail <img>, not a
+// Material Symbol) -- see ToolDefinition.iconImg. `icon` stays as a
+// Material Symbol fallback for any UI that doesn't special-case iconImg.
+ToolRegistry.register({
+  key: 'emojikitchen',
+  label: 'editor.emojiKitchen',
+  icon: 'blender',
+  iconImg: 'https://www.gstatic.com/android/keyboard/emojikitchen/20241023/u1f614/u1f614_u1f614.png',
+  tool: EmojiKitchenTool,
+  draggable: true,
+  showInFooterNav: false,
+  category: 'elements',
+});

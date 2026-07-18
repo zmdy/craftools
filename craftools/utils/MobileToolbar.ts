@@ -26,6 +26,8 @@ interface FooterItem {
   icon: string;
   /** Literal glyph to render instead of `icon` (see ToolDefinition.emojiIcon). */
   emojiIcon?: string;
+  /** Image URL to render instead of `icon`/`emojiIcon` (see ToolDefinition.iconImg). */
+  iconImg?: string;
   label: string;
   action: () => void;
 }
@@ -105,6 +107,7 @@ export class MobileToolbar {
     const toolItems: FooterItem[] = ToolRegistry.all().map(def => ({
       icon:      def.icon,
       emojiIcon: def.emojiIcon,
+      iconImg:   def.iconImg,
       label:     I18n.t(def.label) || def.label,
       action:    () => document.querySelector<HTMLElement>(`#pwa-sidebar-${def.key}`)?.click(),
     }));
@@ -180,9 +183,14 @@ export class MobileToolbar {
     items.forEach(item => {
       const li = document.createElement('li');
       li.className = 'mobile-toolbar-item';
-      // Emoji tool's icon is a literal glyph (ct-emoji-icon, var(--font-emoji)
-      // in index.html), not a Material Symbol -- see ToolDefinition.emojiIcon.
-      const iconHtml = item.emojiIcon
+      // Emoji Kitchen's icon is a live combo thumbnail <img> (matches the
+      // desktop sidebar exactly -- see ToolDefinition.iconImg), the Emoji
+      // tool's icon is a literal glyph (ct-emoji-icon, var(--font-emoji) in
+      // index.html -- see ToolDefinition.emojiIcon), everything else is a
+      // Material Symbol.
+      const iconHtml = item.iconImg
+        ? `<img src="${item.iconImg}" alt="" style="width:20px;height:20px;object-fit:contain;flex-shrink:0;">`
+        : item.emojiIcon
         ? `<span class="ct-emoji-icon">${item.emojiIcon}</span>`
         : `<span class="material-symbols-outlined">${item.icon}</span>`;
       li.innerHTML = `

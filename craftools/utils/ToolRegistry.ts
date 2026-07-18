@@ -32,6 +32,17 @@ export interface ToolDefinition {
    */
   emojiIcon?: string;
   /**
+   * A literal image URL to render instead of `icon`/`emojiIcon` as this
+   * tool's sidebar/footer glyph, for tools whose desktop entry already uses
+   * an `<img>` instead of a Material Symbol (e.g. Emoji Kitchen: the
+   * sidebar shows a live combo preview thumbnail, not an icon font glyph --
+   * see index.html #pwa-sidebar-emojikitchen). Takes priority over
+   * `emojiIcon`/`icon` when rendering the mobile footer (MobileToolbar.ts's
+   * _renderFooterItems()), so the footer matches the desktop exactly
+   * instead of falling back to an unrelated icon-font stand-in.
+   */
+  iconImg?: string;
+  /**
    * The tool class. Must extend BaseTool.
    * Undefined for panel-only tools (use panelOnly: true instead).
    */
