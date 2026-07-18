@@ -32,6 +32,16 @@ const rgbToHex = (rgb: string): string => {
   return '#' + [m[1], m[2], m[3]].map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
 };
 
+/**
+ * Property keys that can change the text's natural (intrinsic) size --
+ * after any of these, re-run AutoFitText.applyAutoSize() so the box keeps
+ * tracking the content while auto-fit is on. See _applyProperty()'s tail.
+ */
+const AUTOFIT_RELEVANT_KEYS = new Set([
+  'font', 'fontSize', 'lineHeight', 'bold', 'italic', 'underline',
+  'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+]);
+
 // ── Tool class ────────────────────────────────────────────────────────────────
 
 export class TextTool extends BaseTool {
@@ -352,6 +362,18 @@ export class TextTool extends BaseTool {
       case 'zIndex':
         element.style.zIndex = String(value);
         break;
+    }
+
+    // Keep the box in sync with the content while auto-fit is on: previously
+    // AutoFitText.applyAutoSize() only ran once, at the moment the toggle
+    // itself was switched on -- every later panel edit that could change the
+    // text's natural size (font, size, line height, weight/style, margin)
+    // left the box exactly where it was, so it silently stopped tracking
+    // the content the moment you touched anything else. Re-measure after
+    // any of those (applyAutoSize() no-ops immediately if auto-fit isn't
+    // on, so this is always safe/cheap to call).
+    if (AUTOFIT_RELEVANT_KEYS.has(key)) {
+      AutoFitText.applyAutoSize(element, textEl);
     }
   }
 
