@@ -366,6 +366,15 @@ export class Craftools_Editor extends HTMLElement {
   bindEvents() {
     const isMobile = () => window.innerWidth <= 768;
 
+    // Wires up the Canva-style footer (tool list <-> per-element property
+    // bar). Dropped during the JS->TS migration (a0c7b5c) -- MobileToolbar.ts
+    // kept its `init()` entry point, but no call site survived, so
+    // `_footer` stayed null forever and every showToolMode()/showElementMode()
+    // call silently no-op'd via its `if (!this._footer) return;` guard,
+    // leaving the footer stuck on the default tool list even after
+    // selecting an element. Restored to match the original Editor.js.
+    MobileToolbar.init(this);
+
     // ── Sidebar helpers ─────────────────────────────────────────────────────
     const closeSidebar = () => {
       const rightPanel = document.getElementById('right-panel');
