@@ -96,7 +96,15 @@ export class PropertyRenderer {
 
   private static _createSectionEl(section: Section, sectionId: string, isFirst: boolean): HTMLElement {
     const collapsible = section.collapsible !== false;
-    const open        = section.defaultOpen ?? isFirst;
+    // Only the first section opens automatically -- several tools' schemas
+    // mark more than one section `defaultOpen: true` (e.g. TextTool.ts's
+    // Text AND Color sections, ShapeTool.ts's first two), which used to open
+    // all of them simultaneously on selection. `defaultOpen: true` is now a
+    // no-op (every tool's actual first section already opens via `isFirst`);
+    // `defaultOpen: false` is still honored so a tool can force a section
+    // closed even if schema ordering ever made it first. Users can still
+    // expand any other section by hand -- this only changes the default.
+    const open = section.defaultOpen === false ? false : isFirst;
 
     const el = document.createElement('div');
     el.className    = `ct-accordion${open ? ' open' : ''}`;
