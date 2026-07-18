@@ -499,7 +499,31 @@ export class Craftools_Editor extends HTMLElement {
       const el = ce.detail.element;
       if (el && el.getAttribute('data-craftool') === 'papeis') el.style.zIndex = '1';
       this.ctxBar.hide();
-      if (isMobile()) MobileToolbar.showToolMode();
+      if (isMobile()) {
+        MobileToolbar.showToolMode();
+        return;
+      }
+      // Desktop: close the properties panel unless another element is
+      // already selected (select() deselects the previous sibling *before*
+      // marking the new one 'craftools-selected' and firing its own
+      // 'craftools-element-select' -- both happen synchronously in the same
+      // call stack, so this check reflects the final DOM state with no
+      // visible flicker). Without this guard, deleting an element or
+      // clicking empty canvas left the last-rendered properties panel
+      // showing stale controls for an element that no longer exists/is
+      // selected.
+      if (document.querySelector('craftools-element.craftools-selected')) return;
+      const rightPanel  = document.getElementById('right-panel');
+      const panelTitle  = document.getElementById('panel-title');
+      const panelBody   = document.getElementById('panel-body');
+      const defaultMenu = document.getElementById('panel-default-menu');
+      const closePanel  = document.getElementById('close-panel');
+      if (defaultMenu) defaultMenu.classList.remove('d-none');
+      if (panelBody)   panelBody.classList.add('d-none');
+      if (closePanel)  closePanel.classList.add('d-none');
+      if (panelTitle)  panelTitle.textContent = '';
+      if (rightPanel)  rightPanel.classList.remove('mobile-modal-mode');
+      this.activePage = null;
     });
 
     // ── Language select ─────────────────────────────────────────────────────
