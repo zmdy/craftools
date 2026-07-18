@@ -7,6 +7,7 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
@@ -133,7 +134,7 @@ export class TextoCurvoTool extends BaseTool {
       </defs>
       <text
         font-size="${fontSize}"
-        font-family="${escXml(fontFamily)}, sans-serif"
+        font-family="${withEmojiFallback(escXml(fontFamily))}"
         font-weight="${fontWeight}"
         font-style="${fontStyle}"
         letter-spacing="${letterSpacing}"

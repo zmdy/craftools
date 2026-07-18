@@ -15,6 +15,7 @@ import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { formaSection, sizePositionSection, pageAlignSection } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
+import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, cssFromValue as colorPickerCss, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
@@ -71,7 +72,7 @@ export class TextTool extends BaseTool {
       font-size: ${size}px;
       font-weight: ${weight};
       color: #1a1a1a;
-      font-family: 'DM Sans', 'Noto Color Emoji', sans-serif;
+      font-family: ${withEmojiFallback('DM Sans')};
       display: block;
       width: 100%;
       height: 100%;
@@ -287,7 +288,11 @@ export class TextTool extends BaseTool {
         textEl.style.marginLeft = `${value}px`;
         break;
       case 'font':
-        textEl.style.fontFamily = `'${value}', sans-serif`;
+        // Was `'${value}', sans-serif` -- dropped the emoji fallback that
+        // createElement()'s own font-family stack has, so an emoji typed
+        // after changing the font (but not before) silently rendered as
+        // tofu/blank instead of falling back to the emoji font.
+        textEl.style.fontFamily = withEmojiFallback(String(value));
         break;
 
       case 'fontSize':

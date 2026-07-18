@@ -8,6 +8,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection, radiusSection, zIndexSection, variableBindingSection } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { AutoFitText } from '../../utils/AutoFitText.js';
+import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { I18n } from '../../settings/Translations.js';
 import type { VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -173,7 +174,7 @@ export class VariableContentTool extends BaseTool {
       font-size: 16px;
       font-weight: 400;
       color: #1a1a1a;
-      font-family: 'DM Sans', 'Noto Color Emoji', sans-serif;
+      font-family: ${withEmojiFallback('DM Sans')};
       display: block;
       width: 100%;
       height: 100%;
@@ -231,7 +232,10 @@ export class VariableContentTool extends BaseTool {
     const content = getContent(element);
     if (!content) return;
     switch (key) {
-      case 'font':      content.style.fontFamily = `'${value}', sans-serif`; break;
+      // withEmojiFallback (not a bare `'${value}', sans-serif`) so emoji in
+      // a bound variable's resolved text still render in color -- see
+      // TextTool.ts's matching 'font' case for the regression this avoids.
+      case 'font':      content.style.fontFamily = withEmojiFallback(String(value)); break;
       case 'fontSize':  content.style.fontSize   = `${value}px`; break;
       case 'color':     content.style.color       = String(value); break;
       case 'textAlign': content.style.textAlign   = String(value); break;
