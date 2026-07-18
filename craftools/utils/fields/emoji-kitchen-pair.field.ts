@@ -87,7 +87,7 @@ FieldRegistry.register('emoji-kitchen-pair', {
         </div>
         <div class="ct-field" style="margin-top:10px;">
           <span class="craftools-label">Right emoji</span>
-          <select class="craftools-select ct-ek-right-select"></select>
+          <select class="craftools-select ct-ek-right-select" style="font-family:'Noto Color Emoji', sans-serif; font-size:20px;"></select>
         </div>`;
     }
 
