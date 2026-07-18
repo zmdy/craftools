@@ -654,6 +654,17 @@ export class Craftools_Editor extends HTMLElement {
 
         const placeholder = mainPage.querySelector('div[style*="font-size: 14px"]');
         if (placeholder) placeholder.remove();
+
+        // Select the newly created element so the mobile UX matches tapping
+        // an existing element: fires 'craftools-element-select', which both
+        // switches the footer into element mode AND (via MobileToolbar's
+        // _keepElementVisible) scrolls/centers the canvas on it. Previously
+        // a freshly added element on mobile stayed off-screen/unfocused
+        // until the user hunted for it and tapped it manually. rAF + short
+        // timeout matches the same pattern EmojiTool/ShapeTool/IconTool's
+        // picker panels already use after inserting an element.
+        const created = el as HTMLElement & { select?: () => void };
+        requestAnimationFrame(() => { setTimeout(() => created.select?.(), 20); });
       });
     });
 
