@@ -396,6 +396,12 @@ export class ImageTool extends BaseTool {
     } else if (['zoom', 'posX', 'posY', 'rotation'].includes(key)) {
       (meta as unknown as Record<string, unknown>)[key] = value;
       element.dispatchEvent(new CustomEvent('craftools-image-transform-apply', { bubbles: false }));
+      // Was missing entirely: only a photo *swap* (the 'src' branch above)
+      // propagated to linked siblings (Business Card mode) -- adjusting
+      // pan/zoom/rotation through the panel's own sliders left every other
+      // cell in the set exactly where it was, same gap as the direct wheel/
+      // drag interactions ImageTransform.ts owns (now fixed there too).
+      ImageTool._propagateToSiblings(element, meta);
     } else if (key === 'objectFit') {
       // Was lumped in with zoom/posX/posY/rotation above, dispatching
       // 'craftools-image-transform-apply' -- but ImageTransform.applyTransform()

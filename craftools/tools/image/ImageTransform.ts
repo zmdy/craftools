@@ -22,7 +22,7 @@ export class ImageTransform {
   static applyTransform(element: CraftoolsTransformEl): void {
       const meta = element._craftoolsMeta;
       if (!meta) return;
-      
+
       const content = element.contentArea || element;
       const img = content.querySelector('img');
       if (!img) return;
@@ -30,6 +30,49 @@ export class ImageTransform {
       // Internal transform: Positioning (translate), Zoom (scale), and Internal Rotation
       img.style.transform = `translate(${meta.posX || 0}px, ${meta.posY || 0}px) scale(${meta.zoom || 1}) rotate(${meta.rotation || 0}deg)`;
       img.style.transformOrigin = 'center center';
+  }
+
+  /**
+   * Returns sibling image elements linked to this one (Album "cartão de
+   * visita"/Business Card mode) -- via the shared `_linkedElements` array
+   * (Album wizard multi-upload) or the `data-linked-id` attribute
+   * (PageTool.ts's card-cloning logic). Deliberately duplicated from
+   * ImageTool.ts's own private `_getLinkedSiblings()` instead of imported:
+   * ImageTool.ts already imports this module (to call applyTransform()/
+   * setupInteractions()), so importing back would be a circular dependency.
+   * Keep both in sync if the linking mechanism ever changes.
+   */
+  private static _getLinkedSiblings(element: CraftoolsTransformEl & { _linkedElements?: HTMLElement[] }): HTMLElement[] {
+      if (Array.isArray(element._linkedElements)) {
+          return element._linkedElements.filter(el => el !== element);
+      }
+      const lid = element.getAttribute('data-linked-id');
+      if (!lid) return [];
+      return [...document.querySelectorAll<HTMLElement>(`craftools-element[data-linked-id="${lid}"]`)]
+          .filter(el => el !== element);
+  }
+
+  /**
+   * Propagates posX/posY/zoom/rotation to every linked sibling in real
+   * time, live during the wheel/drag interaction itself -- previously only
+   * panel-driven photo *swaps* (ImageTool.ts's `src` change) synced across
+   * a linked Business Card set; adjusting the pan/zoom/rotation directly on
+   * the canvas (this module's whole job) never touched siblings at all, so
+   * e.g. a business card's front and back photo cells drifted out of sync
+   * the moment you dragged/scrolled one of them.
+   */
+  private static _propagateToSiblings(element: CraftoolsTransformEl): void {
+      const meta = element._craftoolsMeta;
+      if (!meta) return;
+      this._getLinkedSiblings(element).forEach(sibling => {
+          const s = sibling as CraftoolsTransformEl;
+          if (!s._craftoolsMeta) s._craftoolsMeta = {};
+          s._craftoolsMeta.posX     = meta.posX;
+          s._craftoolsMeta.posY     = meta.posY;
+          s._craftoolsMeta.zoom     = meta.zoom;
+          s._craftoolsMeta.rotation = meta.rotation;
+          this.applyTransform(s);
+      });
   }
 
   static setupInteractions(element: CraftoolsTransformEl): void {
@@ -68,6 +111,7 @@ export class ImageTransform {
           }
           
           this.applyTransform(element);
+          this._propagateToSiblings(element);
           if (element._syncSidebar) element._syncSidebar();
       }, { passive: false });
 
@@ -105,8 +149,9 @@ export class ImageTransform {
 
           element._craftoolsMeta.posX = dragData.initPosX + dx;
           element._craftoolsMeta.posY = dragData.initPosY + dy;
-          
+
           this.applyTransform(element);
+          this._propagateToSiblings(element);
           if (element._syncSidebar) element._syncSidebar();
       });
 
