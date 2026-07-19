@@ -20,6 +20,17 @@ import './VariableContentTool_Translations.js';
 const getContent = (el: HTMLElement) =>
   el.querySelector<HTMLElement>('[contenteditable], div:first-child') ?? null;
 
+/**
+ * Typography keys that can change the resolved content's own natural
+ * rendered size -- re-run AutoFitText.applyAutoSize() after any of these
+ * so the box keeps tracking the content while auto-fit is on. Matches
+ * TextTool.ts's own AUTOFIT_RELEVANT_KEYS (see its header comment); this
+ * tool's schema has no lineHeight/underline/margin fields, so the set is
+ * smaller. textAlign/color are intentionally excluded -- neither changes
+ * the text's measured size.
+ */
+const AUTOFIT_RELEVANT_KEYS = new Set(['font', 'fontSize', 'bold', 'italic']);
+
 const rgbToHex = (rgb: string) => {
   const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
   return m ? '#' + [m[1],m[2],m[3]].map(n => parseInt(n).toString(16).padStart(2,'0')).join('') : rgb;
@@ -319,6 +330,20 @@ export class VariableContentTool extends BaseTool {
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;
       case 'borderRadius': content.style.borderRadius = `${value}px`; break;
       case 'zIndex':    element.style.zIndex       = String(value); break;
+    }
+
+    // Keep the box in sync with the resolved content while auto-fit is on
+    // -- mirrors TextTool.ts's own AUTOFIT_RELEVANT_KEYS tail (see its
+    // header comment). AutoFitText.applyAutoSize() previously only ran
+    // from the 'autoFit' case above (the moment the toggle itself was
+    // switched on) and from _applyVariablePreview() (whenever the
+    // *resolved value* changed) -- every Typography panel edit that
+    // changes the text's own natural size (font, size, bold, italic) left
+    // the box exactly where it was, so with auto-fit on, resizing the font
+    // silently stopped the box from tracking it. applyAutoSize() no-ops
+    // immediately if auto-fit isn't on, so this is always safe to call.
+    if (AUTOFIT_RELEVANT_KEYS.has(key)) {
+      AutoFitText.applyAutoSize(element, content);
     }
   }
 }
