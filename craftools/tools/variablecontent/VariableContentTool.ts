@@ -231,8 +231,10 @@ export class VariableContentTool extends BaseTool {
           { type: 'toggle',      key: 'bold',      label: 'Bold' },
           { type: 'toggle',      key: 'italic',    label: 'Italic' },
           // Gradient-capable (BaseTool._paintTextColor(), the same
-          // background-clip:text technique TextTool.ts uses).
-          { type: 'color-picker', key: 'color',    label: 'Color', defaultSolid: '#18181b' },
+          // background-clip:text technique TextTool.ts uses). No explicit
+          // defaultSolid needed: ColorPickerUI.ts's shared default is
+          // already near-black (#18181b).
+          { type: 'color-picker', key: 'color',    label: 'Color' },
         ],
       },
       backgroundSection(),

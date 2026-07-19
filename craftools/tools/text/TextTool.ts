@@ -216,11 +216,10 @@ export class TextTool extends BaseTool {
         fields: [
           // Standardized solid-or-gradient picker (see color-picker.field.ts) --
           // owns its own Cor/Gradiente toggle internally, so no separate mode
-          // field or hidden-field pair is needed here anymore.
-          // defaultSolid: '#18181b' -- text defaults to near-black (matches
-          // createElement()'s `color: #1a1a1a`), not the shared white default
-          // used by page/shape backgrounds.
-          { type: 'color-picker', key: 'color', label: 'Color', defaultSolid: '#18181b' },
+          // field or hidden-field pair is needed here anymore. No explicit
+          // defaultSolid needed: ColorPickerUI.ts's shared default is already
+          // near-black (#18181b), matching createElement()'s `color: #1a1a1a`.
+          { type: 'color-picker', key: 'color', label: 'Color' },
         ],
       },
       backgroundSection(),

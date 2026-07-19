@@ -53,17 +53,27 @@ export interface ColorPickerOptions {
    * Which COLOR_PRESETS entry counts as "first" for this instance: shown
    * first in the palette grid, and what solid mode resets to when switching
    * back from gradient. Must be one of COLOR_PRESETS' own values (falls back
-   * to COLOR_PRESETS[0] otherwise). Default: COLOR_PRESETS[0] (white) -- the
-   * right choice for page/shape backgrounds, but text tools pass '#18181b'
-   * so a fresh text element's default isn't white-on-white.
+   * to COLOR_PRESETS[0] otherwise). Default: COLOR_PRESETS[0] (near-black,
+   * #18181b) -- the right choice for nearly every tool (text, shape fill/
+   * stroke, icon, barcode, ...), so most fields don't need to pass this at
+   * all. Only override it when a genuinely different solid makes sense as
+   * THIS field's reset target -- e.g. CommonSchema.ts's backgroundSection()
+   * passes 'transparent', since a background layer should start invisible,
+   * not black.
    */
   defaultSolid?: string;
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 
+// Near-black first, not white -- see ColorPickerOptions.defaultSolid's doc
+// comment above: this is the shared default for every color-picker field in
+// the app (previously white, requiring text/curved-text/variable-content
+// tools to each pass their own `defaultSolid: '#18181b'` override just to
+// avoid a white-on-white/invisible default -- now unnecessary duplication,
+// since black is the sensible default almost everywhere).
 export const COLOR_PRESETS: string[] = [
-  '#ffffff', '#18181b', '#71717a', '#e4e4e7',
+  '#18181b', '#ffffff', '#71717a', '#e4e4e7',
   '#f97316', '#ef4444', '#22c55e', '#3b82f6',
   '#a855f7', '#ec4899', '#eab308', '#14b8a6',
 ];
