@@ -17,8 +17,24 @@ import type { PropertySchema } from '../../types/PropertySchema';
 // never registered and I18n.t() falls back to returning the raw key string.
 import './VariableContentTool_Translations.js';
 
-const getContent = (el: HTMLElement) =>
-  el.querySelector<HTMLElement>('[contenteditable], div:first-child') ?? null;
+/**
+ * Returns the resolved-content child div of a conteudovariavel element.
+ *
+ * NOTE: Must exclude UI-layer divs (.ct-bg-layer, .craftools-ctrlbar, etc.)
+ * because `_getOrCreateBgLayer()` inserts a div as the very first child of
+ * the element once any background property is set -- after that,
+ * `div:first-child` would match the bg-layer instead of the content div,
+ * silently breaking every typography property (color, font, size ...) by
+ * writing styles onto the invisible background element instead of the text.
+ */
+const getContent = (el: HTMLElement): HTMLElement | null =>
+  el.querySelector<HTMLElement>('[contenteditable]') ??
+  ([...el.children].find(c =>
+    !c.classList.contains('ct-bg-layer') &&
+    !c.classList.contains('craftools-element-blur-bg') &&
+    !c.classList.contains('craftools-ctrlbar') &&
+    !c.classList.contains('craftools-sidebar-overlay')
+  ) as HTMLElement | undefined) ?? null;
 
 /**
  * Typography keys that can change the resolved content's own natural
