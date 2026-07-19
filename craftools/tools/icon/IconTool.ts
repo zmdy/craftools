@@ -295,6 +295,46 @@ export class IconTool extends BaseTool {
     ];
   }
 
+  /**
+   * "Change icon" ctx-bar action -- swaps the selected element's icon via
+   * the same picker (pack/category tabs + search + grid) used to add a new
+   * one, in "change" mode (renderPickerPanel()'s `targetElement` param,
+   * supported since this tool's migration but never actually reachable:
+   * this getCtxOptions() override didn't exist at all, so BaseTool's
+   * default (an empty array) applied and the ctx-bar never offered a
+   * "change icon" button. iconTool.changeIcon/pickerTitle's translations
+   * already existed for exactly this feature, confirming it was planned
+   * but never wired up -- same gap ShapeTool.ts had for "Change shape".
+   */
+  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+    return [
+      {
+        icon: 'published_with_changes',
+        label: I18n.t('iconTool.changeIcon'),
+        command: (element: HTMLElement) => {
+          const panelTitle = document.getElementById('panel-title');
+          const panelBody  = document.getElementById('panel-body');
+          if (!panelBody) return;
+          if (panelTitle) panelTitle.textContent = I18n.t('iconTool.pickerTitle');
+          // `editor` (2nd param) is only read by renderPickerPanel()'s
+          // "create a brand-new element" branch -- unused whenever
+          // `targetElement` (3rd param) is passed, as it is here, so
+          // reusing `element` in that slot is safe.
+          IconTool.renderPickerPanel(panelBody, element, element, () => {
+            // Picker replaced panelBody's contents wholesale, bypassing
+            // renderPropertiesPanel()'s own "same element, don't re-clear"
+            // tracking -- clear it explicitly so the properties panel
+            // rebuilds cleanly instead of appending its sections after the
+            // stale picker markup.
+            panelBody.innerHTML = '';
+            if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
+            IconTool.renderPropertiesPanel(panelBody, element);
+          });
+        },
+      },
+    ];
+  }
+
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
     // 'zIndex' (from CommonSchema.ts's zIndexSection()) is a plain CSS
