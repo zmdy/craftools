@@ -640,9 +640,35 @@ export class AlbumTool {
       const albumClearBtn = panelBody.querySelector<HTMLButtonElement>('#album-clear-btn');
       if (albumClearBtn) {
         albumClearBtn.addEventListener('click', () => {
-          // Limpar a página toda, assim como no botão de apagar página
-          pageEl.innerHTML = '';
-          pageEl.style.backgroundColor = '#ffffff';
+          // A multi-photo album that doesn't fit on one page spills onto
+          // extra pages via Craftools_LayoutGrid.render() (utils/LayoutGrid.ts),
+          // which calls PageTool.addNewPage() and tags EVERY page it fills
+          // (including the first) with a `.craftools-grid-container
+          // [data-grid-source="album"]` marker. Clearing only `pageEl` (the
+          // page the wizard happened to be opened on) left album content
+          // behind on any of those other auto-added pages -- find every page
+          // carrying that marker, not just this one.
+          const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper');
+          const albumPages = pagesWrapper
+            ? [...pagesWrapper.querySelectorAll<HTMLElement>('.craftools-page')]
+              .filter(p => p === pageEl || p.querySelector('.craftools-grid-container[data-grid-source="album"]'))
+            : [pageEl];
+
+          albumPages.forEach(page => {
+            // Extra pages the album itself created hold nothing but its
+            // grid -- remove them outright instead of leaving a blank page
+            // behind, same as the "Apagar página" action, guarded the same
+            // way (never remove the last remaining page). The primary page
+            // (`pageEl`, where the wizard panel lives) is always just
+            // cleared in place, matching the previous single-page behavior.
+            if (page !== pageEl && pagesWrapper && pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
+              page.remove();
+              return;
+            }
+            page.innerHTML = '';
+            page.style.backgroundColor = '#ffffff';
+          });
+
           const bgEl = document.getElementById('page-bg-color') as HTMLInputElement | null;
           if (bgEl) bgEl.value = '#ffffff';
 
