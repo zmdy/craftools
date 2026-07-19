@@ -75,6 +75,26 @@ export class ShapeGenerator {
           default:         inner = this._square(m);
       }
 
+      // Every shape is drawn in a fixed 0-100 viewBox with
+      // preserveAspectRatio="none" (below) so it always exactly fills the
+      // element's box regardless of aspect ratio -- but that means resizing
+      // to a non-square box scales X and Y by DIFFERENT factors. A plain
+      // `stroke-width` is defined in viewBox units and gets stretched by
+      // whichever axis' factor applies to each edge, so a stroke that's
+      // "2" everywhere in viewBox space renders at a different pixel width
+      // on the shape's horizontal vs. vertical edges the moment the shape
+      // isn't square -- the "border isn't the same width on every side
+      // after resizing" bug. `vector-effect="non-scaling-stroke"` makes the
+      // stroke keep a constant width in screen pixels regardless of any
+      // non-uniform scale applied to the shape's geometry, which is also
+      // the correct/expected behavior for a "stroke width" field in a
+      // design tool (a literal pixel width, not a percentage of the
+      // shape). `vector-effect` isn't inherited from the wrapping <g>, so
+      // it has to land on every actual geometry element (rect/ellipse/
+      // polygon/path/circle) inner may contain -- e.g. the Flower shape
+      // draws several <ellipse>s plus a <circle>, not just one element.
+      inner = inner.replace(/<(rect|ellipse|polygon|path|circle)(?=[\s/])/g, '<$1 vector-effect="non-scaling-stroke"');
+
       const defs = fillPaint.defs + strokeDefs;
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;width:100%;height:100%;">` +
           (defs ? `<defs>${defs}</defs>` : '') +
