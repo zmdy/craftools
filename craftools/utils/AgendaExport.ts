@@ -291,7 +291,7 @@ export class AgendaExport {
     binding:  VariableBinding,
   ): void {
     if (toolType === 'conteudovariavel') {
-      const ce = cloneEl.querySelector('[contenteditable]') as HTMLElement | null;
+      const ce = cloneEl.querySelector('div') as HTMLElement | null;
       if (ce) {
         if (binding.type === 'emojiKitchen') {
           ce.innerHTML = resolved
