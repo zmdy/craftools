@@ -191,12 +191,22 @@ export class AgendaExportTool {
     container.innerHTML = `<p style="font-size:11px; color:var(--text-secondary);">${a('previewIntro')}</p><p style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.previewLoading')}</p>`;
 
     // Collects every binding from every repeated page for a single API
-    // prefetch (avoids one fetch per element/repetition).
+    // prefetch (avoids one fetch per element/repetition), along with the
+    // exact repetition indices this preview will actually sample below
+    // ([0, 1, repeatCount - 1] per page, same formula) -- passed through so
+    // an Emoji Kitchen "variable" binding (no fixed right emoji) only
+    // prefetches the combo(s) these specific samples need instead of every
+    // partner combo in the pool (see prefetchApiResources()'s own comment).
     const allBindings: VariableBinding[] = [];
+    const repetitionIndicesSet = new Set<number>();
     repeatedPages.forEach(page => {
       AgendaExportTool._collectPageBindings(page).forEach(({ binding }) => allBindings.push(binding));
+      const repeatCount = parseInt(page.dataset.agendaRepeat ?? '', 10) || 1;
+      [0, 1, repeatCount - 1].forEach(i => { if (i >= 0 && i < repeatCount) repetitionIndicesSet.add(i); });
     });
-    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings);
+    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
+      repetitionIndices: [...repetitionIndicesSet],
+    });
 
     const blocks = pages.map((page, idx) => {
       const repeatCount = parseInt(page.dataset.agendaRepeat ?? '', 10) || 1;

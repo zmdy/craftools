@@ -55,12 +55,23 @@ export class AgendaExport {
     }
 
     // 1. Pré-busca (uma única vez) todos os recursos de API referenciados por
-    //    variáveis "Frase da API" em qualquer página.
+    //    variáveis "Frase da API" em qualquer página -- passando TODOS os
+    //    índices de repetição que serão de fato renderizados abaixo (0..
+    //    repeatCount-1 de cada página), para que uma variável "Emoji Kitchen"
+    //    sem emoji direito fixo tenha, no cache, exatamente os combos que
+    //    cada repetição vai precisar (ver o próprio comentário de
+    //    prefetchApiResources() -- sem isso, páginas além do que fosse
+    //    prefetched ficariam com a imagem do combo vazia/quebrada).
     const allBindings: (VariableBinding | null)[] = [];
+    const repetitionIndicesSet = new Set<number>();
     pages.forEach(page => {
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
+      const repeatCount = this._repeatCount(page);
+      for (let i = 0; i < repeatCount; i++) repetitionIndicesSet.add(i);
     });
-    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings);
+    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
+      repetitionIndices: [...repetitionIndicesSet],
+    });
 
     const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
 

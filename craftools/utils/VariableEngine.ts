@@ -174,8 +174,28 @@ export class VariableEngine {
         return this.resolve(binding, context, {});
     }
 
-    static async prefetchApiResources(bindings: (VariableBinding | null)[]): Promise<ApiCache> {
+    /**
+     * @param opts.repetitionIndices  Which repetition indices will actually be
+     *   resolved from the returned cache -- matters only for an "emojiKitchen"
+     *   binding with no fixed right emoji (mode sequential/random over every
+     *   available partner, see _pickEmojiKitchen()). Defaults to `[0]`, the
+     *   single-preview case (one canvas element render, or the panel's own
+     *   live preview box) -- previously this method always fetched the combo
+     *   image for EVERY partner in the pool regardless of how many would
+     *   ever actually be used, which is exactly why resolving an Emoji
+     *   Kitchen "variable" binding was so much slower than the standalone
+     *   Emoji Kitchen tool (which only ever fetches the one combo it needs).
+     *   Bulk callers that render many repetitions (AgendaExportTool.ts's
+     *   preview tab, AgendaExport.ts's real PDF generation) pass every
+     *   repetition index they'll actually render, so the cache still has
+     *   everything those repetitions need -- just nothing beyond that.
+     */
+    static async prefetchApiResources(
+        bindings: (VariableBinding | null)[],
+        opts: { repetitionIndices?: number[] } = {},
+    ): Promise<ApiCache> {
         const list = bindings ?? [];
+        const repetitionIndices = opts.repetitionIndices?.length ? opts.repetitionIndices : [0];
         const apiPhraseBindings = list.filter((b): b is VariableBinding => !!b && b.type === 'apiPhrase');
 
         const kitchenPairs         = new Set<string>();
@@ -207,8 +227,24 @@ export class VariableEngine {
                 try   { partners = ((await loadEmojiKitchenPartners(left)) as string[]).filter((p: string) => p !== left); }
                 catch { partners = []; }
                 cache.emojiKitchenPartnersList![left] = partners;
-                kitchenPairs.add(`${left}|${left}`);
-                partners.forEach(p => kitchenPairs.add(`${left}|${p}`));
+
+                // Only queue the combo(s) actually reachable by the
+                // requested repetition indices -- mirrors _pickEmojiKitchen()'s
+                // own pool/index math exactly, so whatever it looks up later
+                // is always already in `kitchenPairs` below. Computed per
+                // BINDING (not per `left`) since two bindings can share the
+                // same left emoji with different modes (sequential vs
+                // random), which pick different rights for the same index.
+                const pool = [left, ...partners];
+                list.forEach(b => {
+                    if (b?.type !== 'emojiKitchen' || (b.leftEmoji ?? '').trim() !== left || (b.rightEmoji ?? '').trim()) return;
+                    repetitionIndices.forEach(idx => {
+                        const right = b.mode === 'random'
+                            ? pool[this._pseudoRandomIndex(idx, pool.length)]
+                            : pool[idx % pool.length];
+                        kitchenPairs.add(`${left}|${right}`);
+                    });
+                });
             }));
         }
 
