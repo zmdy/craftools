@@ -743,20 +743,17 @@ export class Craftools_Editor extends HTMLElement {
           document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
 
-          // papeis: find or create the background paper element, then select it
+          // papeis: Paper is no longer a standalone draggable element/tool --
+          // its controls now live in Page Settings' "Papel personalizado" tab
+          // (see PaperTool.ts's ToolRegistry.register() comment and
+          // PageTool.ts's page click handler). Clicking this sidebar entry
+          // simply opens Page Settings by dispatching a real click on the
+          // active page, reusing PageTool.ts's own click handler so behavior
+          // stays identical to clicking the page directly.
           if (tool === 'papeis') {
-            const page = this.querySelector('.craftools-page') ?? document.querySelector('.craftools-page');
-            if (page) {
-              let paperEl = page.querySelector('craftools-element[data-craftool="papeis"]') as (HTMLElement & { select?: () => void }) | null;
-              if (!paperEl) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const m: any = await import('../tools/paper/PaperTool.js');
-                paperEl = m.PaperTool.createElement('papeis', this);
-                page.appendChild(paperEl!);
-              }
-              setTimeout(() => { if (typeof paperEl?.select === 'function') paperEl!.select!(); }, 50);
-              closeSidebar();
-            }
+            closeSidebar();
+            const targetPage = (this.activePage ?? this.querySelector('.craftools-page') ?? document.querySelector('.craftools-page')) as HTMLElement | null;
+            if (targetPage) targetPage.click();
             return;
           }
 

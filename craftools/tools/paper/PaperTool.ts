@@ -10,7 +10,7 @@ import { zIndexSection } from '../../utils/CommonSchema';
 import { PaperPatterns } from './PaperPatterns';
 import type { PropertySchema } from '../../types/PropertySchema';
 
-type PaperMeta = {
+export type PaperMeta = {
   paperType: string;
   paperSize: string;
   theme: string;
@@ -30,7 +30,12 @@ type PaperMeta = {
 const getMeta = (el: HTMLElement): Partial<PaperMeta> =>
   (el as HTMLElement & { _craftoolsMeta?: Partial<PaperMeta> })._craftoolsMeta ?? {};
 
-const PAPER_TYPES = [
+// Exported for PageTool.ts's "Papel personalizado" page-settings tab (see
+// its own header comment: Paper is no longer a separate draggable sidebar
+// tool -- all of its controls now live inside Page Settings instead,
+// reusing this exact option list/meta shape/rendering rather than
+// duplicating it).
+export const PAPER_TYPES = [
   { value: 'lined',                   label: 'Lined' },
   { value: 'vertical_lined',          label: 'Vertical lined' },
   { value: 'grid',                    label: 'Grid' },
@@ -51,7 +56,7 @@ const PAPER_TYPES = [
   { value: 'storyboard',              label: 'Storyboard' },
 ];
 
-const PAPER_SIZES = [
+export const PAPER_SIZES = [
   { value: 'a4',        label: 'A4 (210 × 297 mm)' },
   { value: 'a5',        label: 'A5 (148 × 210 mm)' },
   { value: 'a3',        label: 'A3 (297 × 420 mm)' },
@@ -64,7 +69,7 @@ const PAPER_SIZES = [
   { value: 'custom',    label: 'Custom' },
 ];
 
-const THEMES = [
+export const THEMES = [
   { value: 'default',    label: 'Default' },
   { value: 'night',      label: 'Night' },
   { value: 'sepia',      label: 'Sepia' },
@@ -343,4 +348,17 @@ PaperTool.registeredKeys = ['papeis'];
 // #pwa-sidebar-papeis) -- 'editor.paper' ("Artes impressas") and
 // 'description' were a different, unrelated i18n key/icon that made this
 // tool's title and the mobile footer show the wrong text/glyph.
-ToolRegistry.register({ key: 'papeis', label: 'editor.papers2', icon: 'layers', tool: PaperTool, draggable: true, showInFooterNav: false, category: 'elements' });
+//
+// draggable: false -- Paper used to be a standalone element the user
+// dragged onto the canvas like Shape/Icon/Emoji, which also meant clicking
+// a page that already had one hijacked the click to select the raw paper
+// element instead of showing Page Settings (PageTool.ts's own click
+// handler used to special-case this). It's now created/edited entirely
+// through Page Settings' own "Papel personalizado" tab (see PageTool.ts),
+// so it's no longer something to drag from the sidebar -- this registry
+// entry (and the class below) still exist purely as the implementation
+// PageTool.ts calls into (createElement/updatePaperSVG/getDefaultMeta),
+// and so ToolRegistry.get('papeis') still resolves correctly for any
+// paper element already sitting in a page (from an existing session) that
+// needs its z-index/ctx handling.
+ToolRegistry.register({ key: 'papeis', label: 'editor.papers2', icon: 'layers', tool: PaperTool, draggable: false, showInFooterNav: false, category: 'elements' });

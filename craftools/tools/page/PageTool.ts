@@ -2,6 +2,7 @@ import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { Notify } from '../../utils/Notify.js';
 import { renderColorPicker, cssFromValue, parseCssBackground, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
+import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, type PaperMeta } from '../paper/PaperTool.js';
 import './PageTool_Translations.js';
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -275,12 +276,14 @@ export class PageTool {
           return;
         }
 
-        // Check if page has a paper element
-        const paperEl = pageEl.querySelector<HTMLElement & { select?: () => void }>('craftools-element[data-craftool="papeis"]');
-        if (paperEl && typeof paperEl.select === 'function') {
-          paperEl.select();
-          return;
-        }
+        // Paper used to be a standalone element the user dragged onto the
+        // canvas -- clicking a page that already had one used to redirect
+        // here to select() that raw element directly instead of showing
+        // Page Settings. Paper is now entirely managed via this panel's own
+        // "Papel personalizado" tab below (see PaperTool.ts's own header
+        // comment on ToolRegistry.register()), so a page click always shows
+        // Page Settings, with that tab reflecting whatever paper element
+        // (if any) already exists on this page.
 
         const rightPanel  = document.getElementById('right-panel');
         const panelTitle  = document.getElementById('panel-title');
@@ -361,9 +364,18 @@ export class PageTool {
             </div>
           `;
 
+          // "Papel personalizado" -- Paper used to be its own draggable
+          // sidebar tool/element (PaperTool.ts); every one of its controls
+          // now lives here instead, reading/writing whichever paper element
+          // (if any) already exists on THIS page. See PageTool._renderPaperTabHtml().
+          const existingPaperEl = PageTool._findPaperElement(pageEl);
+          const paperMeta = existingPaperEl ? (existingPaperEl as HTMLElement & { _craftoolsMeta?: PaperMeta })._craftoolsMeta ?? null : null;
+          const htmlPaper = PageTool._renderPaperTabHtml(paperMeta);
+
           panelBody.innerHTML =
             PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
             PanelUI.accordion('page-fundo',   'palette',    I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
+            PanelUI.accordion('page-papel',   'description',I18n.t('pageTool.customPaperTab') || 'Custom Paper',  htmlPaper) +
             PanelUI.accordion('page-acoes',   'warning',    I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
 
           // BaseTool.renderPropertiesPanel() tracks which element #panel-body
@@ -379,6 +391,7 @@ export class PageTool {
           delete (panelBody as unknown as { _ctRenderedElement?: HTMLElement })._ctRenderedElement;
 
           PanelUI.bindAccordions(panelBody);
+          PageTool._bindPaperTab(panelBody, editor, pageEl);
         }
 
         let activeUnit = currentUnit;
@@ -503,6 +516,224 @@ export class PageTool {
         rightPanel?.classList.add('mobile-open');
       }
     });
+  }
+
+  // ── "Papel personalizado" (custom paper background) ────────────────────────
+  //
+  // Paper used to be its own draggable sidebar tool/element (PaperTool.ts) --
+  // dragging one onto a page created a `<craftools-element data-craftool=
+  // "papeis">` sized to the page, locked, sitting at the bottom of the
+  // stack. Every one of its controls (type/size/theme, lines, margins,
+  // background, extras) now lives here in Page Settings instead: this tab
+  // finds (or creates, on enable) that same underlying element on the
+  // CURRENT page and drives it directly via PaperTool.updatePaperSVG(),
+  // rather than duplicating any of its pattern-generation logic.
+
+  private static _findPaperElement(pageEl: HTMLElement): (HTMLElement & { _craftoolsMeta?: PaperMeta }) | null {
+    return pageEl.querySelector<HTMLElement & { _craftoolsMeta?: PaperMeta }>('craftools-element[data-craftool="papeis"]');
+  }
+
+  private static _paperOptionsHtml(opts: Array<{ value: string; label: string }>, current: string): string {
+    return opts.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${I18n.t(`paperTool.${o.value}`) || o.label}</option>`).join('');
+  }
+
+  private static _renderPaperTabHtml(meta: PaperMeta | null): string {
+    const enabled = meta !== null;
+    const m = meta ?? PaperTool.getDefaultMeta();
+
+    return `
+      <div class="ct-field">
+        <button type="button" class="craftools-pill ${enabled ? 'active' : ''}" id="paper-enable-btn" style="width:100%; justify-content:center; padding:8px; gap:6px;">
+          <span class="material-symbols-outlined" style="font-size:15px;">${enabled ? 'toggle_on' : 'toggle_off'}</span>
+          ${enabled ? I18n.t('pageTool.paperDisable') : I18n.t('pageTool.paperEnable')}
+        </button>
+      </div>
+      <div id="paper-fields-wrap" style="${enabled ? '' : 'display:none;'}">
+        <div class="ct-field">
+          <span class="craftools-label">${I18n.t('paperTool.paperType')}</span>
+          <select class="craftools-select" id="paper-type">${PageTool._paperOptionsHtml(PAPER_TYPES, m.paperType)}</select>
+        </div>
+        <div class="ct-field">
+          <span class="craftools-label">${I18n.t('paperTool.paperSize')}</span>
+          <select class="craftools-select" id="paper-size">${PageTool._paperOptionsHtml(PAPER_SIZES, m.paperSize)}</select>
+        </div>
+        <div class="ct-field">
+          <span class="craftools-label">${I18n.t('paperTool.theme')}</span>
+          <select class="craftools-select" id="paper-theme">${PageTool._paperOptionsHtml(THEMES, m.theme)}</select>
+        </div>
+
+        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+          <span class="craftools-label">${I18n.t('pageTool.paperLines')}</span>
+          <div id="paper-line-color-section" style="margin-bottom:8px;"></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.lineStyle')}</span>
+              <select class="craftools-select" id="paper-line-style">
+                <option value="solid"  ${m.lineStyle === 'solid'  ? 'selected' : ''}>${I18n.t('paperTool.solid')}</option>
+                <option value="dashed" ${m.lineStyle === 'dashed' ? 'selected' : ''}>${I18n.t('paperTool.dashed')}</option>
+                <option value="dotted" ${m.lineStyle === 'dotted' ? 'selected' : ''}>${I18n.t('paperTool.dotted')}</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.lineSpacing')}</span>
+              <input type="number" class="craftools-input" id="paper-line-spacing" value="${m.lineSpacing}" min="4" max="20" step="0.5">
+            </div>
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.lineWidth')}</span>
+              <input type="number" class="craftools-input" id="paper-line-width" value="${m.lineWidth}" min="0.1" max="5" step="0.1">
+            </div>
+          </div>
+        </div>
+
+        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+          <span class="craftools-label">${I18n.t('pageTool.paperMargins')}</span>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.topMargin')}</span>
+              <input type="number" class="craftools-input" id="paper-margin-top" value="${m.margins.top}" min="0" max="50" step="1">
+            </div>
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.rightMargin')}</span>
+              <input type="number" class="craftools-input" id="paper-margin-right" value="${m.margins.right}" min="0" max="50" step="1">
+            </div>
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.bottomMargin')}</span>
+              <input type="number" class="craftools-input" id="paper-margin-bottom" value="${m.margins.bottom}" min="0" max="50" step="1">
+            </div>
+            <div>
+              <span class="craftools-label">${I18n.t('paperTool.leftMargin')}</span>
+              <input type="number" class="craftools-input" id="paper-margin-left" value="${m.margins.left}" min="0" max="50" step="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+          <span class="craftools-label">${I18n.t('pageTool.paperBackground')}</span>
+          <div id="paper-bg-color-section" style="margin-bottom:8px;"></div>
+          <span class="craftools-label">${I18n.t('paperTool.bgPattern')}</span>
+          <select class="craftools-select" id="paper-bg-pattern">
+            ${PageTool._paperOptionsHtml([
+              { value: 'none', label: 'None' }, { value: 'grid', label: 'Grid' }, { value: 'dots', label: 'Dots' },
+              { value: 'lines', label: 'Lines' }, { value: 'crosshatch', label: 'Crosshatch' }, { value: 'graph', label: 'Graph' },
+            ], m.bgPattern)}
+          </select>
+        </div>
+
+        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+          <span class="craftools-label">${I18n.t('pageTool.paperExtras')}</span>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
+            <input type="checkbox" id="paper-sidebar-enabled" ${m.sidebar.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableSidebar')}
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
+            <input type="checkbox" id="paper-watermark-enabled" ${m.watermark.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableWatermark')}
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
+            <input type="checkbox" id="paper-logo-enabled" ${m.logo.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableLogo')}
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
+            <input type="checkbox" id="paper-page-number-enabled" ${m.pageSettings.showPageNumber ? 'checked' : ''}> ${I18n.t('paperTool.showPageNumber')}
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Wires the "Papel personalizado" tab's enable toggle + every field.
+   * Re-renders just this tab's own HTML (via _renderPaperTabHtml()) and
+   * re-binds after each change instead of trying to keep a live meta
+   * object in sync field-by-field -- this tab's HTML is cheap to rebuild
+   * and it keeps every field trivially reading its true current value
+   * (mirrors how the enable toggle itself already has to swap the whole
+   * fields block in/out).
+   */
+  private static _bindPaperTab(panelBody: HTMLElement, editor: HTMLElement, pageEl: HTMLElement): void {
+    const wrap = panelBody.querySelector<HTMLElement>('#page-papel .ct-accordion-content') ?? panelBody;
+
+    const rerender = (): void => {
+      const paperEl = PageTool._findPaperElement(pageEl);
+      const meta = paperEl?._craftoolsMeta ?? null;
+      const target = panelBody.querySelector<HTMLElement>('[data-ct-section="ct-section-page-papel"] .ct-accordion-content');
+      if (target) target.innerHTML = PageTool._renderPaperTabHtml(meta);
+      PageTool._bindPaperTab(panelBody, editor, pageEl);
+    };
+
+    const getOrCreatePaperEl = (): HTMLElement & { _craftoolsMeta?: PaperMeta } => {
+      let paperEl = PageTool._findPaperElement(pageEl);
+      if (!paperEl) {
+        paperEl = PaperTool.createElement('papeis', editor) as HTMLElement & { _craftoolsMeta?: PaperMeta };
+        pageEl.appendChild(paperEl);
+        pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
+      }
+      return paperEl;
+    };
+
+    const enableBtn = wrap.querySelector<HTMLButtonElement>('#paper-enable-btn');
+    if (enableBtn) {
+      enableBtn.onclick = () => {
+        const paperEl = PageTool._findPaperElement(pageEl);
+        if (paperEl) {
+          // Disable: the underlying element is removed entirely (matches
+          // "papel personalizado" being an opt-in overlay, not a permanent
+          // page property) -- re-enabling later starts from a fresh default
+          // rather than resurrecting the old configuration.
+          paperEl.remove();
+        } else {
+          getOrCreatePaperEl();
+        }
+        rerender();
+      };
+    }
+
+    const fieldsWrap = wrap.querySelector<HTMLElement>('#paper-fields-wrap');
+    if (!fieldsWrap) return; // Disabled -- nothing else to bind.
+
+    const applyMeta = (patch: Partial<PaperMeta> | ((m: PaperMeta) => void)): void => {
+      const paperEl = getOrCreatePaperEl();
+      const meta = (paperEl._craftoolsMeta ?? PaperTool.getDefaultMeta()) as PaperMeta;
+      if (typeof patch === 'function') patch(meta);
+      else Object.assign(meta, patch);
+      paperEl._craftoolsMeta = meta;
+      PaperTool.updatePaperSVG(paperEl);
+    };
+
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-type')?.addEventListener('change', e => applyMeta({ paperType: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-size')?.addEventListener('change', e => applyMeta({ paperSize: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-theme')?.addEventListener('change', e => applyMeta({ theme: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-style')?.addEventListener('change', e => applyMeta({ lineStyle: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-line-spacing')?.addEventListener('input', e => applyMeta({ lineSpacing: parseFloat((e.target as HTMLInputElement).value) || 0 }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-line-width')?.addEventListener('input', e => applyMeta({ lineWidth: parseFloat((e.target as HTMLInputElement).value) || 0 }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-top')?.addEventListener('input', e => applyMeta(m => { m.margins.top = parseFloat((e.target as HTMLInputElement).value) || 0; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-right')?.addEventListener('input', e => applyMeta(m => { m.margins.right = parseFloat((e.target as HTMLInputElement).value) || 0; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-bottom')?.addEventListener('input', e => applyMeta(m => { m.margins.bottom = parseFloat((e.target as HTMLInputElement).value) || 0; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-left')?.addEventListener('input', e => applyMeta(m => { m.margins.left = parseFloat((e.target as HTMLInputElement).value) || 0; }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-bg-pattern')?.addEventListener('change', e => applyMeta({ bgPattern: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-sidebar-enabled')?.addEventListener('change', e => applyMeta(m => { m.sidebar.enabled = (e.target as HTMLInputElement).checked; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-watermark-enabled')?.addEventListener('change', e => applyMeta(m => { m.watermark.enabled = (e.target as HTMLInputElement).checked; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-logo-enabled')?.addEventListener('change', e => applyMeta(m => { m.logo.enabled = (e.target as HTMLInputElement).checked; }));
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-page-number-enabled')?.addEventListener('change', e => applyMeta(m => { m.pageSettings.showPageNumber = (e.target as HTMLInputElement).checked; }));
+
+    // Line/background color -- the standardized solid-or-gradient picker
+    // (same one every element tool's color field uses), matching how
+    // htmlBackground's own fill section is wired above.
+    const paperElNow = PageTool._findPaperElement(pageEl);
+    const currentMeta = paperElNow?._craftoolsMeta ?? PaperTool.getDefaultMeta();
+
+    const lineColorSection = fieldsWrap.querySelector<HTMLElement>('#paper-line-color-section');
+    if (lineColorSection) {
+      renderColorPicker(lineColorSection, { mode: 'solid', solid: currentMeta.lineColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } }, (next) => {
+        applyMeta({ lineColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
+      }, { allowGradient: false });
+    }
+
+    const bgColorSection = fieldsWrap.querySelector<HTMLElement>('#paper-bg-color-section');
+    if (bgColorSection) {
+      renderColorPicker(bgColorSection, { mode: 'solid', solid: currentMeta.bgColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } }, (next) => {
+        applyMeta({ bgColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
+      }, { allowGradient: false });
+    }
   }
 
   static addNewPage(editor: HTMLElement): void {

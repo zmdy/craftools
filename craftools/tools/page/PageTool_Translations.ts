@@ -14,7 +14,15 @@ I18n.addTranslations('pageTool', {
         deletePage: "Apagar Página",
         confirmDelete: "Tem certeza que deseja excluir esta página? Essa ação não pode ser desfeita.",
         alertLastPage: "Você não pode apagar a única página restante.",
-        newPageLabel: "Nova Página"
+        newPageLabel: "Nova Página",
+
+        customPaperTab: "Papel personalizado",
+        paperEnable: "Ativar papel personalizado",
+        paperDisable: "Desativar papel personalizado",
+        paperLines: "Linhas",
+        paperMargins: "Margens (mm)",
+        paperBackground: "Fundo do papel",
+        paperExtras: "Extras"
     },
     "en": {
         title: "Page Settings",
@@ -29,7 +37,15 @@ I18n.addTranslations('pageTool', {
         deletePage: "Delete Page",
         confirmDelete: "Are you sure you want to delete this page? This action cannot be undone.",
         alertLastPage: "You cannot delete the only remaining page.",
-        newPageLabel: "New Page"
+        newPageLabel: "New Page",
+
+        customPaperTab: "Custom Paper",
+        paperEnable: "Enable custom paper",
+        paperDisable: "Disable custom paper",
+        paperLines: "Lines",
+        paperMargins: "Margins (mm)",
+        paperBackground: "Paper background",
+        paperExtras: "Extras"
     },
     "es": {
         title: "Configuración de Página",
@@ -44,6 +60,14 @@ I18n.addTranslations('pageTool', {
         deletePage: "Eliminar Página",
         confirmDelete: "¿Seguro que deseas eliminar esta página? Esta acción no se puede deshacer.",
         alertLastPage: "No puedes eliminar la única página restante.",
-        newPageLabel: "Nueva Página"
+        newPageLabel: "Nueva Página",
+
+        customPaperTab: "Papel personalizado",
+        paperEnable: "Activar papel personalizado",
+        paperDisable: "Desactivar papel personalizado",
+        paperLines: "Líneas",
+        paperMargins: "Márgenes (mm)",
+        paperBackground: "Fondo del papel",
+        paperExtras: "Extras"
     }
 });
