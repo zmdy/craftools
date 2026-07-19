@@ -386,7 +386,7 @@ export class AgendaExport {
     binding:  VariableBinding,
   ): void {
     if (toolType === 'conteudovariavel') {
-      const ce = cloneEl.querySelector('div') as HTMLElement | null;
+      const ce = (cloneEl.querySelector('.ct-content') || cloneEl.querySelector('div[contenteditable]') || [...cloneEl.children].find(c => !c.classList.contains('ct-bg-layer') && !c.classList.contains('craftools-ctrlbar') && !c.classList.contains('craftools-sidebar-overlay'))) as HTMLElement | null;
       if (ce) {
         if (binding.type === 'emojiKitchen') {
           ce.innerHTML = resolved

@@ -80,9 +80,15 @@ export class VariableContentTool extends BaseTool {
     // VariablePanel.ts's _getElementBinding() already relies on for
     // cross-element "Vincular a" lookups. Stored here as a JSON *string* in
     // ctState (see variable-binding.field.ts for why).
-    if (!('variableBinding' in existing)) {
-      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable;
-      patch.variableBinding = stringifyVariableBinding(binding);
+    const memoryBinding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable;
+    if ('variableBinding' in existing) {
+      if (!memoryBinding) {
+        // Re-hydrate the JS memory object from the HTML dataset if memory is lost
+        // (which happens after a preview innerHTML restore)
+        (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable = parseVariableBinding(existing.variableBinding);
+      }
+    } else {
+      patch.variableBinding = stringifyVariableBinding(memoryBinding);
     }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
