@@ -526,6 +526,10 @@ export class PageTool {
         // click handler was the one path missing it.
         rightPanel?.classList.add('panel-open');
         rightPanel?.classList.remove('sidenav-collapsed');
+        if (rightPanel) {
+          rightPanel.style.removeProperty('width');
+          if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
+        }
         if (window.innerWidth <= 768) rightPanel?.classList.add('mobile-modal-mode');
       }
     });

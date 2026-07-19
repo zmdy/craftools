@@ -467,6 +467,8 @@ export class Craftools_Editor extends HTMLElement {
         if (rightPanel) {
           rightPanel.classList.add('panel-open');
           rightPanel.classList.remove('sidenav-collapsed');
+          rightPanel.style.removeProperty('width');
+          if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
         }
         const menuIcon = document.getElementById('pwa-menu-icon');
         if (menuIcon && menuIcon.textContent !== 'close') menuIcon.textContent = 'close';
@@ -558,6 +560,8 @@ export class Craftools_Editor extends HTMLElement {
       if (rightPanel) {
         rightPanel.classList.add('panel-open');
         rightPanel.classList.remove('sidenav-collapsed');
+        rightPanel.style.removeProperty('width');
+        if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
         if (isMobile()) rightPanel.classList.add('mobile-modal-mode');
       }
       const menuIcon = document.getElementById('pwa-menu-icon');
