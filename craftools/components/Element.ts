@@ -483,15 +483,22 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       const dy = (e.clientY - this.startY) / scY;
       const d  = this.resizeDir;
 
-      if (d === 'r' || d === 'tr' || d === 'br') this.pw = Math.max(2, this.origW + dx);
-      if (d === 'b' || d === 'bl' || d === 'br') this.ph = Math.max(2, this.origH + dy);
+      // An element's width/height must never exceed its own page's -- most
+      // noticeable on text (which resizes freely to any dragged size), but
+      // applies to every tool via this one shared drag handler. Computed
+      // fresh every move (not just once at drag-start) since it's cheap and
+      // stays correct across zoom changes mid-drag.
+      const { maxW, maxH } = SnapEngine.getMaxSize(this, this.unitW, this.unitH);
+
+      if (d === 'r' || d === 'tr' || d === 'br') this.pw = Math.min(maxW, Math.max(2, this.origW + dx));
+      if (d === 'b' || d === 'bl' || d === 'br') this.ph = Math.min(maxH, Math.max(2, this.origH + dy));
       if (d === 'l' || d === 'tl' || d === 'bl') {
-        const nw = Math.max(2, this.origW - dx);
+        const nw = Math.min(maxW, Math.max(2, this.origW - dx));
         this.pw = nw;
         this.px = this.origX + (this.origW - nw);
       }
       if (d === 't' || d === 'tl' || d === 'tr') {
-        const nh = Math.max(2, this.origH - dy);
+        const nh = Math.min(maxH, Math.max(2, this.origH - dy));
         this.ph = nh;
         this.py = this.origY + (this.origH - nh);
       }

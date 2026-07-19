@@ -14,6 +14,8 @@
  * DESATIVADO.
  */
 
+import { SnapEngine } from './SnapEngine.js';
+
 /** Extended HTMLElement carrying the internal drag/resize state. */
 interface CraftoolsElement extends HTMLElement {
   _craftoolsAutoResize?: boolean;
@@ -68,8 +70,14 @@ export class AutoFitText {
     if (!textElement || !textElement.isConnected)  return;
 
     const { width, height } = this.measureNaturalSize(textElement);
-    const newW = Math.max(10, width);
-    const newH = Math.max(10, height);
+    // Growing to fit typed/pasted content is the most common way an
+    // element ends up wider/taller than the page itself -- clamp to the
+    // page's own size the same way Element.ts's manual resize-handle drag
+    // does (SnapEngine.getMaxSize()), so auto-fit can't grow a text box
+    // past its page's edge just because the user kept typing.
+    const { maxW, maxH } = SnapEngine.getMaxSize(element, 'px', 'px');
+    const newW = Math.min(maxW, Math.max(10, width));
+    const newH = Math.min(maxH, Math.max(10, height));
 
     element.style.width  = newW + 'px';
     element.style.height = newH + 'px';

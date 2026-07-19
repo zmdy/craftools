@@ -216,6 +216,48 @@ export class SnapEngine {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Size bounds
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Returns the largest width/height (in whichever CSS unit the caller
+   * passes, matching a craftools-element's own `unitW`/`unitH`) an element
+   * could legally have without overflowing its page -- the page's own
+   * rendered size, converted out of zoomed screen pixels into the page's
+   * virtual-px coordinate space (the same conversion align()/snap() already
+   * do), then into the requested unit.
+   *
+   * Used by Element.ts's resize-handle drag (so manual resize can't drag a
+   * box past the page edge) and AutoFitText.ts's auto-fit growth (so a text
+   * box growing to fit typed content can't grow past the page either, which
+   * is the more common way an element ends up oversized -- pasting or
+   * typing a lot of text with auto-fit on).
+   *
+   * Returns `{ maxW: Infinity, maxH: Infinity }` (no clamp) when `element`
+   * isn't currently inside a `.craftools-page` -- e.g. not yet attached to
+   * the canvas, or used in a context with no page at all.
+   */
+  static getMaxSize(
+    element: HTMLElement & { _getScale?(): number },
+    unitW: string,
+    unitH: string,
+  ): { maxW: number; maxH: number } {
+    const page = element.closest<HTMLElement>('.craftools-page');
+    if (!page) return { maxW: Infinity, maxH: Infinity };
+
+    const scale = element._getScale?.() ?? (window.craftoolsZoomLevel ?? 1);
+    const pageRect = page.getBoundingClientRect();
+    // Virtual-px (page coordinate space at 1x zoom) -- same as align()'s pageW/pageH.
+    const pageW = pageRect.width  / scale;
+    const pageH = pageRect.height / scale;
+
+    return {
+      maxW: unitW === 'mm' ? pageW / MM_PX : pageW,
+      maxH: unitH === 'mm' ? pageH / MM_PX : pageH,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Guide overlay management
   // ─────────────────────────────────────────────────────────────────────────
 
