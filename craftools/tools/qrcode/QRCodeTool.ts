@@ -54,7 +54,12 @@ const getMeta = (el: HTMLElement): QRCodeMeta =>
     email: '', emailSubject: '', emailBody: '',
     smsPhone: '', smsBody: '',
     pixKey: '', pixName: '', pixCity: '', pixAmount: '', pixTxid: '', pixMessage: '',
-    spotifyInput: '', spotifyBg: '#ffffff', spotifyBarColor: 'black',
+    // Default Spotify Code target: Spotify's own "Today's Top Hits"
+    // editorial playlist (spotify:user:spotify:playlist:...) -- lets a
+    // freshly added Spotify QR element render a real, scannable code out of
+    // the box instead of a blank/broken one before the user pastes their
+    // own link.
+    spotifyInput: 'spotify:user:spotify:playlist:37i9dQZF1DXcBWIGoYBM5M', spotifyBg: '#ffffff', spotifyBarColor: 'black',
     ecLevel: 'M', darkColor: '#000000', lightColor: '#ffffff',
     borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
     variableBinding: null,
@@ -126,7 +131,8 @@ export class QRCodeTool extends BaseTool {
       pixAmount: '',
       pixTxid: '',
       pixMessage: '',
-      spotifyInput: '',
+      // See the matching default in getMeta() above for why this isn't blank.
+      spotifyInput: 'spotify:user:spotify:playlist:37i9dQZF1DXcBWIGoYBM5M',
       spotifyBg: '#ffffff',
       spotifyBarColor: 'black',
       ecLevel: 'M',
