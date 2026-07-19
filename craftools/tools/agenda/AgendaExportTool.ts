@@ -6,8 +6,12 @@
  *   1. Pages — pick which pages repeat and how many times (stored as a
  *      `data-agenda-repeat="N"` attribute on the `.craftools-page` itself,
  *      persisting for as long as the editor session lasts).
- *   2. Preview — sample of how variables will vary between repetitions
- *      (1st, 2nd and last), without actually generating every page.
+ *   2. Preview — real-time canvas preview of resolved variables, navigated
+ *      page-by-page directly on the main canvas (same pattern as
+ *      CalendarTool / GeradorTool). Two buttons: "First 5 pages" / "All
+ *      pages" control how many output pages are rendered at once. The
+ *      actual canvas preview is restored automatically when the user
+ *      switches away from this panel.
  *   3. Actions — summary + "Export Agenda" button, which delegates the
  *      real generation to AgendaExport.ts (dynamic import, only when
  *      actually exporting).
@@ -26,11 +30,30 @@ const a = (key: string): string => I18n.t('agendaExportTool.' + key);
 
 type PageEl = HTMLElement & { dataset: DOMStringMap };
 
+/** Editor instance shape this tool relies on beyond plain HTMLElement. */
+type EditorEl = HTMLElement & {
+  _savedPageHtml?: string;
+  _savedPageCssText?: string;
+  restoreOriginalCanvas?: () => void;
+};
+
 interface PageBinding {
   el:       HTMLElement;
   toolType: string;
   binding:  VariableBinding;
 }
+
+// ── Live canvas preview state (module-level so navigate buttons can update it) ──
+interface CanvasPreviewState {
+  pages:         PageEl[];
+  outputPages:   string[]; // HTML strings for each resolved output page
+  currentIndex:  number;   // 0-based index of which output page is shown
+  pagesWrapper:  HTMLElement | null;
+  mainPage:      HTMLElement | null;
+  root:          HTMLElement;
+}
+
+let _canvasState: CanvasPreviewState | null = null;
 
 export class AgendaExportTool {
 
@@ -39,6 +62,8 @@ export class AgendaExportTool {
     const panelBody  = document.getElementById('panel-body');
     if (panelTitle) panelTitle.textContent = a('panelTitle');
     if (!panelBody) return;
+
+    const ed = editor as EditorEl;
 
     const pagesSnapshot = (): PageEl[] => [...editor.querySelectorAll<PageEl>('.craftools-page')];
 
@@ -95,30 +120,43 @@ export class AgendaExportTool {
         });
       });
 
-      // ── Tab 2: Preview (reloads when the accordion opens) ────────────
+      // ── Tab 2: Preview — opens & loads canvas preview ─────────────────
       const previewHeader = root.querySelector<HTMLElement>('[data-toggle-accordion="agenda-preview"]');
       if (previewHeader) {
         previewHeader.addEventListener('click', () => {
-          const dataBody = root.querySelector<HTMLElement>('#agenda-preview-data');
-          if (dataBody) AgendaExportTool._populatePreview(dataBody, pagesSnapshot());
-          const visualBody = root.querySelector<HTMLElement>('#agenda-visual-preview');
-          const activeScopeBtn = root.querySelector<HTMLButtonElement>('[data-agenda-preview-scope].active');
-          const scope = (activeScopeBtn?.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
-          if (visualBody) AgendaExportTool._populateVisualPreview(visualBody, editor, scope);
+          // Only load if the accordion is being OPENED (it's currently closed)
+          const body = root.querySelector<HTMLElement>('#agenda-preview-body');
+          const isOpen = body?.style.display !== 'none' && body?.offsetParent !== null;
+          if (!isOpen) {
+            const activeScopeBtn = root.querySelector<HTMLButtonElement>('[data-agenda-preview-scope].active');
+            const scope = (activeScopeBtn?.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
+            AgendaExportTool._loadCanvasPreview(root, ed, pagesSnapshot(), scope);
+          }
         });
       }
 
-      // ── Tab 2: Visual preview scope toggle (limited / all pages) ──────
+      // ── Tab 2: Scope toggle (first pages / all pages) ──────────────────
       const scopeButtons = root.querySelectorAll<HTMLButtonElement>('[data-agenda-preview-scope]');
       scopeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
           if (btn.classList.contains('active')) return;
           scopeButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          const visualBody = root.querySelector<HTMLElement>('#agenda-visual-preview');
           const scope = (btn.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
-          if (visualBody) AgendaExportTool._populateVisualPreview(visualBody, editor, scope);
+          AgendaExportTool._loadCanvasPreview(root, ed, pagesSnapshot(), scope);
         });
+      });
+
+      // ── Tab 2: Navigate pages ──────────────────────────────────────────
+      root.addEventListener('click', (e) => {
+        const target = (e.target as HTMLElement).closest<HTMLElement>('[data-agenda-nav]');
+        if (!target || !_canvasState) return;
+        const dir = target.dataset.agendaNav;
+        if (dir === 'prev' && _canvasState.currentIndex > 0) {
+          AgendaExportTool._showCanvasPage(_canvasState.currentIndex - 1, root);
+        } else if (dir === 'next' && _canvasState.currentIndex < _canvasState.outputPages.length - 1) {
+          AgendaExportTool._showCanvasPage(_canvasState.currentIndex + 1, root);
+        }
       });
 
       // ── Tab 3: Actions / Export ────────────────────────────────────────
@@ -195,127 +233,135 @@ export class AgendaExportTool {
 
   private static _renderPreviewSection(): string {
     return `<div id="agenda-preview-body">
-      <div class="ct-field" style="margin-bottom:10px;">
-        <span class="craftools-label">${a('previewVisualScopeLabel')}</span>
-        <div style="display:flex; gap:6px; margin-top:4px;">
-          <button type="button" class="craftools-pill active" data-agenda-preview-scope="limited">${a('previewScopeLimited')}</button>
-          <button type="button" class="craftools-pill" data-agenda-preview-scope="all">${a('previewScopeAll')}</button>
+      <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">${a('previewIntro')}</p>
+      <div style="display:flex; gap:6px; margin-bottom:12px;">
+        <button type="button" class="craftools-pill active" data-agenda-preview-scope="limited">${a('previewScopeLimited')}</button>
+        <button type="button" class="craftools-pill" data-agenda-preview-scope="all">${a('previewScopeAll')}</button>
+      </div>
+      <div id="agenda-preview-status" style="display:flex; align-items:center; justify-content:space-between; background:rgba(99,102,241,0.08); border-radius:8px; padding:8px 10px; margin-bottom:10px; min-height:38px;">
+        <span id="agenda-preview-info" style="font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</span>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button type="button" data-agenda-nav="prev" class="craftools-topbtn" style="padding:4px 8px; font-size:11px;" disabled>
+            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">chevron_left</span>
+          </button>
+          <span id="agenda-preview-page-label" style="font-size:11px; font-weight:600; min-width:50px; text-align:center;">—</span>
+          <button type="button" data-agenda-nav="next" class="craftools-topbtn" style="padding:4px 8px; font-size:11px;" disabled>
+            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">chevron_right</span>
+          </button>
         </div>
-      </div>
-      <div id="agenda-visual-preview" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; overflow:auto; height:380px; background:#ccc; margin-bottom:14px; display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px 0;">
-        <p style="padding:0 12px; font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</p>
-      </div>
-      <div id="agenda-preview-data">
-        <p style="font-size:11px; color:var(--text-secondary);">${a('previewIntro')}</p>
       </div>
     </div>`;
   }
 
   /**
-   * Renders a visual, page-accurate preview by reusing AgendaExport.ts's
-   * exact same document-building pipeline (_buildDocument()) that produces
-   * the real PDF, so this preview can never drift out of sync with what
-   * actually gets exported. The resulting HTML (all output pages stacked
-   * vertically, same as the real print window) is embedded read-only
-   * (autoPrint disabled -- see PdfExport._wrapDocument()'s opts) inside a
-   * single sandboxed iframe, scaled down via CSS `zoom` (which, unlike
-   * `transform:scale`, shrinks the rendered box directly instead of
-   * requiring manual width/height compensation).
+   * Loads and renders a canvas-level real-time preview of the resolved
+   * agenda pages directly on the main editor canvas -- same pattern as
+   * CalendarTool._renderCanvasPreview() and GeradorTool.ts.
+   *
+   * Saves the original page HTML via editor._savedPageHtml (restored
+   * automatically by Editor.ts's restoreOriginalCanvas() when the user
+   * switches to a different tool) and injects the resolved page into
+   * main-page instead of using an iframe.
+   *
+   * Navigation between resolved output pages is handled by
+   * _showCanvasPage(), controlled by the Prev/Next buttons in the panel.
    */
-  private static async _populateVisualPreview(
-    container: HTMLElement,
-    editor: HTMLElement,
-    scope: 'limited' | 'all'
+  private static async _loadCanvasPreview(
+    root:    HTMLElement,
+    editor:  EditorEl,
+    pages:   PageEl[],
+    scope:   'limited' | 'all',
   ): Promise<void> {
-    container.innerHTML = `<p style="padding:0 12px; font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</p>`;
+    const infoEl      = root.querySelector<HTMLElement>('#agenda-preview-info');
+    const pageLabel   = root.querySelector<HTMLElement>('#agenda-preview-page-label');
+    const prevBtn     = root.querySelector<HTMLButtonElement>('[data-agenda-nav="prev"]');
+    const nextBtn     = root.querySelector<HTMLButtonElement>('[data-agenda-nav="next"]');
+
+    if (infoEl) infoEl.textContent = I18n.t('variablePanel.previewLoading');
+    if (pageLabel) pageLabel.textContent = '—';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    const pagesWrapper = document.getElementById('pages-wrapper');
+    const mainPage     = document.getElementById('main-page');
+    if (!mainPage) return;
+
+    // Save original canvas (only first time, like CalendarTool does)
+    if (editor._savedPageHtml === undefined) {
+      editor._savedPageHtml    = mainPage.innerHTML;
+      editor._savedPageCssText = mainPage.style.cssText;
+    }
+
+    // Show badge
+    const canvasArea = document.getElementById('canvas-area');
+    let badge = document.getElementById('gerador-canvas-badge');
+    if (!badge && canvasArea) {
+      badge = document.createElement('div');
+      badge.id = 'gerador-canvas-badge';
+      badge.style.cssText = `
+        position:absolute; top:20px; left:20px;
+        background:#6366f1; color:#fff;
+        font-size:11px; font-weight:700;
+        padding:6px 14px; border-radius:30px; z-index:100;
+        box-shadow:0 4px 12px rgba(99,102,241,0.35);
+        display:flex; align-items:center; gap:6px;
+        pointer-events:none; text-transform:uppercase; letter-spacing:0.5px;
+        animation:pageIn 0.25s cubic-bezier(0.22,1,0.36,1);
+      `;
+      badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;">visibility</span> ${a('tabPreview')}`;
+      canvasArea.appendChild(badge);
+    }
 
     try {
       const { AgendaExport } = await import('../../utils/AgendaExport.js');
       const maxOutputPages = scope === 'limited' ? 5 : undefined;
-      const html = await AgendaExport.buildPreviewHtml(editor, { maxOutputPages });
 
-      if (!html) {
-        container.innerHTML = `<p style="padding:0 12px; font-size:12px; color:var(--text-secondary);">${a('noPagesFound')}</p>`;
+      // Build resolved output pages as HTML strings (one per output page)
+      const outputPages = await AgendaExport.buildOutputPages(editor as HTMLElement, { maxOutputPages });
+
+      if (!outputPages || !outputPages.length) {
+        if (infoEl) infoEl.textContent = a('noPagesFound');
         return;
       }
 
-      const iframe = document.createElement('iframe');
-      iframe.sandbox.add('allow-same-origin');
-      iframe.srcdoc = html;
-      iframe.style.cssText = 'width:900px; height:1400px; border:0; zoom:0.3; flex-shrink:0; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.2);';
-      container.innerHTML = '';
-      container.appendChild(iframe);
+      _canvasState = {
+        pages,
+        outputPages,
+        currentIndex:  0,
+        pagesWrapper,
+        mainPage,
+        root,
+      };
+
+      AgendaExportTool._showCanvasPage(0, root);
+
+      if (infoEl) infoEl.textContent = `${outputPages.length} ${a('exportSummaryLabel').toLowerCase()}`;
+
     } catch (err) {
-      console.error('[AgendaExportTool] Failed to build visual preview:', err);
-      container.innerHTML = `<p style="padding:0 12px; font-size:12px; color:var(--text-secondary);">${a('exportError')}</p>`;
+      console.error('[AgendaExportTool] Failed to build canvas preview:', err);
+      if (infoEl) infoEl.textContent = a('exportError');
     }
   }
 
-  private static async _populatePreview(container: HTMLElement, pages: PageEl[]): Promise<void> {
-    const repeatedPages = pages.filter(p => (parseInt(p.dataset.agendaRepeat ?? '', 10) || 1) > 1);
+  /**
+   * Injects the resolved HTML of a specific output page index into the
+   * main canvas page and updates the navigation buttons.
+   */
+  private static _showCanvasPage(index: number, root: HTMLElement): void {
+    if (!_canvasState) return;
+    const { outputPages, mainPage } = _canvasState;
+    if (!mainPage || index < 0 || index >= outputPages.length) return;
 
-    if (!repeatedPages.length) {
-      container.innerHTML = `<p style="font-size:12px; color:var(--text-secondary);">${a('previewNoRepeats')}</p>`;
-      return;
-    }
+    _canvasState.currentIndex = index;
+    mainPage.innerHTML = outputPages[index];
 
-    container.innerHTML = `<p style="font-size:11px; color:var(--text-secondary);">${a('previewIntro')}</p><p style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.previewLoading')}</p>`;
+    const pageLabel = root.querySelector<HTMLElement>('#agenda-preview-page-label');
+    const prevBtn   = root.querySelector<HTMLButtonElement>('[data-agenda-nav="prev"]');
+    const nextBtn   = root.querySelector<HTMLButtonElement>('[data-agenda-nav="next"]');
 
-    // Collects every binding from every repeated page for a single API
-    // prefetch (avoids one fetch per element/repetition), along with the
-    // exact repetition indices this preview will actually sample below
-    // ([0, 1, repeatCount - 1] per page, same formula) -- passed through so
-    // an Emoji Kitchen "variable" binding (no fixed right emoji) only
-    // prefetches the combo(s) these specific samples need instead of every
-    // partner combo in the pool (see prefetchApiResources()'s own comment).
-    const allBindings: VariableBinding[] = [];
-    const repetitionIndicesSet = new Set<number>();
-    repeatedPages.forEach(page => {
-      AgendaExportTool._collectPageBindings(page).forEach(({ binding }) => allBindings.push(binding));
-      const repeatCount = parseInt(page.dataset.agendaRepeat ?? '', 10) || 1;
-      [0, 1, repeatCount - 1].forEach(i => { if (i >= 0 && i < repeatCount) repetitionIndicesSet.add(i); });
-    });
-    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
-      repetitionIndices: [...repetitionIndicesSet],
-    });
-
-    const blocks = pages.map((page, idx) => {
-      const repeatCount = parseInt(page.dataset.agendaRepeat ?? '', 10) || 1;
-      const bindings = AgendaExportTool._collectPageBindings(page);
-
-      if (repeatCount <= 1) {
-        return `
-          <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
-            <div style="font-weight:600; font-size:12px;">${a('pageLabel')} ${idx + 1} — <span style="font-weight:400; color:var(--text-secondary);">${a('previewCommonPage')}</span></div>
-          </div>
-        `;
-      }
-
-      const sampleIndexes = [...new Set([0, 1, repeatCount - 1])].filter(i => i >= 0 && i < repeatCount);
-
-      const rows = bindings.length ? bindings.map(({ toolType, binding }) => {
-        const samples = sampleIndexes.map(repetitionIndex => {
-          const context = { repetitionIndex, pageNumber: repetitionIndex + 1, totalPages: repeatCount, now: new Date() };
-          const value = VariableEngine.resolve(binding, context, apiCache);
-          return `<div style="display:flex; justify-content:space-between; gap:8px; font-size:11px; padding:3px 0;"><span style="color:var(--text-muted);">${a('previewRepetitionLabel')} ${repetitionIndex + 1}</span><span style="font-weight:500; word-break:break-word; text-align:right;">${AgendaExportTool._esc(value) || '—'}</span></div>`;
-        }).join('');
-        return `
-          <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border, #e4e4e7);">
-            <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-muted); margin-bottom:2px;">${AgendaExportTool._toolTypeLabel(toolType)} — ${AgendaExportTool._variableTypeLabel(binding.type)}</div>
-            ${samples}
-          </div>
-        `;
-      }).join('') : `<p style="font-size:11px; color:var(--text-muted); margin-top:6px;">${a('previewNoBindings')}</p>`;
-
-      return `
-        <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
-          <div style="font-weight:600; font-size:12px;">${a('pageLabel')} ${idx + 1} — <span style="font-weight:400; color:var(--text-secondary);">${a('previewRepeatedPage').replace('{n}', String(repeatCount))}</span></div>
-          ${rows}
-        </div>
-      `;
-    }).join('');
-
-    container.innerHTML = `<p style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">${a('previewIntro')}</p>${blocks}`;
+    if (pageLabel) pageLabel.textContent = `${index + 1} / ${outputPages.length}`;
+    if (prevBtn)   prevBtn.disabled  = index === 0;
+    if (nextBtn)   nextBtn.disabled  = index === outputPages.length - 1;
   }
 
   // ── Tab 3: Actions / Export ──────────────────────────────────────────────
@@ -384,27 +430,6 @@ export class AgendaExportTool {
       if (binding && binding.type) results.push({ el, toolType, binding });
     });
     return results;
-  }
-
-  private static _toolTypeLabel(toolType: string): string {
-    const map: Record<string, string> = {
-      conteudovariavel: I18n.t('editor.variableContent'),
-      qrcode: I18n.t('editor.qrcode'),
-      barcode: I18n.t('editor.barcode'),
-    };
-    return map[toolType] || toolType;
-  }
-
-  private static _variableTypeLabel(type: string): string {
-    const map: Record<string, string> = {
-      date: I18n.t('variablePanel.typeDate'),
-      sequenceNumber: I18n.t('variablePanel.typeSequenceNumber'),
-      sequenceText: I18n.t('variablePanel.typeSequenceText'),
-      pageNumber: I18n.t('variablePanel.typePageNumber'),
-      link: I18n.t('variablePanel.typeLink'),
-      apiPhrase: I18n.t('variablePanel.typeApiPhrase'),
-    };
-    return map[type] || type;
   }
 
   private static _esc(val: unknown): string {

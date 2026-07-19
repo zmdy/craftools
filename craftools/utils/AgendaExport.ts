@@ -220,6 +220,101 @@ export class AgendaExport {
     return built?.fullHtml ?? null;
   }
 
+  /**
+   * Runs the same variable-resolution pipeline as _buildDocument() but
+   * instead of wrapping everything in a print document, returns each resolved
+   * output page as a raw innerHTML string (no print CSS, no wrapper div).
+   *
+   * Used by AgendaExportTool.ts's canvas preview to inject each output page
+   * directly into main-page one at a time, exactly like CalendarTool's live
+   * canvas preview -- so the user sees real pages on the actual canvas
+   * instead of a tiny zoomed iframe.
+   */
+  static async buildOutputPages(
+    editor: HTMLElement,
+    opts: { maxOutputPages?: number } = {},
+  ): Promise<string[] | null> {
+    const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
+    if (!pages.length) return null;
+
+    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
+    const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+
+    // Prefetch API resources
+    const allBindings: (VariableBinding | null)[] = [];
+    const repetitionIndicesSet = new Set<number>();
+    let prefetchCounted = 0;
+    for (const page of pages) {
+      if (prefetchCounted >= renderLimit) break;
+      this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
+      const repeatCount = this._repeatCount(page);
+      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
+        repetitionIndicesSet.add(prefetchCounted);
+      }
+    }
+    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
+      repetitionIndices: [...repetitionIndicesSet],
+    });
+
+    const outputInnerHtmls: string[] = [];
+    let outputPageNumber = 0;
+
+    outer:
+    for (const page of pages) {
+      const repeatCount = this._repeatCount(page);
+      const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+
+      for (let i = 0; i < repeatCount; i++) {
+        if (outputPageNumber >= renderLimit) break outer;
+        outputPageNumber++;
+
+        const clone = page.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
+
+        const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
+        const globalRepetitionIndex = outputPageNumber - 1;
+
+        const context: ResolveContext = {
+          repetitionIndex: globalRepetitionIndex,
+          pageNumber:      outputPageNumber,
+          totalPages:      totalOutputPages,
+          now:             new Date(),
+        };
+
+        const picks = VariableEngine.newLinkRegistry();
+
+        const jobs: BindingJob[] = origEls
+          .map((origEl, idx) => {
+            const cloneEl  = cloneEls[idx];
+            const toolType = origEl.getAttribute('data-craftool');
+            const binding  = this._getBinding(origEl, toolType);
+            return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+          })
+          .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
+
+        const leaders   = jobs.filter(j => !j.binding.linkedTo);
+        const followers = jobs.filter(j =>  j.binding.linkedTo);
+        [...leaders, ...followers].forEach(j => {
+          const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+          this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+        });
+
+        origEls.forEach((origEl, idx) => {
+          if (origEl.getAttribute('data-craftool') !== 'minicalendario') return;
+          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
+        });
+
+        // Return the pre-flatten innerHTML — the canvas renders live
+        // craftools-element tags natively (no need to flatten for display).
+        // Strip only UI-only nodes (ctrlbar, overlays) which were already
+        // removed above via UI_STRIP_SELECTORS.
+        outputInnerHtmls.push(clone.innerHTML);
+      }
+    }
+
+    return outputInnerHtmls.length ? outputInnerHtmls : null;
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   static _repeatCount(page: HTMLElement): number {
