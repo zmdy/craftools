@@ -235,6 +235,34 @@ const gradientsEqual = (a: GradientValue, b: GradientValue): boolean =>
   a.type === b.type && a.angle === b.angle && a.stops.length === b.stops.length &&
   a.stops.every((s, i) => swatchesEqual(s, b.stops[i]));
 
+/**
+ * Converts a CSS color string to a valid #rrggbb hex value that
+ * `<input type="color">` can accept. Named keywords (e.g. "transparent",
+ * "white", "red") and rgb/rgba() values are resolved via an off-screen
+ * canvas; anything that can't be resolved falls back to #000000.
+ */
+function toHexColor(css: string): string {
+  if (!css || css === 'transparent') return '#000000';
+  if (/^#[0-9a-f]{6}$/i.test(css)) return css;
+  // Expand 3-digit hex
+  if (/^#[0-9a-f]{3}$/i.test(css)) {
+    return '#' + css.slice(1).split('').map(c => c + c).join('');
+  }
+  // Attempt off-screen canvas resolution for named keywords / rgb() / rgba()
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = css;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+    }
+  } catch { /* ignore */ }
+  return '#000000';
+}
+
 function paletteHtml(value: ColorPickerValue, defaultSolid?: string): string {
   const presets = defaultSolid && COLOR_PRESETS.includes(defaultSolid)
     ? [defaultSolid, ...COLOR_PRESETS.filter(c => c !== defaultSolid)]
@@ -245,6 +273,9 @@ function paletteHtml(value: ColorPickerValue, defaultSolid?: string): string {
   `).join('');
 
   const isCustom = !COLOR_PRESETS.some(c => swatchesEqual(c, value.solid));
+  // `<input type="color">` only accepts "#rrggbb" — guard against "transparent"
+  // (the default solid for background pickers) and other non-hex values.
+  const customHex = toHexColor(isCustom ? value.solid : '#000000');
 
   return `
     <div class="ct-color-palette">
@@ -252,7 +283,7 @@ function paletteHtml(value: ColorPickerValue, defaultSolid?: string): string {
       <label class="ct-color-swatch-btn ct-color-swatch-custom${isCustom ? ' active' : ''}"
         title="${tr('colorPicker.custom', 'Custom')}">
         <span class="material-symbols-outlined">colorize</span>
-        <input type="color" data-action="custom-color" value="${isCustom ? value.solid : '#000000'}">
+        <input type="color" data-action="custom-color" value="${customHex}">
       </label>
     </div>`;
 }

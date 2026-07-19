@@ -61,7 +61,17 @@ export class VariableContentTool extends BaseTool {
     const patch: Record<string, unknown> = {};
     if (!('font'     in existing)) patch.font     = (content.style.fontFamily || 'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
     if (!('fontSize' in existing)) patch.fontSize = parseFloat(content.style.fontSize) || 16;
-    if (!('color'    in existing)) patch.color    = rgbToHex(content.style.color || '#1a1a1a');
+    if (!('color'    in existing)) {
+      const hexColor = rgbToHex(content.style.color || '#1a1a1a');
+      // Must be stored as a ColorPickerValue JSON string — the same format the
+      // color-picker field emits — so PropertyRenderer's equality check can
+      // correctly detect changes and the panel field re-renders on every pick.
+      // A bare hex string would be parsed correctly by _paintTextColor() but
+      // would fail the string-equality diff in PropertyRenderer (new picker
+      // value is always a JSON object stringified, old stored value would be a
+      // plain "#rrggbb"), silently locking the colour after the first change.
+      patch.color = JSON.stringify({ mode: 'solid', solid: hexColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } });
+    }
     if (!('textAlign' in existing)) patch.textAlign = content.style.textAlign || 'left';
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
