@@ -2,6 +2,7 @@ import { I18n }           from '../settings/Translations.js';
 import { VariableEngine, type VariableBinding } from './VariableEngine.js';
 import { loadEmojiKitchenPartners, loadEmojiKitchenSupported } from './ApiDataLoader.js';
 import { renderEmojiPicker } from './EmojiPickerUI';
+import { withEmojiFallback } from './EmojiFont.js';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -46,7 +47,7 @@ export class VariablePanel {
             <div id="var-config">${this._renderConfig(binding, element)}</div>
             <div class="ct-field" id="var-preview" style="${type ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.previewLabel')}</span>
-                <div id="var-preview-value" style="font-size:12px; padding:6px 9px; background:rgba(127,127,127,0.12); border-radius:6px; word-break:break-word; min-height:16px;">${I18n.t('variablePanel.previewLoading')}</div>
+                <div id="var-preview-value" style="font-size:12px; padding:6px 9px; background:rgba(127,127,127,0.12); border-radius:6px; word-break:break-word; min-height:16px; font-family:${withEmojiFallback('DM Sans')};">${I18n.t('variablePanel.previewLoading')}</div>
             </div>
         `;
     }
