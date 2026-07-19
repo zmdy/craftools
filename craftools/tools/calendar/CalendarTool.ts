@@ -626,6 +626,24 @@ export class CalendarTool {
       gap:0mm; box-sizing:border-box;
     `;
 
+    // Each .craftools-grid-cell draws its OWN border via a ::before overlay
+    // (craftools.css), driven by --cell-border-width/-style/-color -- a
+    // completely separate layer from the .cal-month-card's own CSS border
+    // (already configurable below via _renderBorderRow()'s panel section,
+    // and correctly threaded through CalendarRenderer.buildCardElement()).
+    // This tool never set these custom properties anywhere, so every cell
+    // silently fell back to craftools.css's own default (1px dashed
+    // #cccccc) no matter what the "Border / cell background" panel section
+    // was set to -- the cell's guide border was effectively impossible to
+    // remove. Set from the SAME theme.cellBorder values the panel already
+    // edits, inherited by every cell (CSS custom properties cascade).
+    const cellBorder = state.theme.cellBorder;
+    if (cellBorder) {
+      grid.style.setProperty('--cell-border-width', `${cellBorder.width ?? 0}px`);
+      grid.style.setProperty('--cell-border-style', cellBorder.style ?? 'none');
+      grid.style.setProperty('--cell-border-color', cellBorder.color ?? '#cccccc');
+    }
+
     sheet.forEach(slot => {
       const cell = document.createElement('div');
       cell.className = 'craftools-grid-cell';
