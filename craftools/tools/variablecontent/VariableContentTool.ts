@@ -147,22 +147,36 @@ export class VariableContentTool extends BaseTool {
     return getContent(element) ?? element;
   }
 
-  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+  static getCtxOptions(element?: HTMLElement): Array<{ icon: string; label: string; command: (element: HTMLElement) => void; isActive?: (element: HTMLElement) => boolean }> {
+    if (!element) return [];
+    const isAutoFitOn = (el: HTMLElement) => (el as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize === true;
     return [
+      // Same shared quick-action as TextTool.ts's own "Auto-fit to text" --
+      // the underlying mechanism (AutoFitText.applyAutoSize(), gated on
+      // `_craftoolsAutoResize`) was already wired up here (called from
+      // _applyVariablePreview() whenever the resolved value changes, and
+      // from _toggleCtxStyle()'s bold/italic/underline toggles), but
+      // nothing anywhere in this tool's panel or ctx-bar ever exposed a way
+      // to turn it ON in the first place.
+      this._autoFitCtxOption({
+        isActive: isAutoFitOn,
+        toggle:   (el: HTMLElement) => VariableContentTool._applyProperty(el, 'autoFit', !isAutoFitOn(el)),
+        label:    'Auto-fit to content',
+      }),
       {
         icon: 'format_bold',
         label: I18n.t('textTool.bold'),
-        command: (element: HTMLElement) => VariableContentTool._toggleCtxStyle(element, 'fontWeight', 'bold', 'normal'),
+        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'fontWeight', 'bold', 'normal'),
       },
       {
         icon: 'format_italic',
         label: I18n.t('textTool.italic'),
-        command: (element: HTMLElement) => VariableContentTool._toggleCtxStyle(element, 'fontStyle', 'italic', 'normal'),
+        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'fontStyle', 'italic', 'normal'),
       },
       {
         icon: 'format_underlined',
         label: I18n.t('textTool.underline'),
-        command: (element: HTMLElement) => VariableContentTool._toggleCtxStyle(element, 'textDecoration', 'underline', 'none'),
+        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'textDecoration', 'underline', 'none'),
       },
     ];
   }
@@ -266,6 +280,15 @@ export class VariableContentTool extends BaseTool {
     const content = getContent(element);
     if (!content) return;
     switch (key) {
+      // Turned on from the ctx-bar's auto-fit quick action (see
+      // getCtxOptions()) -- mirrors TextTool.ts's own 'autoFit' case:
+      // persists the flag AND resizes immediately rather than waiting for
+      // the next resolved-value change to pick it up.
+      case 'autoFit': {
+        (element as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize = !!value;
+        if (value) AutoFitText.applyAutoSize(element, content);
+        break;
+      }
       // withEmojiFallback (not a bare `'${value}', sans-serif`) so emoji in
       // a bound variable's resolved text still render in color -- see
       // TextTool.ts's matching 'font' case for the regression this avoids.
