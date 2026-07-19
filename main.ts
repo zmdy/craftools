@@ -280,6 +280,29 @@ function initPwaProxies(): void {
     if (!panel.classList.contains('panel-open')) panel.classList.add('panel-open');
   };
 
+  // ── Sidebar: auto-open (collapsed) once setup finishes ──────────────────────
+  // #right-panel is static markup in index.html, outside the #wrapper Craftools
+  // renders into, so it survives every Setup<->Editor screen swap untouched --
+  // its BASE state (no `panel-open`/`sidenav-collapsed` class) is fully
+  // off-screen (`margin-left:-272px`, see index.html's `.sidenav-panel` rule),
+  // and nothing ever changed that on the setup->editor transition. So every
+  // fresh session landed in the editor with the tool menu completely hidden
+  // until the user found and clicked the menu-toggle icon themselves.
+  // Setup.ts dispatches 'craftools-start' (bubbles all the way to document)
+  // the moment the user finishes the two-step size wizard and craftools.ts
+  // swaps in <craftools-editor> -- open the sidebar right then, in the same
+  // "open but collapsed" icon-rail state setSidebarCollapsed(panel, true)
+  // already produces for the manual toggle button, rather than fully
+  // expanded (covers more canvas than wanted) or left fully hidden (today's
+  // default).
+  document.addEventListener('craftools-start', () => {
+    if (window.innerWidth <= 768) return; // mobile keeps its own bottom-sheet behavior
+    requestAnimationFrame(() => {
+      const panel = document.getElementById('right-panel');
+      if (panel) setSidebarCollapsed(panel, true);
+    });
+  });
+
   document.getElementById('pwa-menu-toggle')?.addEventListener('click', (e) => {
     e.preventDefault();
     const panel = document.getElementById('right-panel');
