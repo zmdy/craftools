@@ -99,10 +99,27 @@ export class AgendaExportTool {
       const previewHeader = root.querySelector<HTMLElement>('[data-toggle-accordion="agenda-preview"]');
       if (previewHeader) {
         previewHeader.addEventListener('click', () => {
-          const body = root.querySelector<HTMLElement>('#agenda-preview-body');
-          if (body) AgendaExportTool._populatePreview(body, pagesSnapshot());
+          const dataBody = root.querySelector<HTMLElement>('#agenda-preview-data');
+          if (dataBody) AgendaExportTool._populatePreview(dataBody, pagesSnapshot());
+          const visualBody = root.querySelector<HTMLElement>('#agenda-visual-preview');
+          const activeScopeBtn = root.querySelector<HTMLButtonElement>('[data-agenda-preview-scope].active');
+          const scope = (activeScopeBtn?.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
+          if (visualBody) AgendaExportTool._populateVisualPreview(visualBody, editor, scope);
         });
       }
+
+      // ── Tab 2: Visual preview scope toggle (limited / all pages) ──────
+      const scopeButtons = root.querySelectorAll<HTMLButtonElement>('[data-agenda-preview-scope]');
+      scopeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.classList.contains('active')) return;
+          scopeButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const visualBody = root.querySelector<HTMLElement>('#agenda-visual-preview');
+          const scope = (btn.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
+          if (visualBody) AgendaExportTool._populateVisualPreview(visualBody, editor, scope);
+        });
+      });
 
       // ── Tab 3: Actions / Export ────────────────────────────────────────
       const exportBtn = root.querySelector<HTMLButtonElement>('#agenda-export-btn');
@@ -178,8 +195,60 @@ export class AgendaExportTool {
 
   private static _renderPreviewSection(): string {
     return `<div id="agenda-preview-body">
-      <p style="font-size:11px; color:var(--text-secondary);">${a('previewIntro')}</p>
+      <div class="ct-field" style="margin-bottom:10px;">
+        <span class="craftools-label">${a('previewVisualScopeLabel')}</span>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <button type="button" class="craftools-pill active" data-agenda-preview-scope="limited">${a('previewScopeLimited')}</button>
+          <button type="button" class="craftools-pill" data-agenda-preview-scope="all">${a('previewScopeAll')}</button>
+        </div>
+      </div>
+      <div id="agenda-visual-preview" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; overflow:auto; height:380px; background:#ccc; margin-bottom:14px; display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px 0;">
+        <p style="padding:0 12px; font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</p>
+      </div>
+      <div id="agenda-preview-data">
+        <p style="font-size:11px; color:var(--text-secondary);">${a('previewIntro')}</p>
+      </div>
     </div>`;
+  }
+
+  /**
+   * Renders a visual, page-accurate preview by reusing AgendaExport.ts's
+   * exact same document-building pipeline (_buildDocument()) that produces
+   * the real PDF, so this preview can never drift out of sync with what
+   * actually gets exported. The resulting HTML (all output pages stacked
+   * vertically, same as the real print window) is embedded read-only
+   * (autoPrint disabled -- see PdfExport._wrapDocument()'s opts) inside a
+   * single sandboxed iframe, scaled down via CSS `zoom` (which, unlike
+   * `transform:scale`, shrinks the rendered box directly instead of
+   * requiring manual width/height compensation).
+   */
+  private static async _populateVisualPreview(
+    container: HTMLElement,
+    editor: HTMLElement,
+    scope: 'limited' | 'all'
+  ): Promise<void> {
+    container.innerHTML = `<p style="padding:0 12px; font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</p>`;
+
+    try {
+      const { AgendaExport } = await import('../../utils/AgendaExport.js');
+      const maxOutputPages = scope === 'limited' ? 5 : undefined;
+      const html = await AgendaExport.buildPreviewHtml(editor, { maxOutputPages });
+
+      if (!html) {
+        container.innerHTML = `<p style="padding:0 12px; font-size:12px; color:var(--text-secondary);">${a('noPagesFound')}</p>`;
+        return;
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.sandbox.add('allow-same-origin');
+      iframe.srcdoc = html;
+      iframe.style.cssText = 'width:900px; height:1400px; border:0; zoom:0.3; flex-shrink:0; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.2);';
+      container.innerHTML = '';
+      container.appendChild(iframe);
+    } catch (err) {
+      console.error('[AgendaExportTool] Failed to build visual preview:', err);
+      container.innerHTML = `<p style="padding:0 12px; font-size:12px; color:var(--text-secondary);">${a('exportError')}</p>`;
+    }
   }
 
   private static async _populatePreview(container: HTMLElement, pages: PageEl[]): Promise<void> {

@@ -50,44 +50,80 @@ const UI_STRIP_SELECTORS = [
 export class AgendaExport {
 
   static async print(editor: HTMLElement): Promise<void> {
+    const built = await this._buildDocument(editor);
+    if (!built) return;
+    PdfExport._openPrintWindow(built.fullHtml);
+  }
+
+  /**
+   * Builds the same self-contained print HTML print() sends to the
+   * browser, without opening the print window -- shared by print() itself
+   * and buildPreviewHtml() (AgendaExportTool.ts's visual preview tab,
+   * embedded in an iframe instead of a new window).
+   *
+   * @param opts.maxOutputPages  Caps how many OUTPUT pages (after repeats,
+   *   in document order) are actually rendered/resolved. Omit to render
+   *   everything (print()'s own real-export case) -- the preview's
+   *   "first 5 pages" mode passes 5 so previewing a large agenda doesn't
+   *   have to render (and resolve every variable binding for) potentially
+   *   hundreds of repetitions just to show a preview. `totalPages` in each
+   *   page's ResolveContext (and so e.g. a "page N of TOTAL" variable)
+   *   always reflects the REAL total regardless of this cap.
+   * @param opts.autoPrint  Passed straight through to
+   *   PdfExport._wrapDocument() -- `false` for the preview embed (an
+   *   iframe popping its own print dialog would be very unexpected),
+   *   default `true` for the real export.
+   */
+  static async _buildDocument(
+    editor: HTMLElement,
+    opts: { maxOutputPages?: number; autoPrint?: boolean } = {},
+  ): Promise<{ fullHtml: string; totalOutputPages: number } | null> {
     const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
     if (!pages.length) {
       Notify.toast(I18n.t('agendaExportTool.noPagesFound'), 'error');
-      return;
+      return null;
     }
 
+    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
+    const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+
     // 1. Pré-busca (uma única vez) todos os recursos de API referenciados por
-    //    variáveis "Frase da API" em qualquer página -- passando TODOS os
-    //    índices de repetição que serão de fato renderizados abaixo (0..
-    //    repeatCount-1 de cada página), para que uma variável "Emoji Kitchen"
-    //    sem emoji direito fixo tenha, no cache, exatamente os combos que
-    //    cada repetição vai precisar (ver o próprio comentário de
-    //    prefetchApiResources() -- sem isso, páginas além do que fosse
-    //    prefetched ficariam com a imagem do combo vazia/quebrada).
+    //    variáveis "Frase da API" em qualquer página que será de fato
+    //    renderizada abaixo -- passando TODOS os índices de repetição que
+    //    serão realmente usados (respeitando `renderLimit`), para que uma
+    //    variável "Emoji Kitchen" sem emoji direito fixo tenha, no cache,
+    //    exatamente os combos que cada repetição vai precisar (ver o
+    //    próprio comentário de prefetchApiResources() -- sem isso, páginas
+    //    além do que fosse prefetched ficariam com a imagem do combo
+    //    vazia/quebrada).
     const allBindings: (VariableBinding | null)[] = [];
     const repetitionIndicesSet = new Set<number>();
-    pages.forEach(page => {
+    let prefetchCounted = 0;
+    for (const page of pages) {
+      if (prefetchCounted >= renderLimit) break;
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
       const repeatCount = this._repeatCount(page);
-      for (let i = 0; i < repeatCount; i++) repetitionIndicesSet.add(i);
-    });
+      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
+        repetitionIndicesSet.add(i);
+      }
+    }
     const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
       repetitionIndices: [...repetitionIndicesSet],
     });
 
-    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
-
-    // 2. Gera o HTML de cada página (ou repetição).
+    // 2. Gera o HTML de cada página (ou repetição), até `renderLimit`.
     const pageSizes:       ReturnType<typeof PdfExport._parsePageSize>[] = [];
     const pagesHtmlParts:  string[] = [];
     let outputPageNumber = 0;
 
+    outer:
     for (const page of pages) {
       const size        = PdfExport._parsePageSize(page);
       const repeatCount = this._repeatCount(page);
       const origEls     = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
 
       for (let i = 0; i < repeatCount; i++) {
+        if (outputPageNumber >= renderLimit) break outer;
         outputPageNumber++;
         pageSizes.push(size);
 
@@ -142,10 +178,20 @@ export class AgendaExport {
     }
 
     const css      = PdfExport._buildCSS(pageSizes);
-    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'));
+    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), { autoPrint: opts.autoPrint });
 
-    // 3. Abre o blob/janela de impressão
-    PdfExport._openPrintWindow(fullHtml);
+    return { fullHtml, totalOutputPages };
+  }
+
+  /**
+   * Builds the print-ready HTML for a live visual preview (embedded in an
+   * iframe by AgendaExportTool.ts's preview tab) without opening the print
+   * window or triggering the browser's print dialog. See
+   * _buildDocument()'s own doc comment for `maxOutputPages`.
+   */
+  static async buildPreviewHtml(editor: HTMLElement, opts: { maxOutputPages?: number } = {}): Promise<string | null> {
+    const built = await this._buildDocument(editor, { ...opts, autoPrint: false });
+    return built?.fullHtml ?? null;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

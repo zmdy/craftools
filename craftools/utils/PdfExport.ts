@@ -237,9 +237,31 @@ ${pageRules}
   }
 
   // ── Envolve tudo num documento HTML completo ─────────────────────────────────
-  static _wrapDocument(css: string, body: string): string {
+  /**
+   * @param opts.autoPrint  Whether to include the `<script>` that fires
+   *   `window.print()` on load. Default `true` (every existing caller --
+   *   this is a real print/export document meant to open its own window
+   *   and prompt the print dialog). Pass `false` when the same markup/CSS
+   *   is instead being embedded read-only somewhere else (e.g.
+   *   AgendaExport.ts's buildPreviewHtml(), shown in an iframe inside the
+   *   properties panel) -- without this, that embed would silently pop the
+   *   browser's print dialog for whatever iframe/window it's loaded into.
+   */
+  static _wrapDocument(css: string, body: string, opts: { autoPrint?: boolean } = {}): string {
     const htmlLangMap: Record<string, string> = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
     const htmlLang = htmlLangMap[I18n.currentLang] || 'pt-BR';
+    const autoPrint = opts.autoPrint !== false;
+    const printScript = autoPrint ? `
+<script>
+    // Dispara o print assim que as fontes e imagens carregarem
+    window.addEventListener('load', () => {
+        // Ajusta o título do documento
+        document.title =  "${this.createTitle()}" +  window.location.href.split('/').reverse()[0];
+
+        // Pequeno delay para garantir renderização completa
+        setTimeout(() => window.print(), 600);
+    });
+<\/script>` : '';
     return `<!DOCTYPE html>
 <html lang="${htmlLang}">
 <head>
@@ -251,17 +273,7 @@ ${pageRules}
     <style>${css}</style>
 </head>
 <body>
-${body}
-<script>
-    // Dispara o print assim que as fontes e imagens carregarem
-    window.addEventListener('load', () => {
-        // Ajusta o título do documento
-        document.title =  "${this.createTitle()}" +  window.location.href.split('/').reverse()[0];
-
-        // Pequeno delay para garantir renderização completa
-        setTimeout(() => window.print(), 600);
-    });
-<\/script>
+${body}${printScript}
 </body>
 </html>`;
   }
