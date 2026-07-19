@@ -297,6 +297,13 @@ export class IconTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
+    // 'zIndex' (from CommonSchema.ts's zIndexSection()) is a plain CSS
+    // stacking property, not part of the icon's own SVG meta -- routing it
+    // through _craftoolsMeta/_regenerate() below persisted the value but
+    // never actually touched element.style.zIndex, so the manual Z-Index
+    // field visibly did nothing for this tool. Apply it directly instead,
+    // same as every other tool's 'zIndex' case.
+    if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     const el = element as HTMLElement & { _craftoolsMeta?: IconMeta };
     if (el._craftoolsMeta) {
       (el._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;

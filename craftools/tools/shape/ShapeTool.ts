@@ -240,6 +240,13 @@ export class ShapeTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
+    // 'zIndex' (from CommonSchema.ts's zIndexSection()) is a plain CSS
+    // stacking property, not part of the shape's own SVG meta -- routing it
+    // through setMeta()/_regenerate() below persisted the value but never
+    // actually touched element.style.zIndex, so the manual Z-Index field
+    // visibly did nothing for this tool. Apply it directly instead, same as
+    // every other tool's 'zIndex' case.
+    if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     setMeta(element, { [key]: value } as Partial<ShapeMeta>);
     ShapeTool._regenerate(element);
   }

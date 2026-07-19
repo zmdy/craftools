@@ -430,7 +430,22 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
   deselect(): void {
     this.classList.remove('craftools-selected');
     this._ctrlbar.style.display = 'none';
-    this.style.zIndex = '2';
+    // select() always bumps zIndex to '100' so the element being edited
+    // renders above everything else while selected -- deselect() used to
+    // hardcode it back to the literal '2' on the way out, silently
+    // discarding ANY real z-index the user had set (via the properties
+    // panel's manual Z-Index field, or the ctx-bar's front/back/up/down
+    // buttons), since '2' is just this class's original default and not
+    // actually "this element's persisted z-index". The very first time the
+    // element got deselected after a stacking change, the change vanished
+    // -- which is also the only way to actually SEE a stacking change (while
+    // selected, this element is always forced to the very top, masking its
+    // real position). Restore the real, persisted value instead: read it
+    // from dataset.ctState.zIndex (the store every tool's _applyProperty()
+    // writes to via PropertyRenderer.applyChange(), and what CtxBar.ts's
+    // buttons now write to as well), falling back to _craftoolsMeta.zIndex
+    // for meta-only tools, then to the original '2' default.
+    this.style.zIndex = String(this._getPersistedZIndex());
 
     const slot = this.closest('.photostrip-slot');
     if (slot) {
@@ -450,6 +465,33 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       document.removeEventListener('pointerdown', this._outsideHandler, { capture: true });
       this._outsideHandler = null;
     }
+  }
+
+  /**
+   * Reads this element's persisted (non-selection) z-index, in priority
+   * order: `dataset.ctState.zIndex` (the shared store every schema-driven
+   * tool's `_applyProperty()` persists to via `PropertyRenderer.
+   * applyChange()`, and what `CtxBar.ts`'s front/back/up/down buttons now
+   * also write to) → `_craftoolsMeta.zIndex` (ShapeTool.ts/IconTool.ts keep
+   * their own meta object as the primary store) → `2` (this class's
+   * original hardcoded default, used when nothing has ever set a z-index).
+   */
+  private _getPersistedZIndex(): number {
+    try {
+      if (this.dataset.ctState) {
+        const state = JSON.parse(this.dataset.ctState) as Record<string, unknown>;
+        const n = Number(state?.zIndex);
+        if (Number.isFinite(n)) return n;
+      }
+    } catch {
+      // Malformed dataset.ctState -- fall through to the meta/default checks.
+    }
+    const meta = (this as unknown as { _craftoolsMeta?: Record<string, unknown> })._craftoolsMeta;
+    if (meta) {
+      const n = Number(meta.zIndex);
+      if (Number.isFinite(n)) return n;
+    }
+    return 2;
   }
 
   // ── Pointer move / up ─────────────────────────────────────────────────────────

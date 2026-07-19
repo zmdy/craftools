@@ -3,6 +3,7 @@
  */
 
 import { I18n } from "../settings/Translations.js";
+import { PropertyRenderer } from "./PropertyRenderer.js";
 
 export interface CtxOption {
   icon:    string;
@@ -98,19 +99,37 @@ export class CtxBar {
       this.el.innerHTML = '';
 
       // Default commands (z-index)
+      //
+      // These used to only set `element.style.zIndex` directly, never
+      // persisting the new value anywhere -- so the moment the element was
+      // deselected (which forces zIndex back to its persisted value; see
+      // Element.ts's deselect()) or the properties panel's own manual
+      // Z-Index field was touched (which re-derives its displayed value
+      // from dataset.ctState, not the live style), the change from these
+      // buttons was silently lost. setZ() now writes through
+      // PropertyRenderer.applyChange() -- the same store every tool's
+      // `_applyProperty()` persists 'zIndex' to -- and keeps _craftoolsMeta
+      // in sync too, for ShapeTool.ts/IconTool.ts which read zIndex from
+      // their own meta object instead.
+      const setZ = (z: number) => {
+          element.style.zIndex = String(z);
+          PropertyRenderer.applyChange(element, 'zIndex', z);
+          if (element._craftoolsMeta) element._craftoolsMeta.zIndex = z;
+      };
+
       const zAdjust = (action: 'front' | 'back' | 'up' | 'down') => {
           const page = element.closest('.craftools-page');
           if(!page) return;
           const siblings = [...page.querySelectorAll<HTMLElement>('craftools-element')];
           const currentZ = parseInt(element.style.zIndex) || 2;
-          
-          if (action === 'front') element.style.zIndex = String(Math.max(...siblings.map(el => parseInt(el.style.zIndex) || 2)) + 1);
+
+          if (action === 'front') setZ(Math.max(...siblings.map(el => parseInt(el.style.zIndex) || 2)) + 1);
           if (action === 'back') {
               const minZ = Math.min(...siblings.map(el => parseInt(el.style.zIndex) || 2));
-              element.style.zIndex = String(Math.max(1, minZ - 1));
+              setZ(Math.max(1, minZ - 1));
           }
-          if (action === 'up') element.style.zIndex = String(currentZ + 1);
-          if (action === 'down') element.style.zIndex = String(Math.max(1, currentZ - 1));
+          if (action === 'up') setZ(currentZ + 1);
+          if (action === 'down') setZ(Math.max(1, currentZ - 1));
       };
 
       this.el.appendChild(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
