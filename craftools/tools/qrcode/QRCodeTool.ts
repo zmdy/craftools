@@ -533,6 +533,32 @@ export class QRCodeTool extends BaseTool {
     }
 
     QRCodeTool._regenerate(element);
+
+    // getPropertySchema() marks every OTHER payload type's fields (Wi-Fi
+    // SSID, phone, e-mail, SMS, PIX, Spotify URL...) `hidden` based on the
+    // CURRENT payloadType, and filters them out of the schema entirely --
+    // but `hidden`/the schema itself is only re-evaluated when
+    // getPropertySchema() re-runs, which normally only happens on a fresh
+    // renderPropertiesPanel() call (element selection). Ordinary field
+    // edits -- including changing this exact 'payloadType' select -- never
+    // trigger that on their own (see color-picker.field.ts's header
+    // comment for the identical underlying limitation elsewhere in this
+    // codebase). Without forcing a re-render here, switching Type in the
+    // panel regenerated the QR correctly but left whichever fields were
+    // already on screen exactly as they were -- e.g. picking "Wi-Fi" right
+    // after "PIX" kept showing the PIX-specific fields (and hid the
+    // Wi-Fi ones) until the user deselected and reselected the element.
+    // Clearing panelBody first forces a full rebuild instead of
+    // renderPropertiesPanel()'s normal "same element, don't re-clear"
+    // fast path, which only ever ADDS/updates field wrappers -- it never
+    // removes one for a field that just became hidden.
+    if (key === 'payloadType') {
+      const panelBody = document.getElementById('panel-body');
+      if (panelBody) {
+        panelBody.innerHTML = '';
+        QRCodeTool.renderPropertiesPanel(panelBody, element);
+      }
+    }
   }
 }
 
