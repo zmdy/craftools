@@ -18,6 +18,8 @@ import { Notify } from '../../utils/Notify';
 import { VariableEngine, type VariableBinding, type ApiCache } from '../../utils/VariableEngine';
 import { PdfExport } from '../../utils/PdfExport';
 import { ToolRegistry } from '../../utils/ToolRegistry';
+import { PropertyRenderer } from '../../utils/PropertyRenderer';
+import { parseVariableBinding } from '../../utils/fields/variable-binding.field';
 import './AgendaExportTool_Translations.js';
 
 const a = (key: string): string => I18n.t('agendaExportTool.' + key);
@@ -275,7 +277,23 @@ export class AgendaExportTool {
 
   // ── Shared helpers ────────────────────────────────────────────────────────
 
-  /** Reads variable bindings from a page's live child elements (not clones). */
+  /**
+   * Reads variable bindings from a page's live child elements (not clones).
+   *
+   * Checks each tool's in-memory `_craftoolsVariable`/`_craftoolsMeta.
+   * variableBinding` first (the fast path, already-hydrated for anything
+   * the user selected in the current DOM instance), then falls back to
+   * parsing `dataset.ctState` -- a real `data-ct-state` HTML attribute, so
+   * unlike those in-memory properties it SURVIVES innerHTML-based DOM
+   * replacement (HistoryManager undo/redo, SessionManager session restore)
+   * -- for anything that didn't. Without this fallback, a binding
+   * configured perfectly correctly could look completely unset here (and
+   * in AgendaExport.ts's matching _getBinding()) the moment the element's
+   * page was rebuilt via innerHTML and the user hadn't re-selected that
+   * specific element since, which is exactly why "N variables bound" counts
+   * and the actual Agenda PDF export could both silently miss variables
+   * that were genuinely configured.
+   */
   private static _collectPageBindings(page: HTMLElement): PageBinding[] {
     const results: PageBinding[] = [];
     page.querySelectorAll<HTMLElement>('craftools-element').forEach(el => {
@@ -283,8 +301,16 @@ export class AgendaExportTool {
       let binding: VariableBinding | null = null;
       if (toolType === 'conteudovariavel') {
         binding = (el as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+        if (!binding) {
+          const state = PropertyRenderer._readState(el);
+          if ('variableBinding' in state) binding = parseVariableBinding(state.variableBinding);
+        }
       } else if (toolType === 'qrcode' || toolType === 'barcode') {
         binding = (el as HTMLElement & { _craftoolsMeta?: { variableBinding?: VariableBinding | null } })._craftoolsMeta?.variableBinding ?? null;
+        if (!binding) {
+          const state = PropertyRenderer._readState(el);
+          if ('variableBinding' in state) binding = parseVariableBinding(state.variableBinding);
+        }
       }
       if (binding && binding.type) results.push({ el, toolType, binding });
     });

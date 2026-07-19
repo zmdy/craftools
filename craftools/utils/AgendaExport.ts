@@ -7,6 +7,8 @@ import { BarcodeGenerator } from './BarcodeGenerator.js';
 import { QRCodeTool }       from '../tools/qrcode/QRCodeTool.js';
 import { CalendarRenderer } from './CalendarRenderer.js';
 import { MiniCalendarTool } from '../tools/minicalendar/MiniCalendarTool.js';
+import { PropertyRenderer } from './PropertyRenderer.js';
+import { parseVariableBinding } from './fields/variable-binding.field.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -164,10 +166,35 @@ export class AgendaExport {
 
   static _getBinding(el: CraftoolsEl, toolType: string | null): VariableBinding | null {
     const type = toolType || el.getAttribute('data-craftool');
-    if (type === 'conteudovariavel') return el._craftoolsVariable ?? null;
+
+    // `_craftoolsVariable` / `_craftoolsMeta.variableBinding` are each
+    // tool's own in-memory fast-path cache, but they're plain JS
+    // properties -- they do NOT survive DOM replacement via innerHTML.
+    // HistoryManager (undo/redo) and SessionManager (session restore) both
+    // rebuild pages that way, which silently drops these for every element
+    // the user hasn't re-selected since that replacement (re-selecting is
+    // what re-primes them, via each tool's own _syncFromDOM()). That's
+    // exactly why generating an Agenda PDF could "not detect" variables
+    // that were configured perfectly correctly: after even one undo/redo
+    // (or a reload), any binding on an element the user didn't happen to
+    // click back into looked completely unset to this method.
+    //
+    // Falls back to `dataset.ctState` -- a real `data-ct-state` HTML
+    // attribute, so it DOES survive innerHTML replacement -- whenever the
+    // in-memory value comes back empty. Every tool's _applyProperty()
+    // already writes the binding there unconditionally on every edit (via
+    // PropertyRenderer.applyChange()), so it's always at least as current
+    // as whatever the user last configured through the panel.
+    if (type === 'conteudovariavel') {
+      if (el._craftoolsVariable) return el._craftoolsVariable;
+      const state = PropertyRenderer._readState(el);
+      return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
+    }
     if (type === 'qrcode' || type === 'barcode') {
       const meta = el._craftoolsMeta as (Record<string, unknown> & { variableBinding?: VariableBinding }) | undefined;
-      return meta?.variableBinding ?? null;
+      if (meta?.variableBinding) return meta.variableBinding;
+      const state = PropertyRenderer._readState(el);
+      return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
     }
     return null;
   }
