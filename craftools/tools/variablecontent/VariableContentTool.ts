@@ -8,7 +8,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { AutoFitText } from '../../utils/AutoFitText.js';
-import { withEmojiFallback } from '../../utils/EmojiFont.js';
+import { withEmojiFallback, EMOJI_FONT_STACK } from '../../utils/EmojiFont.js';
 import { I18n } from '../../settings/Translations.js';
 import type { VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -86,6 +86,25 @@ export class VariableContentTool extends BaseTool {
   public static _applyVariablePreview(element: HTMLElement, textEl: HTMLElement | null, binding: VariableBinding | null): void {
     if (!textEl) return;
     if (binding && binding.type) {
+      // A bound "emoji" value is ALWAYS a single emoji character, never
+      // mixed with regular text -- putting the panel's chosen text font
+      // first (withEmojiFallback()'s normal order, used below for every
+      // OTHER binding type) risks that font having *partial* coverage of
+      // the Unicode emoji range: many ordinary text fonts include a
+      // handful of monochrome symbol/dingbat glyphs even though they are
+      // not "emoji fonts", and the browser renders whichever font in the
+      // stack has ANY glyph for a codepoint, not the first font tagged
+      // "emoji" -- so some emoji rendered fine (fell through to Noto Color
+      // Emoji) while others silently used the text font's own plain glyph.
+      // Forcing the pure emoji stack (no text font first) for this type
+      // matches EmojiTool.ts's own dedicated element, which never puts a
+      // text font first for the same reason. Every other binding type
+      // keeps the user's actually-chosen "font" field (dataset.ctState,
+      // the same source getPropertySchema()'s font-select field reads).
+      textEl.style.fontFamily = binding.type === 'emoji'
+        ? `${EMOJI_FONT_STACK}, sans-serif`
+        : withEmojiFallback(String(PropertyRenderer._readState(element).font ?? 'DM Sans'));
+
       textEl.style.whiteSpace = 'pre-wrap';
       textEl.textContent = I18n.t('variablePanel.previewLoading');
       import('../../utils/VariableEngine.js').then(({ VariableEngine }) => {

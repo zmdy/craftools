@@ -270,6 +270,16 @@ ${pageRules}
     <title>Craftools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <!-- index.html loads this separately (its own <link>, see there for
+         why) so every emoji-capable font-family stack in the app (see
+         EmojiFont.ts) actually resolves to it in the live editor. This
+         print/export document builds its own standalone <head> from
+         scratch and never included it, so any emoji (typed inline, the
+         standalone Emoji tool, or a Variable Content "emoji" binding)
+         fell back to whatever emoji font (if any) happens to be installed
+         on the OS printing the page -- inconsistent with, and often
+         visibly different from, how it looked in the editor itself. -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
     <style>${css}</style>
 </head>
 <body>
