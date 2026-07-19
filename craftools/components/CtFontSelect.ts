@@ -273,7 +273,36 @@ class CtFontSelect extends HTMLElement {
         if (!item.classList.contains('selected'))
           item.style.background = '';
       });
+
+      // Mobile: selecting on 'pointerdown' immediately -- and calling
+      // preventDefault() on it -- fired the moment a finger touched ANY
+      // item, before the browser could tell whether the gesture was a tap
+      // or the start of a scroll drag. preventDefault() on pointerdown
+      // also suppresses the browser's own touch-scroll gesture for that
+      // touch, so once a finger landed on a font item the list couldn't be
+      // scrolled at all -- every touch just instantly picked whatever font
+      // was under the finger. Track movement between pointerdown and
+      // pointerup instead, and only commit the selection if the pointer
+      // stayed within a small tap threshold -- anything that moved further
+      // is a scroll/drag, not a tap, and the native scroll (never blocked
+      // now, since nothing calls preventDefault on pointerdown/pointermove)
+      // handles it.
+      const TAP_THRESHOLD = 8; // px
+      let startX = 0;
+      let startY = 0;
+      let isTap  = true;
       item.addEventListener('pointerdown', (e: PointerEvent) => {
+        startX = e.clientX;
+        startY = e.clientY;
+        isTap  = true;
+      });
+      item.addEventListener('pointermove', (e: PointerEvent) => {
+        if (Math.abs(e.clientX - startX) > TAP_THRESHOLD || Math.abs(e.clientY - startY) > TAP_THRESHOLD) {
+          isTap = false;
+        }
+      });
+      item.addEventListener('pointerup', (e: PointerEvent) => {
+        if (!isTap) return;
         e.preventDefault();
         e.stopPropagation();
         this._select(opt.value);
