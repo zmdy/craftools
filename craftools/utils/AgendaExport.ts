@@ -104,7 +104,15 @@ export class AgendaExport {
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
       const repeatCount = this._repeatCount(page);
       for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
-        repetitionIndicesSet.add(i);
+        // `prefetchCounted` is the GLOBAL running index across every output
+        // page in the whole document (0-based) -- the same value the main
+        // render loop below now uses as `repetitionIndex` (see its own
+        // comment). Adding the local `i` here instead used to only ever
+        // queue combos for indices 0..repeatCount-1 of THIS page, so any
+        // emoji-kitchen "variable" binding without a fixed right emoji on a
+        // document with multiple distinct pages had its combo image missing
+        // for every page beyond the first one's own repeat count.
+        repetitionIndicesSet.add(prefetchCounted);
       }
     }
     const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
@@ -131,8 +139,22 @@ export class AgendaExport {
         clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
 
         const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
+
+        // Root cause of "variable keeps the same value on every page": `i`
+        // is only the LOCAL index within the CURRENT page's own repeat
+        // batch (0..repeatCount-1) -- it resets to 0 for every distinct
+        // `.craftools-page` in the document. A date/sequence/pageNumber
+        // variable is meant to advance across the WHOLE generated document
+        // (that's the entire point of an "Agenda"), whether that advance
+        // comes from repeating one page N times or from simply having N
+        // separate pages -- so it must use a GLOBAL running index instead.
+        // `outputPageNumber` already increments exactly once per rendered
+        // output page across the entire loop (see above), so `- 1` gives
+        // the correct 0-based global equivalent of the old (buggy) `i`.
+        const globalRepetitionIndex = outputPageNumber - 1;
+
         const context: ResolveContext = {
-          repetitionIndex: i,
+          repetitionIndex: globalRepetitionIndex,
           pageNumber:      outputPageNumber,
           totalPages:      totalOutputPages,
           now:             new Date(),
@@ -160,9 +182,13 @@ export class AgendaExport {
         });
 
         // Mini Calendário "solto" — avança o mês em +1 a cada repetição
+        // (globalRepetitionIndex, not the local `i` -- see the comment
+        // above; otherwise a standalone Mini Calendar on a document with
+        // multiple distinct pages showed the same month on every page
+        // beyond the first).
         origEls.forEach((origEl, idx) => {
           if (origEl.getAttribute('data-craftool') !== 'minicalendario') return;
-          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, i);
+          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
         });
 
         // Achata todos os <craftools-element>
