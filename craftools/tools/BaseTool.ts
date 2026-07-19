@@ -479,7 +479,20 @@ export abstract class BaseTool {
     rawPaste.replaceWith(btnPaste);
     rawLock.replaceWith(btnLock);
 
-    this._updateLockButton(btnLock, element.getAttribute('data-locked') === 'true');
+    // Album grid-cell images (AlbumWizard.ts's business-card/grid layouts)
+    // are deliberately created with data-locked="true" -- locking is what
+    // keeps the photo pinned inside its cell; ImageTransform.ts's own
+    // pan/zoom/rotate "adjust" mode (double-click) works independently of
+    // it. Unlocking one from this generic style bar lets it be dragged/
+    // resized/deleted out of the grid like a normal element, breaking the
+    // album layout -- so the button simply isn't offered for these images
+    // at all, rather than relying on the user to never press it.
+    const isAlbumCellImage = element.getAttribute('data-craftool') === 'imagem'
+      && !!element.closest('.craftools-grid-cell');
+    btnLock.style.display = isAlbumCellImage ? 'none' : '';
+    if (!isAlbumCellImage) {
+      this._updateLockButton(btnLock, element.getAttribute('data-locked') === 'true');
+    }
 
     const target = this._getStyleTarget(element);
 
@@ -537,13 +550,15 @@ export abstract class BaseTool {
       }, 50);
     });
 
-    btnLock.addEventListener('click', () => {
-      const nowLocked = element.getAttribute('data-locked') !== 'true';
-      element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
-      (element as unknown as { _syncLockUI?: () => void })._syncLockUI?.();
-      this._updateLockButton(btnLock, nowLocked);
-      element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
-    });
+    if (!isAlbumCellImage) {
+      btnLock.addEventListener('click', () => {
+        const nowLocked = element.getAttribute('data-locked') !== 'true';
+        element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+        (element as unknown as { _syncLockUI?: () => void })._syncLockUI?.();
+        this._updateLockButton(btnLock, nowLocked);
+        element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+      });
+    }
   }
 
   /** Paints the lock button's icon/label/active-state/title for the given locked state. */
