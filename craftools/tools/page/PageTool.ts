@@ -513,7 +513,20 @@ export class PageTool {
         panelBody?.classList.remove('d-none');
         closePanel?.classList.remove('d-none');
         panelLogo?.classList.add('d-none');
-        rightPanel?.classList.add('mobile-open');
+
+        // Force the sidebar fully open even if it was left collapsed
+        // (icons-only) from a previous interaction. 'mobile-open' (the
+        // class this used to add) only affects `.craftools-sidebar`'s CSS,
+        // not `#right-panel` (which is `.sidenav-panel` and is instead
+        // driven by `.panel-open` / `.sidenav-collapsed`, per index.html's
+        // inline styles) -- so this never actually expanded a collapsed
+        // desktop panel. Every other panel-opening call site (Editor.ts's
+        // openPanelMenu, CalendarTool.ts, AlbumWizard.ts) uses this same
+        // add('panel-open') + remove('sidenav-collapsed') pair; this page
+        // click handler was the one path missing it.
+        rightPanel?.classList.add('panel-open');
+        rightPanel?.classList.remove('sidenav-collapsed');
+        if (window.innerWidth <= 768) rightPanel?.classList.add('mobile-modal-mode');
       }
     });
   }
