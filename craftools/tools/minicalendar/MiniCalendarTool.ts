@@ -88,13 +88,36 @@ export class MiniCalendarTool extends BaseTool {
    * _applyProperty() below) -- previously this only dispatched a
    * 'craftools-minicalendar-regenerate' custom event that nothing listened
    * for, so edits from the desktop panel never actually rebuilt the card.
+   *
+   * Used to do `element.innerHTML = ''` then append the fresh card straight
+   * onto `element` -- which wiped out Element.ts's own `_content`/`_overlay`/
+   * `_ctrlbar` children (built once by `_build()` when the element first
+   * connects, and never rebuilt afterwards) along with whatever old card was
+   * there. `_overlay` is what captures pointerdown to start a drag, and
+   * `_ctrlbar` holds the resize/rotate/delete handles -- destroying both
+   * meant the very FIRST property edit (display mode, year, month, any
+   * theme color) silently made the element permanently undraggable and
+   * handle-less, indistinguishable from being locked, for the rest of the
+   * session. Now finds and replaces only the previous `.cal-month-card`
+   * (CalendarRenderer.ts's buildCardElement() root) in place, leaving
+   * Element.ts's own structure untouched.
    */
   public static _regenerate(element: HTMLElement): void {
-    const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
+    const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta; contentArea?: HTMLElement };
     const meta = e._craftoolsMeta;
     if (!meta) return;
-    element.innerHTML = '';
-    element.appendChild(MiniCalendarTool._buildCard(meta));
+    // Before the element has connected (Element.ts's _build() hasn't run
+    // yet), `contentArea` is undefined and the card is still a direct child
+    // of `element` itself (see createElement() above) -- same fallback
+    // pattern ImageTool.ts uses for its own pre/post-connection <img> host.
+    const host = e.contentArea ?? element;
+    const oldCard = host.querySelector<HTMLElement>('.cal-month-card');
+    const freshCard = MiniCalendarTool._buildCard(meta);
+    if (oldCard) {
+      oldCard.replaceWith(freshCard);
+    } else {
+      host.appendChild(freshCard);
+    }
     MiniCalendarTool._triggerChange(element);
   }
 
