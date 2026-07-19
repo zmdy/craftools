@@ -167,7 +167,15 @@ async function fetchResourceRaw(resource: string, extraParams: Record<string, an
 
 export function loadEmojiKitchenSupported(): Promise<any[]> {
   if (_cache.emojiKitchenSupported) return _cache.emojiKitchenSupported;
-  _cache.emojiKitchenSupported = fetchResourceRaw('emoji-kitchen', { mode: 'supported' }).then(data => {
+  // `limit` defaults to 500 server-side (v1/index.php's `mode=supported`
+  // branch) when omitted -- harmless as a request-size safety cap in
+  // general, but the actual imported catalog has 600+ distinct emojis with
+  // at least one real combo, so relying on that default silently dropped
+  // roughly a fifth of the genuinely-supported set (alphabetically past the
+  // cutoff) from every "which emojis have Emoji Kitchen support" picker.
+  // 2000 is the API's own hard max for this endpoint, comfortably covering
+  // the current catalog plus room to grow.
+  _cache.emojiKitchenSupported = fetchResourceRaw('emoji-kitchen', { mode: 'supported', limit: 2000 }).then(data => {
       return Array.isArray(data) ? data : [];
   });
   return _cache.emojiKitchenSupported;

@@ -237,14 +237,38 @@ function paint(container: BoundContainer): void {
     return;
   }
 
-  const activeCat = container._ctEmojiActiveCat ?? 0;
-  const search    = container._ctEmojiSearch ?? '';
+  // When `filter` is set (e.g. EmojiKitchenTool.ts's left-emoji picker,
+  // restricted to emojis with at least one real combo), a category whose
+  // every emoji gets filtered out used to still show its own tab -- picking
+  // it just landed on an empty "Nenhum emoji encontrado" grid, which reads
+  // as the picker "not really filtering" even though the emojis shown
+  // elsewhere were correct. Categories with zero matches after filtering
+  // are now dropped from the tab bar entirely, same as they're already
+  // dropped from the grid.
+  const visibleCats = opts.filter
+    ? EMOJI_CATEGORIES.filter(c => matchingEmojis(c, opts.filter).length > 0)
+    : EMOJI_CATEGORIES;
+
+  let activeCat = container._ctEmojiActiveCat ?? 0;
+  if (opts.filter && !visibleCats.includes(EMOJI_CATEGORIES[activeCat])) {
+    // The previously active category (or the default index 0) has no
+    // matches under the current filter -- fall back to the first category
+    // that does, so the grid never opens on a guaranteed-empty tab.
+    const fallbackCat = visibleCats[0];
+    activeCat = fallbackCat ? EMOJI_CATEGORIES.indexOf(fallbackCat) : 0;
+    container._ctEmojiActiveCat = activeCat;
+  }
+
+  const search = container._ctEmojiSearch ?? '';
 
   container.innerHTML = `
     <div class="ct-emoji-tab-bar" data-part="tabs">
-      ${EMOJI_CATEGORIES.map((c, i) => `
+      ${visibleCats.map(c => {
+        const i = EMOJI_CATEGORIES.indexOf(c);
+        return `
         <button type="button" class="ct-emoji-tab ${!search && i === activeCat ? 'active' : ''}"
-          data-cat="${i}" title="${c.label}">${c.icon}</button>`).join('')}
+          data-cat="${i}" title="${c.label}">${c.icon}</button>`;
+      }).join('')}
     </div>
     <div class="ct-emoji-search">
       <input type="search" placeholder="🔍 Pesquisar emoji..." data-action="emoji-search" value="${search}">
