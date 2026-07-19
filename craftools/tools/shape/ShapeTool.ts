@@ -176,6 +176,49 @@ export class ShapeTool extends BaseTool {
     const state = PropertyRenderer._readState(element);
     const shapeType = String(state.shapeType ?? 'square');
 
+    const shapeSpecificFields = [
+      // square
+      {
+        type: 'slider', key: 'cornerRadius', label: 'Corner radius',
+        min: 0, max: 50, step: 1,
+        hidden: shapeType !== 'square',
+      },
+      // polygon
+      {
+        type: 'slider', key: 'sides', label: 'Sides',
+        min: 3, max: 12, step: 1,
+        hidden: shapeType !== 'polygon',
+      },
+      // star
+      {
+        type: 'slider', key: 'points', label: 'Points',
+        min: 3, max: 12, step: 1,
+        hidden: shapeType !== 'star',
+      },
+      {
+        type: 'slider', key: 'innerRatio', label: 'Inner ratio',
+        min: 0.15, max: 0.85, step: 0.05,
+        hidden: shapeType !== 'star',
+      },
+      // blob
+      {
+        type: 'slider', key: 'blobPoints', label: 'Points',
+        min: 5, max: 20, step: 1,
+        hidden: shapeType !== 'blob',
+      },
+      {
+        type: 'slider', key: 'blobRandomness', label: 'Randomness',
+        min: 0, max: 1, step: 0.05,
+        hidden: shapeType !== 'blob',
+      },
+      // flower
+      {
+        type: 'slider', key: 'petals', label: 'Petals',
+        min: 4, max: 16, step: 1,
+        hidden: shapeType !== 'flower',
+      },
+    ].filter(f => !f.hidden);
+
     return [
       {
         section: 'Fill & Stroke',
@@ -187,55 +230,60 @@ export class ShapeTool extends BaseTool {
           { type: 'slider', key: 'strokeWidth',  label: 'Stroke width', min: 0, max: 10, step: 0.5 },
         ],
       },
-      {
+      // Circle/Triangle/Heart have no shape-specific parameters at all --
+      // this section used to always be included regardless, so selecting
+      // one of those three rendered a "Shape" accordion that expanded to a
+      // completely empty body (no fields ever matched their hidden
+      // conditions above). Only include the section when it actually has
+      // something to show.
+      ...(shapeSpecificFields.length ? [{
         section: 'Shape',
         icon: 'category',
         defaultOpen: true,
-        fields: [
-          // square
-          {
-            type: 'slider', key: 'cornerRadius', label: 'Corner radius',
-            min: 0, max: 50, step: 1,
-            hidden: shapeType !== 'square',
-          },
-          // polygon
-          {
-            type: 'slider', key: 'sides', label: 'Sides',
-            min: 3, max: 12, step: 1,
-            hidden: shapeType !== 'polygon',
-          },
-          // star
-          {
-            type: 'slider', key: 'points', label: 'Points',
-            min: 3, max: 12, step: 1,
-            hidden: shapeType !== 'star',
-          },
-          {
-            type: 'slider', key: 'innerRatio', label: 'Inner ratio',
-            min: 0.15, max: 0.85, step: 0.05,
-            hidden: shapeType !== 'star',
-          },
-          // blob
-          {
-            type: 'slider', key: 'blobPoints', label: 'Points',
-            min: 5, max: 20, step: 1,
-            hidden: shapeType !== 'blob',
-          },
-          {
-            type: 'slider', key: 'blobRandomness', label: 'Randomness',
-            min: 0, max: 1, step: 0.05,
-            hidden: shapeType !== 'blob',
-          },
-          // flower
-          {
-            type: 'slider', key: 'petals', label: 'Petals',
-            min: 4, max: 16, step: 1,
-            hidden: shapeType !== 'flower',
-          },
-        ].filter(f => !f.hidden),
-      },
+        fields: shapeSpecificFields,
+      }] : []),
       zIndexSection(),
     ] as PropertySchema;
+  }
+
+  /**
+   * "Change shape" ctx-bar action -- swaps the selected element's shape
+   * type via the same picker grid used to add a new one, in "change" mode
+   * (renderPickerPanel()'s `targetElement` param, which has existed since
+   * this tool's migration but was never actually reachable: this
+   * getCtxOptions() override didn't exist at all, so BaseTool's default
+   * (an empty array) applied and the ctx-bar never offered a "change
+   * shape" button in the first place. iconTool.changeIcon/shapeTool.
+   * changeShape's translations already existed for exactly this feature,
+   * confirming it was planned but never wired up.
+   */
+  static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
+    return [
+      {
+        icon: 'published_with_changes',
+        label: I18n.t('shapeTool.changeShape'),
+        command: (element: HTMLElement) => {
+          const panelTitle = document.getElementById('panel-title');
+          const panelBody  = document.getElementById('panel-body');
+          if (!panelBody) return;
+          if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.pickerTitle');
+          // `editor` (2nd param) is only read by renderPickerPanel()'s
+          // "create a brand-new element" branch -- unused whenever
+          // `targetElement` (3rd param) is passed, as it is here, so
+          // reusing `element` in that slot is safe.
+          ShapeTool.renderPickerPanel(panelBody, element, element, () => {
+            // Picker grid replaced panelBody's contents wholesale, bypassing
+            // renderPropertiesPanel()'s own "same element, don't re-clear"
+            // tracking -- clear it explicitly so the properties panel
+            // rebuilds cleanly instead of appending its sections after the
+            // stale picker grid markup.
+            panelBody.innerHTML = '';
+            if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
+            ShapeTool.renderPropertiesPanel(panelBody, element);
+          });
+        },
+      },
+    ];
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
