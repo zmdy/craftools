@@ -159,6 +159,40 @@ export class ImageTool extends BaseTool {
   }
 
   /**
+   * Applies the "Blend mode" select's value to the element.
+   *
+   * This used to set `mixBlendMode` on the inner `<img>` itself, which
+   * visually did nothing for the vast majority of images: `<craftools-
+   * element>` is always `position:absolute` with an explicit `z-index`
+   * (Element.ts's `_build()`), and per the CSS Compositing spec that
+   * combination makes each element its own stacking-context root. A blend
+   * mode set on a *descendant* (the `<img>`) can only blend against other
+   * content painted earlier *within that same root* (e.g. this element's
+   * own `.ct-bg-layer`/`.craftools-element-blur-bg`) -- it can never reach
+   * past the element's own boundary to blend with the page background or
+   * any other element behind it, which is what "blend mode" means to a
+   * user coming from any layer-based design tool. Applying it to the
+   * OUTER element instead makes the element's own z-index-bearing box the
+   * blending unit, so it correctly blends against whatever is actually
+   * stacked behind it on the page.
+   *
+   * (The element's selection outline/handles are children of this same
+   * node too, so they'll pick up a visible tint while actively selected
+   * with a non-normal blend mode -- an acceptable trade-off since that UI
+   * never appears in the exported/printed output, PdfExport.ts strips
+   * `.craftools-ctrlbar` entirely.)
+   */
+  private static _applyBlendMode(element: HTMLElement, blendMode: unknown): void {
+    const mode = String(blendMode || 'normal');
+    element.style.mixBlendMode = mode !== 'normal' ? mode : '';
+    // Clears any stale value from before this fix (sessions/undo history
+    // saved with the old behavior may still have it inline on the <img>).
+    const img = (element as HTMLElement & { contentArea?: HTMLElement }).contentArea?.querySelector<HTMLImageElement>('img')
+      ?? element.querySelector<HTMLImageElement>('img');
+    if (img) img.style.mixBlendMode = '';
+  }
+
+  /**
    * Returns sibling image elements linked to this one (Business Card mode) —
    * via the shared `_linkedElements` array (Album wizard multi-upload) or
    * the `data-linked-id` attribute (PageTool.ts's card-cloning logic).
@@ -183,7 +217,7 @@ export class ImageTool extends BaseTool {
     const img = sibling.contentArea?.querySelector<HTMLImageElement>('img') ?? sibling.querySelector<HTMLImageElement>('img');
     if (img) {
       if (img.getAttribute('src') !== meta.src) img.src = meta.src;
-      img.style.mixBlendMode  = (sMeta.blendMode && sMeta.blendMode !== 'normal') ? sMeta.blendMode : '';
+      ImageTool._applyBlendMode(sibling, sMeta.blendMode);
       this._paintBorder(img, sMeta.borderWidth, sMeta.borderStyle, sMeta.borderColor);
       img.style.borderRadius  = `${sMeta.borderRadius || 0}px`;
     }
@@ -237,15 +271,20 @@ export class ImageTool extends BaseTool {
       // to-text toggle, and automatically refreshes the "Fit mode" select
       // in the panel if it's open. Active (orange) whenever not on the
       // default 'cover', since that's the common case most images use.
+      //
+      // Only cycles Cover <-> Contain -- 'fill' (stretch, ignoring aspect
+      // ratio) is still selectable from the Transform section's own select,
+      // but doesn't belong in this quick-toggle: it's a distortion mode a
+      // user would deliberately pick, not something they want to land on by
+      // repeatedly tapping a 2-way "which way does it fit" button.
       this._autoFitCtxOption({
         isActive: (el) => getMeta(el).objectFit !== 'cover',
         toggle: (el) => {
-          const modes = ['cover', 'contain', 'fill'] as const;
-          const current = (getMeta(el).objectFit as typeof modes[number]) || 'cover';
-          const next = modes[(modes.indexOf(current) + 1) % modes.length];
+          const current = getMeta(el).objectFit;
+          const next = current === 'contain' ? 'cover' : 'contain';
           ImageTool._applyProperty(el, 'objectFit', next);
         },
-        label: 'Cycle fit mode (Cover / Contain / Fill)',
+        label: 'Toggle fit mode (Cover / Contain)',
       }),
     ];
   }
@@ -420,8 +459,7 @@ export class ImageTool extends BaseTool {
       element.dispatchEvent(new CustomEvent('craftools-image-bgblur-apply', { bubbles: false }));
     } else if (key === 'blendMode') {
       meta.blendMode = String(value);
-      const img = element.querySelector<HTMLElement>('img');
-      if (img) img.style.mixBlendMode = String(value);
+      ImageTool._applyBlendMode(element, meta.blendMode);
     } else if (key === 'borderWidth' || key === 'borderStyle' || key === 'borderColor') {
       // borderColor is now the standardized solid-OR-gradient value (a JSON
       // ColorPickerValue string from the color-picker field) -- still just a
