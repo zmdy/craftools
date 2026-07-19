@@ -309,15 +309,17 @@ export class Craftools_Editor extends HTMLElement {
     SessionManager.startSession(mediaKey, craftoolsSize);
   }
 
-  /** Re-attaches PageTool events to all pages after undo/redo restore. */
+  /**
+   * Re-attaches PageTool events to all pages after undo/redo restore.
+   * PageTool.attachPageEvents() is idempotent (guards itself against being
+   * called twice on the same page node -- see its own comment), so this can
+   * just call it unconditionally for every page rather than duplicating
+   * that bookkeeping here.
+   */
   _reattachAllPageEvents(pagesWrapper: Element | null): void {
     if (!pagesWrapper) return;
     pagesWrapper.querySelectorAll('.craftools-page').forEach(page => {
-      const p = page as HTMLElement & { _craftoolsEventsAttached?: boolean };
-      if (!p._craftoolsEventsAttached) {
-        PageTool.attachPageEvents(this, page as HTMLElement);
-        p._craftoolsEventsAttached = true;
-      }
+      PageTool.attachPageEvents(this, page as HTMLElement);
     });
   }
 

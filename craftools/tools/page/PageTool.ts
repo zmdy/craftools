@@ -35,6 +35,28 @@ function _rgbToHex(rgb: string): string {
 
 export class PageTool {
   static attachPageEvents(editor: HTMLElement, pageEl: HTMLElement): void {
+    // Idempotency guard -- attachPageEvents() is called from four different
+    // places (initial page load, restoreOriginalCanvas() after leaving a
+    // Calendar/Gerador/ImageSlicer preview, addNewPage()'s clone, and
+    // Editor.ts's _reattachAllPageEvents() after undo/redo/session
+    // restore), and every one of them binds a fresh 'dragover'/'dragleave'/
+    // 'drop' listener set with anonymous closures -- addEventListener()
+    // doesn't dedupe those, so calling this twice on the SAME page node
+    // stacks a second, independent 'drop' handler on top of the first.
+    // From then on every single drag-drop onto that page ran BOTH handlers,
+    // each creating its own element -- "drops a duplicate" (previously only
+    // guarded against by a `_craftoolsEventsAttached` flag that
+    // _reattachAllPageEvents() set and checked itself, but the other three
+    // call sites neither set nor checked it, so restoreOriginalCanvas()
+    // alone -- called every time a Calendar/Gerador/ImageSlicer preview is
+    // cancelled -- could double- or triple-bind the same page with no
+    // undo/redo involved at all). Centralizing the guard here instead of in
+    // each caller means every call site is safe by construction, including
+    // ones added later.
+    const p = pageEl as HTMLElement & { _craftoolsEventsAttached?: boolean };
+    if (p._craftoolsEventsAttached) return;
+    p._craftoolsEventsAttached = true;
+
     pageEl.addEventListener('dragover', (e: DragEvent) => {
       e.preventDefault();
       pageEl.classList.add('drag-over');
