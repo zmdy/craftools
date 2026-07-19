@@ -324,7 +324,7 @@ export class VariableContentTool extends BaseTool {
       // TextTool.ts's matching 'font' case for the regression this avoids.
       case 'font':      content.style.fontFamily = withEmojiFallback(String(value)); break;
       case 'fontSize':  content.style.fontSize   = `${value}px`; break;
-      case 'color':     this._paintTextColor(content, value); break;
+      case 'color':     BaseTool._paintTextColor(content, value); break;
       case 'textAlign': content.style.textAlign   = String(value); break;
       case 'bold':      content.style.fontWeight  = value ? 'bold' : 'normal'; break;
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;
