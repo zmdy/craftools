@@ -193,15 +193,10 @@ ${pageRules}
 
   // ── Achata um <craftools-element> em divs regulares ─────────────────────────
   static _flattenElement(elNode: HTMLElement): void {
-    const transform = elNode.style.transform || '';
-    const width     = elNode.style.width     || 'auto';
-    const height    = elNode.style.height    || 'auto';
-    const zIndex    = elNode.style.zIndex    || '2';
-    const overflow  = elNode.style.overflow  || 'visible';
-
     const replacement = document.createElement('div');
     replacement.className = 'ct-el';
-    replacement.style.cssText = `transform:${transform}; width:${width}; height:${height}; z-index:${zIndex}; overflow:${overflow};`;
+    // Preserve all styles from the parent element (e.g. background, opacity, transform)
+    replacement.style.cssText = elNode.style.cssText;
 
     // 1. Check for Background Blur Layer
     const blurLayer = elNode.querySelector<HTMLElement>('.craftools-element-blur-bg');
@@ -225,6 +220,9 @@ ${pageRules}
     if (contentDiv) {
       const inner = document.createElement('div');
       inner.className = 'ct-el-inner';
+      // Preserve all styles from the content div (e.g. font, color, border radius)
+      inner.style.cssText = (contentDiv as HTMLElement).style.cssText || '';
+      
       [...contentDiv.childNodes].forEach(child => {
         if (child.nodeType === Node.ELEMENT_NODE || child.nodeType === Node.TEXT_NODE) {
           inner.appendChild(child.cloneNode(true));
