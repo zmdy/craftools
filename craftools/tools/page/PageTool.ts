@@ -586,10 +586,6 @@ export class PageTool {
           <select class="craftools-select" id="paper-type">${PageTool._paperOptionsHtml(PAPER_TYPES, m.paperType)}</select>
         </div>
         <div class="ct-field">
-          <span class="craftools-label">${I18n.t('paperTool.paperSize')}</span>
-          <select class="craftools-select" id="paper-size">${PageTool._paperOptionsHtml(PAPER_SIZES, m.paperSize)}</select>
-        </div>
-        <div class="ct-field">
           <span class="craftools-label">${I18n.t('paperTool.theme')}</span>
           <select class="craftools-select" id="paper-theme">${PageTool._paperOptionsHtml(THEMES, m.theme)}</select>
         </div>
@@ -642,18 +638,6 @@ export class PageTool {
         </div>
 
         <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
-          <span class="craftools-label">${I18n.t('pageTool.paperBackground')}</span>
-          <div id="paper-bg-color-section" style="margin-bottom:8px;"></div>
-          <span class="craftools-label">${I18n.t('paperTool.bgPattern')}</span>
-          <select class="craftools-select" id="paper-bg-pattern">
-            ${PageTool._paperOptionsHtml([
-              { value: 'none', label: 'None' }, { value: 'grid', label: 'Grid' }, { value: 'dots', label: 'Dots' },
-              { value: 'lines', label: 'Lines' }, { value: 'crosshatch', label: 'Crosshatch' }, { value: 'graph', label: 'Graph' },
-            ], m.bgPattern)}
-          </select>
-        </div>
-
-        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
           <span class="craftools-label" style="margin-bottom:8px; display:block;">${I18n.t('pageTool.paperExtras')}</span>
           ${PageTool._toggleRowHtml('paper-sidebar-enabled',     I18n.t('paperTool.enableSidebar'),   m.sidebar.enabled)}
           ${PageTool._toggleRowHtml('paper-watermark-enabled',   I18n.t('paperTool.enableWatermark'), m.watermark.enabled)}
@@ -680,7 +664,8 @@ export class PageTool {
     const rerender = (): void => {
       const paperEl = PageTool._findPaperElement(pageEl);
       const meta = paperEl?._craftoolsMeta ?? null;
-      const target = panelBody.querySelector<HTMLElement>('[data-ct-section="ct-section-page-papel"] .ct-accordion-content');
+      // PanelUI.accordion() uses data-accordion-id, not data-ct-section
+      const target = panelBody.querySelector<HTMLElement>('[data-accordion-id="page-papel"] .ct-accordion-content');
       if (target) target.innerHTML = PageTool._renderPaperTabHtml(meta);
       PageTool._bindPaperTab(panelBody, editor, pageEl);
     };
@@ -725,8 +710,15 @@ export class PageTool {
     };
 
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-type')?.addEventListener('change', e => applyMeta({ paperType: (e.target as HTMLSelectElement).value }));
-    fieldsWrap.querySelector<HTMLSelectElement>('#paper-size')?.addEventListener('change', e => applyMeta({ paperSize: (e.target as HTMLSelectElement).value }));
-    fieldsWrap.querySelector<HTMLSelectElement>('#paper-theme')?.addEventListener('change', e => applyMeta({ theme: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-theme')?.addEventListener('change', e => {
+      const theme = (e.target as HTMLSelectElement).value;
+      // Import PaperThemes to apply the theme's colors to meta immediately
+      import('../paper/PaperTool.js').then(({ PaperThemes }) => {
+        const cfg = (PaperThemes as Record<string, { bg: string; line: string }>)[theme];
+        if (cfg) applyMeta({ theme, bgColor: cfg.bg, lineColor: cfg.line });
+        else applyMeta({ theme });
+      });
+    });
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-style')?.addEventListener('change', e => applyMeta({ lineStyle: (e.target as HTMLSelectElement).value }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-line-spacing')?.addEventListener('input', e => applyMeta({ lineSpacing: parseFloat((e.target as HTMLInputElement).value) || 0 }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-line-width')?.addEventListener('input', e => applyMeta({ lineWidth: parseFloat((e.target as HTMLInputElement).value) || 0 }));
@@ -740,9 +732,7 @@ export class PageTool {
     fieldsWrap.querySelector<HTMLInputElement>('#paper-logo-enabled')?.addEventListener('change', e => applyMeta(m => { m.logo.enabled = (e.target as HTMLInputElement).checked; }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-page-number-enabled')?.addEventListener('change', e => applyMeta(m => { m.pageSettings.showPageNumber = (e.target as HTMLInputElement).checked; }));
 
-    // Line/background color -- the standardized solid-or-gradient picker
-    // (same one every element tool's color field uses), matching how
-    // htmlBackground's own fill section is wired above.
+    // Line color picker
     const paperElNow = PageTool._findPaperElement(pageEl);
     const currentMeta = paperElNow?._craftoolsMeta ?? PaperTool.getDefaultMeta();
 
@@ -750,13 +740,6 @@ export class PageTool {
     if (lineColorSection) {
       renderColorPicker(lineColorSection, { mode: 'solid', solid: currentMeta.lineColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } }, (next) => {
         applyMeta({ lineColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
-      }, { allowGradient: false });
-    }
-
-    const bgColorSection = fieldsWrap.querySelector<HTMLElement>('#paper-bg-color-section');
-    if (bgColorSection) {
-      renderColorPicker(bgColorSection, { mode: 'solid', solid: currentMeta.bgColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } }, (next) => {
-        applyMeta({ bgColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
       }, { allowGradient: false });
     }
 
