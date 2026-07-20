@@ -554,29 +554,34 @@ export class PageTool {
     return opts.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${I18n.t(`paperTool.${o.value}`) || o.label}</option>`).join('');
   }
 
+  private static _toggleRowHtml(id: string, label: string, checked: boolean): string {
+    return `
+      <div class="ct-field-row" style="justify-content:space-between; padding:4px 0;">
+        <span class="craftools-label" style="margin:0;">${label}</span>
+        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+          <input type="checkbox" id="${id}" class="ct-fi" style="display:none;" ${checked ? 'checked' : ''}>
+          <span class="ct-toggle-track" style="
+            width:32px; height:18px; border-radius:99px;
+            background:${checked ? 'var(--accent, #3b82f6)' : 'var(--border, #e4e4e7)'}; position:relative; transition:background .15s; flex-shrink:0;">
+            <span class="ct-toggle-thumb" style="
+              position:absolute; top:2px; left:2px;
+              width:14px; height:14px; border-radius:50%;
+              background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+              transform: ${checked ? 'translateX(14px)' : 'translateX(0)'};">
+            </span>
+          </span>
+        </label>
+      </div>`;
+  }
+
   private static _renderPaperTabHtml(meta: PaperMeta | null): string {
     const enabled = meta !== null;
     const m = meta ?? PaperTool.getDefaultMeta();
 
     return `
-      <div class="ct-field-row" style="justify-content:space-between; padding:2px 0; margin-bottom:12px;">
-        <span class="craftools-label" style="margin:0; text-transform:uppercase; font-weight:600; color:var(--text-primary);">${enabled ? I18n.t('pageTool.paperDisable') : I18n.t('pageTool.paperEnable')}</span>
-        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
-          <input type="checkbox" id="paper-enable-chk" style="display:none;" ${enabled ? 'checked' : ''}>
-          <span id="paper-enable-track" class="ct-toggle-track" style="
-            width:32px; height:18px; border-radius:99px;
-            background:${enabled ? 'var(--accent, #3b82f6)' : 'var(--border, #e4e4e7)'}; position:relative; transition:background .15s; flex-shrink:0;">
-            <span id="paper-enable-thumb" class="ct-toggle-thumb" style="
-              position:absolute; top:2px; left:2px;
-              width:14px; height:14px; border-radius:50%;
-              background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2);
-              transform: ${enabled ? 'translateX(14px)' : 'translateX(0)'};">
-            </span>
-          </span>
-        </label>
-      </div>
+      ${PageTool._toggleRowHtml('paper-enable-chk', I18n.t('pageTool.paperEnable'), enabled)}
       <div id="paper-fields-wrap" style="${enabled ? '' : 'display:none;'}">
-        <div class="ct-field">
+        <div class="ct-field" style="margin-top:8px;">
           <span class="craftools-label">${I18n.t('paperTool.paperType')}</span>
           <select class="craftools-select" id="paper-type">${PageTool._paperOptionsHtml(PAPER_TYPES, m.paperType)}</select>
         </div>
@@ -649,23 +654,16 @@ export class PageTool {
         </div>
 
         <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
-          <span class="craftools-label">${I18n.t('pageTool.paperExtras')}</span>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
-            <input type="checkbox" id="paper-sidebar-enabled" ${m.sidebar.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableSidebar')}
-          </label>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
-            <input type="checkbox" id="paper-watermark-enabled" ${m.watermark.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableWatermark')}
-          </label>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
-            <input type="checkbox" id="paper-logo-enabled" ${m.logo.enabled ? 'checked' : ''}> ${I18n.t('paperTool.enableLogo')}
-          </label>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
-            <input type="checkbox" id="paper-page-number-enabled" ${m.pageSettings.showPageNumber ? 'checked' : ''}> ${I18n.t('paperTool.showPageNumber')}
-          </label>
+          <span class="craftools-label" style="margin-bottom:8px; display:block;">${I18n.t('pageTool.paperExtras')}</span>
+          ${PageTool._toggleRowHtml('paper-sidebar-enabled',     I18n.t('paperTool.enableSidebar'),   m.sidebar.enabled)}
+          ${PageTool._toggleRowHtml('paper-watermark-enabled',   I18n.t('paperTool.enableWatermark'), m.watermark.enabled)}
+          ${PageTool._toggleRowHtml('paper-logo-enabled',        I18n.t('paperTool.enableLogo'),      m.logo.enabled)}
+          ${PageTool._toggleRowHtml('paper-page-number-enabled', I18n.t('paperTool.showPageNumber'),  m.pageSettings.showPageNumber)}
         </div>
       </div>
     `;
   }
+
 
   /**
    * Wires the "Papel personalizado" tab's enable toggle + every field.
@@ -761,6 +759,17 @@ export class PageTool {
         applyMeta({ bgColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
       }, { allowGradient: false });
     }
+
+    // Wire standard toggle track/thumb animation for every ct-fi checkbox in the
+    // paper tab (extras toggles + the main enable toggle).
+    wrap.querySelectorAll<HTMLInputElement>('input.ct-fi').forEach(input => {
+      input.addEventListener('change', () => {
+        const track = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+        const thumb = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+        if (track) track.style.background = input.checked ? 'var(--accent, #3b82f6)' : 'var(--border, #e4e4e7)';
+        if (thumb) thumb.style.transform   = input.checked ? 'translateX(14px)' : 'translateX(0)';
+      });
+    });
   }
 
   static addNewPage(editor: HTMLElement): void {
