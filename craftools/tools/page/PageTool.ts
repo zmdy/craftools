@@ -559,11 +559,21 @@ export class PageTool {
     const m = meta ?? PaperTool.getDefaultMeta();
 
     return `
-      <div class="ct-field">
-        <button type="button" class="craftools-pill ${enabled ? 'active' : ''}" id="paper-enable-btn" style="width:100%; justify-content:center; padding:8px; gap:6px;">
-          <span class="material-symbols-outlined" style="font-size:15px;">${enabled ? 'toggle_on' : 'toggle_off'}</span>
-          ${enabled ? I18n.t('pageTool.paperDisable') : I18n.t('pageTool.paperEnable')}
-        </button>
+      <div class="ct-field-row" style="justify-content:space-between; padding:2px 0; margin-bottom:12px;">
+        <span class="craftools-label" style="margin:0; text-transform:uppercase; font-weight:600; color:var(--text-primary);">${enabled ? I18n.t('pageTool.paperDisable') : I18n.t('pageTool.paperEnable')}</span>
+        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+          <input type="checkbox" id="paper-enable-chk" style="display:none;" ${enabled ? 'checked' : ''}>
+          <span id="paper-enable-track" class="ct-toggle-track" style="
+            width:32px; height:18px; border-radius:99px;
+            background:${enabled ? 'var(--accent, #3b82f6)' : 'var(--border, #e4e4e7)'}; position:relative; transition:background .15s; flex-shrink:0;">
+            <span id="paper-enable-thumb" class="ct-toggle-thumb" style="
+              position:absolute; top:2px; left:2px;
+              width:14px; height:14px; border-radius:50%;
+              background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+              transform: ${enabled ? 'translateX(14px)' : 'translateX(0)'};">
+            </span>
+          </span>
+        </label>
       </div>
       <div id="paper-fields-wrap" style="${enabled ? '' : 'display:none;'}">
         <div class="ct-field">
@@ -687,9 +697,9 @@ export class PageTool {
       return paperEl;
     };
 
-    const enableBtn = wrap.querySelector<HTMLButtonElement>('#paper-enable-btn');
-    if (enableBtn) {
-      enableBtn.onclick = () => {
+    const enableChk = wrap.querySelector<HTMLInputElement>('#paper-enable-chk');
+    if (enableChk) {
+      enableChk.onchange = () => {
         const paperEl = PageTool._findPaperElement(pageEl);
         if (paperEl) {
           // Disable: the underlying element is removed entirely (matches
