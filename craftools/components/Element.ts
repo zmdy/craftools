@@ -174,6 +174,17 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     this.style.transform = `translate(${this.px}${this.unitX}, ${this.py}${this.unitY}) rotate(${this.pr}deg)`;
     this.style.width     = `${this.pw}${this.unitW}`;
     this.style.height    = `${this.ph}${this.unitH}`;
+
+    // Keep DOM attributes in sync with virtual coordinates so they survive clones/innerHTML
+    this.setAttribute('x', `${this.px}${this.unitX}`);
+    this.setAttribute('y', `${this.py}${this.unitY}`);
+    this.setAttribute('w', `${this.pw}${this.unitW}`);
+    this.setAttribute('h', `${this.ph}${this.unitH}`);
+    if (this.pr !== 0) {
+      this.setAttribute('r', String(this.pr));
+    } else {
+      this.removeAttribute('r');
+    }
   }
 
   _getScale(): number {

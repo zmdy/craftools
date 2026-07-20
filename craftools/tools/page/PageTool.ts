@@ -1,7 +1,7 @@
 import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { Notify } from '../../utils/Notify.js';
-import { renderColorPicker, cssFromValue, parseCssBackground, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
+import { renderColorPicker, cssFromValue, parseCssBackground, normalizeValue, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
 import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, type PaperMeta } from '../paper/PaperTool.js';
 import './PageTool_Translations.js';
 
@@ -738,9 +738,10 @@ export class PageTool {
 
     const lineColorSection = fieldsWrap.querySelector<HTMLElement>('#paper-line-color-section');
     if (lineColorSection) {
-      renderColorPicker(lineColorSection, { mode: 'solid', solid: currentMeta.lineColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } }, (next) => {
-        applyMeta({ lineColor: next.mode === 'gradient' ? cssFromValue(next) : next.solid });
-      }, { allowGradient: false });
+      const val = normalizeValue(currentMeta.lineColor);
+      renderColorPicker(lineColorSection, val, (next) => {
+        applyMeta({ lineColor: JSON.stringify(next) });
+      }, { allowGradient: true });
     }
 
     // Wire standard toggle track/thumb animation for every ct-fi checkbox in the
