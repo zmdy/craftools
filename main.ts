@@ -266,14 +266,14 @@ function initPwaProxies(): void {
 
   const setSidebarCollapsed = (panel: HTMLElement, collapsed: boolean) => {
     // If the panel is already in the requested state, don't do anything.
-    // Most importantly, if it's ALREADY collapsed, do NOT read its current
-    // width (which would be '68px') and overwrite dataset.expandedWidth with it,
-    // otherwise the panel will be permanently stuck at 68px when it reopens!
     if (collapsed === panel.classList.contains('sidenav-collapsed')) return;
 
     if (collapsed) {
       const currentWidth = panel.style.width || (panel.getBoundingClientRect().width + 'px');
-      panel.dataset.expandedWidth = currentWidth;
+      // Prevent poisoning expandedWidth with the collapsed width if inline style was left dirty
+      if (currentWidth !== '68px' && currentWidth !== '68px !important') {
+        panel.dataset.expandedWidth = currentWidth;
+      }
       panel.classList.add('sidenav-collapsed');
       panel.style.setProperty('width', '68px', 'important');
     } else {

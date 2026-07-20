@@ -122,6 +122,8 @@ export class CalendarTool {
     if (rightPanel) {
       rightPanel.classList.add('panel-open');
       rightPanel.classList.remove('sidenav-collapsed');
+      rightPanel.style.removeProperty('width');
+      if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
       if (window.innerWidth <= 768) rightPanel.classList.add('mobile-modal-mode');
     }
     const menuIcon = document.getElementById('pwa-menu-icon');
