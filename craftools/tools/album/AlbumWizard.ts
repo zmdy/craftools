@@ -738,11 +738,20 @@ export class AlbumTool {
         PropertyRenderer.render(panelBody, [borderSection()], fakeEl, (key, value) => {
           PropertyRenderer.applyChange(fakeEl, key, value);
           const s = PropertyRenderer._readState(fakeEl);
+
+          let parsedColor = String(s.borderColor ?? '#000000');
+          if (parsedColor.startsWith('{')) {
+            try {
+              const v = JSON.parse(parsedColor);
+              parsedColor = v.solid ?? '#000000';
+            } catch {}
+          }
+
           Craftools_LayoutGrid.updateBorders(
             editor,
             s.borderWidth ?? 0,
             s.borderStyle ?? 'none',
-            s.borderColor ?? '#000000',
+            parsedColor,
           );
         });
       }
