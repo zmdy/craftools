@@ -739,27 +739,13 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','papeis','agenda','calendario','album','fatiador','textocurvo','carimbo',
+        'gerador','agenda','calendario','album','fatiador','textocurvo','carimbo',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-
-          // papeis: Paper is no longer a standalone draggable element/tool --
-          // its controls now live in Page Settings' "Papel personalizado" tab
-          // (see PaperTool.ts's ToolRegistry.register() comment and
-          // PageTool.ts's page click handler). Clicking this sidebar entry
-          // simply opens Page Settings by dispatching a real click on the
-          // active page, reusing PageTool.ts's own click handler so behavior
-          // stays identical to clicking the page directly.
-          if (tool === 'papeis') {
-            closeSidebar();
-            const targetPage = (this.activePage ?? this.querySelector('.craftools-page') ?? document.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) targetPage.click();
-            return;
-          }
 
           // album: open the wizard panel on the active page
           if (tool === 'album') {

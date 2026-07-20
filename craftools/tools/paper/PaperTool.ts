@@ -190,6 +190,7 @@ export class PaperTool extends BaseTool {
 
     // The paper sits behind everything (low z-index)
     el.style.zIndex = '1';
+    el.style.pointerEvents = 'none';
 
     const innerDiv = document.createElement('div');
     innerDiv.className = 'paper-content-area';
@@ -217,6 +218,7 @@ export class PaperTool extends BaseTool {
   }
 
   protected static _syncFromDOM(element: HTMLElement): void {
+    element.style.pointerEvents = 'none';
     const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
