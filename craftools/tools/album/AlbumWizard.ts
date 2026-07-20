@@ -735,7 +735,8 @@ export class AlbumTool {
           borderColor: initialBorderColor,
         });
 
-        PropertyRenderer.render(panelBody, [borderSection()], fakeEl, () => {
+        PropertyRenderer.render(panelBody, [borderSection()], fakeEl, (key, value) => {
+          PropertyRenderer.applyChange(fakeEl, key, value);
           const s = PropertyRenderer._readState(fakeEl);
           Craftools_LayoutGrid.updateBorders(
             editor,
