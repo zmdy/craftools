@@ -39,7 +39,14 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaMesExtenso: "31 de Dezembro",
         dateFormatDiaMesAnoExtenso: "31 de Dezembro de 2026",
         dateFormatDiaSemana: "Quinta-feira",
+        dateFormatDiaSemanaAbrev: "QUI (Dia da semana abreviado)",
+        dateFormatCaixaDias: "Caixa de dias (S T Q Q S S D)",
         dateFormatDiaSemanaData: "Quinta-feira, 31/12",
+
+        dateDaysBoxColor: "Cor de Destaque",
+        dateDaysBoxRadius: "Arredondamento da Borda (px)",
+        dateDaysBoxPadding: "Preenchimento interno (px)",
+        dateDaysBoxSundayFirst: "Começar semana no Domingo",
 
         seqNumberStartLabel: "Início",
         seqNumberStepLabel: "Passo",
@@ -143,7 +150,14 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaMesExtenso: "December 31",
         dateFormatDiaMesAnoExtenso: "December 31, 2026",
         dateFormatDiaSemana: "Thursday",
+        dateFormatDiaSemanaAbrev: "THU (Abbreviated day)",
+        dateFormatCaixaDias: "Days box (M T W T F S S)",
         dateFormatDiaSemanaData: "Thursday, 31/12",
+
+        dateDaysBoxColor: "Highlight Color",
+        dateDaysBoxRadius: "Border Radius (px)",
+        dateDaysBoxPadding: "Internal Padding (px)",
+        dateDaysBoxSundayFirst: "Start week on Sunday",
 
         seqNumberStartLabel: "Start",
         seqNumberStepLabel: "Step",
@@ -247,7 +261,14 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaMesExtenso: "31 de Diciembre",
         dateFormatDiaMesAnoExtenso: "31 de Diciembre de 2026",
         dateFormatDiaSemana: "Jueves",
+        dateFormatDiaSemanaAbrev: "JUE (Día abreviado)",
+        dateFormatCaixaDias: "Caja de días (L M M J V S D)",
         dateFormatDiaSemanaData: "Jueves, 31/12",
+
+        dateDaysBoxColor: "Color de Resalte",
+        dateDaysBoxRadius: "Radio de Borde (px)",
+        dateDaysBoxPadding: "Relleno Interno (px)",
+        dateDaysBoxSundayFirst: "Comenzar semana en Domingo",
 
         seqNumberStartLabel: "Inicio",
         seqNumberStepLabel: "Paso",

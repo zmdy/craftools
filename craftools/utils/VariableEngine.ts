@@ -18,6 +18,10 @@ export interface VariableBinding {
     interval?:     string;
     step?:         number | string;
     format?:       string;
+    daysBoxHighlightColor?: string;
+    daysBoxBorderRadius?:   number | string;
+    daysBoxStartSunday?:    boolean;
+    daysBoxPadding?:        number | string;
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -302,7 +306,7 @@ export class VariableEngine {
 
     private static _format(binding: VariableBinding, pick: unknown, ctx: Required<ResolveContext> & { now: Date }): string {
         switch (binding.type) {
-            case 'date':           return pick ? this._formatDate(pick as Date, binding.format ?? 'DD/MM/YYYY') : '';
+            case 'date':           return pick ? this._formatDate(pick as Date, binding) : '';
             case 'sequenceNumber': return this._formatSequenceNumber(pick as number, binding);
             case 'sequenceText':   return pick == null ? '' : String(pick);
             case 'pageNumber':     return this._formatPageNumber(pick as number, binding, ctx);
@@ -334,11 +338,14 @@ export class VariableEngine {
         return d;
     }
 
-    private static _formatDate(d: Date, format: string): string {
+    private static _formatDate(d: Date, b: VariableBinding): string {
+        const format = b.format ?? 'DD/MM/YYYY';
         const pad = (v: number) => String(v).padStart(2, '0');
         const dd   = pad(d.getDate()), mm = pad(d.getMonth() + 1), yyyy = d.getFullYear(), yy = String(yyyy).slice(-2);
         const mPt  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
         const wPt  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+        const wPtAbrev = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+        
         switch (format) {
             case 'DD/MM/YYYY':         return `${dd}/${mm}/${yyyy}`;
             case 'DD/MM/YY':           return `${dd}/${mm}/${yy}`;
@@ -348,7 +355,37 @@ export class VariableEngine {
             case 'DIA_MES_EXTENSO':    return `${d.getDate()} de ${mPt[d.getMonth()]}`;
             case 'DIA_MES_ANO_EXTENSO':return `${d.getDate()} de ${mPt[d.getMonth()]} de ${yyyy}`;
             case 'DIA_SEMANA':         return wPt[d.getDay()];
+            case 'DIA_SEMANA_ABREV':   return wPtAbrev[d.getDay()];
             case 'DIA_SEMANA_DATA':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
+            case 'CAIXA_DIAS': {
+                const hlColor = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
+                const radius  = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
+                const padding = b.daysBoxPadding !== undefined ? String(b.daysBoxPadding) : '4';
+                const startSun = !!b.daysBoxStartSunday;
+                
+                // Construct the sequence of letters
+                const letters = startSun 
+                    ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] 
+                    : ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+                
+                // Indices map to Date.getDay() (0 = Sunday, 1 = Monday, etc)
+                // If starting on Monday, index 0 is Monday (d.getDay() === 1), index 6 is Sunday (d.getDay() === 0).
+                let todayIdx = -1;
+                if (startSun) {
+                    todayIdx = d.getDay(); // 0 is Sunday, which matches index 0
+                } else {
+                    todayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0 (Sunday) becomes index 6
+                }
+                
+                const html = letters.map((letter, idx) => {
+                    const isActive = idx === todayIdx;
+                    const bg = isActive ? hlColor : 'transparent';
+                    const color = isActive ? '#ffffff' : 'inherit';
+                    return `<div style="display:flex; align-items:center; justify-content:center; border: 1px solid currentColor; border-radius: ${radius}px; padding: ${padding}px; background-color: ${bg}; color: ${color}; min-width: 1.5em; min-height: 1.5em;">${letter}</div>`;
+                }).join('');
+                
+                return `<div style="display:flex; align-items:center; gap:6px; font-weight:bold;">${html}</div>`;
+            }
             default:                   return `${dd}/${mm}/${yyyy}`;
         }
     }

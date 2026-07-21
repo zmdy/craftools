@@ -151,7 +151,8 @@ export class VariablePanel {
         return [
             ['DD/MM/YYYY','DDMMYYYY'],['DD/MM/YY','DDMMYY'],['DD/MM','DDMM'],['MM/YYYY','MMYYYY'],
             ['YYYY-MM-DD','ISO'],['DIA_MES_EXTENSO','DiaMesExtenso'],['DIA_MES_ANO_EXTENSO','DiaMesAnoExtenso'],
-            ['DIA_SEMANA','DiaSemana'],['DIA_SEMANA_DATA','DiaSemanaData'],
+            ['DIA_SEMANA','DiaSemana'],['DIA_SEMANA_ABREV','DiaSemanaAbrev'],['DIA_SEMANA_DATA','DiaSemanaData'],
+            ['CAIXA_DIAS','CaixaDias'],
         ];
     }
 
@@ -184,6 +185,27 @@ export class VariablePanel {
                         <option value="${fmt}" ${b.format === fmt ? 'selected' : ''}>${I18n.t('variablePanel.dateFormat' + key)}</option>
                     `).join('')}
                 </select>
+            </div>
+            
+            <div id="var-date-daysbox-options" style="display: ${b.format === 'CAIXA_DIAS' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
+                    <input type="color" id="var-date-daysbox-color" class="craftools-input" style="width:100%; height: 32px;" value="${b.daysBoxHighlightColor || '#f97316'}">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxRadius')}</span>
+                        <input type="number" id="var-date-daysbox-radius" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderRadius !== undefined ? b.daysBoxBorderRadius : 50}" min="0">
+                    </div>
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxPadding')}</span>
+                        <input type="number" id="var-date-daysbox-padding" class="craftools-input" style="width:100%;" value="${b.daysBoxPadding !== undefined ? b.daysBoxPadding : 4}" min="0">
+                    </div>
+                </div>
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
+                    <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateDaysBoxSundayFirst')}</span>
+                </label>
             </div>
         `;
     }
@@ -452,10 +474,24 @@ export class VariablePanel {
                     const intervalSel   = container.querySelector<HTMLSelectElement>('#var-date-interval');
                     const stepInput     = container.querySelector<HTMLInputElement>('#var-date-step');
                     const formatSel     = container.querySelector<HTMLSelectElement>('#var-date-format');
+                    const daysBoxOpts   = container.querySelector<HTMLElement>('#var-date-daysbox-options');
+                    const daysBoxColor  = container.querySelector<HTMLInputElement>('#var-date-daysbox-color');
+                    const daysBoxRadius = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
+                    const daysBoxPad    = container.querySelector<HTMLInputElement>('#var-date-daysbox-padding');
+                    const daysBoxSun    = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
+                    
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
-                    if (formatSel)   formatSel.onchange    = () => { binding!.format    = formatSel.value;                                notify(); };
+                    if (formatSel)   formatSel.onchange    = () => { 
+                        binding!.format = formatSel.value;
+                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'CAIXA_DIAS' ? 'block' : 'none';
+                        notify(); 
+                    };
+                    if (daysBoxColor)  daysBoxColor.oninput  = () => { binding!.daysBoxHighlightColor = daysBoxColor.value;                  notify(); };
+                    if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius   = parseInt(daysBoxRadius.value, 10);   notify(); };
+                    if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding        = parseInt(daysBoxPad.value, 10);      notify(); };
+                    if (daysBoxSun)    daysBoxSun.onchange   = () => { binding!.daysBoxStartSunday    = daysBoxSun.checked;                  notify(); };
                     break;
                 }
                 case 'sequenceNumber': {
