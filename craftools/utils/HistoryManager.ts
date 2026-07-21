@@ -4,7 +4,9 @@
  * Exposes undo/redo methods and fires 'craftools-history-change' events.
  */
 
-const MAX_STATES = 10;
+import { StateSerializer, type EditorState } from './StateSerializer';
+
+const MAX_STATES = 20; // Increased to 20 since JSON is lightweight
 
 /** Payload of the 'craftools-history-change' CustomEvent. */
 export interface HistoryChangeDetail {
@@ -15,7 +17,7 @@ export interface HistoryChangeDetail {
 }
 
 class _HistoryManager {
-  private _stack: string[] = [];
+  private _stack: EditorState[] = [];
   private _index: number = -1;
   private _locked: boolean = false;
 
@@ -32,17 +34,19 @@ class _HistoryManager {
     }
     if (!pagesWrapper) return;
 
-    const html = pagesWrapper.innerHTML;
+    const state = StateSerializer.serialize(pagesWrapper);
 
-    // Skip if identical to the last snapshot (avoids duplicates)
-    if (this._stack[this._index] === html) return;
+    // Deep compare to avoid pushing duplicates (simplified check using JSON.stringify for now)
+    if (this._stack.length > 0 && this._index >= 0) {
+      if (JSON.stringify(this._stack[this._index]) === JSON.stringify(state)) return;
+    }
 
     // Discard states ahead of the cursor (cleared after an undo)
     if (this._index < this._stack.length - 1) {
       this._stack = this._stack.slice(0, this._index + 1);
     }
 
-    this._stack.push(html);
+    this._stack.push(state);
 
     // Enforce the maximum stack size
     if (this._stack.length > MAX_STATES) {
@@ -59,10 +63,11 @@ class _HistoryManager {
     if (!pagesWrapper) pagesWrapper = document.querySelector<HTMLElement>('#pages-wrapper');
     if (!pagesWrapper) return false;
 
-    // If the current state hasn't been snapshotted yet, save it before undoing
-    const currentHtml = pagesWrapper.innerHTML;
-    if (this._stack[this._index] !== currentHtml) {
-      this.snapshot(pagesWrapper);
+    // Save current if we haven't
+    const currentState = StateSerializer.serialize(pagesWrapper);
+    if (this._index === this._stack.length - 1 && JSON.stringify(this._stack[this._index]) !== JSON.stringify(currentState)) {
+        this.snapshot(pagesWrapper);
+        if (!this.canUndo) return false; // Edge case after snapshotting
     }
 
     if (this._index <= 0) return false;
@@ -102,15 +107,24 @@ class _HistoryManager {
     this._emit();
   }
 
-  // ─── Private ─────────────────────────────────────────────────────────
+  suspend(): void { this._locked = true; }
+  resume(): void { this._locked = false; }
+
+  // ─── Private Internal ────────────────────────────────────────────────
 
   private _restore(pagesWrapper: HTMLElement): void {
-    this._locked = true;
-    pagesWrapper.innerHTML = this._stack[this._index];
+    if (this._index < 0 || this._index >= this._stack.length) return;
+    const targetState = this._stack[this._index];
+    
+    // Suspend observation to avoid snapshotting our own restores
+    this.suspend();
+    try {
+      StateSerializer.reconcile(pagesWrapper, targetState);
+    } finally {
+      this.resume();
+    }
 
     // Fire events so Editor can re-attach page interactions for restored pages.
-    // (The legacy JS version also destructured window._craftoolsPageTool here
-    // but never called it — the event dispatch was always the real mechanism.)
     if (document.querySelector('craftools-editor')) {
       pagesWrapper.querySelectorAll('.craftools-page').forEach(page => {
         pagesWrapper.dispatchEvent(

@@ -8,12 +8,15 @@
  * Format: { html, timestamp, mediaKey, sizeConfig }
  */
 
+import { StateSerializer, type EditorState } from './StateSerializer';
+
 const SESSION_KEY = 'craftools-session';
 const AUTOSAVE_INTERVAL_MS = 30_000; // 30 seconds
 
 /** Shape of the object persisted in localStorage under SESSION_KEY. */
 export interface SavedSession {
-  html: string;
+  html?: string;          // Legacy string-based HTML format
+  state?: EditorState;    // New lightweight JSON format
   timestamp: number;
   mediaKey: string | null;
   sizeConfig: unknown;
@@ -73,8 +76,9 @@ class _SessionManager {
     if (!pagesWrapper) return;
 
     try {
+      const state = StateSerializer.serialize(pagesWrapper);
       const session: SavedSession = {
-        html: pagesWrapper.innerHTML,
+        state,
         timestamp: Date.now(),
         mediaKey: this._mediaKey,
         sizeConfig: this._sizeConfig,
@@ -111,9 +115,14 @@ class _SessionManager {
    */
   restoreSession(session: SavedSession, pagesWrapper?: HTMLElement | null): void {
     if (!pagesWrapper) pagesWrapper = document.querySelector<HTMLElement>('#pages-wrapper');
-    if (!pagesWrapper || !session?.html) return;
+    if (!pagesWrapper || (!session?.html && !session?.state)) return;
 
-    pagesWrapper.innerHTML = session.html;
+    if (session.state) {
+      StateSerializer.reconcile(pagesWrapper, session.state);
+    } else if (session.html) {
+      // Legacy compatibility
+      pagesWrapper.innerHTML = session.html;
+    }
 
     // Restore global size state
     if (session.sizeConfig) {

@@ -80,6 +80,10 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     if (this._built) return;
     this._built = true;
 
+    if (!this.dataset.ctId) {
+      this.dataset.ctId = 'el-' + Math.random().toString(36).substring(2, 9);
+    }
+
     const rawX = this.getAttribute('x') || '50';
     const rawY = this.getAttribute('y') || '50';
     const rawW = this.getAttribute('w') || '200';
