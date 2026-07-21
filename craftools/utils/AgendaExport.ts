@@ -155,17 +155,7 @@ export class AgendaExport {
 
         // Alternância de layout (Frente e Verso espelhados)
         if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
-          const pageWidth = page.offsetWidth;
-          for (let idx = 0; idx < cloneEls.length; idx++) {
-            const cl = cloneEls[idx];
-            const px = parseFloat(cl.getAttribute('x') || '0');
-            const pw = parseFloat(cl.getAttribute('w') || '100');
-            const pr = parseFloat(cl.getAttribute('r') || '0');
-            const unitX = (cl.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
-
-            cl.setAttribute('x', String(pageWidth - px - pw) + unitX);
-            if (pr !== 0) cl.setAttribute('r', String(-pr));
-          }
+          this._applyAlternateLayout(page, cloneEls);
         }
 
         const context: ResolveContext = {
@@ -289,6 +279,11 @@ export class AgendaExport {
         const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
         const globalRepetitionIndex = outputPageNumber - 1;
 
+        // Alternância de layout (Frente e Verso espelhados)
+        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+          this._applyAlternateLayout(page, cloneEls);
+        }
+
         const context: ResolveContext = {
           repetitionIndex: globalRepetitionIndex,
           pageNumber:      outputPageNumber,
@@ -334,6 +329,44 @@ export class AgendaExport {
 
   static _repeatCount(page: HTMLElement): number {
     return Math.max(1, parseInt(page.dataset['agendaRepeat'] ?? '1', 10) || 1);
+  }
+
+  /**
+   * Espelha horizontalmente os elementos de um clone de página:
+   * - Inverte a coordenada X: novo_x = largura_da_pagina - x - largura_do_elemento
+   * - Inverte a rotação: novo_r = -r
+   *
+   * Usa offsetWidth quando disponível (DOM montado) e cai para o parse
+   * de style.width (que sempre está na folha de estilo inline do CrafTools)
+   * quando o elemento não está renderizado em tela (geração headless).
+   */
+  private static _applyAlternateLayout(page: HTMLElement, cloneEls: HTMLElement[]): void {
+    // offsetWidth é zero em elementos não visíveis; nesses casos extraímos
+    // a largura do atributo de estilo inline (ex: '210mm', '794px').
+    let pageWidth = page.offsetWidth;
+    if (!pageWidth) {
+      const raw = page.style.width;
+      const num = parseFloat(raw);
+      if (!isNaN(num)) {
+        // Converte mm/cm para px usando 96dpi (padrão CSS)
+        if (raw.endsWith('mm'))      pageWidth = num * 3.7795;
+        else if (raw.endsWith('cm')) pageWidth = num * 37.795;
+        else if (raw.endsWith('in')) pageWidth = num * 96;
+        else                         pageWidth = num; // px ou unitless
+      }
+    }
+    if (!pageWidth) return; // Proteção final
+
+    for (const cl of cloneEls) {
+      const px    = parseFloat(cl.getAttribute('x') || '0');
+      const pw    = parseFloat(cl.getAttribute('w') || '100');
+      const pr    = parseFloat(cl.getAttribute('r') || '0');
+      const unitX = (cl.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
+
+      cl.setAttribute('x', String(Math.round(pageWidth - px - pw)) + unitX);
+      if (pr !== 0) cl.setAttribute('r', String(-pr));
+      else cl.removeAttribute('r');
+    }
   }
 
   static _collectBindings(page: HTMLElement): Array<{ el: CraftoolsEl; toolType: string | null; binding: VariableBinding }> {
