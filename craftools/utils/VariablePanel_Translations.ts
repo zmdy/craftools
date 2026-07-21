@@ -50,6 +50,9 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxRadius: "Arredondamento da Borda (px)",
         dateDaysBoxPadding: "Preenchimento interno (px)",
         dateDaysBoxSundayFirst: "Começar semana no Domingo",
+        dateDaysBoxHeight: "Altura da caixa (px)",
+        dateDaysBoxHeightPlaceholder: "auto",
+        dateDaysBoxHeightHelp: "Deixe em branco para altura automática. Combine com a largura (Preenchimento interno) para deixar a caixa perfeitamente circular ou oval.",
 
         dateCustomLabel: "Formato personalizado",
         dateCustomPlaceholder: "ex: dd/mm/yyyy",
@@ -168,6 +171,9 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxRadius: "Border Radius (px)",
         dateDaysBoxPadding: "Internal Padding (px)",
         dateDaysBoxSundayFirst: "Start week on Sunday",
+        dateDaysBoxHeight: "Box height (px)",
+        dateDaysBoxHeightPlaceholder: "auto",
+        dateDaysBoxHeightHelp: "Leave blank for automatic height. Combine with the width (Internal Padding) to make the box a perfect circle or oval.",
 
         dateCustomLabel: "Custom format",
         dateCustomPlaceholder: "e.g. dd/mm/yyyy",
@@ -286,6 +292,9 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxRadius: "Radio de Borde (px)",
         dateDaysBoxPadding: "Relleno Interno (px)",
         dateDaysBoxSundayFirst: "Comenzar semana en Domingo",
+        dateDaysBoxHeight: "Altura de la caja (px)",
+        dateDaysBoxHeightPlaceholder: "auto",
+        dateDaysBoxHeightHelp: "Deja en blanco para altura automática. Combínalo con el ancho (Relleno Interno) para que la caja quede perfectamente circular u ovalada.",
 
         dateCustomLabel: "Formato personalizado",
         dateCustomPlaceholder: "ej: dd/mm/yyyy",

@@ -22,6 +22,11 @@ export interface VariableBinding {
     daysBoxBorderRadius?:   number | string;
     daysBoxStartSunday?:    boolean;
     daysBoxPadding?:        number | string;
+    /** Explicit box height (px) -- lets the box be shaped into a perfect circle/oval independent of its content-driven width. */
+    daysBoxHeight?:         number | string;
+    daysBoxBorderColor?:    string;
+    daysBoxBorderStyle?:    string;
+    daysBoxBorderWidth?:    number | string;
     /** Token pattern used only when format === 'PERSONALIZADO' (e.g. "dd/mm/yyyy"). See _formatCustomDate(). */
     customFormat?: string;
     // sequenceNumber
@@ -363,16 +368,38 @@ export class VariableEngine {
             case 'MES_APENAS':         return mPt[d.getMonth()];
             case 'PERSONALIZADO':      return this._formatCustomDate(d, b.customFormat ?? '');
             case 'CAIXA_DIAS': {
-                const hlColor = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
-                const radius  = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
-                const padding = b.daysBoxPadding !== undefined ? String(b.daysBoxPadding) : '4';
+                const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
+                const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
+                const padding  = b.daysBoxPadding !== undefined ? String(b.daysBoxPadding) : '4';
                 const startSun = !!b.daysBoxStartSunday;
-                
+
+                // Explicit height (px) is independent from the content-driven
+                // width (min-width + padding) -- lets the box be shaped into
+                // a perfect circle (height === effective width) or an oval
+                // (height different from width), instead of always being a
+                // roughly-square box sized purely from the letter + padding.
+                // Falls back to the original min-height:1.5em when unset, so
+                // existing bindings saved before this control existed render
+                // exactly as before.
+                const heightCss = (b.daysBoxHeight !== undefined && String(b.daysBoxHeight).trim() !== '')
+                    ? `height: ${b.daysBoxHeight}px;`
+                    : `min-height: 1.5em;`;
+
+                // Border style/width/color, independently controllable --
+                // previously hardcoded to "1px solid currentColor" (always
+                // matching the surrounding text color, never configurable).
+                // 'none' collapses to a real 0 border so the padding/height
+                // above aren't thrown off by a residual 1px browser default.
+                const borderStyle = b.daysBoxBorderStyle || 'solid';
+                const borderWidth = b.daysBoxBorderWidth !== undefined ? String(b.daysBoxBorderWidth) : '1';
+                const borderColor = b.daysBoxBorderColor || 'currentColor';
+                const borderCss   = borderStyle === 'none' ? 'none' : `${borderWidth}px ${borderStyle} ${borderColor}`;
+
                 // Construct the sequence of letters
-                const letters = startSun 
-                    ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] 
+                const letters = startSun
+                    ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
                     : ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
-                
+
                 // Indices map to Date.getDay() (0 = Sunday, 1 = Monday, etc)
                 // If starting on Monday, index 0 is Monday (d.getDay() === 1), index 6 is Sunday (d.getDay() === 0).
                 let todayIdx = -1;
@@ -381,12 +408,12 @@ export class VariableEngine {
                 } else {
                     todayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0 (Sunday) becomes index 6
                 }
-                
+
                 const html = letters.map((letter, idx) => {
                     const isActive = idx === todayIdx;
                     const bg = isActive ? hlColor : 'transparent';
                     const color = isActive ? '#ffffff' : 'inherit';
-                    return `<div style="display:flex; align-items:center; justify-content:center; border: 1px solid currentColor; border-radius: ${radius}px; padding: ${padding}px; background-color: ${bg}; color: ${color}; min-width: 1.5em; min-height: 1.5em;">${letter}</div>`;
+                    return `<div style="display:flex; align-items:center; justify-content:center; border: ${borderCss}; border-radius: ${radius}px; padding: ${padding}px; background-color: ${bg}; color: ${color}; min-width: 1.5em; ${heightCss}">${letter}</div>`;
                 }).join('');
                 
                 return `<div style="display:flex; align-items:center; gap:6px; font-weight:bold;">${html}</div>`;

@@ -3,6 +3,7 @@ import { VariableEngine, type VariableBinding } from './VariableEngine.js';
 import { loadEmojiKitchenPartners, loadEmojiKitchenSupported } from './ApiDataLoader.js';
 import { renderEmojiPicker } from './EmojiPickerUI';
 import { withEmojiFallback } from './EmojiFont.js';
+import { renderColorPicker, normalizeValue } from './ColorPickerUI.js';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -191,7 +192,7 @@ export class VariablePanel {
             <div id="var-date-daysbox-options" style="display: ${b.format === 'CAIXA_DIAS' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
-                    <input type="color" id="var-date-daysbox-color" class="craftools-input" style="width:100%; height: 32px;" value="${b.daysBoxHighlightColor || '#f97316'}">
+                    <div id="var-date-daysbox-color-picker"></div>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <div class="ct-field">
@@ -202,6 +203,31 @@ export class VariablePanel {
                         <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxPadding')}</span>
                         <input type="number" id="var-date-daysbox-padding" class="craftools-input" style="width:100%;" value="${b.daysBoxPadding !== undefined ? b.daysBoxPadding : 4}" min="0">
                     </div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxHeight')}</span>
+                    <input type="number" id="var-date-daysbox-height" class="craftools-input" style="width:100%;"
+                        value="${b.daysBoxHeight !== undefined ? b.daysBoxHeight : ''}" min="0"
+                        placeholder="${this._esc(I18n.t('variablePanel.dateDaysBoxHeightPlaceholder'))}">
+                    <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateDaysBoxHeightHelp')}</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
+                        <select id="var-date-daysbox-borderstyle" class="craftools-select" style="width:100%;">
+                            ${['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style => `
+                                <option value="${style}" ${(b.daysBoxBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                        <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
+                    </div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
+                    <div id="var-date-daysbox-bordercolor-picker"></div>
                 </div>
                 <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
                     <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
@@ -490,17 +516,21 @@ export class VariablePanel {
 
             switch (binding.type) {
                 case 'date': {
-                    const startInput    = container.querySelector<HTMLInputElement>('#var-date-start');
-                    const intervalSel   = container.querySelector<HTMLSelectElement>('#var-date-interval');
-                    const stepInput     = container.querySelector<HTMLInputElement>('#var-date-step');
-                    const formatSel     = container.querySelector<HTMLSelectElement>('#var-date-format');
-                    const daysBoxOpts   = container.querySelector<HTMLElement>('#var-date-daysbox-options');
-                    const daysBoxColor  = container.querySelector<HTMLInputElement>('#var-date-daysbox-color');
-                    const daysBoxRadius = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
-                    const daysBoxPad    = container.querySelector<HTMLInputElement>('#var-date-daysbox-padding');
-                    const daysBoxSun    = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
-                    const customOpts    = container.querySelector<HTMLElement>('#var-date-custom-options');
-                    const customFormat  = container.querySelector<HTMLInputElement>('#var-date-custom-format');
+                    const startInput      = container.querySelector<HTMLInputElement>('#var-date-start');
+                    const intervalSel     = container.querySelector<HTMLSelectElement>('#var-date-interval');
+                    const stepInput       = container.querySelector<HTMLInputElement>('#var-date-step');
+                    const formatSel       = container.querySelector<HTMLSelectElement>('#var-date-format');
+                    const daysBoxOpts     = container.querySelector<HTMLElement>('#var-date-daysbox-options');
+                    const daysBoxColorEl  = container.querySelector<HTMLElement>('#var-date-daysbox-color-picker');
+                    const daysBoxRadius   = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
+                    const daysBoxPad      = container.querySelector<HTMLInputElement>('#var-date-daysbox-padding');
+                    const daysBoxHeight   = container.querySelector<HTMLInputElement>('#var-date-daysbox-height');
+                    const daysBoxBStyle   = container.querySelector<HTMLSelectElement>('#var-date-daysbox-borderstyle');
+                    const daysBoxBWidth   = container.querySelector<HTMLInputElement>('#var-date-daysbox-borderwidth');
+                    const daysBoxBColorEl = container.querySelector<HTMLElement>('#var-date-daysbox-bordercolor-picker');
+                    const daysBoxSun      = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
+                    const customOpts      = container.querySelector<HTMLElement>('#var-date-custom-options');
+                    const customFormat    = container.querySelector<HTMLInputElement>('#var-date-custom-format');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
@@ -511,11 +541,40 @@ export class VariablePanel {
                         if (customOpts)  customOpts.style.display  = binding!.format === 'PERSONALIZADO' ? 'block' : 'none';
                         notify();
                     };
-                    if (daysBoxColor)  daysBoxColor.oninput  = () => { binding!.daysBoxHighlightColor = daysBoxColor.value;                  notify(); };
-                    if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius   = parseInt(daysBoxRadius.value, 10);   notify(); };
-                    if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding        = parseInt(daysBoxPad.value, 10);      notify(); };
+                    if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius = parseInt(daysBoxRadius.value, 10);   notify(); };
+                    if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding      = parseInt(daysBoxPad.value, 10);      notify(); };
+                    if (daysBoxHeight) daysBoxHeight.oninput = () => {
+                        // Empty field -> back to the original content-driven
+                        // min-height instead of writing an empty/NaN height.
+                        const raw = daysBoxHeight.value.trim();
+                        binding!.daysBoxHeight = raw === '' ? undefined : parseInt(raw, 10);
+                        notify();
+                    };
+                    if (daysBoxBStyle) daysBoxBStyle.onchange = () => { binding!.daysBoxBorderStyle = daysBoxBStyle.value;                  notify(); };
+                    if (daysBoxBWidth) daysBoxBWidth.oninput  = () => { binding!.daysBoxBorderWidth = parseInt(daysBoxBWidth.value, 10);    notify(); };
                     if (daysBoxSun)    daysBoxSun.onchange   = () => { binding!.daysBoxStartSunday    = daysBoxSun.checked;                  notify(); };
                     if (customFormat)  customFormat.oninput  = () => { binding!.customFormat          = customFormat.value;                  notify(); };
+
+                    // Highlight/border color -- the same standardized picker
+                    // every other color field in the app uses (palette
+                    // swatches + custom pick), replacing what used to be a
+                    // bare native <input type="color">. Solid-only: a
+                    // gradient on a ~1.5em letter box wasn't requested and
+                    // VariableEngine's CAIXA_DIAS renderer only ever applies
+                    // these as plain `background-color`/`border-color`
+                    // values, not a `background`/`border-image` gradient.
+                    if (daysBoxColorEl) {
+                        renderColorPicker(daysBoxColorEl, normalizeValue(binding!.daysBoxHighlightColor || '#f97316'), (next) => {
+                            binding!.daysBoxHighlightColor = next.solid;
+                            notify();
+                        }, { allowGradient: false });
+                    }
+                    if (daysBoxBColorEl) {
+                        renderColorPicker(daysBoxBColorEl, normalizeValue(binding!.daysBoxBorderColor || '#000000'), (next) => {
+                            binding!.daysBoxBorderColor = next.solid;
+                            notify();
+                        }, { allowGradient: false });
+                    }
                     break;
                 }
                 case 'sequenceNumber': {
