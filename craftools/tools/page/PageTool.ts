@@ -357,6 +357,14 @@ export class PageTool {
           `;
 
           const htmlActions = `
+            <div class="ct-field" style="margin-bottom:8px;">
+              <button class="craftools-btn" id="clone-page-btn" style="width:100%; justify-content:center; gap:6px; margin-bottom:8px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">content_copy</span> ${I18n.t('pageTool.clonePage')}
+              </button>
+              <button class="craftools-btn" id="clone-alt-page-btn" style="width:100%; justify-content:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">flip</span> ${I18n.t('pageTool.cloneAltPage')}
+              </button>
+            </div>
             <div class="ct-danger-section">
               <button class="craftools-danger-btn" id="delete-page-btn" style="width:100%; justify-content:center; gap:6px;">
                 <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ${I18n.t('pageTool.deletePage')}
@@ -489,6 +497,18 @@ export class PageTool {
             reader.readAsDataURL(file);
           }
         });
+
+        // Clone Page
+        panelBody!.querySelector<HTMLButtonElement>('#clone-page-btn')!
+          .addEventListener('click', () => {
+            PageTool._duplicatePage(editor, pageEl, false);
+          });
+
+        // Alternate Clone Page
+        panelBody!.querySelector<HTMLButtonElement>('#clone-alt-page-btn')!
+          .addEventListener('click', () => {
+            PageTool._duplicatePage(editor, pageEl, true);
+          });
 
         // Delete Page
         panelBody!.querySelector<HTMLButtonElement>('#delete-page-btn')!
@@ -754,6 +774,46 @@ export class PageTool {
         if (thumb) thumb.style.transform   = input.checked ? 'translateX(14px)' : 'translateX(0)';
       });
     });
+  }
+
+  static _duplicatePage(editor: HTMLElement, pageEl: HTMLElement, alternated: boolean): void {
+    const clone = pageEl.cloneNode(true) as HTMLElement;
+    clone.id = 'page-' + Date.now();
+    delete (clone as HTMLElement & { _craftoolsEventsAttached?: boolean })._craftoolsEventsAttached;
+
+    // A largura da página em pixels lógicos
+    const pageWidth = pageEl.offsetWidth;
+
+    // Parear elementos para copiar estado interno e (se alternado) espelhar posições
+    const origEls = Array.from(pageEl.querySelectorAll<HTMLElement>('craftools-element'));
+    const cloneEls = Array.from(clone.querySelectorAll<HTMLElement>('craftools-element'));
+
+    for (let i = 0; i < origEls.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const orig = origEls[i] as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cl = cloneEls[i] as any;
+
+      cl._craftoolsMeta = orig._craftoolsMeta;
+      cl._craftoolsAutoResize = orig._craftoolsAutoResize;
+      cl.removeAttribute('data-linked-id');
+
+      if (alternated) {
+        const px = Number(orig.getAttribute('x') || 0);
+        const pw = Number(orig.getAttribute('w') || 100);
+        const pr = Number(orig.getAttribute('r') || 0);
+        cl.setAttribute('x', String(pageWidth - px - pw));
+        cl.setAttribute('r', String(-pr));
+      }
+    }
+
+    this.attachPageEvents(editor, clone);
+    pageEl.after(clone);
+
+    document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
+    
+    // Rolagem suave para a nova página
+    clone.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   static addNewPage(editor: HTMLElement): void {
