@@ -22,6 +22,8 @@ export interface VariableBinding {
     daysBoxBorderRadius?:   number | string;
     daysBoxStartSunday?:    boolean;
     daysBoxPadding?:        number | string;
+    /** Token pattern used only when format === 'PERSONALIZADO' (e.g. "dd/mm/yyyy"). See _formatCustomDate(). */
+    customFormat?: string;
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -357,6 +359,9 @@ export class VariableEngine {
             case 'DIA_SEMANA':         return wPt[d.getDay()];
             case 'DIA_SEMANA_ABREV':   return wPtAbrev[d.getDay()];
             case 'DIA_SEMANA_DATA':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
+            case 'DIA_APENAS':         return `${d.getDate()}`;
+            case 'MES_APENAS':         return mPt[d.getMonth()];
+            case 'PERSONALIZADO':      return this._formatCustomDate(d, b.customFormat ?? '');
             case 'CAIXA_DIAS': {
                 const hlColor = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius  = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -388,6 +393,62 @@ export class VariableEngine {
             }
             default:                   return `${dd}/${mm}/${yyyy}`;
         }
+    }
+
+    /**
+     * Token-based custom date format (format === 'PERSONALIZADO'). A token
+     * is a MAXIMAL run of the same letter among d/m/y/w (matched via
+     * /d+|m+|y+|w+/gi, case-insensitive) -- e.g. "yy" is one 2-letter run,
+     * never two separate single-'y' matches (an earlier version matched
+     * each letter independently, so "yy" silently produced the 2-digit
+     * year TWICE concatenated, e.g. "2626" instead of "26"). A run whose
+     * length doesn't match a known token (e.g. "ddd") is left untouched.
+     *
+     * Any other character (including regular letters like 'e', 'a', 's'
+     * that show up in ordinary words) passes through unchanged -- EXCEPT
+     * that a bare single letter from {d,m,y,w} inside a literal word (e.g.
+     * the 'd' in "de") is indistinguishable from the token itself and WILL
+     * be replaced. Text wrapped in [square brackets] is passed through
+     * completely literally so patterns like "dd [de] mmmm" can safely
+     * include such words -- documented in the legend shown above the
+     * format input (VariablePanel.ts's _dateConfig()), which must stay in
+     * sync with this exact token list.
+     */
+    private static _formatCustomDate(d: Date, pattern: string): string {
+        if (!pattern) return '';
+        const pad     = (v: number) => String(v).padStart(2, '0');
+        const mFull   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const mAbrev  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const wFull   = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+        const wAbrev  = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+        const wFirst  = ['D','S','T','Q','Q','S','S'];
+
+        const tokens: Record<string, () => string> = {
+            yyyy: () => String(d.getFullYear()),
+            yy:   () => String(d.getFullYear()).slice(-2),
+            mmmm: () => mFull[d.getMonth()],
+            mmm:  () => mAbrev[d.getMonth()],
+            mm:   () => pad(d.getMonth() + 1),
+            m:    () => String(d.getMonth() + 1),
+            dd:   () => pad(d.getDate()),
+            d:    () => String(d.getDate()),
+            wwww: () => wFull[d.getDay()],
+            ww:   () => wAbrev[d.getDay()],
+            w:    () => wFirst[d.getDay()],
+        };
+
+        const applyTokens = (text: string): string =>
+            text.replace(/d+|m+|y+|w+/gi, run => {
+                const fn = tokens[run.toLowerCase()];
+                return fn ? fn() : run;
+            });
+
+        // Split out [bracketed] literal segments (kept as-is, brackets
+        // stripped) from everything else (token-replaced).
+        return pattern
+            .split(/(\[[^\]]*\])/g)
+            .map(part => (part.startsWith('[') && part.endsWith(']')) ? part.slice(1, -1) : applyTokens(part))
+            .join('');
     }
 
     // ── sequenceNumber ────────────────────────────────────────────────────────

@@ -42,11 +42,18 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaSemanaAbrev: "QUI (Dia da semana abreviado)",
         dateFormatCaixaDias: "Caixa de dias (S T Q Q S S D)",
         dateFormatDiaSemanaData: "Quinta-feira, 31/12",
+        dateFormatDiaApenas: "31 (Apenas o dia)",
+        dateFormatMesApenas: "Dezembro (Apenas o mês)",
+        dateFormatPersonalizado: "Personalizado...",
 
         dateDaysBoxColor: "Cor de Destaque",
         dateDaysBoxRadius: "Arredondamento da Borda (px)",
         dateDaysBoxPadding: "Preenchimento interno (px)",
         dateDaysBoxSundayFirst: "Começar semana no Domingo",
+
+        dateCustomLabel: "Formato personalizado",
+        dateCustomPlaceholder: "ex: dd/mm/yyyy",
+        dateCustomLegend: "Use códigos para montar seu próprio formato: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Início",
         seqNumberStepLabel: "Passo",
@@ -153,11 +160,18 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaSemanaAbrev: "THU (Abbreviated day)",
         dateFormatCaixaDias: "Days box (M T W T F S S)",
         dateFormatDiaSemanaData: "Thursday, 31/12",
+        dateFormatDiaApenas: "31 (Day only)",
+        dateFormatMesApenas: "December (Month only)",
+        dateFormatPersonalizado: "Custom...",
 
         dateDaysBoxColor: "Highlight Color",
         dateDaysBoxRadius: "Border Radius (px)",
         dateDaysBoxPadding: "Internal Padding (px)",
         dateDaysBoxSundayFirst: "Start week on Sunday",
+
+        dateCustomLabel: "Custom format",
+        dateCustomPlaceholder: "e.g. dd/mm/yyyy",
+        dateCustomLegend: "Use tokens to build your own format: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
 
         seqNumberStartLabel: "Start",
         seqNumberStepLabel: "Step",
@@ -264,11 +278,18 @@ I18n.addTranslations('variablePanel', {
         dateFormatDiaSemanaAbrev: "JUE (Día abreviado)",
         dateFormatCaixaDias: "Caja de días (L M M J V S D)",
         dateFormatDiaSemanaData: "Jueves, 31/12",
+        dateFormatDiaApenas: "31 (Solo el día)",
+        dateFormatMesApenas: "Diciembre (Solo el mes)",
+        dateFormatPersonalizado: "Personalizado...",
 
         dateDaysBoxColor: "Color de Resalte",
         dateDaysBoxRadius: "Radio de Borde (px)",
         dateDaysBoxPadding: "Relleno Interno (px)",
         dateDaysBoxSundayFirst: "Comenzar semana en Domingo",
+
+        dateCustomLabel: "Formato personalizado",
+        dateCustomPlaceholder: "ej: dd/mm/yyyy",
+        dateCustomLegend: "Usa códigos para armar tu propio formato: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Inicio",
         seqNumberStepLabel: "Paso",

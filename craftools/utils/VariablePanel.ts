@@ -152,7 +152,8 @@ export class VariablePanel {
             ['DD/MM/YYYY','DDMMYYYY'],['DD/MM/YY','DDMMYY'],['DD/MM','DDMM'],['MM/YYYY','MMYYYY'],
             ['YYYY-MM-DD','ISO'],['DIA_MES_EXTENSO','DiaMesExtenso'],['DIA_MES_ANO_EXTENSO','DiaMesAnoExtenso'],
             ['DIA_SEMANA','DiaSemana'],['DIA_SEMANA_ABREV','DiaSemanaAbrev'],['DIA_SEMANA_DATA','DiaSemanaData'],
-            ['CAIXA_DIAS','CaixaDias'],
+            ['CAIXA_DIAS','CaixaDias'],['DIA_APENAS','DiaApenas'],['MES_APENAS','MesApenas'],
+            ['PERSONALIZADO','Personalizado'],
         ];
     }
 
@@ -206,6 +207,18 @@ export class VariablePanel {
                     <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateDaysBoxSundayFirst')}</span>
                 </label>
+            </div>
+
+            <div id="var-date-custom-options" style="display: ${b.format === 'PERSONALIZADO' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <div style="font-size:11px; color:var(--text-muted); line-height:1.6; margin-bottom:8px;">
+                    ${I18n.t('variablePanel.dateCustomLegend')}
+                </div>
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateCustomLabel')}</span>
+                    <input type="text" id="var-date-custom-format" class="craftools-input" style="width:100%;"
+                        placeholder="${this._esc(I18n.t('variablePanel.dateCustomPlaceholder'))}"
+                        value="${this._esc(b.customFormat)}">
+                </div>
             </div>
         `;
     }
@@ -442,6 +455,13 @@ export class VariablePanel {
                     previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
                 } else if (binding!.type === 'miniCalendar' && val) {
                     previewValue.innerHTML = `<div style="width:120px; height:135px; margin:0 auto;">${val}</div>`;
+                } else if (binding!.type === 'date' && binding!.format === 'CAIXA_DIAS' && val) {
+                    // _formatDate()'s CAIXA_DIAS case returns real markup (a
+                    // row of day-letter boxes), not typed text -- was falling
+                    // into the plain-text branch below, which showed the
+                    // literal "<div style=...>S</div>..." tags as text
+                    // instead of rendering them.
+                    previewValue.innerHTML = val;
                 } else {
                     previewValue.textContent = (val?.length) ? val : '—';
                 }
@@ -479,19 +499,23 @@ export class VariablePanel {
                     const daysBoxRadius = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
                     const daysBoxPad    = container.querySelector<HTMLInputElement>('#var-date-daysbox-padding');
                     const daysBoxSun    = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
-                    
+                    const customOpts    = container.querySelector<HTMLElement>('#var-date-custom-options');
+                    const customFormat  = container.querySelector<HTMLInputElement>('#var-date-custom-format');
+
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
-                    if (formatSel)   formatSel.onchange    = () => { 
+                    if (formatSel)   formatSel.onchange    = () => {
                         binding!.format = formatSel.value;
-                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'CAIXA_DIAS' ? 'block' : 'none';
-                        notify(); 
+                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'CAIXA_DIAS'    ? 'block' : 'none';
+                        if (customOpts)  customOpts.style.display  = binding!.format === 'PERSONALIZADO' ? 'block' : 'none';
+                        notify();
                     };
                     if (daysBoxColor)  daysBoxColor.oninput  = () => { binding!.daysBoxHighlightColor = daysBoxColor.value;                  notify(); };
                     if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius   = parseInt(daysBoxRadius.value, 10);   notify(); };
                     if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding        = parseInt(daysBoxPad.value, 10);      notify(); };
                     if (daysBoxSun)    daysBoxSun.onchange   = () => { binding!.daysBoxStartSunday    = daysBoxSun.checked;                  notify(); };
+                    if (customFormat)  customFormat.oninput  = () => { binding!.customFormat          = customFormat.value;                  notify(); };
                     break;
                 }
                 case 'sequenceNumber': {
