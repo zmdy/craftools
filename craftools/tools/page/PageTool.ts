@@ -358,10 +358,10 @@ export class PageTool {
 
           const htmlActions = `
             <div class="ct-field" style="margin-bottom:8px;">
-              <button class="craftools-btn" id="clone-page-btn" style="width:100%; justify-content:center; gap:6px; margin-bottom:8px;">
+              <button class="craftools-topbtn" id="clone-page-btn" style="width:100%; justify-content:center; gap:6px; margin-bottom:8px;">
                 <span class="material-symbols-outlined" style="font-size:16px;">content_copy</span> ${I18n.t('pageTool.clonePage')}
               </button>
-              <button class="craftools-btn" id="clone-alt-page-btn" style="width:100%; justify-content:center; gap:6px;">
+              <button class="craftools-topbtn" id="clone-alt-page-btn" style="width:100%; justify-content:center; gap:6px;">
                 <span class="material-symbols-outlined" style="font-size:16px;">flip</span> ${I18n.t('pageTool.cloneAltPage')}
               </button>
             </div>
@@ -799,11 +799,18 @@ export class PageTool {
       cl.removeAttribute('data-linked-id');
 
       if (alternated) {
-        const px = Number(orig.getAttribute('x') || 0);
-        const pw = Number(orig.getAttribute('w') || 100);
-        const pr = Number(orig.getAttribute('r') || 0);
-        cl.setAttribute('x', String(pageWidth - px - pw));
-        cl.setAttribute('r', String(-pr));
+        const px = parseFloat(orig.getAttribute('x') || '0');
+        const pw = parseFloat(orig.getAttribute('w') || '100');
+        const pr = parseFloat(orig.getAttribute('r') || '0');
+        
+        // Mantém a unidade original pegando as letras
+        const unitX = (orig.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
+        
+        // Força a atualização dos getters do componente via attributes
+        // O Componente ao entrar no DOM via clone, chamará connectedCallback()
+        // e fará o _applyTransform() ler os atributos!
+        cl.setAttribute('x', String(pageWidth - px - pw) + unitX);
+        if (pr !== 0) cl.setAttribute('r', String(-pr));
       }
     }
 
