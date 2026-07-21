@@ -332,6 +332,30 @@ export class AgendaExport {
   }
 
   /**
+   * Converts a page's authored CSS width (e.g. "210mm", "800px") into the
+   * given target unit. Needed because most craftools-elements are created
+   * with UNITLESS x/y/w/h (implicitly px, from mouse-drag math), but
+   * PaperTool.createElement() deliberately authors the background Paper
+   * element's x/w in the PAGE's own unit (matching pageEl.style.width --
+   * commonly "mm", since that's PageTool.ts's default page size unit) so
+   * it lines up exactly with the page regardless of unit. Mirroring math
+   * that always treats pageWidth as px (see _applyAlternateLayout() below)
+   * silently subtracted raw mm numbers as if they were px, producing a
+   * nonsense mirrored X (e.g. "793 - 0 - 210" written back as "583mm" --
+   * more than half a meter off the physical page) that pushed the paper
+   * entirely outside the visible page on any alternated/mirrored page.
+   */
+  private static _pageWidthInUnit(rawPageWidth: string, targetUnit: string): number {
+    const PX_PER_UNIT: Record<string, number> = { mm: 3.7795, cm: 37.795, in: 96, px: 1, '': 1 };
+    const sourceUnit = rawPageWidth.replace(/[0-9.-]/g, '') || 'px';
+    const sourceNum  = parseFloat(rawPageWidth) || 0;
+    const tUnit      = targetUnit || 'px';
+    if (sourceUnit === tUnit) return sourceNum;
+    const px = sourceNum * (PX_PER_UNIT[sourceUnit] ?? 1);
+    return px / (PX_PER_UNIT[tUnit] ?? 1);
+  }
+
+  /**
    * Espelha horizontalmente os elementos de um clone de página:
    * - Inverte a coordenada X: novo_x = largura_da_pagina - x - largura_do_elemento
    * - Inverte a rotação: novo_r = -r
@@ -341,21 +365,22 @@ export class AgendaExport {
    * quando o elemento não está renderizado em tela (geração headless).
    */
   private static _applyAlternateLayout(page: HTMLElement, cloneEls: HTMLElement[]): void {
+    const rawPageWidth = page.style.width || '210mm';
+
     // offsetWidth é zero em elementos não visíveis; nesses casos extraímos
     // a largura do atributo de estilo inline (ex: '210mm', '794px').
-    let pageWidth = page.offsetWidth;
-    if (!pageWidth) {
-      const raw = page.style.width;
-      const num = parseFloat(raw);
+    let pageWidthPx = page.offsetWidth;
+    if (!pageWidthPx) {
+      const num = parseFloat(rawPageWidth);
       if (!isNaN(num)) {
         // Converte mm/cm para px usando 96dpi (padrão CSS)
-        if (raw.endsWith('mm'))      pageWidth = num * 3.7795;
-        else if (raw.endsWith('cm')) pageWidth = num * 37.795;
-        else if (raw.endsWith('in')) pageWidth = num * 96;
-        else                         pageWidth = num; // px ou unitless
+        if (rawPageWidth.endsWith('mm'))      pageWidthPx = num * 3.7795;
+        else if (rawPageWidth.endsWith('cm')) pageWidthPx = num * 37.795;
+        else if (rawPageWidth.endsWith('in')) pageWidthPx = num * 96;
+        else                                  pageWidthPx = num; // px ou unitless
       }
     }
-    if (!pageWidth) return; // Proteção final
+    if (!pageWidthPx) return; // Proteção final
 
     for (const cl of cloneEls) {
       const px    = parseFloat(cl.getAttribute('x') || '0');
@@ -363,7 +388,13 @@ export class AgendaExport {
       const pr    = parseFloat(cl.getAttribute('r') || '0');
       const unitX = (cl.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
 
-      cl.setAttribute('x', String(Math.round(pageWidth - px - pw)) + unitX);
+      // Use the page's width IN THIS ELEMENT'S OWN UNIT (see
+      // _pageWidthInUnit()'s doc comment) instead of always the px value
+      // above, so e.g. the Paper element (authored in mm) mirrors
+      // correctly instead of subtracting a px pageWidth from mm coords.
+      const effectivePageWidth = unitX === 'px' ? pageWidthPx : this._pageWidthInUnit(rawPageWidth, unitX);
+
+      cl.setAttribute('x', String(Math.round(effectivePageWidth - px - pw)) + unitX);
       if (pr !== 0) cl.setAttribute('r', String(-pr));
       else cl.removeAttribute('r');
     }

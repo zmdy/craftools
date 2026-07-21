@@ -776,13 +776,32 @@ export class PageTool {
     });
   }
 
+  /**
+   * Converts a page's authored CSS width (e.g. "210mm", "800px") into the
+   * given target unit -- see AgendaExport.ts's identical helper (same
+   * root cause fixed there: the alternated/mirrored clone below assumed
+   * every element's x/w is in px, but PaperTool.createElement() authors
+   * the background Paper element's x/w in the PAGE's own unit, commonly
+   * "mm", so it lines up exactly with the page).
+   */
+  private static _pageWidthInUnit(rawPageWidth: string, targetUnit: string): number {
+    const PX_PER_UNIT: Record<string, number> = { mm: 3.7795, cm: 37.795, in: 96, px: 1, '': 1 };
+    const sourceUnit = rawPageWidth.replace(/[0-9.-]/g, '') || 'px';
+    const sourceNum  = parseFloat(rawPageWidth) || 0;
+    const tUnit      = targetUnit || 'px';
+    if (sourceUnit === tUnit) return sourceNum;
+    const px = sourceNum * (PX_PER_UNIT[sourceUnit] ?? 1);
+    return px / (PX_PER_UNIT[tUnit] ?? 1);
+  }
+
   static _duplicatePage(editor: HTMLElement, pageEl: HTMLElement, alternated: boolean): void {
     const clone = pageEl.cloneNode(true) as HTMLElement;
     clone.id = 'page-' + Date.now();
     delete (clone as HTMLElement & { _craftoolsEventsAttached?: boolean })._craftoolsEventsAttached;
 
     // A largura da página em pixels lógicos
-    const pageWidth = pageEl.offsetWidth;
+    const pageWidthPx  = pageEl.offsetWidth;
+    const rawPageWidth = pageEl.style.width || '210mm';
 
     // Parear elementos para copiar estado interno e (se alternado) espelhar posições
     const origEls = Array.from(pageEl.querySelectorAll<HTMLElement>('craftools-element'));
@@ -802,14 +821,21 @@ export class PageTool {
         const px = parseFloat(orig.getAttribute('x') || '0');
         const pw = parseFloat(orig.getAttribute('w') || '100');
         const pr = parseFloat(orig.getAttribute('r') || '0');
-        
+
         // Mantém a unidade original pegando as letras
         const unitX = (orig.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
-        
+
+        // Use the page's width IN THIS ELEMENT'S OWN UNIT (see
+        // _pageWidthInUnit() above) -- not always pageWidthPx -- so e.g.
+        // the Paper background element (authored in mm) mirrors correctly
+        // instead of subtracting a px pageWidth from mm coordinates,
+        // which used to push it far outside the visible page.
+        const effectivePageWidth = unitX === 'px' ? pageWidthPx : PageTool._pageWidthInUnit(rawPageWidth, unitX);
+
         // Força a atualização dos getters do componente via attributes
         // O Componente ao entrar no DOM via clone, chamará connectedCallback()
         // e fará o _applyTransform() ler os atributos!
-        cl.setAttribute('x', String(pageWidth - px - pw) + unitX);
+        cl.setAttribute('x', String(Math.round(effectivePageWidth - px - pw)) + unitX);
         if (pr !== 0) cl.setAttribute('r', String(-pr));
       }
     }
