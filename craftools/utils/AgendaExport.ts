@@ -440,7 +440,12 @@ export class AgendaExport {
           ce.innerHTML = resolved
             ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
             : '';
-        } else if (binding.type === 'miniCalendar') {
+        } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && binding.format === 'CAIXA_DIAS')) {
+          // VariableEngine's CAIXA_DIAS date format returns real markup (a
+          // row of day-letter boxes), not typed text -- was falling into
+          // the plain-text branch below, which rendered the exported
+          // Agenda page with the literal "<div style=...>S</div>..." tags
+          // visible as text instead of the actual days strip.
           ce.innerHTML = resolved || '';
         } else {
           ce.textContent = resolved;
