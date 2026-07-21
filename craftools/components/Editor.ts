@@ -123,9 +123,27 @@ export class Craftools_Editor extends HTMLElement {
   // breaking those tools' editor.restoreOriginalCanvas() calls.
   restoreOriginalCanvas?: () => void;
 
+  private _onHistoryChange?: (e: Event) => void;
+  private _onKeydown?: (e: KeyboardEvent) => void;
+  private _onPageAdd?: (e: Event) => void;
+  private _onPointerdown?: (e: PointerEvent) => void;
+
   constructor() { super(); }
 
   connectedCallback() { this.render(); }
+
+  disconnectedCallback() {
+    if (this._onHistoryChange) document.removeEventListener('craftools-history-change', this._onHistoryChange);
+    if (this._onKeydown) document.removeEventListener('keydown', this._onKeydown);
+    if (this._onPageAdd) document.removeEventListener('craftools-page-add', this._onPageAdd);
+    if (this._onPointerdown) document.removeEventListener('pointerdown', this._onPointerdown, { capture: true });
+    
+    // Clear global clipboard to avoid leaking DOM nodes
+    const win = window as any;
+    if (win.__craftoolsElementClipboard) {
+      win.__craftoolsElementClipboard = null;
+    }
+  }
 
   render() {
     const activeSizeConfig = (window as any).craftoolsSize;
@@ -224,11 +242,12 @@ export class Craftools_Editor extends HTMLElement {
       this._reattachAllPageEvents(pagesWrapper);
     });
 
-    document.addEventListener('craftools-history-change', (e: Event) => {
+    this._onHistoryChange = (e: Event) => {
       updateHistoryUI((e as CustomEvent).detail ?? {});
-    });
+    };
+    document.addEventListener('craftools-history-change', this._onHistoryChange);
 
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
+    this._onKeydown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) return;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
@@ -282,7 +301,8 @@ export class Craftools_Editor extends HTMLElement {
         selected._applyTransform();
         selected.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: selected } }));
       }
-    });
+    };
+    document.addEventListener('keydown', this._onKeydown);
 
     let actionDebounce: ReturnType<typeof setTimeout> | null = null;
     this.addEventListener('craftools-element-change', () => {
@@ -297,9 +317,10 @@ export class Craftools_Editor extends HTMLElement {
     this.addEventListener('craftools-element-delete', () => {
       HistoryManager.snapshot(pagesWrapper); SessionManager.markDirty();
     });
-    document.addEventListener('craftools-page-add', () => {
+    this._onPageAdd = () => {
       HistoryManager.snapshot(pagesWrapper); SessionManager.markDirty();
-    });
+    };
+    document.addEventListener('craftools-page-add', this._onPageAdd);
 
     setTimeout(() => HistoryManager.snapshot(pagesWrapper), 300);
 
@@ -808,7 +829,7 @@ export class Craftools_Editor extends HTMLElement {
     // at all -- clicking empty canvas or a different page left the page
     // panel showing forever, unlike every other element type which already
     // closes correctly (see the 'craftools-element-deselect' handler above).
-    document.addEventListener('pointerdown', (e: PointerEvent) => {
+    this._onPointerdown = (e: PointerEvent) => {
       if (!this.activePage) return;
       const t = e.target as Element | null;
       if (
@@ -830,7 +851,8 @@ export class Craftools_Editor extends HTMLElement {
         return;
       }
       closePanelMenu();
-    }, { capture: true });
+    };
+    document.addEventListener('pointerdown', this._onPointerdown, { capture: true });
 
     // ── New Page ────────────────────────────────────────────────────────────
     document.querySelectorAll('#new-page-btn, #pwa-sidebar-newpage').forEach(btn => {
@@ -899,15 +921,21 @@ export class Craftools_Editor extends HTMLElement {
       }
     }, { passive: true });
 
+    let isZooming = false;
     canvas.addEventListener('touchmove', (e: Event) => {
       const te = e as TouchEvent;
       if (te.touches.length === 2 && pinchStartDist) {
-        const dx = te.touches[0].clientX - te.touches[1].clientX;
-        const dy = te.touches[0].clientY - te.touches[1].clientY;
-        const dist = Math.hypot(dx, dy);
-        const scale = dist / pinchStartDist;
-        zoomLevel = Math.min(3.0, Math.max(0.2, pinchStartZoom * scale));
-        updateZoom();
+        if (isZooming) return;
+        isZooming = true;
+        requestAnimationFrame(() => {
+          const dx = te.touches[0].clientX - te.touches[1].clientX;
+          const dy = te.touches[0].clientY - te.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const scale = dist / pinchStartDist!;
+          zoomLevel = Math.min(3.0, Math.max(0.2, pinchStartZoom * scale));
+          updateZoom();
+          isZooming = false;
+        });
       }
     }, { passive: true });
 
