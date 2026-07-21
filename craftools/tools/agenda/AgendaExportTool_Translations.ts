@@ -18,9 +18,8 @@ I18n.addTranslations('agendaExportTool', {
         variablesFoundSuffix: "elemento(s) com variável configurada nesta página.",
         noVariablesWarning: "Esta página está marcada para repetir, mas nenhum elemento dela tem uma variável configurada (aba \"Texto Variável\" no Texto/Título/QR Code/Código de Barras) — todas as repetições ficarão idênticas.",
 
-        previewVisualScopeLabel: "Pré-visualização das páginas",
-        previewScopeLimited: "Primeiras 5 páginas",
-        previewScopeAll: "Todas as páginas",
+        previewToggleLabel: "Ativar pré-visualização",
+        previewToggleOffHint: "Ative para ver as páginas geradas diretamente na tela.",
 
         previewIntro: "Amostra de como cada página repetida vai variar entre as repetições (mostrando a 1ª, 2ª e última).",
         previewNoRepeats: "Nenhuma página está marcada para repetir. Vá na aba \"Páginas\" para configurar.",
@@ -50,6 +49,9 @@ I18n.addTranslations('agendaExportTool', {
         variablesFoundSuffix: "element(s) with a configured variable on this page.",
         noVariablesWarning: "This page is marked to repeat, but none of its elements have a configured variable (\"Variable Text\" tab on Text/Title/QR Code/Barcode) — every repetition will look identical.",
 
+        previewToggleLabel: "Enable preview",
+        previewToggleOffHint: "Turn on to see the generated pages right on the canvas.",
+
         previewIntro: "Sample of how each repeated page will vary between repetitions (showing the 1st, 2nd and last).",
         previewNoRepeats: "No page is marked to repeat. Go to the \"Pages\" tab to configure it.",
         previewCommonPage: "common (appears 1x)",
@@ -77,6 +79,9 @@ I18n.addTranslations('agendaExportTool', {
         repeatCountLabel: "Cuántas veces repetir",
         variablesFoundSuffix: "elemento(s) con variable configurada en esta página.",
         noVariablesWarning: "Esta página está marcada para repetirse, pero ninguno de sus elementos tiene una variable configurada (pestaña \"Texto Variable\" en Texto/Título/QR Code/Código de Barras) — todas las repeticiones serán idénticas.",
+
+        previewToggleLabel: "Activar vista previa",
+        previewToggleOffHint: "Actívala para ver las páginas generadas directamente en la pantalla.",
 
         previewIntro: "Muestra de cómo variará cada página repetida entre las repeticiones (mostrando la 1ª, 2ª y última).",
         previewNoRepeats: "Ninguna página está marcada para repetirse. Vaya a la pestaña \"Páginas\" para configurarlo.",

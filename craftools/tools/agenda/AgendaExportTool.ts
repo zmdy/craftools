@@ -131,34 +131,30 @@ export class AgendaExportTool {
         });
       });
 
-      // ── Tab 2: Preview — opens & loads canvas preview ─────────────────
-      const previewHeader = root.querySelector<HTMLElement>('[data-toggle-accordion="agenda-preview"]');
-      if (previewHeader) {
-        previewHeader.addEventListener('click', () => {
-          // Only load if the accordion is being OPENED (it's currently closed)
-          const body = root.querySelector<HTMLElement>('#agenda-preview-body');
-          const isOpen = body?.style.display !== 'none' && body?.offsetParent !== null;
-          if (!isOpen) {
-            const activeScopeBtn = root.querySelector<HTMLButtonElement>('[data-agenda-preview-scope].active');
-            const scope = (activeScopeBtn?.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
-            AgendaExportTool._loadCanvasPreview(root, ed, pagesSnapshot(), scope);
+      // ── Tab 2: Preview — single on/off toggle ──────────────────────────
+      // Entirely decoupled from the accordion's own open/closed state now
+      // (previously opening the accordion silently triggered a load) --
+      // the canvas preview is only ever loaded/torn down by this switch.
+      const previewToggle = root.querySelector<HTMLInputElement>('#agenda-preview-toggle');
+      if (previewToggle) {
+        previewToggle.addEventListener('change', () => {
+          const track = previewToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+          const thumb = previewToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+          if (track) track.style.background = previewToggle.checked ? 'var(--accent, #f97316)' : 'var(--border, #e4e4e7)';
+          if (thumb) thumb.style.transform   = previewToggle.checked ? 'translateX(14px)' : 'translateX(0)';
+
+          if (previewToggle.checked) {
+            AgendaExportTool._loadCanvasPreview(root, ed, pagesSnapshot());
+          } else {
+            AgendaExportTool._disableCanvasPreview(root, ed);
           }
         });
       }
 
-      // ── Tab 2: Scope toggle (first pages / all pages) ──────────────────
-      const scopeButtons = root.querySelectorAll<HTMLButtonElement>('[data-agenda-preview-scope]');
-      scopeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.classList.contains('active')) return;
-          scopeButtons.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const scope = (btn.dataset.agendaPreviewScope as 'limited' | 'all') || 'limited';
-          AgendaExportTool._loadCanvasPreview(root, ed, pagesSnapshot(), scope);
-        });
-      });
-
       // ── Tab 2: Navigate pages ──────────────────────────────────────────
+      // Buttons are only ever enabled while the toggle above is on (see
+      // _loadCanvasPreview()/_showCanvasPage()), and disabled buttons never
+      // dispatch 'click' -- no extra toggle-state guard needed here.
       root.addEventListener('click', (e) => {
         const target = (e.target as HTMLElement).closest<HTMLElement>('[data-agenda-nav]');
         if (!target || !_canvasState) return;
@@ -249,14 +245,33 @@ export class AgendaExportTool {
   // ── Tab 2: Preview ────────────────────────────────────────────────────────
 
   private static _renderPreviewSection(): string {
+    // Single on/off toggle -- was two scope pills ("First 5 pages" / "All
+    // pages") that also silently loaded the canvas preview as a side
+    // effect of merely opening this accordion. Replaced with one explicit
+    // switch (loads/restores the canvas on its own change event, entirely
+    // decoupled from the accordion's own open/closed state) plus a nav bar
+    // that's ALWAYS rendered below it -- just disabled while the toggle is
+    // off -- instead of appearing/disappearing.
     return `<div id="agenda-preview-body">
       <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">${a('previewIntro')}</p>
-      <div style="display:flex; gap:6px; margin-bottom:12px;">
-        <button type="button" class="craftools-pill active" data-agenda-preview-scope="limited">${a('previewScopeLimited')}</button>
-        <button type="button" class="craftools-pill" data-agenda-preview-scope="all">${a('previewScopeAll')}</button>
+      <div class="ct-field-row" style="justify-content:space-between; padding:4px 0; margin-bottom:10px;">
+        <span class="craftools-label" style="margin:0;">${a('previewToggleLabel')}</span>
+        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+          <input type="checkbox" id="agenda-preview-toggle" class="ct-fi" style="display:none;">
+          <span class="ct-toggle-track" style="
+            width:32px; height:18px; border-radius:99px;
+            background:var(--border, #e4e4e7); position:relative; transition:background .15s; flex-shrink:0;">
+            <span class="ct-toggle-thumb" style="
+              position:absolute; top:2px; left:2px;
+              width:14px; height:14px; border-radius:50%;
+              background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+              transform:translateX(0);">
+            </span>
+          </span>
+        </label>
       </div>
-      <div id="agenda-preview-status" style="display:flex; align-items:center; justify-content:space-between; background:rgba(99,102,241,0.08); border-radius:8px; padding:8px 10px; margin-bottom:10px; min-height:38px;">
-        <span id="agenda-preview-info" style="font-size:11px; color:var(--text-secondary);">${I18n.t('variablePanel.previewLoading')}</span>
+      <div id="agenda-preview-status" style="display:flex; align-items:center; justify-content:space-between; background:rgba(99,102,241,0.08); border-radius:8px; padding:8px 10px; min-height:38px;">
+        <span id="agenda-preview-info" style="font-size:11px; color:var(--text-secondary);">${a('previewToggleOffHint')}</span>
         <div style="display:flex; gap:4px; align-items:center;">
           <button type="button" data-agenda-nav="prev" class="craftools-topbtn" style="padding:4px 8px; font-size:11px;" disabled>
             <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">chevron_left</span>
@@ -287,7 +302,6 @@ export class AgendaExportTool {
     root:    HTMLElement,
     editor:  EditorEl,
     pages:   PageEl[],
-    scope:   'limited' | 'all',
   ): Promise<void> {
     const infoEl      = root.querySelector<HTMLElement>('#agenda-preview-info');
     const pageLabel   = root.querySelector<HTMLElement>('#agenda-preview-page-label');
@@ -309,7 +323,11 @@ export class AgendaExportTool {
       editor._savedPageCssText = mainPage.style.cssText;
     }
 
-    // Show badge
+    // Show badge -- same #gerador-canvas-badge element (and exact style)
+    // GeradorTool.ts/CalendarTool.ts already use for their own canvas
+    // preview badge, so all three look identical. This one previously
+    // used a one-off indigo (#6366f1), out of step with the app's actual
+    // standard orange (#f97316, matching --accent).
     const canvasArea = document.getElementById('canvas-area');
     let badge = document.getElementById('gerador-canvas-badge');
     if (!badge && canvasArea) {
@@ -317,10 +335,10 @@ export class AgendaExportTool {
       badge.id = 'gerador-canvas-badge';
       badge.style.cssText = `
         position:absolute; top:20px; left:20px;
-        background:#6366f1; color:#fff;
+        background:#f97316; color:#fff;
         font-size:11px; font-weight:700;
         padding:6px 14px; border-radius:30px; z-index:100;
-        box-shadow:0 4px 12px rgba(99,102,241,0.35);
+        box-shadow:0 4px 12px rgba(249,115,22,0.3);
         display:flex; align-items:center; gap:6px;
         pointer-events:none; text-transform:uppercase; letter-spacing:0.5px;
         animation:pageIn 0.25s cubic-bezier(0.22,1,0.36,1);
@@ -331,10 +349,12 @@ export class AgendaExportTool {
 
     try {
       const { AgendaExport } = await import('../../utils/AgendaExport.js');
-      const maxOutputPages = scope === 'limited' ? 5 : undefined;
 
       // Build resolved output pages as HTML strings (one per output page)
-      const outputPages = await AgendaExport.buildOutputPages(editor as HTMLElement, { maxOutputPages });
+      // -- the toggle has no "first N pages" limit anymore (that scope
+      // choice was removed along with the pill buttons); Prev/Next now
+      // navigates the full set, so the preview should always match it.
+      const outputPages = await AgendaExport.buildOutputPages(editor as HTMLElement, {});
 
       if (!outputPages || !outputPages.length) {
         if (infoEl) infoEl.textContent = a('noPagesFound');
@@ -358,6 +378,28 @@ export class AgendaExportTool {
       console.error('[AgendaExportTool] Failed to build canvas preview:', err);
       if (infoEl) infoEl.textContent = a('exportError');
     }
+  }
+
+  /**
+   * Turns the toggle off: restores the canvas exactly as
+   * Editor.ts's restoreOriginalCanvas() already does when switching tools
+   * (removes the badge, restores main-page's saved HTML, re-attaches page
+   * events), clears the nav state, and resets the status bar/nav buttons
+   * back to their initial disabled/placeholder look.
+   */
+  private static _disableCanvasPreview(root: HTMLElement, editor: EditorEl): void {
+    editor.restoreOriginalCanvas?.();
+    _canvasState = null;
+
+    const infoEl    = root.querySelector<HTMLElement>('#agenda-preview-info');
+    const pageLabel = root.querySelector<HTMLElement>('#agenda-preview-page-label');
+    const prevBtn   = root.querySelector<HTMLButtonElement>('[data-agenda-nav="prev"]');
+    const nextBtn   = root.querySelector<HTMLButtonElement>('[data-agenda-nav="next"]');
+
+    if (infoEl)    infoEl.textContent    = a('previewToggleOffHint');
+    if (pageLabel) pageLabel.textContent = '—';
+    if (prevBtn)   prevBtn.disabled  = true;
+    if (nextBtn)   nextBtn.disabled  = true;
   }
 
   /**
