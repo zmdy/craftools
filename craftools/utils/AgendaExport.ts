@@ -153,6 +153,21 @@ export class AgendaExport {
         // the correct 0-based global equivalent of the old (buggy) `i`.
         const globalRepetitionIndex = outputPageNumber - 1;
 
+        // Alternância de layout (Frente e Verso espelhados)
+        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+          const pageWidth = page.offsetWidth;
+          for (let idx = 0; idx < cloneEls.length; idx++) {
+            const cl = cloneEls[idx];
+            const px = parseFloat(cl.getAttribute('x') || '0');
+            const pw = parseFloat(cl.getAttribute('w') || '100');
+            const pr = parseFloat(cl.getAttribute('r') || '0');
+            const unitX = (cl.getAttribute('x') || '').replace(/[0-9.-]/g, '') || 'px';
+
+            cl.setAttribute('x', String(pageWidth - px - pw) + unitX);
+            if (pr !== 0) cl.setAttribute('r', String(-pr));
+          }
+        }
+
         const context: ResolveContext = {
           repetitionIndex: globalRepetitionIndex,
           pageNumber:      outputPageNumber,

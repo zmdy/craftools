@@ -12,6 +12,7 @@ I18n.addTranslations('agendaExportTool', {
 
         pagesIntro: "Marque as páginas que devem se repetir várias vezes na Agenda (ex: uma página modelo repetida para cada dia do mês). Páginas não marcadas aparecem apenas uma vez, como no PDF normal.",
         pageLabel: "Página",
+        alternateToggle: "Páginas Alternadas (Frente e Verso)",
         repeatCheckLabel: "Repetir esta página várias vezes",
         repeatCountLabel: "Quantas vezes repetir",
         variablesFoundSuffix: "elemento(s) com variável configurada nesta página.",
@@ -43,6 +44,7 @@ I18n.addTranslations('agendaExportTool', {
 
         pagesIntro: "Mark the pages that should repeat multiple times in the Agenda (e.g. a template page repeated for each day of the month). Unmarked pages appear only once, like in a normal PDF.",
         pageLabel: "Page",
+        alternateToggle: "Alternate Pages (Duplex Printing)",
         repeatCheckLabel: "Repeat this page multiple times",
         repeatCountLabel: "How many times to repeat",
         variablesFoundSuffix: "element(s) with a configured variable on this page.",
@@ -70,6 +72,7 @@ I18n.addTranslations('agendaExportTool', {
 
         pagesIntro: "Marque las páginas que deben repetirse varias veces en la Agenda (ej: una página modelo repetida para cada día del mes). Las páginas no marcadas aparecen solo una vez, como en el PDF normal.",
         pageLabel: "Página",
+        alternateToggle: "Páginas Alternas (Doble Cara)",
         repeatCheckLabel: "Repetir esta página varias veces",
         repeatCountLabel: "Cuántas veces repetir",
         variablesFoundSuffix: "elemento(s) con variable configurada en esta página.",

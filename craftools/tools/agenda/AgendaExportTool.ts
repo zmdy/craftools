@@ -120,6 +120,17 @@ export class AgendaExportTool {
         });
       });
 
+      root.querySelectorAll<HTMLInputElement>('.agenda-page-alternate-check').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const pageId = chk.dataset.pageId as string;
+          const page   = document.getElementById(pageId);
+          if (page) {
+            if (chk.checked) page.dataset.agendaAlternate = 'true';
+            else delete page.dataset.agendaAlternate;
+          }
+        });
+      });
+
       // ── Tab 2: Preview — opens & loads canvas preview ─────────────────
       const previewHeader = root.querySelector<HTMLElement>('[data-toggle-accordion="agenda-preview"]');
       if (previewHeader) {
@@ -201,6 +212,8 @@ export class AgendaExportTool {
       const checked = repeatCount > 1;
       const boundCount = AgendaExportTool._collectPageBindings(page).length;
 
+      const alternate = page.dataset.agendaAlternate === 'true';
+
       return `
         <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
@@ -211,7 +224,11 @@ export class AgendaExportTool {
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px; margin-left:24px;">${boundCount} ${a('variablesFoundSuffix')}</span>
           <div class="agenda-page-repeat-count-wrap" data-page-id="${page.id}" style="margin-top:8px; margin-left:24px; ${checked ? '' : 'display:none;'}">
             <span class="craftools-label">${a('repeatCountLabel')}</span>
-            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" style="width:100%;">
+            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" style="width:100%; margin-bottom:8px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+              <input type="checkbox" class="agenda-page-alternate-check" data-page-id="${page.id}" ${alternate ? 'checked' : ''}>
+              <span style="font-size:11px;">${a('alternateToggle')}</span>
+            </label>
             ${boundCount === 0 ? `
               <div style="display:flex; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444; margin-top:8px;">
                 <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
