@@ -71,7 +71,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   barcode:          () => import('../tools/barcode/BarcodeTool.js'),
   minicalendario:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
   textocurvo:       () => import('../tools/textocurvo/TextoCurvoTool.js'),
-  carimbo:          () => import('../tools/carimbo/CarimboTool.js'),
+  stamp:            () => import('../tools/stamp/StampTool.js'),
   papeis:           () => import('../tools/paper/PaperTool.js'),
   conteudovariavel: () => import('../tools/variablecontent/VariableContentTool.js'),
 };
@@ -358,7 +358,7 @@ export class Craftools_Editor extends HTMLElement {
     // cloneNode() only copies DOM attributes/children. Tool-specific state
     // kept as a plain JS expando on the element instance (not a DOM
     // attribute) is silently dropped otherwise -- e.g. PaperTool.ts/
-    // ShapeTool.ts/IconTool.ts/CarimboTool.ts/TextoCurvoTool.ts/
+    // ShapeTool.ts/IconTool.ts/StampTool.ts/TextoCurvoTool.ts/
     // MiniCalendarTool.ts/EmojiKitchenTool.ts all set `el._craftoolsMeta`
     // directly, and TextTool.ts's autoFit toggle lives in
     // `_craftoolsAutoResize` the same way -- without this, pasting any of
@@ -616,7 +616,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendario',
-      'emojikitchen','emoji','shape','conteudovariavel','textocurvo','carimbo','icone',
+      'emojikitchen','emoji','shape','conteudovariavel','textocurvo','stamp','icone',
     ]);
 
     toolBtns.forEach(btn => {
@@ -678,7 +678,7 @@ export class Craftools_Editor extends HTMLElement {
           emojikitchen:    () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
           conteudovariavel:() => import('../tools/variablecontent/VariableContentTool.js'),
           textocurvo:      () => import('../tools/textocurvo/TextoCurvoTool.js'),
-          carimbo:         () => import('../tools/carimbo/CarimboTool.js'),
+          stamp:           () => import('../tools/stamp/StampTool.js'),
           titulo:          () => import('../tools/text/TextTool.js'),
           paragrafo:       () => import('../tools/text/TextTool.js'),
         };
@@ -686,7 +686,7 @@ export class Craftools_Editor extends HTMLElement {
         const offsets: Record<string, [number, number]> = {
           imagem: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendario: [-95,-105], emojikitchen: [-80,-80],
-          conteudovariavel: [-110,-25], textocurvo: [-80,-80], carimbo: [-80,-80],
+          conteudovariavel: [-110,-25], textocurvo: [-80,-80], stamp: [-80,-80],
           titulo: [-100,-30], paragrafo: [-100,-30],
         };
 
@@ -760,7 +760,7 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','agenda','calendario','album','fatiador','textocurvo','carimbo',
+        'gerador','agenda','calendario','album','fatiador','textocurvo','stamp',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -777,7 +777,7 @@ export class Craftools_Editor extends HTMLElement {
             return;
           }
 
-          // textocurvo / carimbo: create element directly on the active page
+          // textocurvo / stamp: create element directly on the active page
           if (tool === 'textocurvo') {
             if (isMobile()) return;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -786,12 +786,12 @@ export class Craftools_Editor extends HTMLElement {
             if (targetPage) { const el = m.TextoCurvoTool.createElement('textocurvo', this); targetPage.appendChild(el); closeSidebar(); }
             return;
           }
-          if (tool === 'carimbo') {
+          if (tool === 'stamp') {
             if (isMobile()) return;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const m: any = await import('../tools/carimbo/CarimboTool.js');
+            const m: any = await import('../tools/stamp/StampTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = m.CarimboTool.createElement('carimbo', this); targetPage.appendChild(el); closeSidebar(); }
+            if (targetPage) { const el = m.StampTool.createElement('stamp', this); targetPage.appendChild(el); closeSidebar(); }
             return;
           }
 

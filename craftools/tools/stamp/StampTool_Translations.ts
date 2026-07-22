@@ -1,6 +1,6 @@
 import { I18n } from "../../settings/Translations.js";
 
-I18n.addTranslations('carimbo', {
+I18n.addTranslations('stamp', {
     "pt-br": {
         panelTitle:       "Carimbo / Selo",
         sectionOuter:     "Texto externo",

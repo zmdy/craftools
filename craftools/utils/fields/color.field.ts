@@ -9,7 +9,7 @@
  *
  * Stored/reported value is a bare hex string (e.g. '#f97316'), unchanged
  * from before this field was upgraded -- existing tools (BarcodeTool,
- * ShapeTool, IconTool, PaperTool, QRCodeTool, MiniCalendarTool, CarimboTool,
+ * ShapeTool, IconTool, PaperTool, QRCodeTool, MiniCalendarTool, StampTool,
  * ImageTool border color, etc.) all read/write a plain string here already,
  * so this upgrade needed zero schema or _applyProperty changes anywhere.
  */

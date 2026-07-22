@@ -1,5 +1,5 @@
 /**
- * CarimboTool.ts — Stamp tool. Stores state in dataset.ctState (and
+ * StampTool.ts — Stamp tool. Stores state in dataset.ctState (and
  * mirrored onto element._ctState), so _syncFromDOM is a no-op.
  */
 import { BaseTool } from '../BaseTool';
@@ -8,10 +8,10 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import { normalizeValue, svgPaintFromValue } from '../../utils/ColorPickerUI';
 import { I18n } from '../../settings/Translations.js';
-import './CarimboTool_Translations.js';
+import './StampTool_Translations.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
-interface CarimboState {
+interface StampState {
   outerText:      string;
   outerFontSize:  number;
   outerBold:      boolean;
@@ -30,15 +30,15 @@ interface CarimboState {
   color:          string;
 }
 
-const DEFAULT_STATE = (): CarimboState => ({
-  outerText:     I18n.t('carimbo.defaultOuterText'),
+const DEFAULT_STATE = (): StampState => ({
+  outerText:     I18n.t('stamp.defaultOuterText'),
   outerFontSize: 11,
   outerBold:     true,
   showInnerText: true,
-  innerText:     I18n.t('carimbo.defaultInnerText'),
+  innerText:     I18n.t('stamp.defaultInnerText'),
   innerFontSize: 9,
   centerType:    'text',
-  centerText:    I18n.t('carimbo.defaultCenterText'),
+  centerText:    I18n.t('stamp.defaultCenterText'),
   centerFontSize: 14,
   centerBold:    true,
   outerRadius:   85,
@@ -58,7 +58,7 @@ const escXml = (s: unknown): string =>
 
 const SEP_GLYPHS: Record<string, string> = { star: '★', dot: '●', diamond: '◆', none: '' };
 
-export class CarimboTool extends BaseTool {
+export class StampTool extends BaseTool {
 
   // _syncFromDOM: no-op -- dataset.ctState already populated by createElement()
 
@@ -75,7 +75,7 @@ export class CarimboTool extends BaseTool {
    *   [innerBorderR]  -- inner thin ring  (outerRadius - 37) if rings=3
    *   CENTER TEXT     -- at (cx, cy)
    */
-  public static buildSVG(state: CarimboState, uid: string): string {
+  public static buildSVG(state: StampState, uid: string): string {
     const {
       outerText, outerFontSize, outerBold,
       showInnerText, innerText, innerFontSize,
@@ -185,17 +185,17 @@ export class CarimboTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="carimbo">` with its
-   * stamp SVG inside. Recovered from the pre-migration CarimboTool.js
+   * Builds a fresh `<craftools-element data-craftool="stamp">` with its
+   * stamp SVG inside. Recovered from the pre-migration StampTool.js
    * (deleted by the "Purge legacy JS" commit without this logic being
    * ported) -- the previous file had no createElement() at all, throwing
    * "createElement is not a function" for every stamp element creation.
    */
   public static createElement(_type: string, _editor?: unknown): HTMLElement {
-    const el = document.createElement('craftools-element') as HTMLElement & { _ctState?: CarimboState };
+    const el = document.createElement('craftools-element') as HTMLElement & { _ctState?: StampState };
     const uid = Math.random().toString(36).slice(2, 8);
 
-    el.setAttribute('data-craftool', 'carimbo');
+    el.setAttribute('data-craftool', 'stamp');
     el.setAttribute('data-ct-uid',   uid);
     el.setAttribute('w',  '160');
     el.setAttribute('h',  '160');
@@ -206,17 +206,17 @@ export class CarimboTool extends BaseTool {
     el.dataset.ctState = JSON.stringify(state);
     el._ctState = state;
 
-    el.innerHTML = CarimboTool.buildSVG(state, uid);
+    el.innerHTML = StampTool.buildSVG(state, uid);
     return el;
   }
 
   /** Updates the element's SVG and persisted state in-place. */
-  public static updateElement(el: HTMLElement & { _ctState?: CarimboState; contentArea?: HTMLElement }, state: CarimboState): void {
+  public static updateElement(el: HTMLElement & { _ctState?: StampState; contentArea?: HTMLElement }, state: StampState): void {
     el._ctState = state;
     el.dataset.ctState = JSON.stringify(state);
 
     const uid = el.getAttribute('data-ct-uid') || 'x';
-    const svgHtml = CarimboTool.buildSVG(state, uid);
+    const svgHtml = StampTool.buildSVG(state, uid);
 
     const container = el.contentArea || el;
     const existing = container.querySelector('svg');
@@ -292,17 +292,17 @@ export class CarimboTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
-    const e = element as HTMLElement & { _ctState?: CarimboState };
+    const e = element as HTMLElement & { _ctState?: StampState };
     if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     if (!e._ctState) e._ctState = DEFAULT_STATE();
     (e._ctState as unknown as Record<string, unknown>)[key] = value;
     // Calls updateElement() directly (previously dispatched an unlistened
-    // 'craftools-carimbo-regenerate' custom event, so panel edits never
+    // 'craftools-stamp-regenerate' custom event, so panel edits never
     // actually rebuilt the rendered SVG).
-    CarimboTool.updateElement(e, e._ctState);
+    StampTool.updateElement(e, e._ctState);
   }
 }
 
-CarimboTool.registeredKeys = ['carimbo'];
-// icon matches the desktop sidebar (index.html #pwa-sidebar-carimbo).
-ToolRegistry.register({ key: 'carimbo', label: 'editor.stamp', icon: 'verified', tool: CarimboTool, draggable: true, showInFooterNav: false, category: 'elements' });
+StampTool.registeredKeys = ['stamp'];
+// icon matches the desktop sidebar (index.html #pwa-sidebar-stamp).
+ToolRegistry.register({ key: 'stamp', label: 'editor.stamp', icon: 'verified', tool: StampTool, draggable: true, showInFooterNav: false, category: 'elements' });

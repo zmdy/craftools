@@ -32,7 +32,7 @@ export { BarcodeTool }         from './barcode/BarcodeTool';
 
 // ── Text effects ──────────────────────────────────────────────────────────────
 export { TextoCurvoTool }      from './textocurvo/TextoCurvoTool';
-export { CarimboTool }         from './carimbo/CarimboTool';
+export { StampTool }           from './stamp/StampTool';
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 export { MiniCalendarTool }    from './minicalendar/MiniCalendarTool';
