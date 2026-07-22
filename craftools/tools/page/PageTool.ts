@@ -38,7 +38,7 @@ export class PageTool {
   static attachPageEvents(editor: HTMLElement, pageEl: HTMLElement): void {
     // Idempotency guard -- attachPageEvents() is called from four different
     // places (initial page load, restoreOriginalCanvas() after leaving a
-    // Calendar/Gerador/ImageSlicer preview, addNewPage()'s clone, and
+    // Calendar/Generator/ImageSlicer preview, addNewPage()'s clone, and
     // Editor.ts's _reattachAllPageEvents() after undo/redo/session
     // restore), and every one of them binds a fresh 'dragover'/'dragleave'/
     // 'drop' listener set with anonymous closures -- addEventListener()
@@ -49,7 +49,7 @@ export class PageTool {
     // guarded against by a `_craftoolsEventsAttached` flag that
     // _reattachAllPageEvents() set and checked itself, but the other three
     // call sites neither set nor checked it, so restoreOriginalCanvas()
-    // alone -- called every time a Calendar/Gerador/ImageSlicer preview is
+    // alone -- called every time a Calendar/Generator/ImageSlicer preview is
     // cancelled -- could double- or triple-bind the same page with no
     // undo/redo involved at all). Centralizing the guard here instead of in
     // each caller means every call site is safe by construction, including

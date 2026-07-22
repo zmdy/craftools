@@ -1,8 +1,8 @@
 import { I18n } from "../../settings/Translations.js";
 
-I18n.addTranslations('geradorTool', {
+I18n.addTranslations('generatorTool', {
     "pt-br": {
-        panelTitle:      "Gerador de Modelos de Álbum",
+        panelTitle:      "Generator de Modelos de Álbum",
         sectionName:     "Identidade do Template",
         namePlaceholder: "Ex: Kit Polaroid A4",
         nameLabel:       "Nome do Template",

@@ -1,16 +1,16 @@
 /**
- * GeradorTool.ts
+ * GeneratorTool.ts
  *
- * "Gerador" panel — a custom grid-template builder. Takes over the entire
+ * "Generator" panel — a custom grid-template builder. Takes over the entire
  * side panel (like CalendarTool / AgendaExportTool) and lets the user design
  * a reusable album-page template (grid / strip / promo-kit layout), preview
  * it live on the main page as an SVG mockup, and save it to
  * `UserTemplates` (localStorage) so it shows up alongside the built-in
  * `GridSizes` templates when using the Album wizard.
  *
- * Recovered from the pre-migration GeradorTool.js (deleted by the "Purge
+ * Recovered from the pre-migration GeneratorTool.js (deleted by the "Purge
  * legacy JS" commit without this logic being ported) -- the previous
- * GeradorTool.ts was a ToolRegistry.register()-only stub with no setup()
+ * GeneratorTool.ts was a ToolRegistry.register()-only stub with no setup()
  * at all, so clicking the sidebar button threw
  * "Cannot read properties of undefined (reading 'bind')" in Editor.ts's
  * PANEL_SETUP_MAP.
@@ -21,9 +21,9 @@ import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG';
 import { UserTemplates } from '../../utils/UserTemplates';
 import type { GridTemplate, GridTemplateSlot } from '../../utils/GridSizes.js';
 import { ToolRegistry } from '../../utils/ToolRegistry';
-import './GeradorTool_Translations.js';
+import './GeneratorTool_Translations.js';
 
-const g = (key: string): string => I18n.t('geradorTool.' + key);
+const g = (key: string): string => I18n.t('generatorTool.' + key);
 
 interface MarginObj {
   top: number;
@@ -151,7 +151,7 @@ type CraftoolsWindow = typeof window & {
   craftoolsApp?: { activeMedia?: { sizes?: SizeOption[] } };
 };
 
-export class GeradorTool {
+export class GeneratorTool {
 
   public static setup(editor: HTMLElement): void {
     const panelTitle = document.getElementById('panel-title');
@@ -299,10 +299,10 @@ export class GeradorTool {
       if (pagesWrapper) (pagesWrapper as HTMLElement).style.display = '';
 
       // Handle floating preview badge in canvasArea (outside the page)
-      let badge = document.getElementById('gerador-canvas-badge');
+      let badge = document.getElementById('generator-canvas-badge');
       if (!badge) {
         badge = document.createElement('div');
-        badge.id = 'gerador-canvas-badge';
+        badge.id = 'generator-canvas-badge';
         badge.style.cssText = `
           position: absolute;
           top: 20px;
@@ -358,7 +358,7 @@ export class GeradorTool {
         // the margin adjust in real time as they change the cell/gap/page
         // size, even without re-rendering the field they're currently
         // editing (avoids losing input focus).
-        const root = panelBody.querySelector('#gerador-root');
+        const root = panelBody.querySelector('#generator-root');
         if (root) {
           root.querySelectorAll<HTMLInputElement>('.margin-part-input[data-prefix="cfg-pageMargin"]').forEach(el => {
             const side = el.dataset.side as keyof MarginObj | undefined;
@@ -394,7 +394,7 @@ export class GeradorTool {
         return `<div style="font-size:11px; color:var(--text-muted); text-align:center; padding:10px 0;">${g('noSaved')}</div>`;
       }
       return saved.map(t => `
-        <div class="gerador-saved-row" data-id="${t._id}" style="
+        <div class="generator-saved-row" data-id="${t._id}" style="
           display:flex; align-items:center; gap:8px; padding:8px 10px;
           border-radius:7px; background:var(--bg-input,#1e1e2e);
           border:1px solid var(--border,#374151); margin-bottom:6px;
@@ -405,10 +405,10 @@ export class GeradorTool {
           ">${g('badgeUser')}</span>
           <span style="flex:1; font-size:12px; font-weight:600; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.name || '—'}</span>
           <span style="font-size:10px; color:var(--text-muted); flex-shrink:0;">${(t.sizes || [])[0] || ''}</span>
-          <button class="gerador-edit-btn craftools-topbtn" data-id="${t._id}" style="padding:3px 8px; font-size:10px; gap:4px;">
+          <button class="generator-edit-btn craftools-topbtn" data-id="${t._id}" style="padding:3px 8px; font-size:10px; gap:4px;">
             <span class="material-symbols-outlined" style="font-size:13px;">edit</span>${g('editBtn')}
           </button>
-          <button class="gerador-del-btn craftools-topbtn" data-id="${t._id}" style="padding:3px 8px; font-size:10px; gap:4px; background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.3);">
+          <button class="generator-del-btn craftools-topbtn" data-id="${t._id}" style="padding:3px 8px; font-size:10px; gap:4px; background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.3);">
             <span class="material-symbols-outlined" style="font-size:13px;">delete</span>
           </button>
         </div>
@@ -434,7 +434,7 @@ export class GeradorTool {
         const toggleHtml = autoCenterToggle ? `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span class="craftools-label" style="margin:0; font-size:11px; color:var(--text-secondary);">${g('autoCenterLabel')}</span>
-            <button type="button" class="craftools-pill gerador-autocenter-btn ${isAuto ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+            <button type="button" class="craftools-pill generator-autocenter-btn ${isAuto ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
               <span class="material-symbols-outlined" style="font-size:14px;">center_focus_strong</span>
               ${isAuto ? g('enabled') : g('disabled')}
             </button>
@@ -471,12 +471,12 @@ export class GeradorTool {
 
       if (layoutType === 'promo') {
         const slotsHtml = promoSlots.map((slot, i) => `
-          <div class="gerador-promo-slot" data-slot="${i}" style="
+          <div class="generator-promo-slot" data-slot="${i}" style="
             background:var(--bg-input,#1e1e2e); border:1px solid var(--border,#374151);
             border-radius:8px; padding:10px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
               <span style="font-size:11px; font-weight:600; color:var(--text-secondary);">Slot ${i + 1}</span>
-              ${promoSlots.length > 1 ? `<button class="gerador-remove-slot craftools-topbtn" data-slot="${i}" style="padding:2px 7px; font-size:10px; color:#f87171; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.3);">
+              ${promoSlots.length > 1 ? `<button class="generator-remove-slot craftools-topbtn" data-slot="${i}" style="padding:2px 7px; font-size:10px; color:#f87171; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.3);">
                 <span class="material-symbols-outlined" style="font-size:12px;">remove</span>${g('removeSlot')}
               </button>` : ''}
             </div>
@@ -519,8 +519,8 @@ export class GeradorTool {
         const canAddSlot = promoSlots.length < MAX_PROMO_SLOTS;
 
         return `
-          <div id="gerador-promo-slots">${slotsHtml}</div>
-          ${canAddSlot ? `<button id="gerador-add-slot" class="craftools-topbtn" style="width:100%; justify-content:center; margin-bottom:8px;">
+          <div id="generator-promo-slots">${slotsHtml}</div>
+          ${canAddSlot ? `<button id="generator-add-slot" class="craftools-topbtn" style="width:100%; justify-content:center; margin-bottom:8px;">
             <span class="material-symbols-outlined" style="font-size:14px;">add</span>${g('addSlot')}
           </button>` : ''}
           ${marginInputGroup('cfg-pageMargin', g('pageMarginLabel'), cfg.pageMargin, { autoCenterToggle: true })}
@@ -550,7 +550,7 @@ export class GeradorTool {
     // ── Full panel HTML ─────────────────────────────────────────────────
     const renderPanel = (): void => {
       const sizePills = allSizes.map((s, i) =>
-        `<button class="craftools-pill gerador-size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${i}">${s.name}</button>`,
+        `<button class="craftools-pill generator-size-btn ${selectedSize === s ? 'active' : ''}" data-idx="${i}">${s.name}</button>`,
       ).join('');
 
       const typeCards = ([
@@ -558,7 +558,7 @@ export class GeradorTool {
         { type: 'strip', icon: 'view_column',  label: g('typeStrip') },
         { type: 'promo', icon: 'dashboard',    label: g('typePromo') },
       ] as Array<{ type: LayoutType; icon: string; label: string }>).map(({ type, icon, label }) => `
-        <button class="gerador-type-btn" data-type="${type}" style="
+        <button class="generator-type-btn" data-type="${type}" style="
           flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
           padding:10px 6px; border-radius:8px; cursor:pointer; font-size:10px;
           border:2px solid ${layoutType === type ? 'var(--accent)' : 'var(--border,#374151)'};
@@ -577,7 +577,7 @@ export class GeradorTool {
       const sectionName = `
         <div class="craftools-field" style="margin-bottom:6px;">
           <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:5px;">${g('nameLabel')}</label>
-          <input type="text" id="gerador-name" class="craftools-input" value="${name}"
+          <input type="text" id="generator-name" class="craftools-input" value="${name}"
             placeholder="${g('namePlaceholder')}" style="width:100%; padding:8px 10px; font-size:13px; font-weight:600;">
         </div>
       `;
@@ -593,10 +593,10 @@ export class GeradorTool {
       const saveLabel = isEditing ? g('saveUpdate') : g('saveBtn');
       const saveFooter = `
         <div style="padding:10px 0 4px; display:flex; gap:8px;">
-          ${isEditing ? `<button id="gerador-new-btn" class="craftools-topbtn" style="flex:0 0 auto; padding:8px 12px;">
+          ${isEditing ? `<button id="generator-new-btn" class="craftools-topbtn" style="flex:0 0 auto; padding:8px 12px;">
             <span class="material-symbols-outlined" style="font-size:14px;">add</span>${g('newTemplate')}
           </button>` : ''}
-          <button id="gerador-save-btn" class="craftools-topbtn" style="
+          <button id="generator-save-btn" class="craftools-topbtn" style="
             flex:1; justify-content:center; padding:10px;
             background:linear-gradient(135deg,#f97316,#ef4444); color:#fff;
             border:none; font-weight:700; font-size:13px; border-radius:8px;
@@ -608,7 +608,7 @@ export class GeradorTool {
       `;
 
       panelBody.innerHTML = `
-        <div id="gerador-root">
+        <div id="generator-root">
           ${PanelUI.accordion('gdr-name',   'badge',       g('sectionName'),   sectionName,   { open: true })}
           ${PanelUI.accordion('gdr-size',   'straighten',  g('sectionSize'),   sectionSize,   { open: true })}
           ${PanelUI.accordion('gdr-type',   'category',    g('sectionType'),   sectionType,   { open: true })}
@@ -625,11 +625,11 @@ export class GeradorTool {
 
     // ── Event binding ────────────────────────────────────────────────────
     const bindEvents = (): void => {
-      const root = panelBody.querySelector<HTMLElement>('#gerador-root');
+      const root = panelBody.querySelector<HTMLElement>('#generator-root');
       if (!root) return;
 
       // Name input
-      const nameInput = root.querySelector<HTMLInputElement>('#gerador-name');
+      const nameInput = root.querySelector<HTMLInputElement>('#generator-name');
       if (nameInput) {
         nameInput.addEventListener('input', () => {
           name = nameInput.value;
@@ -637,17 +637,17 @@ export class GeradorTool {
       }
 
       // Size pills
-      root.querySelectorAll<HTMLElement>('.gerador-size-btn').forEach(btn => {
+      root.querySelectorAll<HTMLElement>('.generator-size-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           selectedSize = allSizes[parseInt(btn.dataset.idx!, 10)];
-          root.querySelectorAll('.gerador-size-btn').forEach(b => b.classList.remove('active'));
+          root.querySelectorAll('.generator-size-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           renderPreview();
         });
       });
 
       // Layout type
-      root.querySelectorAll<HTMLElement>('.gerador-type-btn').forEach(btn => {
+      root.querySelectorAll<HTMLElement>('.generator-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           layoutType = btn.dataset.type as LayoutType;
           // Reset strip fields when changing type
@@ -681,7 +681,7 @@ export class GeradorTool {
       });
 
       // Auto-center margins toggle
-      const autoCenterBtn = root.querySelector<HTMLElement>('.gerador-autocenter-btn');
+      const autoCenterBtn = root.querySelector<HTMLElement>('.generator-autocenter-btn');
       if (autoCenterBtn) {
         autoCenterBtn.addEventListener('click', () => {
           cfg.autoCenter = !cfg.autoCenter;
@@ -713,7 +713,7 @@ export class GeradorTool {
       });
 
       // Add slot
-      const addSlotBtn = root.querySelector<HTMLElement>('#gerador-add-slot');
+      const addSlotBtn = root.querySelector<HTMLElement>('#generator-add-slot');
       if (addSlotBtn) {
         addSlotBtn.addEventListener('click', () => {
           if (promoSlots.length >= MAX_PROMO_SLOTS) return;
@@ -723,7 +723,7 @@ export class GeradorTool {
       }
 
       // Remove slot
-      root.querySelectorAll<HTMLElement>('.gerador-remove-slot').forEach(btn => {
+      root.querySelectorAll<HTMLElement>('.generator-remove-slot').forEach(btn => {
         btn.addEventListener('click', () => {
           const i = parseInt(btn.dataset.slot!, 10);
           promoSlots.splice(i, 1);
@@ -732,10 +732,10 @@ export class GeradorTool {
       });
 
       // Save
-      const saveBtn = root.querySelector<HTMLButtonElement>('#gerador-save-btn');
+      const saveBtn = root.querySelector<HTMLButtonElement>('#generator-save-btn');
       if (saveBtn) {
         saveBtn.addEventListener('click', () => {
-          const currentName = root.querySelector<HTMLInputElement>('#gerador-name')?.value?.trim() || name.trim();
+          const currentName = root.querySelector<HTMLInputElement>('#generator-name')?.value?.trim() || name.trim();
           name = currentName;
 
           if (!name) { showToast(g('errorName'), 'error'); return; }
@@ -762,7 +762,7 @@ export class GeradorTool {
       }
 
       // New template button (when editing)
-      const newBtn = root.querySelector<HTMLElement>('#gerador-new-btn');
+      const newBtn = root.querySelector<HTMLElement>('#generator-new-btn');
       if (newBtn) {
         newBtn.addEventListener('click', () => {
           editingId  = null;
@@ -779,7 +779,7 @@ export class GeradorTool {
 
     const bindSavedListEvents = (root: HTMLElement): void => {
       // Edit
-      root.querySelectorAll<HTMLElement>('.gerador-edit-btn').forEach(btn => {
+      root.querySelectorAll<HTMLElement>('.generator-edit-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const t = UserTemplates.getById(btn.dataset.id!);
           if (!t) return;
@@ -789,7 +789,7 @@ export class GeradorTool {
       });
 
       // Delete
-      root.querySelectorAll<HTMLElement>('.gerador-del-btn').forEach(btn => {
+      root.querySelectorAll<HTMLElement>('.generator-del-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           UserTemplates.delete(btn.dataset.id!);
           invalidateApiCache();
@@ -808,7 +808,7 @@ export class GeradorTool {
 
     renderPanel();
     // `editor` isn't referenced directly by this panel's logic (unlike
-    // Calendar/Agenda, Gerador only edits localStorage-backed templates and
+    // Calendar/Agenda, Generator only edits localStorage-backed templates and
     // takes over #main-page via plain DOM ids), but it's still accepted to
     // match the PanelSetupFn signature every panel-only tool must satisfy.
     void editor;
@@ -843,9 +843,9 @@ function showToast(msg: string, type: 'success' | 'error' = 'success'): void {
   setTimeout(() => el.remove(), 3000);
 }
 
-// icon matches the desktop sidebar (index.html #pwa-sidebar-gerador).
+// icon matches the desktop sidebar (index.html #pwa-sidebar-generator).
 ToolRegistry.register({
-  key: 'gerador',
+  key: 'generator',
   label: 'editor.generator',
   icon: 'dashboard_customize',
   panelOnly: true,

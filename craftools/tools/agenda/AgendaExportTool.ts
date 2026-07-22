@@ -2,13 +2,13 @@
  * AgendaExportTool.ts
  *
  * "Export Agenda" panel — takes over the entire side panel (like
- * GeradorTool), with 3 accordion tabs:
+ * GeneratorTool), with 3 accordion tabs:
  *   1. Pages — pick which pages repeat and how many times (stored as a
  *      `data-agenda-repeat="N"` attribute on the `.craftools-page` itself,
  *      persisting for as long as the editor session lasts).
  *   2. Preview — real-time canvas preview of resolved variables, navigated
  *      page-by-page directly on the main canvas (same pattern as
- *      CalendarTool / GeradorTool). Two buttons: "First 5 pages" / "All
+ *      CalendarTool / GeneratorTool). Two buttons: "First 5 pages" / "All
  *      pages" control how many output pages are rendered at once. The
  *      actual canvas preview is restored automatically when the user
  *      switches away from this panel.
@@ -288,7 +288,7 @@ export class AgendaExportTool {
   /**
    * Loads and renders a canvas-level real-time preview of the resolved
    * agenda pages directly on the main editor canvas -- same pattern as
-   * CalendarTool._renderCanvasPreview() and GeradorTool.ts.
+   * CalendarTool._renderCanvasPreview() and GeneratorTool.ts.
    *
    * Saves the original page HTML via editor._savedPageHtml (restored
    * automatically by Editor.ts's restoreOriginalCanvas() when the user
@@ -323,16 +323,16 @@ export class AgendaExportTool {
       editor._savedPageCssText = mainPage.style.cssText;
     }
 
-    // Show badge -- same #gerador-canvas-badge element (and exact style)
-    // GeradorTool.ts/CalendarTool.ts already use for their own canvas
+    // Show badge -- same #generator-canvas-badge element (and exact style)
+    // GeneratorTool.ts/CalendarTool.ts already use for their own canvas
     // preview badge, so all three look identical. This one previously
     // used a one-off indigo (#6366f1), out of step with the app's actual
     // standard orange (#f97316, matching --accent).
     const canvasArea = document.getElementById('canvas-area');
-    let badge = document.getElementById('gerador-canvas-badge');
+    let badge = document.getElementById('generator-canvas-badge');
     if (!badge && canvasArea) {
       badge = document.createElement('div');
-      badge.id = 'gerador-canvas-badge';
+      badge.id = 'generator-canvas-badge';
       badge.style.cssText = `
         position:absolute; top:20px; left:20px;
         background:#f97316; color:#fff;

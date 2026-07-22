@@ -48,7 +48,7 @@ export interface ToolDefinition {
    */
   tool?: typeof BaseTool;
   /**
-   * True for tools that take over the sidebar panel (AgendaExport, Gerador, etc.)
+   * True for tools that take over the sidebar panel (AgendaExport, Generator, etc.)
    * and do not create canvas elements. These tools call setup(editor) instead of
    * renderPropertiesPanel(). Editor.ts will check this flag to route accordingly.
    */

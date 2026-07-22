@@ -1,7 +1,7 @@
 /**
  * CalendarTool.ts
  *
- * "Calendário" panel — takes over the entire side panel (like GeradorTool /
+ * "Calendário" panel — takes over the entire side panel (like GeneratorTool /
  * AgendaExportTool), with 5 accordion tabs: Modelo, Layout, Preenchimento,
  * Estilo, Gerar. Clicking "Gerar" builds real pages in the document (like
  * the Album wizard does with photos), using the same
@@ -675,15 +675,15 @@ export class CalendarTool {
     if (pagesWrapper) pagesWrapper.style.display = '';
 
     // Save the page's original content only the first time (same logic as
-    // GeradorTool.ts) -- restored when switching to a different tool.
+    // GeneratorTool.ts) -- restored when switching to a different tool.
     if (editor._savedPageHtml === undefined) {
       editor._savedPageHtml = mainPage.innerHTML;
     }
 
-    let badge = document.getElementById('gerador-canvas-badge');
+    let badge = document.getElementById('generator-canvas-badge');
     if (!badge) {
       badge = document.createElement('div');
-      badge.id = 'gerador-canvas-badge';
+      badge.id = 'generator-canvas-badge';
       badge.style.cssText = `
         position: absolute;
         top: 20px;

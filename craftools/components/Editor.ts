@@ -95,7 +95,7 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   calendar:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gerador:   () => import('../tools/gerador/GeradorTool.js').then((m: any) => m.GeradorTool.setup.bind(m.GeradorTool)),
+  generator: () => import('../tools/generator/GeneratorTool.js').then((m: any) => m.GeneratorTool.setup.bind(m.GeneratorTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   imageslicer: () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
 };
@@ -116,7 +116,7 @@ export class Craftools_Editor extends HTMLElement {
   activePage: Element | null = null;
   _savedPageHtml?: string;
   _savedPageCssText?: string;
-  // Exposed for panel-only tools (CalendarTool, GeradorTool) that take over
+  // Exposed for panel-only tools (CalendarTool, GeneratorTool) that take over
   // #main-page as a live preview and need to restore it afterward -- was
   // assigned in bindEvents() below (`this.restoreOriginalCanvas = ...`) in
   // the pre-migration Editor.js but dropped during the TS port, silently
@@ -432,14 +432,14 @@ export class Craftools_Editor extends HTMLElement {
         delete this._savedPageCssText;
         PageTool.attachPageEvents(this, mainPage);
       }
-      // Calendar/Gerador/ImageSlicer all show this same floating "Preview"
+      // Calendar/Generator/ImageSlicer all show this same floating "Preview"
       // badge while taking over the canvas -- remove it here (once, in the
       // shared restore path) rather than in each tool.
-      const badge = document.getElementById('gerador-canvas-badge');
+      const badge = document.getElementById('generator-canvas-badge');
       if (badge) badge.remove();
     };
     // Exposed on the instance so panel-only tools (CalendarTool.ts,
-    // GeradorTool.ts) can call `editor.restoreOriginalCanvas()` themselves
+    // GeneratorTool.ts) can call `editor.restoreOriginalCanvas()` themselves
     // right before generating real pages -- matches the pre-migration
     // Editor.js, which assigned this the same way.
     this.restoreOriginalCanvas = restoreOriginalCanvas;
@@ -719,10 +719,10 @@ export class Craftools_Editor extends HTMLElement {
       });
     });
 
-    // Restore canvas when clicking any tool other than gerador/calendar
+    // Restore canvas when clicking any tool other than generator/calendar
     toolBtns.forEach(btn => {
       const tool = btn.dataset.tool ?? btn.id.replace('pwa-sidebar-', '').replace('pwa-btn-', '');
-      if (tool !== 'gerador' && tool !== 'calendar') {
+      if (tool !== 'generator' && tool !== 'calendar') {
         btn.addEventListener('click', () => restoreOriginalCanvas());
       }
     });
@@ -760,7 +760,7 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','agenda','calendar','album','imageslicer','curvedtext','stamp',
+        'generator','agenda','calendar','album','imageslicer','curvedtext','stamp',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -795,8 +795,8 @@ export class Craftools_Editor extends HTMLElement {
             return;
           }
 
-          // gerador: save page HTML before taking it over as live preview
-          if (tool === 'gerador') {
+          // generator: save page HTML before taking it over as live preview
+          if (tool === 'generator') {
             const mainPage = document.getElementById('main-page');
             if (mainPage && this._savedPageHtml === undefined) {
               this._savedPageHtml    = mainPage.innerHTML;
@@ -804,7 +804,7 @@ export class Craftools_Editor extends HTMLElement {
             }
           }
 
-          // panel-only tools: agenda / calendar / gerador / imageslicer
+          // panel-only tools: agenda / calendar / generator / imageslicer
           openPanelMenu();
           this.activePage = null;
           const setupLoader = PANEL_SETUP_MAP[tool];

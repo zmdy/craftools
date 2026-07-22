@@ -2,7 +2,7 @@
  * ImageSlicerTool.ts
  *
  * "Fatiador de Imagem" (Image Slicer) panel — takes over the entire side
- * panel (like CalendarTool / GeradorTool). Lets the user upload one or more
+ * panel (like CalendarTool / GeneratorTool). Lets the user upload one or more
  * images, slice each into an R×C grid, preview the slices live as a page
  * grid overlaid on the canvas area, and generate one real document page per
  * slice (one full-bleed or margin+border page each).
@@ -67,7 +67,7 @@ interface SlicerState {
 
 // Ad hoc global set elsewhere in the app (Settings.js / index.html inline
 // scripts) -- same pragmatic `window as any` pattern AlbumWizard.ts,
-// GeradorTool.ts and Editor.ts already use for craftoolsSize/craftoolsApp.
+// GeneratorTool.ts and Editor.ts already use for craftoolsSize/craftoolsApp.
 type CraftoolsWindow = typeof window & {
   craftoolsApp?: { activeMedia?: { sizes?: SizeOption[] } };
 };
@@ -138,7 +138,7 @@ export class ImageSlicerTool {
       return ov;
     };
 
-    /** Creates the orange "Preview" badge (same style as GeradorTool). */
+    /** Creates the orange "Preview" badge (same style as GeneratorTool). */
     const ensureBadge = (): void => {
       if (document.getElementById('slicer-canvas-badge') || !canvasArea) return;
       const badge = document.createElement('div');
