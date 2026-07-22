@@ -249,6 +249,18 @@ export class VariablePanel {
 
             <div id="var-date-special-options" style="display: ${b.format === 'SPECIAL_DATE' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('variablePanel.dateSpecialLimitLabel')}</span>
+                        <input type="number" id="var-date-special-limit" class="craftools-input" style="width:100%;" min="1"
+                            placeholder="${this._esc(I18n.t('variablePanel.dateSpecialLimitPlaceholder'))}"
+                            value="${b.specialDateLimit !== undefined && b.specialDateLimit !== '' ? b.specialDateLimit : ''}">
+                    </div>
+                    <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:18px;">
+                        <input type="checkbox" id="var-date-special-randomize" ${b.specialDateRandomize ? 'checked' : ''}>
+                        <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateSpecialRandomizeLabel')}</span>
+                    </label>
+                </div>
                 <div class="ct-field" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('variablePanel.dateSpecialSeparatorLabel')}</span>
                     <input type="text" id="var-date-special-separator" class="craftools-input" style="width:100%;"
@@ -570,6 +582,8 @@ export class VariablePanel {
                     const customFormat    = container.querySelector<HTMLInputElement>('#var-date-custom-format');
                     const specialOpts     = container.querySelector<HTMLElement>('#var-date-special-options');
                     const specialCatBoxes = container.querySelectorAll<HTMLInputElement>('.var-date-special-cat');
+                    const specialLimit    = container.querySelector<HTMLInputElement>('#var-date-special-limit');
+                    const specialRandom   = container.querySelector<HTMLInputElement>('#var-date-special-randomize');
                     const specialSep      = container.querySelector<HTMLInputElement>('#var-date-special-separator');
                     const specialEmpty    = container.querySelector<HTMLInputElement>('#var-date-special-emptytext');
 
@@ -598,8 +612,17 @@ export class VariablePanel {
                             notify();
                         };
                     });
-                    if (specialSep)   specialSep.oninput   = () => { binding!.specialDateSeparator = specialSep.value;   notify(); };
-                    if (specialEmpty) specialEmpty.oninput = () => { binding!.specialDateEmptyText = specialEmpty.value; notify(); };
+                    if (specialLimit) specialLimit.oninput = () => {
+                        // Empty field = "show all" (undefined, not 0/NaN --
+                        // _formatSpecialDate() only slices when the parsed
+                        // value is a positive number).
+                        const raw = specialLimit.value.trim();
+                        binding!.specialDateLimit = raw === '' ? undefined : parseInt(raw, 10);
+                        notify();
+                    };
+                    if (specialRandom) specialRandom.onchange = () => { binding!.specialDateRandomize = specialRandom.checked; notify(); };
+                    if (specialSep)    specialSep.oninput     = () => { binding!.specialDateSeparator = specialSep.value;   notify(); };
+                    if (specialEmpty)  specialEmpty.oninput   = () => { binding!.specialDateEmptyText = specialEmpty.value; notify(); };
                     if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius = parseInt(daysBoxRadius.value, 10);   notify(); };
                     if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding      = parseInt(daysBoxPad.value, 10);      notify(); };
                     if (daysBoxHeight) daysBoxHeight.oninput = () => {

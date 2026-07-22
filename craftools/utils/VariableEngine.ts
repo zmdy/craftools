@@ -40,6 +40,10 @@ export interface VariableBinding {
     specialDateSeparator?: string;
     /** Shown when the resolved day has no matching entries. Default ''. */
     specialDateEmptyText?: string;
+    /** Caps how many matched titles are shown. Empty/undefined = show all. Applied AFTER specialDateRandomize's shuffle. */
+    specialDateLimit?: number | string;
+    /** Shuffles the matched titles (deterministically -- see _seededShuffle()) before specialDateLimit is applied, instead of always showing them in category/sort_order. */
+    specialDateRandomize?: boolean;
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -158,6 +162,8 @@ export class VariableEngine {
                 specialDateCategories: ['holiday', 'commemoration', 'saint', 'event'],
                 specialDateSeparator: ', ',
                 specialDateEmptyText: '',
+                specialDateLimit: '',
+                specialDateRandomize: false,
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
@@ -383,7 +389,7 @@ export class VariableEngine {
 
     private static _format(binding: VariableBinding, pick: unknown, ctx: Required<ResolveContext> & { now: Date }, apiCache: ApiCache = {}): string {
         switch (binding.type) {
-            case 'date':           return pick ? this._formatDate(pick as Date, binding, apiCache) : '';
+            case 'date':           return pick ? this._formatDate(pick as Date, binding, ctx, apiCache) : '';
             case 'sequenceNumber': return this._formatSequenceNumber(pick as number, binding);
             case 'sequenceText':   return pick == null ? '' : String(pick);
             case 'pageNumber':     return this._formatPageNumber(pick as number, binding, ctx);
@@ -415,7 +421,7 @@ export class VariableEngine {
         return d;
     }
 
-    private static _formatDate(d: Date, b: VariableBinding, apiCache: ApiCache = {}): string {
+    private static _formatDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache = {}): string {
         const format = b.format ?? 'DD/MM/YYYY';
         const pad = (v: number) => String(v).padStart(2, '0');
         const dd   = pad(d.getDate()), mm = pad(d.getMonth() + 1), yyyy = d.getFullYear(), yy = String(yyyy).slice(-2);
@@ -437,7 +443,7 @@ export class VariableEngine {
             case 'DAY_ONLY':         return `${d.getDate()}`;
             case 'MONTH_ONLY':         return mPt[d.getMonth()];
             case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
-            case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, apiCache);
+            case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -567,7 +573,7 @@ export class VariableEngine {
         event:         'eventos',
     };
 
-    private static _formatSpecialDate(d: Date, b: VariableBinding, apiCache: ApiCache): string {
+    private static _formatSpecialDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
         const key   = `${d.getMonth() + 1}-${d.getDate()}`;
         const entry = apiCache.calendarDateByKey?.[key];
         const emptyText = b.specialDateEmptyText ?? '';
@@ -580,7 +586,7 @@ export class VariableEngine {
         // here would treat both the same and silently ignore the user
         // having cleared every checkbox.
         const categories = b.specialDateCategories ?? ['holiday', 'commemoration', 'saint', 'event'];
-        const titles: string[] = [];
+        let titles: string[] = [];
         categories.forEach(cat => {
             const groupKey = this.SPECIAL_DATE_GROUP_KEYS[cat];
             if (!groupKey) return;
@@ -588,8 +594,40 @@ export class VariableEngine {
             (items ?? []).forEach(item => { if (item?.title) titles.push(item.title); });
         });
 
+        if (b.specialDateRandomize) {
+            // Seeded by the resolved month/day + repetition index, NOT
+            // Math.random() -- a live preview re-render or a repeated PDF
+            // export must keep showing the exact same "random" order for
+            // the exact same date/repetition (same reasoning as every other
+            // 'random' mode in this file, e.g. _pseudoRandomIndex()), while
+            // still varying across different dates and across repetitions
+            // that happen to land on the same fixed date (interval: 'none').
+            const seed = (ctx.repetitionIndex + 1) * 1000003 + d.getMonth() * 31 + d.getDate();
+            titles = this._seededShuffle(titles, seed);
+        }
+
+        const limit = parseInt(String(b.specialDateLimit ?? ''), 10);
+        if (!isNaN(limit) && limit > 0) titles = titles.slice(0, limit);
+
         if (!titles.length) return emptyText;
         return titles.join(b.specialDateSeparator ?? ', ');
+    }
+
+    /** Deterministic Fisher-Yates shuffle (mulberry32 PRNG) -- same seed always produces the same order. */
+    private static _seededShuffle<T>(arr: T[], seed: number): T[] {
+        const out = arr.slice();
+        let s = seed >>> 0;
+        const next = (): number => {
+            s = (s + 0x6D2B79F5) | 0;
+            let t = Math.imul(s ^ (s >>> 15), 1 | s);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        for (let i = out.length - 1; i > 0; i--) {
+            const j = Math.floor(next() * (i + 1));
+            [out[i], out[j]] = [out[j], out[i]];
+        }
+        return out;
     }
 
     // ── sequenceNumber ────────────────────────────────────────────────────────
