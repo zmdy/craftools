@@ -24,7 +24,7 @@
  * plain object stringifies to the same "[object Object]", which would
  * silently stop this field from ever refreshing again for the same element
  * (e.g. after the paste-style bar overwrites its color). Consumers
- * (TextTool.ts, TextoCurvoTool.ts) JSON.parse() it in _applyProperty() and
+ * (TextTool.ts, CurvedTextTool.ts) JSON.parse() it in _applyProperty() and
  * JSON.stringify() it back in _syncFromDOM().
  */
 

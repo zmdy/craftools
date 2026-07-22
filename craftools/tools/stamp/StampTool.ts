@@ -106,7 +106,7 @@ export class StampTool extends BaseTool {
     const colorPaint = svgPaintFromValue(normalizeValue(color), `cb-color-${uid}`);
     const paint = colorPaint.paint;
 
-    // Arc paths (see TextoCurvoTool.ts for the geometry proof):
+    // Arc paths (see CurvedTextTool.ts for the geometry proof):
     //   Top arc (CW, sweep=1):  M left A r r 0 0,1 right -> outside top, L->R
     //   Bot arc (CCW, sweep=0): M left A r r 0 0,0 right -> outside bottom, L->R
     const outerTopPath = `M ${cx - outerTextR},${cy} A ${outerTextR},${outerTextR} 0 0,1 ${cx + outerTextR},${cy}`;

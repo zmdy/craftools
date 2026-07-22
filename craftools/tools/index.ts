@@ -31,7 +31,7 @@ export { QRCodeTool }          from './qrcode/QRCodeTool';
 export { BarcodeTool }         from './barcode/BarcodeTool';
 
 // ── Text effects ──────────────────────────────────────────────────────────────
-export { TextoCurvoTool }      from './textocurvo/TextoCurvoTool';
+export { CurvedTextTool }      from './curvedtext/CurvedTextTool';
 export { StampTool }           from './stamp/StampTool';
 
 // ── Calendar ──────────────────────────────────────────────────────────────────

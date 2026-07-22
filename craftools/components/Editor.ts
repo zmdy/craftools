@@ -70,7 +70,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   qrcode:           () => import('../tools/qrcode/QRCodeTool.js'),
   barcode:          () => import('../tools/barcode/BarcodeTool.js'),
   minicalendario:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
-  textocurvo:       () => import('../tools/textocurvo/TextoCurvoTool.js'),
+  curvedtext:       () => import('../tools/curvedtext/CurvedTextTool.js'),
   stamp:            () => import('../tools/stamp/StampTool.js'),
   paper:            () => import('../tools/paper/PaperTool.js'),
   conteudovariavel: () => import('../tools/variablecontent/VariableContentTool.js'),
@@ -358,7 +358,7 @@ export class Craftools_Editor extends HTMLElement {
     // cloneNode() only copies DOM attributes/children. Tool-specific state
     // kept as a plain JS expando on the element instance (not a DOM
     // attribute) is silently dropped otherwise -- e.g. PaperTool.ts/
-    // ShapeTool.ts/IconTool.ts/StampTool.ts/TextoCurvoTool.ts/
+    // ShapeTool.ts/IconTool.ts/StampTool.ts/CurvedTextTool.ts/
     // MiniCalendarTool.ts/EmojiKitchenTool.ts all set `el._craftoolsMeta`
     // directly, and TextTool.ts's autoFit toggle lives in
     // `_craftoolsAutoResize` the same way -- without this, pasting any of
@@ -616,7 +616,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendario',
-      'emojikitchen','emoji','shape','conteudovariavel','textocurvo','stamp','icone',
+      'emojikitchen','emoji','shape','conteudovariavel','curvedtext','stamp','icone',
     ]);
 
     toolBtns.forEach(btn => {
@@ -677,7 +677,7 @@ export class Craftools_Editor extends HTMLElement {
           minicalendario:  () => import('../tools/minicalendar/MiniCalendarTool.js'),
           emojikitchen:    () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
           conteudovariavel:() => import('../tools/variablecontent/VariableContentTool.js'),
-          textocurvo:      () => import('../tools/textocurvo/TextoCurvoTool.js'),
+          curvedtext:      () => import('../tools/curvedtext/CurvedTextTool.js'),
           stamp:           () => import('../tools/stamp/StampTool.js'),
           titulo:          () => import('../tools/text/TextTool.js'),
           paragrafo:       () => import('../tools/text/TextTool.js'),
@@ -686,7 +686,7 @@ export class Craftools_Editor extends HTMLElement {
         const offsets: Record<string, [number, number]> = {
           imagem: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendario: [-95,-105], emojikitchen: [-80,-80],
-          conteudovariavel: [-110,-25], textocurvo: [-80,-80], stamp: [-80,-80],
+          conteudovariavel: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
           titulo: [-100,-30], paragrafo: [-100,-30],
         };
 
@@ -760,7 +760,7 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','agenda','calendario','album','fatiador','textocurvo','stamp',
+        'gerador','agenda','calendario','album','fatiador','curvedtext','stamp',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -777,13 +777,13 @@ export class Craftools_Editor extends HTMLElement {
             return;
           }
 
-          // textocurvo / stamp: create element directly on the active page
-          if (tool === 'textocurvo') {
+          // curvedtext / stamp: create element directly on the active page
+          if (tool === 'curvedtext') {
             if (isMobile()) return;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const m: any = await import('../tools/textocurvo/TextoCurvoTool.js');
+            const m: any = await import('../tools/curvedtext/CurvedTextTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = m.TextoCurvoTool.createElement('textocurvo', this); targetPage.appendChild(el); closeSidebar(); }
+            if (targetPage) { const el = m.CurvedTextTool.createElement('curvedtext', this); targetPage.appendChild(el); closeSidebar(); }
             return;
           }
           if (tool === 'stamp') {
