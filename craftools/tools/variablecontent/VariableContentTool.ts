@@ -159,7 +159,7 @@ export class VariableContentTool extends BaseTool {
             textEl.innerHTML = val
               ? `<img src="${VariableContentTool._escAttr(val)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
               : '—';
-          } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && binding.format === 'CAIXA_DIAS')) {
+          } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && binding.format === 'DAYS_BOX')) {
             // The value here is already full HTML. 'white-space: pre-wrap'
             // (needed to preserve line breaks for typed text) would make the
             // browser render all that internal whitespace as visible space,

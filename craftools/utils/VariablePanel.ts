@@ -151,10 +151,10 @@ export class VariablePanel {
     private static _dateFormats(): [string, string][] {
         return [
             ['DD/MM/YYYY','DDMMYYYY'],['DD/MM/YY','DDMMYY'],['DD/MM','DDMM'],['MM/YYYY','MMYYYY'],
-            ['YYYY-MM-DD','ISO'],['DIA_MES_EXTENSO','DiaMesExtenso'],['DIA_MES_ANO_EXTENSO','DiaMesAnoExtenso'],
-            ['DIA_SEMANA','DiaSemana'],['DIA_SEMANA_ABREV','DiaSemanaAbrev'],['DIA_SEMANA_DATA','DiaSemanaData'],
-            ['CAIXA_DIAS','CaixaDias'],['DIA_APENAS','DiaApenas'],['MES_APENAS','MesApenas'],
-            ['PERSONALIZADO','Personalizado'],
+            ['YYYY-MM-DD','ISO'],['DAY_MONTH_LONG','DayMonthLong'],['DAY_MONTH_YEAR_LONG','DayMonthYearLong'],
+            ['WEEKDAY','Weekday'],['WEEKDAY_SHORT','WeekdayShort'],['WEEKDAY_DATE','WeekdayDate'],
+            ['DAYS_BOX','DaysBox'],['DAY_ONLY','DayOnly'],['MONTH_ONLY','MonthOnly'],
+            ['CUSTOM','Custom'],
         ];
     }
 
@@ -189,7 +189,7 @@ export class VariablePanel {
                 </select>
             </div>
             
-            <div id="var-date-daysbox-options" style="display: ${b.format === 'CAIXA_DIAS' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-daysbox-options" style="display: ${b.format === 'DAYS_BOX' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
                     <div id="var-date-daysbox-color-picker"></div>
@@ -235,7 +235,7 @@ export class VariablePanel {
                 </label>
             </div>
 
-            <div id="var-date-custom-options" style="display: ${b.format === 'PERSONALIZADO' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-custom-options" style="display: ${b.format === 'CUSTOM' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div style="font-size:11px; color:var(--text-muted); line-height:1.6; margin-bottom:8px;">
                     ${I18n.t('variablePanel.dateCustomLegend')}
                 </div>
@@ -481,8 +481,8 @@ export class VariablePanel {
                     previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
                 } else if (binding!.type === 'miniCalendar' && val) {
                     previewValue.innerHTML = `<div style="width:120px; height:135px; margin:0 auto;">${val}</div>`;
-                } else if (binding!.type === 'date' && binding!.format === 'CAIXA_DIAS' && val) {
-                    // _formatDate()'s CAIXA_DIAS case returns real markup (a
+                } else if (binding!.type === 'date' && binding!.format === 'DAYS_BOX' && val) {
+                    // _formatDate()'s DAYS_BOX case returns real markup (a
                     // row of day-letter boxes), not typed text -- was falling
                     // into the plain-text branch below, which showed the
                     // literal "<div style=...>S</div>..." tags as text
@@ -537,8 +537,8 @@ export class VariablePanel {
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
                     if (formatSel)   formatSel.onchange    = () => {
                         binding!.format = formatSel.value;
-                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'CAIXA_DIAS'    ? 'block' : 'none';
-                        if (customOpts)  customOpts.style.display  = binding!.format === 'PERSONALIZADO' ? 'block' : 'none';
+                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
+                        if (customOpts)  customOpts.style.display  = binding!.format === 'CUSTOM' ? 'block' : 'none';
                         notify();
                     };
                     if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius = parseInt(daysBoxRadius.value, 10);   notify(); };
@@ -560,7 +560,7 @@ export class VariablePanel {
                     // swatches + custom pick), replacing what used to be a
                     // bare native <input type="color">. Solid-only: a
                     // gradient on a ~1.5em letter box wasn't requested and
-                    // VariableEngine's CAIXA_DIAS renderer only ever applies
+                    // VariableEngine's DAYS_BOX renderer only ever applies
                     // these as plain `background-color`/`border-color`
                     // values, not a `background`/`border-image` gradient.
                     if (daysBoxColorEl) {

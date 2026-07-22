@@ -27,7 +27,7 @@ export interface VariableBinding {
     daysBoxBorderColor?:    string;
     daysBoxBorderStyle?:    string;
     daysBoxBorderWidth?:    number | string;
-    /** Token pattern used only when format === 'PERSONALIZADO' (e.g. "dd/mm/yyyy"). See _formatCustomDate(). */
+    /** Token pattern used only when format === 'CUSTOM' (e.g. "dd/mm/yyyy"). See _formatCustomDate(). */
     customFormat?: string;
     // sequenceNumber
     start?:        number | string;
@@ -359,15 +359,15 @@ export class VariableEngine {
             case 'DD/MM':              return `${dd}/${mm}`;
             case 'MM/YYYY':            return `${mm}/${yyyy}`;
             case 'YYYY-MM-DD':         return `${yyyy}-${mm}-${dd}`;
-            case 'DIA_MES_EXTENSO':    return `${d.getDate()} de ${mPt[d.getMonth()]}`;
-            case 'DIA_MES_ANO_EXTENSO':return `${d.getDate()} de ${mPt[d.getMonth()]} de ${yyyy}`;
-            case 'DIA_SEMANA':         return wPt[d.getDay()];
-            case 'DIA_SEMANA_ABREV':   return wPtAbrev[d.getDay()];
-            case 'DIA_SEMANA_DATA':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
-            case 'DIA_APENAS':         return `${d.getDate()}`;
-            case 'MES_APENAS':         return mPt[d.getMonth()];
-            case 'PERSONALIZADO':      return this._formatCustomDate(d, b.customFormat ?? '');
-            case 'CAIXA_DIAS': {
+            case 'DAY_MONTH_LONG':    return `${d.getDate()} de ${mPt[d.getMonth()]}`;
+            case 'DAY_MONTH_YEAR_LONG':return `${d.getDate()} de ${mPt[d.getMonth()]} de ${yyyy}`;
+            case 'WEEKDAY':         return wPt[d.getDay()];
+            case 'WEEKDAY_SHORT':   return wPtAbrev[d.getDay()];
+            case 'WEEKDAY_DATE':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
+            case 'DAY_ONLY':         return `${d.getDate()}`;
+            case 'MONTH_ONLY':         return mPt[d.getMonth()];
+            case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
+            case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
                 const padding  = b.daysBoxPadding !== undefined ? String(b.daysBoxPadding) : '4';
@@ -423,7 +423,7 @@ export class VariableEngine {
     }
 
     /**
-     * Token-based custom date format (format === 'PERSONALIZADO'). A token
+     * Token-based custom date format (format === 'CUSTOM'). A token
      * is a MAXIMAL run of the same letter among d/m/y/w (matched via
      * /d+|m+|y+|w+/gi, case-insensitive) -- e.g. "yy" is one 2-letter run,
      * never two separate single-'y' matches (an earlier version matched
