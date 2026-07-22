@@ -125,7 +125,7 @@ export class PageTool {
         pageEl.appendChild(el);
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
       } else if ([
-        'titulo', 'paragrafo', 'image', 'qrcode', 'barcode',
+        'title', 'paragraph', 'image', 'qrcode', 'barcode',
         'minicalendar', 'emojikitchen', 'variablecontent',
       ].includes(toolType)) {
         const pRect  = pageEl.getBoundingClientRect();
@@ -202,7 +202,7 @@ export class PageTool {
           const mod = await import('../variablecontent/VariableContentTool.js') as AnyMod;
           el = mod['VariableContentTool'].createElement(toolType, editor) as HTMLElement;
         } else {
-          // titulo, paragrafo (default text tool)
+          // title, paragraph (default text tool)
           const mod = await import('../text/TextTool.js') as AnyMod;
           el = mod['TextTool'].createElement(toolType, editor) as HTMLElement;
         }

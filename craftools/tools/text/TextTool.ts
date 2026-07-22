@@ -1,7 +1,7 @@
 /**
  * TextTool.ts — Schema-based TypeScript migration of TextTool.
  *
- * Handles both 'titulo' (heading) and 'paragrafo' (paragraph) element types.
+ * Handles both 'title' (heading) and 'paragraph' (paragraph) element types.
  * The DOM manipulation logic remains in TextTool.js for backward compat with
  * the existing Editor.js. This file adds:
  *   - getPropertySchema()  → declarative field definitions
@@ -47,7 +47,7 @@ const AUTOFIT_RELEVANT_KEYS = new Set([
 export class TextTool extends BaseTool {
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="titulo|paragrafo">`
+   * Builds a fresh `<craftools-element data-craftool="title|paragraph">`
    * with a contenteditable heading/paragraph inside. Recovered from the
    * pre-migration TextTool.js (deleted by the "Purge legacy JS" commit
    * without this logic being ported) — the previous `createElement()` here
@@ -59,9 +59,9 @@ export class TextTool extends BaseTool {
     let tag = 'p', size = 16, weight = 400, w = 200, h = 40;
     const text = 'Editar texto...';
 
-    if (type === 'titulo') {
+    if (type === 'title') {
       tag = 'h1'; size = 48; weight = 700; w = 300; h = 70;
-    } else if (type === 'paragrafo') {
+    } else if (type === 'paragraph') {
       tag = 'p'; size = 16; weight = 400; w = 200; h = 40;
     }
 
@@ -379,10 +379,10 @@ export class TextTool extends BaseTool {
 
 // ── Self-registration ─────────────────────────────────────────────────────────
 
-TextTool.registeredKeys = ['titulo', 'paragrafo'];
+TextTool.registeredKeys = ['title', 'paragraph'];
 
 ToolRegistry.register({
-  key:             'titulo',
+  key:             'title',
   label:           'editor.toolTitle',
   icon:            'title',
   tool:            TextTool,
@@ -392,7 +392,7 @@ ToolRegistry.register({
 });
 
 ToolRegistry.register({
-  key:             'paragrafo',
+  key:             'paragraph',
   label:           'editor.text',
   icon:            'notes',
   tool:            TextTool,

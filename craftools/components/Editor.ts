@@ -60,8 +60,8 @@ interface PositionedElement extends HTMLElement {
 // craftools-element-select handler below to import a tool's module
 // on-demand the first time one of its elements is selected in this session.
 const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
-  titulo:           () => import('../tools/text/TextTool.js'),
-  paragrafo:        () => import('../tools/text/TextTool.js'),
+  title:            () => import('../tools/text/TextTool.js'),
+  paragraph:        () => import('../tools/text/TextTool.js'),
   image:           () => import('../tools/image/ImageTool.js'),
   shape:            () => import('../tools/shape/ShapeTool.js'),
   icon:             () => import('../tools/icon/IconTool.js'),
@@ -615,7 +615,7 @@ export class Craftools_Editor extends HTMLElement {
 
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
-      'titulo','paragrafo','image','album','qrcode','barcode','minicalendar',
+      'title','paragraph','image','album','qrcode','barcode','minicalendar',
       'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon',
     ]);
 
@@ -679,15 +679,15 @@ export class Craftools_Editor extends HTMLElement {
           variablecontent:() => import('../tools/variablecontent/VariableContentTool.js'),
           curvedtext:      () => import('../tools/curvedtext/CurvedTextTool.js'),
           stamp:           () => import('../tools/stamp/StampTool.js'),
-          titulo:          () => import('../tools/text/TextTool.js'),
-          paragrafo:       () => import('../tools/text/TextTool.js'),
+          title:           () => import('../tools/text/TextTool.js'),
+          paragraph:       () => import('../tools/text/TextTool.js'),
         };
 
         const offsets: Record<string, [number, number]> = {
           image: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendar: [-95,-105], emojikitchen: [-80,-80],
           variablecontent: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
-          titulo: [-100,-30], paragrafo: [-100,-30],
+          title: [-100,-30], paragraph: [-100,-30],
         };
 
         const loader = MODULE_MAP[tool];

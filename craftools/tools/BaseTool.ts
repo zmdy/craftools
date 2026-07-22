@@ -576,7 +576,7 @@ export abstract class BaseTool {
   // ── ToolRegistry integration ────────────────────────────────────────────────
 
   /**
-   * The canvas element keys this tool handles (e.g. ['titulo', 'paragrafo']).
+   * The canvas element keys this tool handles (e.g. ['title', 'paragraph']).
    *
    * Set by the tool's ToolRegistry.register() calls at the end of its file.
    * Used by CraftoolsConfig to resolve which registry entries to activate
