@@ -25,8 +25,10 @@
       "@components/*": ["./craftools/components/*"]
     },
 
-    // Node types for vite.config.ts (path, url, dirname, etc.)
-    "types": ["node"],
+    // Node types for vite.config.ts (path, url, dirname, etc.); vite/client
+    // brings in Vite's ambient module declarations (import 'x.css', etc.) --
+    // needed for the vendored Bootstrap CSS side-effect import in main.ts.
+    "types": ["node", "vite/client"],
 
     // Interop
     "esModuleInterop": true,

@@ -112,5 +112,5 @@
 - [ ] Photo upload link tool: external photo submission flow (polaroid, mini-polaroid, 7×5 styles with overlays and backgrounds; email integration)
 - [ ] API subscription management UI (user-facing token/plan dashboard)
 - [ ] PostgreSQL migration path for craftools_api (swap SQLite DSN in db.php when concurrent write load demands it)
-- [ ] Replace Bootstrap CDN with vendored/bundled assets for full offline capability
+- [x] Replace Bootstrap CDN with vendored/bundled assets for full offline capability — done: Bootstrap, SortableJS, and html2canvas are now real npm deps bundled by Vite (see Architecture_Overview.md § Third-Party Dependencies)
 - [ ] Lazy-load + virtualised icon packs (Lucide, user-uploaded SVG sets)

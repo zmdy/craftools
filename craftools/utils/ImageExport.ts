@@ -5,6 +5,11 @@
 import { Notify } from './Notify.js';
 import { I18n }   from '../settings/Translations.js';
 import './ImageExport_Translations.js';
+// Vendored via npm (previously loaded on first use from a cdnjs CDN <script>
+// injected at runtime, see _loadHtml2Canvas() below pre-migration) -- Vite
+// bundles it into dist/assets/*.js on build, so PNG/JPG export no longer
+// depends on a third-party network request the first time it's used.
+import html2canvas from 'html2canvas';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,23 +24,6 @@ interface Resolution {
     label: string;
     hint:  string;
 }
-
-interface Html2CanvasOptions {
-    scale?:           number;
-    useCORS?:         boolean;
-    allowTaint?:      boolean;
-    backgroundColor?: string | null;
-    logging?:         boolean;
-    ignoreElements?:  (el: Element) => boolean;
-}
-
-declare global {
-    interface Window {
-        html2canvas?: (el: HTMLElement, opts?: Html2CanvasOptions) => Promise<HTMLCanvasElement>;
-    }
-}
-
-const H2C_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 
 function _resolutions(): Resolution[] {
     return [
@@ -65,12 +53,11 @@ export class ImageExport {
         );
 
         try {
-            const h2c = await this._loadHtml2Canvas();
             this._hideUI(editor);
             await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
             for (let i = 0; i < pages.length; i++) {
-                const canvas = await h2c(pages[i], {
+                const canvas = await html2canvas(pages[i], {
                     scale:           opts.scale,
                     useCORS:         true,
                     allowTaint:      true,
@@ -207,25 +194,6 @@ export class ImageExport {
             overlay.addEventListener('click', e => { if (e.target === overlay) close(null); });
             overlay.querySelector<HTMLElement>('#ie-cancel')!.addEventListener('click',  () => close(null));
             overlay.querySelector<HTMLElement>('#ie-confirm')!.addEventListener('click', () => close({ format: selectedFormat, scale: selectedScale }));
-        });
-    }
-
-    // ── html2canvas loader ────────────────────────────────────────────────────
-
-    private static _loadHtml2Canvas(): Promise<NonNullable<Window['html2canvas']>> {
-        if (window.html2canvas) return Promise.resolve(window.html2canvas);
-        return new Promise((resolve, reject) => {
-            const existing = document.querySelector<HTMLScriptElement>(`script[src="${H2C_CDN}"]`);
-            if (existing) {
-                existing.addEventListener('load',  () => resolve(window.html2canvas!));
-                existing.addEventListener('error', reject);
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = H2C_CDN;
-            script.addEventListener('load',  () => resolve(window.html2canvas!));
-            script.addEventListener('error', () => reject(new Error('Falha ao carregar html2canvas.')));
-            document.head.appendChild(script);
         });
     }
 

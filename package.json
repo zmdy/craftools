@@ -10,8 +10,14 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "bootstrap": "^5.3.8",
+    "html2canvas": "^1.4.1",
+    "sortablejs": "^1.15.7"
+  },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/sortablejs": "^1.15.9",
     "typescript": "^7.0.2",
     "vite": "^8.1.4"
   }

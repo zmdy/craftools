@@ -19,6 +19,25 @@
  * Craftools.ts can call ToolRegistry.all() without explicit imports.
  */
 
+// ── Vendored third-party libs (side-effects only) ──────────────────────────────
+// Previously loaded via a CDN <script> tag in index.html (jsDelivr) plus
+// runtime-injected <script> tags in LayoutGrid.ts (SortableJS) and
+// ImageExport.ts (html2canvas). Now real npm deps, imported here so Vite
+// bundles them into dist/assets/*.js on every build -- no third-party network
+// round-trip at runtime, works fully offline. Same pattern already used by
+// the local vendor/qrcode-generator/*.mjs modules (see QrCode.ts).
+// Bootstrap's CSS stays a plain <link> in index.html (now pointing at the
+// local node_modules copy instead of the CDN) rather than an import here --
+// its cascade position relative to vendor/pwa-template/style.css and
+// craftools/craftools.css is load-bearing (see the CSS-order comment in
+// index.html); importing it from JS would let Vite's bundler reorder it
+// relative to those two <link> tags and silently reintroduce the "app
+// reverts to the template's default blue" bug that comment describes.
+// Bootstrap's JS bundle has no such ordering constraint (only auto-inits via
+// data-bs-* attributes, none currently used in the app) so it's imported
+// normally here.
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 // ── Tool registrations (side-effects only) ────────────────────────────────────
 import './craftools/tools/index';
 

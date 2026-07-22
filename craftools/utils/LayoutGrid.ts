@@ -3,14 +3,11 @@
  */
 
 import type { GridTemplate, GridTemplateSlot } from './GridSizes.js';
-
-// Sortable global declaration
-declare global {
-  interface Window {
-      Sortable: any;
-  }
-  const Sortable: any;
-}
+// Vendored via npm (previously loaded at runtime from a jsDelivr CDN
+// <script> injected below) -- Vite bundles it into dist/assets/*.js on
+// build, so grid drag-reorder no longer depends on a third-party network
+// request the first time it's used.
+import Sortable from 'sortablejs';
 
 export interface PageSizeDef {
   size: string;
@@ -59,15 +56,6 @@ export class Craftools_LayoutGrid {
   }
 
   async render(items: any[], renderCellContentCallback?: (container: Element | null, item: any, idx: number, slotDef: any) => void): Promise<void> {
-      if (!window.Sortable) {
-          await new Promise<void>(resolve => {
-              let s = document.createElement('script');
-              s.src = "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js";
-              s.onload = () => resolve();
-              document.head.appendChild(s);
-          });
-      }
-
       const unit = this.pageSize.sizeUnit || 'px';
 
       const pageSizeParts = this.pageSize.size.split(',').map(Number);
