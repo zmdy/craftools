@@ -1,6 +1,6 @@
 import { I18n } from "../../settings/Translations.js";
 
-I18n.addTranslations('textoCurvo', {
+I18n.addTranslations('curvedTextTool', {
     "pt-br": {
         panelTitle:    "Texto em Curva",
         text:          "Texto",
