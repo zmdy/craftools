@@ -83,13 +83,13 @@ export interface LinkCtx {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const MINI_CALENDAR_PARTS: Record<string, { header: boolean; week: boolean; days: boolean; holidaysBox: boolean; moonBox: boolean }> = {
-    diasSemana:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
-    calendario:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
+    weekdays:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
+    calendar:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
     header:      { header: true,  week: false, days: false, holidaysBox: false, moonBox: false },
     holidaysBox: { header: false, week: false, days: false, holidaysBox: true,  moonBox: false },
     moonBox:     { header: false, week: false, days: false, holidaysBox: false, moonBox: true  },
-    completo1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
-    completo2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
+    complete1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
+    complete2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
 };
 
 const DEFAULT_EMOJI_POOL = [
@@ -124,7 +124,7 @@ export class VariableEngine {
             case 'emoji':          return { type, values: '', mode: 'sequential', linkedTo: '' };
             case 'apiPhrase':      return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
             case 'emojiKitchen':   return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
-            case 'miniCalendar':   return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'completo1', linkedTo: '' };
+            case 'miniCalendar':   return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'complete1', linkedTo: '' };
             default:               return null;
         }
     }
@@ -639,12 +639,12 @@ export class VariableEngine {
             while (month > 12) { month -= 12; year += 1; }
             while (month < 1)  { month += 12; year -= 1; }
         }
-        const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'completo1';
+        const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'complete1';
         return { year, month, displayMode };
     }
 
     private static _formatMiniCalendar(pick: { year: number; month: number; displayMode: string }): string {
-        const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.completo1;
+        const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.complete1;
         // CalendarRenderer stays JS — any type here is acceptable
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts }) as string;

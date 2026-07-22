@@ -144,13 +144,13 @@ export const Translations: Record<string, TranslationDict> = {
             formatEan13: "EAN-13 (produto, 12-13 dígitos)"
         },
         miniCalendarTool: {
-            modeDiasSemana: "Apenas tabela de dias (com feriados marcados)",
-            modeCalendario: "Calendário (cabeçalho + tabela de dias)",
+            modeWeekdays: "Apenas tabela de dias (com feriados marcados)",
+            modeCalendar: "Calendário (cabeçalho + tabela de dias)",
             modeHeader: "Apenas cabeçalho (mês e ano)",
             modeHolidaysBox: "Apenas caixa de feriados",
             modeMoonBox: "Apenas caixa de fases da lua",
-            modeCompleto1: "Calendário com feriados",
-            modeCompleto2: "Calendário completo com fases da lua"
+            modeComplete1: "Calendário com feriados",
+            modeComplete2: "Calendário completo com fases da lua"
         },
         qrTool: {
             spotifyBarColor: "Cor do Código"
@@ -312,13 +312,13 @@ export const Translations: Record<string, TranslationDict> = {
         textTool: { typography: "Typography", color: "Color" },
         barcodeTool: { format: "Format", formatCode39: "Code 39 (text/numbers)", formatEan13: "EAN-13 (product, 12-13 digits)" },
         miniCalendarTool: {
-            modeDiasSemana: "Days table only (with holidays marked)",
-            modeCalendario: "Calendar (header + days table)",
+            modeWeekdays: "Days table only (with holidays marked)",
+            modeCalendar: "Calendar (header + days table)",
             modeHeader: "Header only (month and year)",
             modeHolidaysBox: "Holidays box only",
             modeMoonBox: "Moon phases box only",
-            modeCompleto1: "Calendar with holidays",
-            modeCompleto2: "Full calendar with moon phases"
+            modeComplete1: "Calendar with holidays",
+            modeComplete2: "Full calendar with moon phases"
         },
         qrTool: { spotifyBarColor: "Code Color" },
         variablePanel: { title: "Variable Text" },
@@ -471,13 +471,13 @@ export const Translations: Record<string, TranslationDict> = {
         textTool: { typography: "Tipografía", color: "Color" },
         barcodeTool: { format: "Formato", formatCode39: "Code 39 (texto/números)", formatEan13: "EAN-13 (producto, 12-13 dígitos)" },
         miniCalendarTool: {
-            modeDiasSemana: "Solo tabla de días (con feriados marcados)",
-            modeCalendario: "Calendario (encabezado + tabla de días)",
+            modeWeekdays: "Solo tabla de días (con feriados marcados)",
+            modeCalendar: "Calendario (encabezado + tabla de días)",
             modeHeader: "Solo encabezado (mes y año)",
             modeHolidaysBox: "Solo caja de feriados",
             modeMoonBox: "Solo caja de fases de la luna",
-            modeCompleto1: "Calendario con feriados",
-            modeCompleto2: "Calendario completo con fases de la luna"
+            modeComplete1: "Calendario con feriados",
+            modeComplete2: "Calendario completo con fases de la luna"
         },
         qrTool: { spotifyBarColor: "Color del Código" },
         variablePanel: { title: "Texto Variable" },

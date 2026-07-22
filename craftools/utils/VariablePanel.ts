@@ -443,13 +443,13 @@ export class VariablePanel {
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarDisplayModeLabel')}</span>
                 <select id="var-minical-displaymode" class="craftools-select" style="width:100%;">
-                    <option value="diasSemana"  ${b.displayMode === 'diasSemana'  ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeDiasSemana')}</option>
-                    <option value="calendario"  ${b.displayMode === 'calendario'  ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCalendario')}</option>
+                    <option value="weekdays"    ${b.displayMode === 'weekdays'    ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeWeekdays')}</option>
+                    <option value="calendar"    ${b.displayMode === 'calendar'    ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCalendar')}</option>
                     <option value="header"      ${b.displayMode === 'header'      ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHeader')}</option>
                     <option value="holidaysBox" ${b.displayMode === 'holidaysBox' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHolidaysBox')}</option>
                     <option value="moonBox"     ${b.displayMode === 'moonBox'     ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeMoonBox')}</option>
-                    <option value="completo1"   ${b.displayMode === 'completo1'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCompleto1')}</option>
-                    <option value="completo2"   ${b.displayMode === 'completo2'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCompleto2')}</option>
+                    <option value="complete1"   ${b.displayMode === 'complete1'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete1')}</option>
+                    <option value="complete2"   ${b.displayMode === 'complete2'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete2')}</option>
                 </select>
             </div>
         `;

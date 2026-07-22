@@ -22,32 +22,32 @@ const getMeta = (el: HTMLElement): Partial<MiniCalendarMeta> =>
 // Must match MiniCalendarTool.js's real DISPLAY_MODES exactly (id + order) --
 // CalendarRenderer only knows how to render these 7 modes. The previous list
 // here ('mes'/'semana'/'mini'/'lista') didn't correspond to anything the
-// renderer implements (picking them silently fell back to 'completo1'), and
-// 5 real modes (diasSemana/calendario/header/holidaysBox/moonBox) were
+// renderer implements (picking them silently fell back to 'complete1'), and
+// 5 real modes (weekdays/calendar/header/holidaysBox/moonBox) were
 // missing entirely.
 // SelectField.options now supports an optional per-option i18nKey (see
 // types/PropertySchema.ts) -- these already exist in
 // MiniCalendarTool_Translations.ts (used by the legacy panel/VariablePanel's
 // miniCalendar config), just weren't wired up here yet.
 const DISPLAY_MODES = [
-  { value: 'diasSemana',  label: 'Days table only (with holidays marked)', i18nKey: 'miniCalendarTool.modeDiasSemana' },
-  { value: 'calendario',  label: 'Calendar (header + days table)',         i18nKey: 'miniCalendarTool.modeCalendario' },
+  { value: 'weekdays',  label: 'Days table only (with holidays marked)', i18nKey: 'miniCalendarTool.modeWeekdays' },
+  { value: 'calendar',  label: 'Calendar (header + days table)',         i18nKey: 'miniCalendarTool.modeCalendar' },
   { value: 'header',      label: 'Header only (month and year)',          i18nKey: 'miniCalendarTool.modeHeader' },
   { value: 'holidaysBox', label: 'Holidays box only',                     i18nKey: 'miniCalendarTool.modeHolidaysBox' },
   { value: 'moonBox',     label: 'Moon phases box only',                  i18nKey: 'miniCalendarTool.modeMoonBox' },
-  { value: 'completo1',   label: 'Calendar with holidays',                i18nKey: 'miniCalendarTool.modeCompleto1' },
-  { value: 'completo2',   label: 'Full calendar with moon phases',        i18nKey: 'miniCalendarTool.modeCompleto2' },
+  { value: 'complete1',   label: 'Calendar with holidays',                i18nKey: 'miniCalendarTool.modeComplete1' },
+  { value: 'complete2',   label: 'Full calendar with moon phases',        i18nKey: 'miniCalendarTool.modeComplete2' },
 ];
 
 // id -> CalendarRenderer's `parts` flags for that display mode.
 const DISPLAY_MODE_PARTS: Record<string, { header: boolean; week: boolean; days: boolean; holidaysBox: boolean; moonBox: boolean }> = {
-  diasSemana:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
-  calendario:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
+  weekdays:  { header: false, week: true,  days: true,  holidaysBox: false, moonBox: false },
+  calendar:  { header: true,  week: true,  days: true,  holidaysBox: false, moonBox: false },
   header:      { header: true,  week: false, days: false, holidaysBox: false, moonBox: false },
   holidaysBox: { header: false, week: false, days: false, holidaysBox: true,  moonBox: false },
   moonBox:     { header: false, week: false, days: false, holidaysBox: false, moonBox: true  },
-  completo1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
-  completo2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
+  complete1:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: false },
+  complete2:   { header: true,  week: true,  days: true,  holidaysBox: true,  moonBox: true  },
 };
 
 const now = new Date();
@@ -62,7 +62,7 @@ export class MiniCalendarTool extends BaseTool {
    */
   public static getDefaultMeta(): MiniCalendarMeta {
     return {
-      displayMode: 'completo1',
+      displayMode: 'complete1',
       year: now.getFullYear(),
       month: now.getMonth() + 1,
       theme: CalendarRenderer.defaultTheme(),
@@ -70,7 +70,7 @@ export class MiniCalendarTool extends BaseTool {
   }
 
   private static _currentParts(displayMode: string) {
-    return DISPLAY_MODE_PARTS[displayMode] ?? DISPLAY_MODE_PARTS.completo1;
+    return DISPLAY_MODE_PARTS[displayMode] ?? DISPLAY_MODE_PARTS.complete1;
   }
 
   private static _buildCard(meta: MiniCalendarMeta): HTMLElement {
@@ -151,7 +151,7 @@ export class MiniCalendarTool extends BaseTool {
     const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
-    if (!('displayMode' in existing)) patch.displayMode = meta.displayMode ?? 'completo1';
+    if (!('displayMode' in existing)) patch.displayMode = meta.displayMode ?? 'complete1';
     if (!('year'        in existing)) patch.year        = meta.year  ?? now.getFullYear();
     if (!('month'       in existing)) patch.month       = meta.month ?? (now.getMonth() + 1);
     // NOTE: these flattened theme.* colors don't map onto CalendarTheme's
