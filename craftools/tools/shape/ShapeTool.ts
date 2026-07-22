@@ -13,6 +13,7 @@ import { zIndexSection } from '../../utils/CommonSchema';
 import { ShapeGenerator, LINE_SHAPE_TYPES, type ShapeMeta } from '../../utils/ShapeGenerator';
 import {
   SHAPE_COLLECTIONS, isAssetShapeType, assetShapeTypeFor, assetIdFromShapeType, findShapeAsset,
+  loadAssetSvgText, recolorAssetSvgMarkup,
   type ShapeAsset,
 } from '../../utils/ShapeAssetLoader';
 import { I18n } from '../../settings/Translations.js';
@@ -30,6 +31,21 @@ const setMeta = (element: HTMLElement, patch: Partial<ShapeMeta>): ShapeMeta => 
   const el = element as HTMLElement & { _craftoolsMeta?: ShapeMeta };
   el._craftoolsMeta = { ...getMeta(element), ...patch };
   return el._craftoolsMeta;
+};
+
+// Per-element bookkeeping for asset shapes: which asset is currently loaded
+// (`_ctAssetId`) and its pristine, never-recolored SVG markup
+// (`_ctAssetSvgRaw`, populated once the fetch in _loadAndPaintAsset()
+// resolves). Recoloring always starts from this pristine copy rather than
+// the currently-painted DOM -- re-running recolorAssetSvgMarkup() against
+// markup that's already been recolored once would still work (it only ever
+// looks for "is this non-'none'", not "is this the original color"), but
+// keeping one clean source of truth avoids any accidental double-transform
+// drift if that assumption ever stops holding.
+type AssetTrackedElement = HTMLElement & {
+  _craftoolsMeta?: ShapeMeta;
+  _ctAssetId?: string;
+  _ctAssetSvgRaw?: string;
 };
 
 const SHAPE_LABEL_KEYS: Record<string, string> = {
@@ -152,7 +168,9 @@ export class ShapeTool extends BaseTool {
     el._craftoolsMeta = ShapeGenerator.defaultMeta(shapeType);
 
     if (isAssetShapeType(shapeType)) {
-      el.appendChild(ShapeTool._buildAssetImg(shapeType));
+      const assetId = assetIdFromShapeType(shapeType);
+      (el as AssetTrackedElement)._ctAssetId = assetId;
+      ShapeTool._loadAndPaintAsset(el, shapeType, assetId);
     } else {
       const svg = ShapeGenerator.buildSvgElement(el._craftoolsMeta);
       svg.style.userSelect = 'none';
@@ -164,32 +182,91 @@ export class ShapeTool extends BaseTool {
   }
 
   /**
-   * Builds the `<img>` used for asset-pack shapes (assets/shapes/<pack>/*.svg,
-   * enumerated by ShapeAssetLoader.ts) -- these are opaque, ready-made SVG
-   * files (Inkscape exports with their own embedded fill/stroke), not
-   * recolorable/regeneratable like ShapeGenerator's procedural shapes, so
-   * they're rendered as a plain image instead of inlined SVG markup.
+   * Builds the placeholder `<img>` shown for an asset-pack shape while its
+   * real SVG markup is being fetched (see _loadAndPaintAsset()) -- shows the
+   * file's native, unrecolored appearance immediately (same URL the picker
+   * thumbnails use, so it's very likely already cached by the browser) so
+   * the element is never blank, then gets swapped for the recolorable
+   * inlined `<svg>` once the fetch resolves.
    */
-  private static _buildAssetImg(shapeType: string): HTMLImageElement {
-    const asset: ShapeAsset | null = findShapeAsset(assetIdFromShapeType(shapeType));
+  private static _buildAssetPlaceholderImg(asset: ShapeAsset): HTMLImageElement {
     const img = document.createElement('img');
-    img.dataset.shapeAsset = '1';
-    img.src = asset?.url ?? '';
-    img.alt = asset?.name ?? '';
+    img.dataset.shapeAssetPlaceholder = '1';
+    img.src = asset.url;
+    img.alt = asset.name;
     img.draggable = false;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.display = 'block';
     img.style.userSelect = 'none';
     img.style.pointerEvents = 'none';
-    // Asset packs don't share ShapeGenerator's fixed 100x100 viewBox -- each
-    // file keeps its own native aspect ratio, so `object-fit: contain` avoids
-    // stretching/cropping when the element's box doesn't match the source
-    // SVG's proportions (same tradeoff the fixed-viewBox shapes deliberately
-    // avoid via preserveAspectRatio="none", but these files aren't ours to
-    // redraw to fit).
     img.style.objectFit = 'contain';
     return img;
+  }
+
+  /**
+   * Fetches an asset's raw SVG text (ShapeAssetLoader.ts's cached
+   * loadAssetSvgText()), recolors it for the element's CURRENT fillColor/
+   * strokeColor, and swaps it in for the placeholder `<img>`. Kicked off
+   * from both createElement() (new element) and _regenerate() (asset
+   * switched via "Change shape").
+   */
+  private static _loadAndPaintAsset(element: HTMLElement, shapeType: string, assetId: string): void {
+    const asset = findShapeAsset(assetId);
+    if (!asset) return;
+
+    element.appendChild(ShapeTool._buildAssetPlaceholderImg(asset));
+
+    loadAssetSvgText(asset.url).then(rawMarkup => {
+      const tracked = element as AssetTrackedElement;
+      // The element may have been deleted, or moved on to a different
+      // asset/shape entirely, while this fetch was in flight -- bail rather
+      // than resurrecting stale content onto it.
+      if (tracked._ctAssetId !== assetId || tracked._craftoolsMeta?.shapeType !== shapeType) return;
+      tracked._ctAssetSvgRaw = rawMarkup;
+      ShapeTool._paintAssetSvg(element, rawMarkup, tracked._craftoolsMeta!);
+    }).catch(() => {
+      // Network/parsing failure -- leave the <img> placeholder showing
+      // (still a valid, if unrecolored, rendering of the shape) rather than
+      // leaving the element blank.
+    });
+  }
+
+  /**
+   * Recolors `rawMarkup` for the given meta's fillColor/strokeColor and
+   * writes the result into `element`, replacing the placeholder `<img>`
+   * (first paint) or updating the existing asset `<svg>` in place (later
+   * Fill/Stroke edits -- same "keep the node, swap its content" contract
+   * _regenerate()'s procedural branch uses for its own <svg>).
+   */
+  private static _paintAssetSvg(element: HTMLElement, rawMarkup: string, meta: ShapeMeta): void {
+    const recolored = recolorAssetSvgMarkup(rawMarkup, meta.fillColor, meta.strokeColor);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = recolored;
+    const fresh = wrapper.firstElementChild as SVGElement | null;
+    if (!fresh) return;
+
+    fresh.dataset.shapeAsset = '1';
+    fresh.style.userSelect = 'none';
+    fresh.style.pointerEvents = 'none';
+    fresh.style.display = 'block';
+    fresh.style.width = '100%';
+    fresh.style.height = '100%';
+    // Asset packs don't share ShapeGenerator's fixed 100x100
+    // preserveAspectRatio="none" viewBox -- each file keeps its own native
+    // aspect ratio, so letterboxing (the SVG equivalent of object-fit:
+    // contain) avoids stretching/cropping when the element's box doesn't
+    // match the source SVG's proportions.
+    fresh.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    element.querySelector('img[data-shape-asset-placeholder]')?.remove();
+    const existing = element.querySelector<SVGElement>('svg[data-shape-asset]');
+    if (existing) {
+      existing.setAttribute('viewBox', fresh.getAttribute('viewBox') ?? existing.getAttribute('viewBox') ?? '');
+      existing.innerHTML = fresh.innerHTML;
+    } else {
+      element.appendChild(fresh);
+    }
   }
 
   /**
@@ -325,13 +402,27 @@ export class ShapeTool extends BaseTool {
     const state = PropertyRenderer._readState(element);
     const shapeType = String(state.shapeType ?? 'square');
 
-    // Asset-pack shapes (assets/shapes/<pack>/*.svg) are opaque, ready-made
-    // SVG files -- not procedurally generated, so none of ShapeGenerator's
-    // fill/stroke/shape-specific fields apply to them (there's no meta for
-    // ShapeGenerator to read). Only the fields every tool gets regardless of
-    // type (z-index) make sense here.
+    // Asset-pack shapes (assets/shapes/<pack>/*.svg) get a Fill/Stroke pair
+    // too (recolorAssetSvgMarkup() in ShapeAssetLoader.ts overrides whatever
+    // non-"none" fill/stroke each element in the source SVG already has),
+    // but none of ShapeGenerator's shape-specific fields (corner radius,
+    // sides, arm thickness, ...) apply -- there's no procedural meta for
+    // ShapeGenerator to read, and no strokeWidth field either, since the
+    // source file's own relative stroke widths are preserved rather than
+    // forced to one uniform value.
     if (isAssetShapeType(shapeType)) {
-      return [zIndexSection()] as PropertySchema;
+      return [
+        {
+          section: 'Fill & Stroke',
+          icon: 'format_shapes',
+          defaultOpen: true,
+          fields: [
+            { type: 'color-picker', key: 'fillColor',   label: 'Fill' },
+            { type: 'color-picker', key: 'strokeColor', label: 'Stroke' },
+          ],
+        },
+        zIndexSection(),
+      ] as PropertySchema;
     }
 
     const isLineShape = LINE_SHAPE_TYPES.includes(shapeType);
@@ -509,41 +600,50 @@ export class ShapeTool extends BaseTool {
    * and shape edits never touched the rendered SVG.
    */
   private static _regenerate(element: HTMLElement): void {
-    const meta = (element as HTMLElement & { _craftoolsMeta?: ShapeMeta })._craftoolsMeta;
+    const tracked = element as AssetTrackedElement;
+    const meta = tracked._craftoolsMeta;
     if (!meta) return;
 
     if (isAssetShapeType(meta.shapeType)) {
-      // Swapping INTO an asset shape (via "Change shape"): drop any
-      // procedural <svg> left over from the previous type first.
-      element.querySelector('svg')?.remove();
+      const assetId = assetIdFromShapeType(meta.shapeType!);
 
-      const asset = findShapeAsset(assetIdFromShapeType(meta.shapeType!));
-      let img = element.querySelector<HTMLImageElement>('img[data-shape-asset]');
-      if (!img) {
-        img = ShapeTool._buildAssetImg(meta.shapeType!);
-        element.appendChild(img);
-      } else {
-        // Same element, switched to a different asset within a pack (or a
-        // different pack) -- reuse the existing <img> node instead of
-        // rebuilding it, same "keep the node, swap its content" contract
-        // the procedural branch below uses for <svg>.
-        img.src = asset?.url ?? '';
-        img.alt = asset?.name ?? '';
+      if (tracked._ctAssetId === assetId && tracked._ctAssetSvgRaw) {
+        // Same asset already fetched (a Fill/Stroke edit, not a shape
+        // swap) -- repaint from the cached pristine markup, no network
+        // round-trip needed.
+        ShapeTool._paintAssetSvg(element, tracked._ctAssetSvgRaw, meta);
+        ShapeTool._triggerChange(element);
+        return;
       }
+
+      // First time this element shows an asset shape, or "Change shape"
+      // switched it to a different asset -- drop whatever was there
+      // (procedural <svg>, a different asset's <svg>, or a stale
+      // placeholder) and start a fresh fetch-and-paint cycle.
+      element.querySelector('svg:not([data-shape-asset])')?.remove();
+      element.querySelector('svg[data-shape-asset]')?.remove();
+      element.querySelector('img[data-shape-asset-placeholder]')?.remove();
+      tracked._ctAssetId = assetId;
+      delete tracked._ctAssetSvgRaw;
+      ShapeTool._loadAndPaintAsset(element, meta.shapeType!, assetId);
       ShapeTool._triggerChange(element);
       return;
     }
 
-    // Swapping OUT of an asset shape (via "Change shape"): drop the <img>
-    // left over from the previous type before building the procedural SVG.
-    element.querySelector<HTMLImageElement>('img[data-shape-asset]')?.remove();
+    // Swapping OUT of (or never having been) an asset shape -- clear the
+    // asset-tracking state and drop any asset-specific DOM nodes before
+    // building the procedural SVG.
+    delete tracked._ctAssetId;
+    delete tracked._ctAssetSvgRaw;
+    element.querySelector('svg[data-shape-asset]')?.remove();
+    element.querySelector('img[data-shape-asset-placeholder]')?.remove();
 
     const svgString = ShapeGenerator.buildSvgString(meta);
     const wrapper = document.createElement('div');
     wrapper.innerHTML = svgString;
     const fresh = wrapper.firstElementChild as SVGElement;
 
-    const svg = element.querySelector<SVGElement>('svg');
+    const svg = element.querySelector<SVGElement>('svg:not([data-shape-asset])');
     if (svg) {
       // Keeps the same <svg> node (preserves border/radius applied via CommonSchema)
       svg.setAttribute('viewBox', fresh.getAttribute('viewBox') ?? '');
