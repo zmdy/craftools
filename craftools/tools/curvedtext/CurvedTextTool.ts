@@ -1,5 +1,5 @@
 /**
- * TextoCurvoTool.ts — TextoCurvoTool stores state in dataset.ctState (and
+ * CurvedTextTool.ts — CurvedTextTool stores state in dataset.ctState (and
  * mirrored onto element._ctState), so _syncFromDOM is a no-op.
  * _applyProperty persists the change and re-renders the SVG in place.
  */
@@ -11,7 +11,7 @@ import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
 
-interface TextoCurvoState {
+interface CurvedTextState {
   text:          string;
   mode:          string; // 'arc-top' | 'arc-bottom' | 'full-circle'
   radius:        number;
@@ -35,7 +35,7 @@ interface TextoCurvoState {
   italic:        boolean;
 }
 
-const DEFAULT_STATE = (): TextoCurvoState => ({
+const DEFAULT_STATE = (): CurvedTextState => ({
   text:          'MINHA EMPRESA',
   mode:          'arc-top',
   radius:        70,
@@ -56,7 +56,7 @@ const escXml = (s: unknown): string =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-export class TextoCurvoTool extends BaseTool {
+export class CurvedTextTool extends BaseTool {
 
   // _syncFromDOM: no-op -- dataset.ctState already populated by createElement()
 
@@ -107,7 +107,7 @@ export class TextoCurvoTool extends BaseTool {
     return `<linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stopsXml}</linearGradient>`;
   }
 
-  public static buildSVG(state: TextoCurvoState, uid: string): string {
+  public static buildSVG(state: CurvedTextState, uid: string): string {
     const {
       text, mode, radius, fontSize, fontFamily,
       letterSpacing, startOffset, bold, italic,
@@ -119,9 +119,9 @@ export class TextoCurvoTool extends BaseTool {
     const fontWeight = bold   ? 'bold'   : 'normal';
     const fontStyle  = italic ? 'italic' : 'normal';
 
-    const gradDef  = TextoCurvoTool._gradientDefSVG(colorValue, gradId);
+    const gradDef  = CurvedTextTool._gradientDefSVG(colorValue, gradId);
     const fillAttr = colorValue.mode === 'gradient' ? `fill="url(#${gradId})"` : `fill="${colorValue.solid}"`;
-    const pathD = TextoCurvoTool._pathD(mode, radius, startOffset);
+    const pathD = CurvedTextTool._pathD(mode, radius, startOffset);
 
     const offset = mode === 'full-circle'
       ? `${Math.max(0, Math.min(100, startOffset))}%`
@@ -148,18 +148,18 @@ export class TextoCurvoTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="textocurvo">` with
+   * Builds a fresh `<craftools-element data-craftool="curvedtext">` with
    * its curved-text SVG inside. Recovered from the pre-migration
-   * TextoCurvoTool.js (deleted by the "Purge legacy JS" commit without
+   * CurvedTextTool.js (deleted by the "Purge legacy JS" commit without
    * this logic being ported) -- the previous file had no createElement()
    * at all, throwing "createElement is not a function" for every
    * curved-text element creation.
    */
   public static createElement(_type: string, _editor?: unknown): HTMLElement {
-    const el = document.createElement('craftools-element') as HTMLElement & { _ctState?: TextoCurvoState };
+    const el = document.createElement('craftools-element') as HTMLElement & { _ctState?: CurvedTextState };
     const uid = Math.random().toString(36).slice(2, 8);
 
-    el.setAttribute('data-craftool', 'textocurvo');
+    el.setAttribute('data-craftool', 'curvedtext');
     el.setAttribute('data-ct-uid',   uid);
     el.setAttribute('w',  '160');
     el.setAttribute('h',  '160');
@@ -170,17 +170,17 @@ export class TextoCurvoTool extends BaseTool {
     el.dataset.ctState = JSON.stringify(state);
     el._ctState = state;
 
-    el.innerHTML = TextoCurvoTool.buildSVG(state, uid);
+    el.innerHTML = CurvedTextTool.buildSVG(state, uid);
     return el;
   }
 
   /** Updates the element's SVG and persisted state in-place. */
-  public static updateElement(el: HTMLElement & { _ctState?: TextoCurvoState; contentArea?: HTMLElement }, state: TextoCurvoState): void {
+  public static updateElement(el: HTMLElement & { _ctState?: CurvedTextState; contentArea?: HTMLElement }, state: CurvedTextState): void {
     el._ctState = state;
     el.dataset.ctState = JSON.stringify(state);
 
     const uid = el.getAttribute('data-ct-uid') || 'x';
-    const svgHtml = TextoCurvoTool.buildSVG(state, uid);
+    const svgHtml = CurvedTextTool.buildSVG(state, uid);
 
     // Replace the SVG child (works whether content is in contentArea or directly in el)
     const container = el.contentArea || el;
@@ -245,19 +245,19 @@ export class TextoCurvoTool extends BaseTool {
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
-    const e = element as HTMLElement & { _ctState?: TextoCurvoState };
+    const e = element as HTMLElement & { _ctState?: CurvedTextState };
     if (key === 'zIndex') { element.style.zIndex = String(value); return; }
     if (!e._ctState) e._ctState = DEFAULT_STATE();
     // 'color' arrives as a JSON string already (see color-picker.field.ts /
-    // TextoCurvoState.color's own doc comment) -- plain assignment is correct.
+    // CurvedTextState.color's own doc comment) -- plain assignment is correct.
     (e._ctState as unknown as Record<string, unknown>)[key] = value;
     // Calls updateElement() directly (previously dispatched an unlistened
-    // 'craftools-textocurvo-regenerate' custom event, so panel edits never
+    // 'craftools-curvedtext-regenerate' custom event, so panel edits never
     // actually rebuilt the rendered SVG).
-    TextoCurvoTool.updateElement(e, e._ctState);
+    CurvedTextTool.updateElement(e, e._ctState);
   }
 }
 
-TextoCurvoTool.registeredKeys = ['textocurvo'];
-// icon matches the desktop sidebar (index.html #pwa-sidebar-textocurvo).
-ToolRegistry.register({ key: 'textocurvo', label: 'editor.curvedText', icon: 'change_history', tool: TextoCurvoTool, draggable: true, showInFooterNav: false, category: 'text' });
+CurvedTextTool.registeredKeys = ['curvedtext'];
+// icon matches the desktop sidebar (index.html #pwa-sidebar-curvedtext).
+ToolRegistry.register({ key: 'curvedtext', label: 'editor.curvedText', icon: 'change_history', tool: CurvedTextTool, draggable: true, showInFooterNav: false, category: 'text' });
