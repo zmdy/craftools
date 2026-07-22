@@ -93,7 +93,7 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   album:     () => import('../tools/album/AlbumWizard').then((m: any) => m.AlbumTool.setup.bind(m.AlbumTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  calendario:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
+  calendar:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gerador:   () => import('../tools/gerador/GeradorTool.js').then((m: any) => m.GeradorTool.setup.bind(m.GeradorTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -719,10 +719,10 @@ export class Craftools_Editor extends HTMLElement {
       });
     });
 
-    // Restore canvas when clicking any tool other than gerador/calendario
+    // Restore canvas when clicking any tool other than gerador/calendar
     toolBtns.forEach(btn => {
       const tool = btn.dataset.tool ?? btn.id.replace('pwa-sidebar-', '').replace('pwa-btn-', '');
-      if (tool !== 'gerador' && tool !== 'calendario') {
+      if (tool !== 'gerador' && tool !== 'calendar') {
         btn.addEventListener('click', () => restoreOriginalCanvas());
       }
     });
@@ -760,7 +760,7 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','agenda','calendario','album','imageslicer','curvedtext','stamp',
+        'gerador','agenda','calendar','album','imageslicer','curvedtext','stamp',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -804,7 +804,7 @@ export class Craftools_Editor extends HTMLElement {
             }
           }
 
-          // panel-only tools: agenda / calendario / gerador / imageslicer
+          // panel-only tools: agenda / calendar / gerador / imageslicer
           openPanelMenu();
           this.activePage = null;
           const setupLoader = PANEL_SETUP_MAP[tool];

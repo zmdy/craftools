@@ -621,7 +621,7 @@ export class CalendarTool {
     grid.className = 'craftools-grid-container';
     // Marks the grid's origin -- PageTool.ts uses this to reopen the
     // Calendar panel (instead of Album) when clicking the page.
-    grid.dataset.gridSource = 'calendario';
+    grid.dataset.gridSource = 'calendar';
     grid.style.cssText = `
       position:absolute; top:${preset.margin}mm; right:${preset.margin}mm; bottom:${preset.margin}mm; left:${preset.margin}mm;
       display:grid; grid-template-columns:repeat(${preset.cols}, ${preset.cellWidth}mm); grid-auto-rows:${preset.cellHeight}mm;
@@ -750,11 +750,11 @@ export class CalendarTool {
   }
 }
 
-// label matches the desktop sidebar (index.html #pwa-sidebar-calendario) --
+// label matches the desktop sidebar (index.html #pwa-sidebar-calendar) --
 // 'editor.calendar' isn't a registered translation key, so it rendered
 // literally instead of "Calendário".
 ToolRegistry.register({
-  key: 'calendario',
+  key: 'calendar',
   label: 'editor.calendarTool',
   icon: 'calendar_month',
   panelOnly: true,

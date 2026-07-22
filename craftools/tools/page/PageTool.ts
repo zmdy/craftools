@@ -77,7 +77,7 @@ export class PageTool {
         // AlbumTool.js's wizard logic was ported to AlbumWizard.ts.
         const { AlbumTool } = await import('../album/AlbumWizard');
         AlbumTool.setup(editor, pageEl);
-      } else if (toolType === 'calendario') {
+      } else if (toolType === 'calendar') {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mod: any = await import('../calendar/CalendarTool.js');
         mod.CalendarTool.setup(editor);
@@ -264,7 +264,7 @@ export class PageTool {
         // Check if page has a grid
         const gridContainer = pageEl.querySelector<HTMLElement>('.craftools-grid-container');
         if (gridContainer) {
-          if (gridContainer.dataset['gridSource'] === 'calendario') {
+          if (gridContainer.dataset['gridSource'] === 'calendar') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const calMod = await import('../calendar/CalendarTool.js') as { [k: string]: any };
             calMod['CalendarTool'].setup(editor);
