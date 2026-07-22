@@ -17,11 +17,28 @@ export interface ShapeMeta {
   blobRandomness?: number;
   blobSeed?:       number;
   petals?:         number | string;
+  armThickness?:   number | string;
+  ringThickness?:  number | string;
+  arrowStart?:     boolean;
+  arrowEnd?:       boolean;
+  dashed?:         boolean;
   [key: string]:   any;
 }
 
+/**
+ * Shape types drawn as an open, unfilled stroke (a line/connector) rather
+ * than a filled region -- ShapeTool.ts reads this to relabel the standard
+ * Fill/Stroke fields ("Arrowhead color"/"Line color" instead of "Fill"/
+ * "Stroke") since there's no enclosed area for "fill" to mean anything.
+ */
+export const LINE_SHAPE_TYPES = ['line', 'elbowConnector'];
+
 export class ShapeGenerator {
-  static SHAPE_TYPES = ['square', 'circle', 'triangle', 'polygon', 'star', 'heart', 'blob', 'flower'];
+  static SHAPE_TYPES = [
+      'square', 'circle', 'triangle', 'polygon', 'star', 'heart', 'blob', 'flower',
+      'diamond', 'cross', 'ring', 'arrow', 'arc', 'speechBubble',
+      'line', 'elbowConnector',
+  ];
 
   static randomSeed(): number {
       return Math.floor(Math.random() * 1e9);
@@ -35,6 +52,15 @@ export class ShapeGenerator {
           case 'star':    return { ...base, points: 5, innerRatio: 0.45 };
           case 'blob':    return { ...base, blobPoints: 8, blobRandomness: 0.35, blobSeed: this.randomSeed() };
           case 'flower':  return { ...base, petals: 6 };
+          case 'cross':   return { ...base, armThickness: 28 };
+          case 'ring':    return { ...base, ringThickness: 18 };
+          // Lines have nothing to "fill" -- strokeWidth defaults to 0 for
+          // every other shape (fillColor alone is enough to see it), but a
+          // line with strokeWidth 0 is completely invisible, so these two
+          // get a real default width and start pre-wired as a connector
+          // (one arrowhead) instead of a bare, easy-to-miss line segment.
+          case 'line':           return { ...base, strokeColor: '#1a1a1a', strokeWidth: 4, arrowStart: false, arrowEnd: true, dashed: false };
+          case 'elbowConnector': return { ...base, strokeColor: '#1a1a1a', strokeWidth: 4, arrowStart: false, arrowEnd: true };
           default:        return base;
       }
   }
@@ -72,6 +98,14 @@ export class ShapeGenerator {
           case 'heart':    inner = this._heart(m); break;
           case 'blob':     inner = this._blob(m); break;
           case 'flower':   inner = this._flower(m); break;
+          case 'diamond':      inner = this._diamond(m); break;
+          case 'cross':        inner = this._cross(m); break;
+          case 'ring':         inner = this._ring(m); break;
+          case 'arrow':        inner = this._arrow(m); break;
+          case 'arc':          inner = this._arc(m); break;
+          case 'speechBubble': inner = this._speechBubble(m); break;
+          case 'line':          inner = this._line(m); break;
+          case 'elbowConnector': inner = this._elbowConnector(m); break;
           default:         inner = this._square(m);
       }
 
@@ -160,6 +194,76 @@ export class ShapeGenerator {
           markup += `<ellipse cx="50" cy="26" rx="12" ry="24" transform="rotate(${angle.toFixed(2)} 50 50)"/>`;
       }
       markup += `<circle cx="50" cy="50" r="10" fill-opacity="0.85"/>`;
+      return markup;
+  }
+
+  static _diamond(m: ShapeMeta): string {
+      return `<polygon points="50,2 98,50 50,98 2,50"/>`;
+  }
+
+  static _cross(m: ShapeMeta): string {
+      const t = Math.max(10, Math.min(40, parseFloat(String(m.armThickness)) || 28));
+      const half = (t / 2).toFixed(2);
+      const c = 50;
+      const lo = (c - t / 2).toFixed(2), hi = (c + t / 2).toFixed(2);
+      return `<polygon points="${lo},2 ${hi},2 ${hi},${lo} 98,${lo} 98,${hi} ${hi},${hi} ${hi},98 ${lo},98 ${lo},${hi} 2,${hi} 2,${lo} ${lo},${lo}"/>`;
+  }
+
+  static _ring(m: ShapeMeta): string {
+      const thickness = Math.max(5, Math.min(45, parseFloat(String(m.ringThickness)) || 18));
+      const outerR = 49;
+      const innerR = Math.max(4, outerR - thickness);
+      // Two concentric circles (any winding) combined with fill-rule
+      // evenodd: the inner circle sits entirely inside the outer one, so
+      // the overlap (the whole inner disc) is excluded, leaving a ring.
+      return `<path fill-rule="evenodd" d="` +
+          `M50,${(50 - outerR).toFixed(2)} A${outerR},${outerR} 0 1,0 50,${(50 + outerR).toFixed(2)} A${outerR},${outerR} 0 1,0 50,${(50 - outerR).toFixed(2)} Z ` +
+          `M50,${(50 - innerR).toFixed(2)} A${innerR},${innerR} 0 1,1 50,${(50 + innerR).toFixed(2)} A${innerR},${innerR} 0 1,1 50,${(50 - innerR).toFixed(2)} Z"/>`;
+  }
+
+  static _arrow(m: ShapeMeta): string {
+      // Classic block arrow pointing right, in the fixed 0-100 box.
+      return `<polygon points="2,35 60,35 60,15 98,50 60,85 60,65 2,65"/>`;
+  }
+
+  static _arc(m: ShapeMeta): string {
+      // A half-circle "dome" (semicircle + flat base).
+      return `<path d="M2,50 A48,48 0 0 1 98,50 L98,98 L2,98 Z"/>`;
+  }
+
+  static _speechBubble(m: ShapeMeta): string {
+      return `<path d="M12,2 H88 A10,10 0 0 1 98,12 V68 A10,10 0 0 1 88,78 H35 L18,96 L22,78 H12 A10,10 0 0 1 2,68 V12 A10,10 0 0 1 12,2 Z"/>`;
+  }
+
+  // ── Lines / connectors ──────────────────────────────────────────────────
+  // Unlike every shape above, a line has no enclosed area -- "fill" doesn't
+  // mean anything for the segment itself. It's drawn with an explicit
+  // fill="none" override instead, and the segment's visible color/width
+  // come entirely from the shared strokeAttr (buildSvgString() already
+  // guarantees hasStroke=true here via defaultMeta()'s non-zero
+  // strokeWidth). Arrowhead triangles are left WITHOUT an explicit fill
+  // attribute so they inherit the wrapping <g>'s fill -- i.e. they use
+  // fillColor, which ShapeTool.ts relabels "Arrowhead color" for these two
+  // types (see LINE_SHAPE_TYPES).
+
+  static _arrowHead(x: number, y: number, angleDeg: number): string {
+      const len = 14, halfWidth = 5;
+      return `<polygon points="0,0 ${-len},${-halfWidth} ${-len},${halfWidth}" transform="translate(${x} ${y}) rotate(${angleDeg})"/>`;
+  }
+
+  static _line(m: ShapeMeta): string {
+      const sw = Math.max(1, parseFloat(String(m.strokeWidth)) || 4);
+      const dashAttr = m.dashed ? ` stroke-dasharray="${(sw * 2.2).toFixed(1)},${(sw * 1.6).toFixed(1)}"` : '';
+      let markup = `<path d="M4,50 L96,50" fill="none"${dashAttr}/>`;
+      if (m.arrowStart) markup += this._arrowHead(4, 50, 180);
+      if (m.arrowEnd)   markup += this._arrowHead(96, 50, 0);
+      return markup;
+  }
+
+  static _elbowConnector(m: ShapeMeta): string {
+      let markup = `<path d="M4,15 L50,15 L50,85 L96,85" fill="none"/>`;
+      if (m.arrowStart) markup += this._arrowHead(4, 15, 180);
+      if (m.arrowEnd)   markup += this._arrowHead(96, 85, 0);
       return markup;
   }
 

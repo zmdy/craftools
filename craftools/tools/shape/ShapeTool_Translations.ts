@@ -19,6 +19,14 @@ I18n.addTranslations('shapeTool', {
         shapeHeart: "Coração",
         shapeBlob: "Blob",
         shapeFlower: "Flor",
+        shapeDiamond: "Losango",
+        shapeCross: "Cruz",
+        shapeRing: "Anel",
+        shapeArrow: "Seta",
+        shapeArc: "Arco",
+        shapeSpeechBubble: "Balão de fala",
+        shapeLine: "Linha",
+        shapeElbowConnector: "Conector em ângulo",
 
         fillColor: "Cor de preenchimento",
         strokeColor: "Cor do contorno",
@@ -30,7 +38,18 @@ I18n.addTranslations('shapeTool', {
         petals: "Número de pétalas",
         blobPoints: "Complexidade",
         blobRandomness: "Aleatoriedade",
-        regenerateBlob: "Gerar novo blob"
+        regenerateBlob: "Gerar novo blob",
+
+        armThickness: "Espessura dos braços",
+        ringThickness: "Espessura do anel",
+        arrowStart: "Seta no início",
+        arrowEnd: "Seta no fim",
+        dashed: "Tracejado",
+        lineColor: "Cor da linha",
+        arrowheadColor: "Cor da seta",
+
+        tabBasic: "Básico",
+        noAssets: "Nenhuma forma disponível neste pacote"
     },
     "en": {
         panelTitle: "Shape",
@@ -47,6 +66,14 @@ I18n.addTranslations('shapeTool', {
         shapeHeart: "Heart",
         shapeBlob: "Blob",
         shapeFlower: "Flower",
+        shapeDiamond: "Diamond",
+        shapeCross: "Cross",
+        shapeRing: "Ring",
+        shapeArrow: "Arrow",
+        shapeArc: "Arc",
+        shapeSpeechBubble: "Speech bubble",
+        shapeLine: "Line",
+        shapeElbowConnector: "Elbow connector",
 
         fillColor: "Fill color",
         strokeColor: "Stroke color",
@@ -58,7 +85,18 @@ I18n.addTranslations('shapeTool', {
         petals: "Number of petals",
         blobPoints: "Complexity",
         blobRandomness: "Randomness",
-        regenerateBlob: "Generate new blob"
+        regenerateBlob: "Generate new blob",
+
+        armThickness: "Arm thickness",
+        ringThickness: "Ring thickness",
+        arrowStart: "Arrow at start",
+        arrowEnd: "Arrow at end",
+        dashed: "Dashed",
+        lineColor: "Line color",
+        arrowheadColor: "Arrowhead color",
+
+        tabBasic: "Basic",
+        noAssets: "No shapes available in this pack"
     },
     "es": {
         panelTitle: "Forma",
@@ -75,6 +113,14 @@ I18n.addTranslations('shapeTool', {
         shapeHeart: "Corazón",
         shapeBlob: "Blob",
         shapeFlower: "Flor",
+        shapeDiamond: "Rombo",
+        shapeCross: "Cruz",
+        shapeRing: "Anillo",
+        shapeArrow: "Flecha",
+        shapeArc: "Arco",
+        shapeSpeechBubble: "Globo de diálogo",
+        shapeLine: "Línea",
+        shapeElbowConnector: "Conector en ángulo",
 
         fillColor: "Color de relleno",
         strokeColor: "Color del contorno",
@@ -86,6 +132,17 @@ I18n.addTranslations('shapeTool', {
         petals: "Número de pétalos",
         blobPoints: "Complejidad",
         blobRandomness: "Aleatoriedad",
-        regenerateBlob: "Generar nuevo blob"
+        regenerateBlob: "Generar nuevo blob",
+
+        armThickness: "Grosor de los brazos",
+        ringThickness: "Grosor del anillo",
+        arrowStart: "Flecha al inicio",
+        arrowEnd: "Flecha al final",
+        dashed: "Discontinuo",
+        lineColor: "Color de la línea",
+        arrowheadColor: "Color de la flecha",
+
+        tabBasic: "Básico",
+        noAssets: "No hay formas disponibles en este paquete"
     }
 });

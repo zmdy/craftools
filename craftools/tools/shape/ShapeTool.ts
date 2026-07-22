@@ -10,7 +10,11 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
-import { ShapeGenerator, type ShapeMeta } from '../../utils/ShapeGenerator';
+import { ShapeGenerator, LINE_SHAPE_TYPES, type ShapeMeta } from '../../utils/ShapeGenerator';
+import {
+  SHAPE_COLLECTIONS, isAssetShapeType, assetShapeTypeFor, assetIdFromShapeType, findShapeAsset,
+  type ShapeAsset,
+} from '../../utils/ShapeAssetLoader';
 import { I18n } from '../../settings/Translations.js';
 // Registers the 'shapeTool.*' i18n keys used by renderPickerPanel()'s
 // per-shape button titles and panelTitle lookups elsewhere (Editor.ts).
@@ -32,6 +36,9 @@ const SHAPE_LABEL_KEYS: Record<string, string> = {
   square: 'shapeSquare', circle: 'shapeCircle', triangle: 'shapeTriangle',
   polygon: 'shapePolygon', star: 'shapeStar', heart: 'shapeHeart',
   blob: 'shapeBlob', flower: 'shapeFlower',
+  diamond: 'shapeDiamond', cross: 'shapeCross', ring: 'shapeRing',
+  arrow: 'shapeArrow', arc: 'shapeArc', speechBubble: 'shapeSpeechBubble',
+  line: 'shapeLine', elbowConnector: 'shapeElbowConnector',
 };
 
 const PICKER_STYLE_ID = 'ct-shape-picker-styles';
@@ -60,6 +67,42 @@ function ensurePickerStyles(): void {
     }
     .ct-shape-preview svg { width: 84px; height: 84px; }
     .ct-shape-change-picker { max-height: 260px; overflow-y: auto; }
+
+    .ct-shape-tab-bar {
+      display: flex; gap: 2px; overflow-x: auto; padding: 8px 10px 0;
+      border-bottom: 1px solid var(--border, #e4e4e7); scrollbar-width: none;
+    }
+    .ct-shape-tab-bar::-webkit-scrollbar { display: none; }
+    .ct-shape-tab {
+      background: none; border: none; cursor: pointer; white-space: nowrap;
+      font-size: 11px; font-weight: 600; color: var(--text-secondary, #71717a);
+      padding: 7px 9px; border-radius: 6px 6px 0 0; flex-shrink: 0;
+      transition: background 0.12s, color 0.12s;
+      border-bottom: 2px solid transparent;
+    }
+    .ct-shape-tab.active {
+      color: var(--text-primary, #18181b);
+      background: var(--bg-hover, rgba(0,0,0,.06));
+      border-bottom-color: var(--accent, #f97316);
+    }
+    .ct-shape-tab:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
+    .ct-shape-asset-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; padding: 10px 12px 14px; max-height: 320px; overflow-y: auto;
+    }
+    .ct-shape-asset-btn {
+      background: var(--bg-input, #f4f4f5); border: 1px solid var(--border, #e4e4e7);
+      cursor: grab; border-radius: 8px; padding: 8px;
+      display: flex; align-items: center; justify-content: center;
+      aspect-ratio: 1; transition: background 0.12s, transform 0.12s, border-color 0.12s;
+    }
+    .ct-shape-asset-btn:hover { background: var(--bg-hover, rgba(0,0,0,.06)); border-color: var(--accent, #f97316); transform: scale(1.05); }
+    .ct-shape-asset-btn:active { cursor: grabbing; transform: scale(0.94); }
+    .ct-shape-asset-btn img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
+    .ct-shape-asset-empty {
+      grid-column: 1/-1; text-align: center; font-size: 12px;
+      color: var(--text-secondary, #71717a); padding: 20px 0;
+    }
   `;
   document.head.appendChild(s);
 }
@@ -75,6 +118,7 @@ export class ShapeTool extends BaseTool {
       'shapeType', 'fillColor', 'strokeColor', 'strokeWidth',
       'cornerRadius', 'sides', 'points', 'innerRatio',
       'blobPoints', 'blobRandomness', 'petals',
+      'armThickness', 'ringThickness', 'arrowStart', 'arrowEnd', 'dashed',
     ];
 
     keys.forEach(k => {
@@ -99,14 +143,53 @@ export class ShapeTool extends BaseTool {
     el.setAttribute('h', '120');
     el.setAttribute('data-craftool', 'shape');
 
+    // defaultMeta() falls through to its `default:` branch for asset shape
+    // types ("asset:pack_01/vector_g10", matched by no case) -- still gives
+    // a real ShapeMeta object with shapeType set, just without any of the
+    // procedural fields the asset image doesn't use. Using it here for both
+    // branches keeps this in sync with renderPickerPanel()'s "change shape"
+    // path below, which also always goes through defaultMeta().
     el._craftoolsMeta = ShapeGenerator.defaultMeta(shapeType);
 
-    const svg = ShapeGenerator.buildSvgElement(el._craftoolsMeta);
-    svg.style.userSelect = 'none';
-    svg.style.pointerEvents = 'none';
-    el.appendChild(svg);
+    if (isAssetShapeType(shapeType)) {
+      el.appendChild(ShapeTool._buildAssetImg(shapeType));
+    } else {
+      const svg = ShapeGenerator.buildSvgElement(el._craftoolsMeta);
+      svg.style.userSelect = 'none';
+      svg.style.pointerEvents = 'none';
+      el.appendChild(svg);
+    }
 
     return el;
+  }
+
+  /**
+   * Builds the `<img>` used for asset-pack shapes (assets/shapes/<pack>/*.svg,
+   * enumerated by ShapeAssetLoader.ts) -- these are opaque, ready-made SVG
+   * files (Inkscape exports with their own embedded fill/stroke), not
+   * recolorable/regeneratable like ShapeGenerator's procedural shapes, so
+   * they're rendered as a plain image instead of inlined SVG markup.
+   */
+  private static _buildAssetImg(shapeType: string): HTMLImageElement {
+    const asset: ShapeAsset | null = findShapeAsset(assetIdFromShapeType(shapeType));
+    const img = document.createElement('img');
+    img.dataset.shapeAsset = '1';
+    img.src = asset?.url ?? '';
+    img.alt = asset?.name ?? '';
+    img.draggable = false;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.display = 'block';
+    img.style.userSelect = 'none';
+    img.style.pointerEvents = 'none';
+    // Asset packs don't share ShapeGenerator's fixed 100x100 viewBox -- each
+    // file keeps its own native aspect ratio, so `object-fit: contain` avoids
+    // stretching/cropping when the element's box doesn't match the source
+    // SVG's proportions (same tradeoff the fixed-viewBox shapes deliberately
+    // avoid via preserveAspectRatio="none", but these files aren't ours to
+    // redraw to fit).
+    img.style.objectFit = 'contain';
+    return img;
   }
 
   /**
@@ -150,8 +233,17 @@ export class ShapeTool extends BaseTool {
       }
     };
 
-    panelBody.innerHTML = `
-      <div class="ct-shape-grid" id="ct-shape-grid">
+    // Bind-once/repaint-many container, same contract as EmojiPickerUI.ts's
+    // renderEmojiPicker(): the active-tab state lives on the container
+    // itself so re-invoking this function (every time the picker is opened)
+    // doesn't reset back to the "Basic" tab. `_ctShapeBound` guards the
+    // delegated listener set so it's only attached once per panelBody node.
+    type BoundPanel = HTMLElement & { _ctShapeActiveTab?: string; _ctShapeBound?: boolean };
+    const panel = panelBody as BoundPanel;
+    if (panel._ctShapeActiveTab === undefined) panel._ctShapeActiveTab = 'basic';
+
+    const basicGridHtml = (): string => `
+      <div class="ct-shape-grid" data-part="asset-results">
         ${ShapeGenerator.SHAPE_TYPES.map(t => `
           <button class="ct-shape-btn" data-shape="${t}" draggable="true"
             title="${I18n.t('shapeTool.' + SHAPE_LABEL_KEYS[t])}">
@@ -161,20 +253,88 @@ export class ShapeTool extends BaseTool {
       </div>
     `;
 
-    panelBody.querySelectorAll<HTMLButtonElement>('.ct-shape-btn').forEach(btn => {
-      const shapeType = btn.dataset.shape as string;
-      btn.addEventListener('click', (e) => { e.preventDefault(); applyShape(shapeType); });
-      btn.addEventListener('dragstart', (ev: DragEvent) => {
-        ev.dataTransfer?.setData('ToolType', 'shape');
-        ev.dataTransfer?.setData('ShapeType', shapeType);
-        if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
+    const collectionGridHtml = (collectionId: string): string => {
+      const collection = SHAPE_COLLECTIONS.find(c => c.id === collectionId);
+      if (!collection || !collection.assets.length) {
+        return `<div class="ct-shape-asset-grid"><div class="ct-shape-asset-empty">${I18n.t('shapeTool.noAssets')}</div></div>`;
+      }
+      return `
+        <div class="ct-shape-asset-grid" data-part="asset-results">
+          ${collection.assets.map(a => `
+            <button class="ct-shape-asset-btn" data-asset-id="${a.id}" draggable="true" title="${a.name}">
+              <img src="${a.url}" alt="${a.name}" loading="lazy" draggable="false">
+            </button>
+          `).join('')}
+        </div>
+      `;
+    };
+
+    const resultsHtml = (): string =>
+      panel._ctShapeActiveTab === 'basic' ? basicGridHtml() : collectionGridHtml(panel._ctShapeActiveTab!);
+
+    const bindResultsEvents = (): void => {
+      panelBody.querySelectorAll<HTMLButtonElement>('.ct-shape-btn').forEach(btn => {
+        const shapeType = btn.dataset.shape as string;
+        btn.addEventListener('click', (e) => { e.preventDefault(); applyShape(shapeType); });
+        btn.addEventListener('dragstart', (ev: DragEvent) => {
+          ev.dataTransfer?.setData('ToolType', 'shape');
+          ev.dataTransfer?.setData('ShapeType', shapeType);
+          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
+        });
       });
-    });
+      panelBody.querySelectorAll<HTMLButtonElement>('.ct-shape-asset-btn').forEach(btn => {
+        const shapeType = assetShapeTypeFor(btn.dataset.assetId as string);
+        btn.addEventListener('click', (e) => { e.preventDefault(); applyShape(shapeType); });
+        btn.addEventListener('dragstart', (ev: DragEvent) => {
+          ev.dataTransfer?.setData('ToolType', 'shape');
+          ev.dataTransfer?.setData('ShapeType', shapeType);
+          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
+        });
+      });
+    };
+
+    const paint = (): void => {
+      panelBody.innerHTML = `
+        <div class="ct-shape-tab-bar" data-part="tabs">
+          <button type="button" class="ct-shape-tab ${panel._ctShapeActiveTab === 'basic' ? 'active' : ''}"
+            data-tab="basic">${I18n.t('shapeTool.tabBasic')}</button>
+          ${SHAPE_COLLECTIONS.map(c => `
+            <button type="button" class="ct-shape-tab ${panel._ctShapeActiveTab === c.id ? 'active' : ''}"
+              data-tab="${c.id}">${c.label}</button>
+          `).join('')}
+        </div>
+        <div data-part="results">${resultsHtml()}</div>
+      `;
+      bindResultsEvents();
+    };
+
+    paint();
+
+    if (!panel._ctShapeBound) {
+      panel._ctShapeBound = true;
+      panelBody.addEventListener('click', (e) => {
+        const tab = (e.target as HTMLElement).closest<HTMLElement>('[data-tab]');
+        if (!tab) return;
+        panel._ctShapeActiveTab = tab.dataset.tab;
+        paint();
+      });
+    }
   }
 
   static getPropertySchema(element: HTMLElement): PropertySchema {
     const state = PropertyRenderer._readState(element);
     const shapeType = String(state.shapeType ?? 'square');
+
+    // Asset-pack shapes (assets/shapes/<pack>/*.svg) are opaque, ready-made
+    // SVG files -- not procedurally generated, so none of ShapeGenerator's
+    // fill/stroke/shape-specific fields apply to them (there's no meta for
+    // ShapeGenerator to read). Only the fields every tool gets regardless of
+    // type (z-index) make sense here.
+    if (isAssetShapeType(shapeType)) {
+      return [zIndexSection()] as PropertySchema;
+    }
+
+    const isLineShape = LINE_SHAPE_TYPES.includes(shapeType);
 
     const shapeSpecificFields = [
       // square
@@ -217,6 +377,34 @@ export class ShapeTool extends BaseTool {
         min: 4, max: 16, step: 1,
         hidden: shapeType !== 'flower',
       },
+      // cross
+      {
+        type: 'slider', key: 'armThickness', label: 'Arm thickness', i18nKey: 'shapeTool.armThickness',
+        min: 10, max: 40, step: 1,
+        hidden: shapeType !== 'cross',
+      },
+      // ring
+      {
+        type: 'slider', key: 'ringThickness', label: 'Ring thickness', i18nKey: 'shapeTool.ringThickness',
+        min: 5, max: 45, step: 1,
+        hidden: shapeType !== 'ring',
+      },
+      // line / elbowConnector
+      {
+        type: 'toggle', key: 'arrowStart', label: 'Arrow at start', i18nKey: 'shapeTool.arrowStart',
+        hidden: !isLineShape,
+      },
+      {
+        type: 'toggle', key: 'arrowEnd', label: 'Arrow at end', i18nKey: 'shapeTool.arrowEnd',
+        hidden: !isLineShape,
+      },
+      {
+        type: 'toggle', key: 'dashed', label: 'Dashed', i18nKey: 'shapeTool.dashed',
+        // Only _line() reads `dashed` (an elbow connector's bent path
+        // dashing isn't implemented -- would need per-segment dash-offset
+        // math to look right around the corner, not a simple attribute).
+        hidden: shapeType !== 'line',
+      },
     ].filter(f => !f.hidden);
 
     return [
@@ -225,9 +413,22 @@ export class ShapeTool extends BaseTool {
         icon: 'format_shapes',
         defaultOpen: true,
         fields: [
-          { type: 'color-picker', key: 'fillColor',   label: 'Fill' },
-          { type: 'color-picker', key: 'strokeColor', label: 'Stroke' },
-          { type: 'slider', key: 'strokeWidth',  label: 'Stroke width', min: 0, max: 10, step: 0.5 },
+          // Lines/connectors have no enclosed area -- "Fill" drives the
+          // (fill-less-by-default) arrowhead triangles' color instead, and
+          // "Stroke" drives the segment itself, so both fields are relabeled
+          // to describe what they actually control for these two types (see
+          // LINE_SHAPE_TYPES in ShapeGenerator.ts).
+          {
+            type: 'color-picker', key: 'fillColor',
+            label: isLineShape ? 'Arrowhead color' : 'Fill',
+            i18nKey: isLineShape ? 'shapeTool.arrowheadColor' : undefined,
+          },
+          {
+            type: 'color-picker', key: 'strokeColor',
+            label: isLineShape ? 'Line color' : 'Stroke',
+            i18nKey: isLineShape ? 'shapeTool.lineColor' : undefined,
+          },
+          { type: 'slider', key: 'strokeWidth',  label: isLineShape ? 'Line width' : 'Stroke width', min: isLineShape ? 1 : 0, max: 10, step: 0.5 },
         ],
       },
       // Circle/Triangle/Heart have no shape-specific parameters at all --
@@ -310,6 +511,32 @@ export class ShapeTool extends BaseTool {
   private static _regenerate(element: HTMLElement): void {
     const meta = (element as HTMLElement & { _craftoolsMeta?: ShapeMeta })._craftoolsMeta;
     if (!meta) return;
+
+    if (isAssetShapeType(meta.shapeType)) {
+      // Swapping INTO an asset shape (via "Change shape"): drop any
+      // procedural <svg> left over from the previous type first.
+      element.querySelector('svg')?.remove();
+
+      const asset = findShapeAsset(assetIdFromShapeType(meta.shapeType!));
+      let img = element.querySelector<HTMLImageElement>('img[data-shape-asset]');
+      if (!img) {
+        img = ShapeTool._buildAssetImg(meta.shapeType!);
+        element.appendChild(img);
+      } else {
+        // Same element, switched to a different asset within a pack (or a
+        // different pack) -- reuse the existing <img> node instead of
+        // rebuilding it, same "keep the node, swap its content" contract
+        // the procedural branch below uses for <svg>.
+        img.src = asset?.url ?? '';
+        img.alt = asset?.name ?? '';
+      }
+      ShapeTool._triggerChange(element);
+      return;
+    }
+
+    // Swapping OUT of an asset shape (via "Change shape"): drop the <img>
+    // left over from the previous type before building the procedural SVG.
+    element.querySelector<HTMLImageElement>('img[data-shape-asset]')?.remove();
 
     const svgString = ShapeGenerator.buildSvgString(meta);
     const wrapper = document.createElement('div');
