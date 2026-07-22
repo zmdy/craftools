@@ -7,6 +7,8 @@ import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import { normalizeValue, svgPaintFromValue } from '../../utils/ColorPickerUI';
+import { I18n } from '../../settings/Translations.js';
+import './CarimboTool_Translations.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface CarimboState {
@@ -29,14 +31,14 @@ interface CarimboState {
 }
 
 const DEFAULT_STATE = (): CarimboState => ({
-  outerText:     'EMPRESA FANTASIA LTDA',
+  outerText:     I18n.t('carimbo.defaultOuterText'),
   outerFontSize: 11,
   outerBold:     true,
   showInnerText: true,
-  innerText:     'CNPJ: 00.000.000/0001-00',
+  innerText:     I18n.t('carimbo.defaultInnerText'),
   innerFontSize: 9,
   centerType:    'text',
-  centerText:    'CARIMBO',
+  centerText:    I18n.t('carimbo.defaultCenterText'),
   centerFontSize: 14,
   centerBold:    true,
   outerRadius:   85,

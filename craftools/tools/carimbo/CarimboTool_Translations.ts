@@ -27,6 +27,10 @@ I18n.addTranslations('carimbo', {
         fontFamily:       "Fonte",
         color:            "Cor",
         outerRadius:      "Tamanho do selo",
+
+        defaultOuterText:  "EMPRESA FANTASIA LTDA",
+        defaultInnerText:  "CNPJ: 00.000.000/0001-00",
+        defaultCenterText: "CARIMBO",
     },
     "en": {
         panelTitle:       "Stamp / Seal",
@@ -54,6 +58,10 @@ I18n.addTranslations('carimbo', {
         fontFamily:       "Font",
         color:            "Color",
         outerRadius:      "Stamp size",
+
+        defaultOuterText:  "SAMPLE COMPANY LTD",
+        defaultInnerText:  "REG. NO: 000-000-000",
+        defaultCenterText: "STAMP",
     },
     "es": {
         panelTitle:       "Sello / Timbre",
@@ -81,5 +89,9 @@ I18n.addTranslations('carimbo', {
         fontFamily:       "Fuente",
         color:            "Color",
         outerRadius:      "Tamaño del sello",
+
+        defaultOuterText:  "EMPRESA DE EJEMPLO S.A.",
+        defaultInnerText:  "NIF: 00.000.000-A",
+        defaultCenterText: "SELLO",
     },
 });
