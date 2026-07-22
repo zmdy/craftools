@@ -192,7 +192,7 @@ export class AgendaExport {
         // multiple distinct pages showed the same month on every page
         // beyond the first).
         origEls.forEach((origEl, idx) => {
-          if (origEl.getAttribute('data-craftool') !== 'minicalendario') return;
+          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
           this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
         });
 
@@ -310,7 +310,7 @@ export class AgendaExport {
         });
 
         origEls.forEach((origEl, idx) => {
-          if (origEl.getAttribute('data-craftool') !== 'minicalendario') return;
+          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
           this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
         });
 

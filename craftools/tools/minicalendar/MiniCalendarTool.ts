@@ -126,7 +126,7 @@ export class MiniCalendarTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="minicalendario">`
+   * Builds a fresh `<craftools-element data-craftool="minicalendar">`
    * with a real calendar card inside. Recovered from the pre-migration
    * MiniCalendarTool.js (deleted by the "Purge legacy JS" commit without
    * this logic being ported) -- the previous file had no createElement()
@@ -139,7 +139,7 @@ export class MiniCalendarTool extends BaseTool {
     el.setAttribute('y', '50');
     el.setAttribute('w', '190');
     el.setAttribute('h', '210');
-    el.setAttribute('data-craftool', 'minicalendario');
+    el.setAttribute('data-craftool', 'minicalendar');
 
     el._craftoolsMeta = MiniCalendarTool.getDefaultMeta();
     el.appendChild(MiniCalendarTool._buildCard(el._craftoolsMeta));
@@ -218,6 +218,6 @@ export class MiniCalendarTool extends BaseTool {
   }
 }
 
-MiniCalendarTool.registeredKeys = ['minicalendario'];
-// icon matches the desktop sidebar (index.html #pwa-sidebar-minicalendario).
-ToolRegistry.register({ key: 'minicalendario', label: 'editor.miniCalendar', icon: 'today', tool: MiniCalendarTool, draggable: true, showInFooterNav: false, category: 'elements' });
+MiniCalendarTool.registeredKeys = ['minicalendar'];
+// icon matches the desktop sidebar (index.html #pwa-sidebar-minicalendar).
+ToolRegistry.register({ key: 'minicalendar', label: 'editor.miniCalendar', icon: 'today', tool: MiniCalendarTool, draggable: true, showInFooterNav: false, category: 'elements' });

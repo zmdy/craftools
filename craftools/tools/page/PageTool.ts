@@ -126,7 +126,7 @@ export class PageTool {
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
       } else if ([
         'titulo', 'paragrafo', 'imagem', 'qrcode', 'barcode',
-        'minicalendario', 'emojikitchen', 'variablecontent',
+        'minicalendar', 'emojikitchen', 'variablecontent',
       ].includes(toolType)) {
         const pRect  = pageEl.getBoundingClientRect();
         const scale  = window.craftoolsZoomLevel || 1;
@@ -135,14 +135,14 @@ export class PageTool {
         const elW = toolType === 'imagem'           ? 200
                   : toolType === 'qrcode'           ? 180
                   : toolType === 'barcode'          ? 220
-                  : toolType === 'minicalendario'   ? 190
+                  : toolType === 'minicalendar'   ? 190
                   : toolType === 'emojikitchen'     ? 160
                   : toolType === 'variablecontent' ? 220 : 120;
 
         const elH = toolType === 'imagem'           ? 150
                   : toolType === 'qrcode'           ? 180
                   : toolType === 'barcode'          ? 100
-                  : toolType === 'minicalendario'   ? 210
+                  : toolType === 'minicalendar'   ? 210
                   : toolType === 'emojikitchen'     ? 160
                   : toolType === 'variablecontent' ?  50 :  40;
 
@@ -174,7 +174,7 @@ export class PageTool {
           if      (toolType === 'imagem')           { dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200)); dropY = Math.max(10, Math.min(dropY -  75, (pRect.height / scale) - 150)); }
           else if (toolType === 'qrcode')           { dropX = Math.max(10, Math.min(dropX -  90, (pRect.width / scale) - 180)); dropY = Math.max(10, Math.min(dropY -  90, (pRect.height / scale) - 180)); }
           else if (toolType === 'barcode')          { dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220)); dropY = Math.max(10, Math.min(dropY -  50, (pRect.height / scale) - 100)); }
-          else if (toolType === 'minicalendario')   { dropX = Math.max(10, Math.min(dropX -  95, (pRect.width / scale) - 190)); dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210)); }
+          else if (toolType === 'minicalendar')   { dropX = Math.max(10, Math.min(dropX -  95, (pRect.width / scale) - 190)); dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210)); }
           else if (toolType === 'emojikitchen')     { dropX = Math.max(10, Math.min(dropX -  80, (pRect.width / scale) - 160)); dropY = Math.max(10, Math.min(dropY -  80, (pRect.height / scale) - 160)); }
           else if (toolType === 'variablecontent') { dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220)); dropY = Math.max(10, Math.min(dropY -  25, (pRect.height / scale) -  50)); }
           else                                      { dropX = Math.max(10, Math.min(dropX -  60, (pRect.width / scale) - 120)); dropY = Math.max(10, Math.min(dropY -  20, (pRect.height / scale) -  40)); }
@@ -192,7 +192,7 @@ export class PageTool {
         } else if (toolType === 'barcode') {
           const mod = await import('../barcode/BarcodeTool.js') as AnyMod;
           el = mod['BarcodeTool'].createElement(toolType, editor) as HTMLElement;
-        } else if (toolType === 'minicalendario') {
+        } else if (toolType === 'minicalendar') {
           const mod = await import('../minicalendar/MiniCalendarTool.js') as AnyMod;
           el = mod['MiniCalendarTool'].createElement(toolType, editor) as HTMLElement;
         } else if (toolType === 'emojikitchen') {

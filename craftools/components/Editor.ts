@@ -69,7 +69,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   emojikitchen:     () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
   qrcode:           () => import('../tools/qrcode/QRCodeTool.js'),
   barcode:          () => import('../tools/barcode/BarcodeTool.js'),
-  minicalendario:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
+  minicalendar:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
   curvedtext:       () => import('../tools/curvedtext/CurvedTextTool.js'),
   stamp:            () => import('../tools/stamp/StampTool.js'),
   paper:            () => import('../tools/paper/PaperTool.js'),
@@ -615,7 +615,7 @@ export class Craftools_Editor extends HTMLElement {
 
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
-      'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendario',
+      'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendar',
       'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icone',
     ]);
 
@@ -674,7 +674,7 @@ export class Craftools_Editor extends HTMLElement {
           imagem:          () => import('../tools/image/ImageTool.js'),
           qrcode:          () => import('../tools/qrcode/QRCodeTool.js'),
           barcode:         () => import('../tools/barcode/BarcodeTool.js'),
-          minicalendario:  () => import('../tools/minicalendar/MiniCalendarTool.js'),
+          minicalendar:  () => import('../tools/minicalendar/MiniCalendarTool.js'),
           emojikitchen:    () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
           variablecontent:() => import('../tools/variablecontent/VariableContentTool.js'),
           curvedtext:      () => import('../tools/curvedtext/CurvedTextTool.js'),
@@ -685,7 +685,7 @@ export class Craftools_Editor extends HTMLElement {
 
         const offsets: Record<string, [number, number]> = {
           imagem: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
-          minicalendario: [-95,-105], emojikitchen: [-80,-80],
+          minicalendar: [-95,-105], emojikitchen: [-80,-80],
           variablecontent: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
           titulo: [-100,-30], paragrafo: [-100,-30],
         };
