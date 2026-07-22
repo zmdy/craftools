@@ -72,7 +72,7 @@ export class ImageTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="imagem">` with a
+   * Builds a fresh `<craftools-element data-craftool="image">` with a
    * placeholder `<img>`. Recovered from the pre-migration ImageTool.js
    * (deleted by the "Purge legacy JS" commit without this logic being
    * ported) — the previous createElement() here was a broken stub that
@@ -91,7 +91,7 @@ export class ImageTool extends BaseTool {
     el.setAttribute('y', '50');
     el.setAttribute('w', '200');
     el.setAttribute('h', '200');
-    el.setAttribute('data-craftool', 'imagem');
+    el.setAttribute('data-craftool', 'image');
 
     el._craftoolsMeta = ImageTool.getDefaultMeta();
     el._craftoolsMeta.src = placeholder;
@@ -480,10 +480,10 @@ export class ImageTool extends BaseTool {
 
 // ── Self-registration ─────────────────────────────────────────────────────────
 
-ImageTool.registeredKeys = ['imagem'];
+ImageTool.registeredKeys = ['image'];
 
 ToolRegistry.register({
-  key:             'imagem',
+  key:             'image',
   label:           'editor.image',
   icon:            'image',
   tool:            ImageTool,

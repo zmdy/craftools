@@ -487,7 +487,7 @@ export abstract class BaseTool {
     // resized/deleted out of the grid like a normal element, breaking the
     // album layout -- so the button simply isn't offered for these images
     // at all, rather than relying on the user to never press it.
-    const isAlbumCellImage = element.getAttribute('data-craftool') === 'imagem'
+    const isAlbumCellImage = element.getAttribute('data-craftool') === 'image'
       && !!element.closest('.craftools-grid-cell');
     btnLock.style.display = isAlbumCellImage ? 'none' : '';
     if (!isAlbumCellImage) {

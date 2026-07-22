@@ -62,7 +62,7 @@ interface PositionedElement extends HTMLElement {
 const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   titulo:           () => import('../tools/text/TextTool.js'),
   paragrafo:        () => import('../tools/text/TextTool.js'),
-  imagem:           () => import('../tools/image/ImageTool.js'),
+  image:           () => import('../tools/image/ImageTool.js'),
   shape:            () => import('../tools/shape/ShapeTool.js'),
   icon:             () => import('../tools/icon/IconTool.js'),
   emoji:            () => import('../tools/emoji/EmojiTool.js'),
@@ -615,7 +615,7 @@ export class Craftools_Editor extends HTMLElement {
 
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
-      'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendar',
+      'titulo','paragrafo','image','album','qrcode','barcode','minicalendar',
       'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon',
     ]);
 
@@ -671,7 +671,7 @@ export class Craftools_Editor extends HTMLElement {
         // don't declare createElement — the real implementations live in .js files.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const MODULE_MAP: Record<string, () => Promise<any>> = {
-          imagem:          () => import('../tools/image/ImageTool.js'),
+          image:           () => import('../tools/image/ImageTool.js'),
           qrcode:          () => import('../tools/qrcode/QRCodeTool.js'),
           barcode:         () => import('../tools/barcode/BarcodeTool.js'),
           minicalendar:  () => import('../tools/minicalendar/MiniCalendarTool.js'),
@@ -684,7 +684,7 @@ export class Craftools_Editor extends HTMLElement {
         };
 
         const offsets: Record<string, [number, number]> = {
-          imagem: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
+          image: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendar: [-95,-105], emojikitchen: [-80,-80],
           variablecontent: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
           titulo: [-100,-30], paragrafo: [-100,-30],

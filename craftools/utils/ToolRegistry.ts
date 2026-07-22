@@ -14,7 +14,7 @@ import type { BaseTool } from '../tools/BaseTool';
 // ── ToolDefinition ────────────────────────────────────────────────────────────
 
 export interface ToolDefinition {
-  /** Canvas element key, e.g. 'titulo', 'imagem', 'qrcode'. */
+  /** Canvas element key, e.g. 'titulo', 'image', 'qrcode'. */
   key: string;
   /** i18n key or literal string shown in the sidebar. */
   label: string;

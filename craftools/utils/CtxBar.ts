@@ -162,7 +162,7 @@ export class CtxBar {
               page.appendChild(clone);
               
               // If it's an image, re-bind interactions
-              if (clone.getAttribute('data-craftool') === 'imagem') {
+              if (clone.getAttribute('data-craftool') === 'image') {
                   const { ImageTransform } = await import('../tools/image/ImageTransform.js');
                   const { ImageFilters } = await import('../tools/image/ImageFilters.js');
                   ImageTransform.setupInteractions(clone as any);

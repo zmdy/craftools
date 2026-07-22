@@ -125,21 +125,21 @@ export class PageTool {
         pageEl.appendChild(el);
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
       } else if ([
-        'titulo', 'paragrafo', 'imagem', 'qrcode', 'barcode',
+        'titulo', 'paragrafo', 'image', 'qrcode', 'barcode',
         'minicalendar', 'emojikitchen', 'variablecontent',
       ].includes(toolType)) {
         const pRect  = pageEl.getBoundingClientRect();
         const scale  = window.craftoolsZoomLevel || 1;
 
         // Default element dimensions per tool type
-        const elW = toolType === 'imagem'           ? 200
+        const elW = toolType === 'image'           ? 200
                   : toolType === 'qrcode'           ? 180
                   : toolType === 'barcode'          ? 220
                   : toolType === 'minicalendar'   ? 190
                   : toolType === 'emojikitchen'     ? 160
                   : toolType === 'variablecontent' ? 220 : 120;
 
-        const elH = toolType === 'imagem'           ? 150
+        const elH = toolType === 'image'           ? 150
                   : toolType === 'qrcode'           ? 180
                   : toolType === 'barcode'          ? 100
                   : toolType === 'minicalendar'   ? 210
@@ -171,7 +171,7 @@ export class PageTool {
         } else {
           dropX = (e.clientX - pRect.left) / scale;
           dropY = (e.clientY - pRect.top)  / scale;
-          if      (toolType === 'imagem')           { dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200)); dropY = Math.max(10, Math.min(dropY -  75, (pRect.height / scale) - 150)); }
+          if      (toolType === 'image')           { dropX = Math.max(10, Math.min(dropX - 100, (pRect.width / scale) - 200)); dropY = Math.max(10, Math.min(dropY -  75, (pRect.height / scale) - 150)); }
           else if (toolType === 'qrcode')           { dropX = Math.max(10, Math.min(dropX -  90, (pRect.width / scale) - 180)); dropY = Math.max(10, Math.min(dropY -  90, (pRect.height / scale) - 180)); }
           else if (toolType === 'barcode')          { dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220)); dropY = Math.max(10, Math.min(dropY -  50, (pRect.height / scale) - 100)); }
           else if (toolType === 'minicalendar')   { dropX = Math.max(10, Math.min(dropX -  95, (pRect.width / scale) - 190)); dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210)); }
@@ -183,7 +183,7 @@ export class PageTool {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type AnyMod = { [k: string]: any };
         let el: HTMLElement;
-        if (toolType === 'imagem') {
+        if (toolType === 'image') {
           const mod = await import('../image/ImageTool.js') as AnyMod;
           el = mod['ImageTool'].createElement(toolType, editor) as HTMLElement;
         } else if (toolType === 'qrcode') {

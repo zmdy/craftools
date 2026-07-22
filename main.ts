@@ -54,7 +54,7 @@ function initPwaProxies(): void {
   const toolsMap: Record<string, ToolProxy> = {
     'pwa-btn-titulo':    { selector: '[data-tool="titulo"]',    type: 'titulo'    },
     'pwa-btn-paragrafo': { selector: '[data-tool="paragrafo"]', type: 'paragrafo' },
-    'pwa-btn-imagem':    { selector: '[data-tool="imagem"]',    type: 'imagem'    },
+    'pwa-btn-image':     { selector: '[data-tool="image"]',     type: 'image'     },
     'pwa-btn-album':     { selector: '[data-tool="album"]',     type: 'album'     },
     'pwa-btn-qrcode':    { selector: '[data-tool="qrcode"]',    type: 'qrcode'    },
     'pwa-sidebar-export':  { selector: '#pdf-btn',          type: null },

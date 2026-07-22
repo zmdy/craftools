@@ -785,7 +785,7 @@ export class AlbumTool {
 
   // ── Helpers: build a locked ImageTool element for a grid cell ────────────
   static _buildCellElement(editor: HTMLElement, src: string, pl: number, pt: number, cw: number, ch: number, unit = 'px'): HTMLElement {
-    const imgEl = ImageTool.createElement('imagem', editor) as HTMLElement & {
+    const imgEl = ImageTool.createElement('image', editor) as HTMLElement & {
       _craftoolsMeta: Record<string, unknown>;
     };
     imgEl.setAttribute('x', pl + unit);
@@ -926,7 +926,7 @@ export class AlbumTool {
       const activeSlot = slotOverride || template;
       const { pt, pl, cw, ch } = AlbumTool._cellDimensions(activeSlot, pageSize);
 
-      const imgEl = ImageTool.createElement('imagem', editor) as HTMLElement & {
+      const imgEl = ImageTool.createElement('image', editor) as HTMLElement & {
         _craftoolsMeta: Record<string, unknown>;
         _linkedElements?: HTMLElement[];
       };
@@ -991,7 +991,7 @@ export class AlbumTool {
         e.stopPropagation();
         const cellEl = newBtn.closest<HTMLElement>('.craftools-grid-cell');
         if (cellEl) {
-          const imgEl = cellEl.querySelector<HTMLElement & { select?: () => void }>('craftools-element[data-craftool="imagem"]');
+          const imgEl = cellEl.querySelector<HTMLElement & { select?: () => void }>('craftools-element[data-craftool="image"]');
           if (imgEl) {
             imgEl.select?.();
           } else {
