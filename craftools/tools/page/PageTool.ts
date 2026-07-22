@@ -559,7 +559,7 @@ export class PageTool {
   //
   // Paper used to be its own draggable sidebar tool/element (PaperTool.ts) --
   // dragging one onto a page created a `<craftools-element data-craftool=
-  // "papeis">` sized to the page, locked, sitting at the bottom of the
+  // "paper">` sized to the page, locked, sitting at the bottom of the
   // stack. Every one of its controls (type/size/theme, lines, margins,
   // background, extras) now lives here in Page Settings instead: this tab
   // finds (or creates, on enable) that same underlying element on the
@@ -567,7 +567,7 @@ export class PageTool {
   // rather than duplicating any of its pattern-generation logic.
 
   private static _findPaperElement(pageEl: HTMLElement): (HTMLElement & { _craftoolsMeta?: PaperMeta }) | null {
-    return pageEl.querySelector<HTMLElement & { _craftoolsMeta?: PaperMeta }>('craftools-element[data-craftool="papeis"]');
+    return pageEl.querySelector<HTMLElement & { _craftoolsMeta?: PaperMeta }>('craftools-element[data-craftool="paper"]');
   }
 
   private static _paperOptionsHtml(opts: Array<{ value: string; label: string }>, current: string): string {
@@ -693,7 +693,7 @@ export class PageTool {
     const getOrCreatePaperEl = (): HTMLElement & { _craftoolsMeta?: PaperMeta } => {
       let paperEl = PageTool._findPaperElement(pageEl);
       if (!paperEl) {
-        paperEl = PaperTool.createElement('papeis', editor) as HTMLElement & { _craftoolsMeta?: PaperMeta };
+        paperEl = PaperTool.createElement('paper', editor) as HTMLElement & { _craftoolsMeta?: PaperMeta };
         pageEl.appendChild(paperEl);
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
       }

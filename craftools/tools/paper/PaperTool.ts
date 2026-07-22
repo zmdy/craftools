@@ -149,7 +149,7 @@ export class PaperTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh craftools-element (data-craftool="papeis") sized to
+   * Builds a fresh craftools-element (data-craftool="paper") sized to
    * the active page, with its pattern SVG inside. Recovered from the
    * pre-migration PaperTool.js (deleted by the "Purge legacy JS" commit
    * without this logic being ported) -- the previous file had no
@@ -158,7 +158,7 @@ export class PaperTool extends BaseTool {
    */
   public static createElement(_type: string, editor?: unknown): HTMLElement {
     const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsMeta?: PaperMeta };
-    el.setAttribute('data-craftool', 'papeis');
+    el.setAttribute('data-craftool', 'paper');
     // The background paper is locked by default -- unlike every other tool
     // (which start unlocked) -- so it isn't accidentally moved/resized on
     // top of the page. See CommonSchema.ts's lock toggle and Element.ts's
@@ -345,11 +345,11 @@ export class PaperTool extends BaseTool {
   }
 }
 
-PaperTool.registeredKeys = ['papeis'];
-// label/icon match the desktop sidebar entry exactly (index.html
-// #pwa-sidebar-papeis) -- 'editor.paper' ("Artes impressas") and
-// 'description' were a different, unrelated i18n key/icon that made this
-// tool's title and the mobile footer show the wrong text/glyph.
+PaperTool.registeredKeys = ['paper'];
+// label/icon previously matched a desktop sidebar entry (index.html
+// #pwa-sidebar-papeis, since removed) -- 'editor.paper' ("Artes impressas")
+// and 'description' were a different, unrelated i18n key/icon that made
+// this tool's title and the mobile footer show the wrong text/glyph.
 //
 // draggable: false -- Paper used to be a standalone element the user
 // dragged onto the canvas like Shape/Icon/Emoji, which also meant clicking
@@ -360,7 +360,7 @@ PaperTool.registeredKeys = ['papeis'];
 // so it's no longer something to drag from the sidebar -- this registry
 // entry (and the class below) still exist purely as the implementation
 // PageTool.ts calls into (createElement/updatePaperSVG/getDefaultMeta),
-// and so ToolRegistry.get('papeis') still resolves correctly for any
+// and so ToolRegistry.get('paper') still resolves correctly for any
 // paper element already sitting in a page (from an existing session) that
 // needs its z-index/ctx handling.
-ToolRegistry.register({ key: 'papeis', label: 'editor.papers2', icon: 'layers', tool: PaperTool, draggable: false, showInFooterNav: false, category: 'elements' });
+ToolRegistry.register({ key: 'paper', label: 'editor.papers2', icon: 'layers', tool: PaperTool, draggable: false, showInFooterNav: false, category: 'elements' });

@@ -72,7 +72,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   minicalendario:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
   textocurvo:       () => import('../tools/textocurvo/TextoCurvoTool.js'),
   stamp:            () => import('../tools/stamp/StampTool.js'),
-  papeis:           () => import('../tools/paper/PaperTool.js'),
+  paper:            () => import('../tools/paper/PaperTool.js'),
   conteudovariavel: () => import('../tools/variablecontent/VariableContentTool.js'),
 };
 
@@ -522,7 +522,7 @@ export class Craftools_Editor extends HTMLElement {
     this.addEventListener('craftools-element-deselect', (e: Event) => {
       const ce = e as CustomEvent<{ element: HTMLElement }>;
       const el = ce.detail.element;
-      if (el && el.getAttribute('data-craftool') === 'papeis') el.style.zIndex = '1';
+      if (el && el.getAttribute('data-craftool') === 'paper') el.style.zIndex = '1';
       this.ctxBar.hide();
       if (isMobile()) {
         MobileToolbar.showToolMode();
