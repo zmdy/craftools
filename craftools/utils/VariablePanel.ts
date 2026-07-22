@@ -108,7 +108,7 @@ export class VariablePanel {
     }
 
     private static _getElementBinding(el: VarElement, toolType: string | null): VariableBinding | null {
-        if (toolType === 'conteudovariavel') return el._craftoolsVariable ?? null;
+        if (toolType === 'variablecontent') return el._craftoolsVariable ?? null;
         if (toolType === 'qrcode' || toolType === 'barcode') {
             return (el._craftoolsMeta?.variableBinding as VariableBinding | undefined) ?? null;
         }
@@ -135,7 +135,7 @@ export class VariablePanel {
         const typeKey   = 'type' + binding.type.charAt(0).toUpperCase() + binding.type.slice(1);
         const typeLabel = I18n.t('variablePanel.' + typeKey) || binding.type;
         let snippet     = '';
-        if (toolType === 'conteudovariavel') {
+        if (toolType === 'variablecontent') {
             const ce  = el.contentArea?.querySelector<HTMLElement>('[contenteditable]');
             const raw = String(el._craftoolsVariablePrevHtml !== undefined
                 ? el._craftoolsVariablePrevHtml

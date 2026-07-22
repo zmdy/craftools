@@ -473,7 +473,7 @@ export class AgendaExportTool {
     page.querySelectorAll<HTMLElement>('craftools-element').forEach(el => {
       const toolType = el.getAttribute('data-craftool') ?? '';
       let binding: VariableBinding | null = null;
-      if (toolType === 'conteudovariavel') {
+      if (toolType === 'variablecontent') {
         binding = (el as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
         if (!binding) {
           const state = PropertyRenderer._readState(el);

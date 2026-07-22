@@ -73,7 +73,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   curvedtext:       () => import('../tools/curvedtext/CurvedTextTool.js'),
   stamp:            () => import('../tools/stamp/StampTool.js'),
   paper:            () => import('../tools/paper/PaperTool.js'),
-  conteudovariavel: () => import('../tools/variablecontent/VariableContentTool.js'),
+  variablecontent: () => import('../tools/variablecontent/VariableContentTool.js'),
 };
 
 // ── Panel-only tools: key → lazy setup() import ───────────────────────────────
@@ -616,7 +616,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendario',
-      'emojikitchen','emoji','shape','conteudovariavel','curvedtext','stamp','icone',
+      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icone',
     ]);
 
     toolBtns.forEach(btn => {
@@ -676,7 +676,7 @@ export class Craftools_Editor extends HTMLElement {
           barcode:         () => import('../tools/barcode/BarcodeTool.js'),
           minicalendario:  () => import('../tools/minicalendar/MiniCalendarTool.js'),
           emojikitchen:    () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
-          conteudovariavel:() => import('../tools/variablecontent/VariableContentTool.js'),
+          variablecontent:() => import('../tools/variablecontent/VariableContentTool.js'),
           curvedtext:      () => import('../tools/curvedtext/CurvedTextTool.js'),
           stamp:           () => import('../tools/stamp/StampTool.js'),
           titulo:          () => import('../tools/text/TextTool.js'),
@@ -686,7 +686,7 @@ export class Craftools_Editor extends HTMLElement {
         const offsets: Record<string, [number, number]> = {
           imagem: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendario: [-95,-105], emojikitchen: [-80,-80],
-          conteudovariavel: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
+          variablecontent: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
           titulo: [-100,-30], paragrafo: [-100,-30],
         };
 

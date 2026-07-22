@@ -431,7 +431,7 @@ export class AgendaExport {
     // already writes the binding there unconditionally on every edit (via
     // PropertyRenderer.applyChange()), so it's always at least as current
     // as whatever the user last configured through the panel.
-    if (type === 'conteudovariavel') {
+    if (type === 'variablecontent') {
       if (el._craftoolsVariable) return el._craftoolsVariable;
       const state = PropertyRenderer._readState(el);
       return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
@@ -464,7 +464,7 @@ export class AgendaExport {
     resolved: string,
     binding:  VariableBinding,
   ): void {
-    if (toolType === 'conteudovariavel') {
+    if (toolType === 'variablecontent') {
       const ce = (cloneEl.querySelector('.ct-content') || cloneEl.querySelector('div[contenteditable]') || [...cloneEl.children].find(c => !c.classList.contains('ct-bg-layer') && !c.classList.contains('craftools-ctrlbar') && !c.classList.contains('craftools-sidebar-overlay'))) as HTMLElement | null;
       if (ce) {
         if (binding.type === 'emojiKitchen') {

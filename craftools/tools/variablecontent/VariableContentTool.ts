@@ -18,7 +18,7 @@ import type { PropertySchema } from '../../types/PropertySchema';
 import './VariableContentTool_Translations.js';
 
 /**
- * Returns the resolved-content child div of a conteudovariavel element.
+ * Returns the resolved-content child div of a variablecontent element.
  *
  * NOTE: Must exclude UI-layer divs (.ct-bg-layer, .craftools-ctrlbar, etc.)
  * because `_getOrCreateBgLayer()` inserts a div as the very first child of
@@ -242,7 +242,7 @@ export class VariableContentTool extends BaseTool {
   }
 
   /**
-   * Builds a fresh `<craftools-element data-craftool="conteudovariavel">`
+   * Builds a fresh `<craftools-element data-craftool="variablecontent">`
    * showing a placeholder until a variable is configured via the panel.
    * Recovered from the pre-migration VariableContentTool.js (deleted by the
    * "Purge legacy JS" commit without this logic being ported) -- the
@@ -257,7 +257,7 @@ export class VariableContentTool extends BaseTool {
     el.setAttribute('y', '50');
     el.setAttribute('w', '220');
     el.setAttribute('h', '50');
-    el.setAttribute('data-craftool', 'conteudovariavel');
+    el.setAttribute('data-craftool', 'variablecontent');
     // Auto-fit starts OFF (see AutoFitText.ts / CommonSchema.ts's
     // sizePositionSection({ autoFit: true })) -- only `true` turns it on.
     el._craftoolsAutoResize = false;
@@ -378,5 +378,5 @@ export class VariableContentTool extends BaseTool {
   }
 }
 
-VariableContentTool.registeredKeys = ['conteudovariavel'];
-ToolRegistry.register({ key: 'conteudovariavel', label: 'editor.variableContent', icon: 'data_object', tool: VariableContentTool, draggable: true, showInFooterNav: false, category: 'data' });
+VariableContentTool.registeredKeys = ['variablecontent'];
+ToolRegistry.register({ key: 'variablecontent', label: 'editor.variableContent', icon: 'data_object', tool: VariableContentTool, draggable: true, showInFooterNav: false, category: 'data' });
