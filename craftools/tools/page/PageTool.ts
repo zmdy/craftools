@@ -109,7 +109,7 @@ export class PageTool {
         el.setAttribute('y', String(Math.round(dropY)));
         pageEl.appendChild(el);
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
-      } else if (toolType === 'icone') {
+      } else if (toolType === 'icon') {
         const iconPackId = e.dataTransfer!.getData('IconPackId');
         const iconId     = e.dataTransfer!.getData('IconId');
         if (!iconPackId || !iconId) return;

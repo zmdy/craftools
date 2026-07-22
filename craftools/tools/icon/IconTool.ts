@@ -119,7 +119,7 @@ export class IconTool extends BaseTool {
     const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsMeta?: IconMeta };
     el.setAttribute('w', '100');
     el.setAttribute('h', '100');
-    el.setAttribute('data-craftool', 'icone');
+    el.setAttribute('data-craftool', 'icon');
 
     el._craftoolsMeta = (IconLibrary as unknown as AnyRec).defaultMeta(packId, iconId);
 
@@ -212,7 +212,7 @@ export class IconTool extends BaseTool {
         btn.addEventListener('click', (e) => { e.preventDefault(); applyIcon(activePackId, iconId); });
         btn.addEventListener('dragstart', (ev: Event) => {
           const dt = (ev as DragEvent).dataTransfer;
-          dt?.setData('ToolType', 'icone');
+          dt?.setData('ToolType', 'icon');
           dt?.setData('IconPackId', activePackId);
           dt?.setData('IconId', iconId);
           if (dt) dt.effectAllowed = 'copy';
@@ -385,12 +385,12 @@ export class IconTool extends BaseTool {
 
 // ── Self-registration ─────────────────────────────────────────────────────────
 
-IconTool.registeredKeys = ['icone'];
+IconTool.registeredKeys = ['icon'];
 
-// label/icon match the desktop sidebar (index.html #pwa-sidebar-icone) --
+// label/icon match the desktop sidebar (index.html #pwa-sidebar-icon) --
 // 'editor.icon' (singular) isn't a registered key, only 'editor.icons' is.
 ToolRegistry.register({
-  key:             'icone',
+  key:             'icon',
   label:           'editor.icons',
   icon:            'grid_view',
   tool:            IconTool,

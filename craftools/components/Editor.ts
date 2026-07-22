@@ -64,7 +64,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   paragrafo:        () => import('../tools/text/TextTool.js'),
   imagem:           () => import('../tools/image/ImageTool.js'),
   shape:            () => import('../tools/shape/ShapeTool.js'),
-  icone:            () => import('../tools/icon/IconTool.js'),
+  icon:             () => import('../tools/icon/IconTool.js'),
   emoji:            () => import('../tools/emoji/EmojiTool.js'),
   emojikitchen:     () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
   qrcode:           () => import('../tools/qrcode/QRCodeTool.js'),
@@ -616,7 +616,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'titulo','paragrafo','imagem','album','qrcode','barcode','minicalendar',
-      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icone',
+      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon',
     ]);
 
     toolBtns.forEach(btn => {
@@ -657,7 +657,7 @@ export class Craftools_Editor extends HTMLElement {
           openPanelMenu();
           return;
         }
-        if (tool === 'icone') {
+        if (tool === 'icon') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const m: any = await import('../tools/icon/IconTool.js');
           if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
@@ -733,7 +733,7 @@ export class Craftools_Editor extends HTMLElement {
       const tool = btn.dataset.tool ?? btn.id.replace('pwa-sidebar-', '');
 
       // ── Picker tools: open a panel so user picks which item to add ──────
-      if (['emoji', 'shape', 'icone'].includes(tool)) {
+      if (['emoji', 'shape', 'icon'].includes(tool)) {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -749,7 +749,7 @@ export class Craftools_Editor extends HTMLElement {
             const m: any = await import('../tools/shape/ShapeTool.js');
             if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
             if (panelBody)  m.ShapeTool.renderPickerPanel(panelBody, this);
-          } else if (tool === 'icone') {
+          } else if (tool === 'icon') {
             const m: any = await import('../tools/icon/IconTool.js');
             if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
             if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
