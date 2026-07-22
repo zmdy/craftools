@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners } from './ApiDataLoader.js';
+import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners, loadCalendarDate } from './ApiDataLoader.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { CalendarRenderer } from './CalendarRenderer.js';
 
@@ -29,6 +29,17 @@ export interface VariableBinding {
     daysBoxBorderWidth?:    number | string;
     /** Token pattern used only when format === 'CUSTOM' (e.g. "dd/mm/yyyy"). See _formatCustomDate(). */
     customFormat?: string;
+    /**
+     * Only read when format === 'SPECIAL_DATE' -- which craftools_api
+     * calendar_entries categories to include (subset of 'holiday'/
+     * 'commemoration'/'saint'/'event'). Defaults to all four in
+     * defaultBinding(). See _formatDate()'s 'SPECIAL_DATE' case.
+     */
+    specialDateCategories?: string[];
+    /** Joiner between multiple matched titles on the same day. Default ', '. */
+    specialDateSeparator?: string;
+    /** Shown when the resolved day has no matching entries. Default ''. */
+    specialDateEmptyText?: string;
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -64,10 +75,36 @@ export interface ResolveContext {
     now?:             Date;
 }
 
+export interface CalendarDateApiEntry {
+    id:          string;
+    title:       string;
+    description?: string;
+    /** 'event' entries only. */
+    year?:       number;
+    /** 'saint' entries only. */
+    link?:       string;
+    /** 'holiday' entries only. */
+    scope?:      string;
+    uf?:         string;
+    city?:       string;
+}
+
+/** craftools_api's `calendar-dates` resource response `data` shape (repo.php's calendarEntryForDate()). */
+export interface CalendarDateApiResult {
+    month:        number;
+    day:          number;
+    feriados:     CalendarDateApiEntry[];
+    comemoracoes: CalendarDateApiEntry[];
+    santos:       CalendarDateApiEntry[];
+    eventos:      CalendarDateApiEntry[];
+}
+
 export interface ApiCache {
     phrasesByCollection?:    Record<string, unknown[]>;
     emojiKitchenCombos?:     Record<string, string>;
     emojiKitchenPartnersList?: Record<string, string[]>;
+    /** Keyed by "month-day" (e.g. "12-25"). Populated by prefetchApiResources() for 'date' bindings with format === 'SPECIAL_DATE'. */
+    calendarDateByKey?:      Record<string, CalendarDateApiResult | null>;
 }
 
 interface LinkPick {
@@ -116,7 +153,12 @@ export class VariableEngine {
         const isoToday = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
         switch (type) {
-            case 'date':           return { type, startDate: isoToday, interval: 'daily', step: 1, format: 'DD/MM/YYYY', linkedTo: '' };
+            case 'date':           return {
+                type, startDate: isoToday, interval: 'daily', step: 1, format: 'DD/MM/YYYY', linkedTo: '',
+                specialDateCategories: ['holiday', 'commemoration', 'saint', 'event'],
+                specialDateSeparator: ', ',
+                specialDateEmptyText: '',
+            };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
             case 'pageNumber':     return { type, startAt: 1, format: 'n', linkedTo: '' };
@@ -161,7 +203,7 @@ export class VariableEngine {
             if (picks && myId) picks.set(myId, { type: binding.type, pick });
         }
 
-        return this._format(binding, pick, ctx);
+        return this._format(binding, pick, ctx, apiCache);
     }
 
     static newLinkRegistry(): Map<string, LinkPick> {
@@ -178,7 +220,7 @@ export class VariableEngine {
             totalPages:      sampleContext.totalPages      ?? 1,
             now:             new Date(),
         };
-        if (binding.type === 'apiPhrase' || binding.type === 'emojiKitchen') {
+        if (binding.type === 'apiPhrase' || binding.type === 'emojiKitchen' || (binding.type === 'date' && binding.format === 'SPECIAL_DATE')) {
             const apiCache = await this.prefetchApiResources([binding]);
             return this.resolve(binding, context, apiCache);
         }
@@ -268,6 +310,34 @@ export class VariableEngine {
             }));
         }
 
+        // 'date' bindings with format === 'SPECIAL_DATE' need craftools_api's
+        // calendar-dates resource for the specific month/day each repetition
+        // actually lands on -- computed the same way _pick()/_pickDate()
+        // will compute it later (same `now`, so a binding with no explicit
+        // startDate resolves to the identical "today" both times). Multiple
+        // bindings/repetitions landing on the same month/day share one
+        // fetch (deduped via the Set below); loadCalendarDate() also caches
+        // per month/day across separate prefetchApiResources() calls (e.g.
+        // one per live-preview keystroke).
+        const specialDateBindings = list.filter((b): b is VariableBinding => !!b && b.type === 'date' && b.format === 'SPECIAL_DATE');
+        if (specialDateBindings.length) {
+            const now = new Date();
+            const pairs = new Set<string>();
+            specialDateBindings.forEach(b => {
+                repetitionIndices.forEach(idx => {
+                    const d = this._pickDate(b, { repetitionIndex: idx, now });
+                    if (d) pairs.add(`${d.getMonth() + 1}-${d.getDate()}`);
+                });
+            });
+
+            cache.calendarDateByKey = {};
+            await Promise.all([...pairs].map(async key => {
+                const [month, day] = key.split('-').map(Number);
+                try   { cache.calendarDateByKey![key] = await loadCalendarDate(month, day); }
+                catch { cache.calendarDateByKey![key] = null; }
+            }));
+        }
+
         return cache;
     }
 
@@ -311,9 +381,9 @@ export class VariableEngine {
 
     // ── Format dispatch ───────────────────────────────────────────────────────
 
-    private static _format(binding: VariableBinding, pick: unknown, ctx: Required<ResolveContext> & { now: Date }): string {
+    private static _format(binding: VariableBinding, pick: unknown, ctx: Required<ResolveContext> & { now: Date }, apiCache: ApiCache = {}): string {
         switch (binding.type) {
-            case 'date':           return pick ? this._formatDate(pick as Date, binding) : '';
+            case 'date':           return pick ? this._formatDate(pick as Date, binding, apiCache) : '';
             case 'sequenceNumber': return this._formatSequenceNumber(pick as number, binding);
             case 'sequenceText':   return pick == null ? '' : String(pick);
             case 'pageNumber':     return this._formatPageNumber(pick as number, binding, ctx);
@@ -345,7 +415,7 @@ export class VariableEngine {
         return d;
     }
 
-    private static _formatDate(d: Date, b: VariableBinding): string {
+    private static _formatDate(d: Date, b: VariableBinding, apiCache: ApiCache = {}): string {
         const format = b.format ?? 'DD/MM/YYYY';
         const pad = (v: number) => String(v).padStart(2, '0');
         const dd   = pad(d.getDate()), mm = pad(d.getMonth() + 1), yyyy = d.getFullYear(), yy = String(yyyy).slice(-2);
@@ -367,6 +437,7 @@ export class VariableEngine {
             case 'DAY_ONLY':         return `${d.getDate()}`;
             case 'MONTH_ONLY':         return mPt[d.getMonth()];
             case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
+            case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, apiCache);
             case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -476,6 +547,49 @@ export class VariableEngine {
             .split(/(\[[^\]]*\])/g)
             .map(part => (part.startsWith('[') && part.endsWith(']')) ? part.slice(1, -1) : applyTokens(part))
             .join('');
+    }
+
+    /**
+     * format === 'SPECIAL_DATE' -- joins the titles of every craftools_api
+     * calendar_entries hit for `d`'s month/day, restricted to
+     * `b.specialDateCategories` (national holidays / commemorative dates /
+     * saint days / historical events). Reads from the pre-populated
+     * `apiCache.calendarDateByKey` (built by prefetchApiResources()) rather
+     * than fetching here -- `_formatDate()` is called from the synchronous
+     * `resolve()`/`_format()` path, same constraint 'apiPhrase'/
+     * 'emojiKitchen' already work under (see the file-header comment on
+     * prefetchApiResources()).
+     */
+    private static readonly SPECIAL_DATE_GROUP_KEYS: Record<string, keyof CalendarDateApiResult> = {
+        holiday:       'feriados',
+        commemoration: 'comemoracoes',
+        saint:         'santos',
+        event:         'eventos',
+    };
+
+    private static _formatSpecialDate(d: Date, b: VariableBinding, apiCache: ApiCache): string {
+        const key   = `${d.getMonth() + 1}-${d.getDate()}`;
+        const entry = apiCache.calendarDateByKey?.[key];
+        const emptyText = b.specialDateEmptyText ?? '';
+        if (!entry) return emptyText;
+
+        // Distinguishes "never configured" (undefined -- defensive; every
+        // real binding gets all four from defaultBinding()) from "user
+        // unchecked every category in the panel" (a real empty array,
+        // meaning show nothing/only the empty text) -- an `?.length` check
+        // here would treat both the same and silently ignore the user
+        // having cleared every checkbox.
+        const categories = b.specialDateCategories ?? ['holiday', 'commemoration', 'saint', 'event'];
+        const titles: string[] = [];
+        categories.forEach(cat => {
+            const groupKey = this.SPECIAL_DATE_GROUP_KEYS[cat];
+            if (!groupKey) return;
+            const items = entry[groupKey] as CalendarDateApiEntry[] | undefined;
+            (items ?? []).forEach(item => { if (item?.title) titles.push(item.title); });
+        });
+
+        if (!titles.length) return emptyText;
+        return titles.join(b.specialDateSeparator ?? ', ');
     }
 
     // ── sequenceNumber ────────────────────────────────────────────────────────

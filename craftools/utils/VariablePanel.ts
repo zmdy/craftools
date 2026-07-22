@@ -154,7 +154,7 @@ export class VariablePanel {
             ['YYYY-MM-DD','ISO'],['DAY_MONTH_LONG','DayMonthLong'],['DAY_MONTH_YEAR_LONG','DayMonthYearLong'],
             ['WEEKDAY','Weekday'],['WEEKDAY_SHORT','WeekdayShort'],['WEEKDAY_DATE','WeekdayDate'],
             ['DAYS_BOX','DaysBox'],['DAY_ONLY','DayOnly'],['MONTH_ONLY','MonthOnly'],
-            ['CUSTOM','Custom'],
+            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],
         ];
     }
 
@@ -246,6 +246,43 @@ export class VariablePanel {
                         value="${this._esc(b.customFormat)}">
                 </div>
             </div>
+
+            <div id="var-date-special-options" style="display: ${b.format === 'SPECIAL_DATE' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                ${this._specialDateCategoriesFields(b)}
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateSpecialSeparatorLabel')}</span>
+                    <input type="text" id="var-date-special-separator" class="craftools-input" style="width:100%;"
+                        value="${this._esc(b.specialDateSeparator ?? ', ')}">
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateSpecialEmptyTextLabel')}</span>
+                    <input type="text" id="var-date-special-emptytext" class="craftools-input" style="width:100%;"
+                        placeholder="${this._esc(I18n.t('variablePanel.dateSpecialEmptyTextPlaceholder'))}"
+                        value="${this._esc(b.specialDateEmptyText)}">
+                </div>
+            </div>
+        `;
+    }
+
+    private static _specialDateCategories(): [string, string][] {
+        return [
+            ['holiday',       'dateSpecialCategoryHoliday'],
+            ['commemoration', 'dateSpecialCategoryCommemoration'],
+            ['saint',         'dateSpecialCategorySaint'],
+            ['event',         'dateSpecialCategoryEvent'],
+        ];
+    }
+
+    private static _specialDateCategoriesFields(b: VariableBinding): string {
+        const active = b.specialDateCategories?.length ? b.specialDateCategories : ['holiday', 'commemoration', 'saint', 'event'];
+        return `
+            <span class="craftools-label">${I18n.t('variablePanel.dateSpecialCategoriesLabel')}</span>
+            ${this._specialDateCategories().map(([cat, key]) => `
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
+                    <input type="checkbox" class="var-date-special-cat" value="${cat}" ${active.includes(cat) ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.' + key)}</span>
+                </label>
+            `).join('')}
         `;
     }
 
@@ -531,6 +568,10 @@ export class VariablePanel {
                     const daysBoxSun      = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
                     const customOpts      = container.querySelector<HTMLElement>('#var-date-custom-options');
                     const customFormat    = container.querySelector<HTMLInputElement>('#var-date-custom-format');
+                    const specialOpts     = container.querySelector<HTMLElement>('#var-date-special-options');
+                    const specialCatBoxes = container.querySelectorAll<HTMLInputElement>('.var-date-special-cat');
+                    const specialSep      = container.querySelector<HTMLInputElement>('#var-date-special-separator');
+                    const specialEmpty    = container.querySelector<HTMLInputElement>('#var-date-special-emptytext');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
@@ -539,8 +580,26 @@ export class VariablePanel {
                         binding!.format = formatSel.value;
                         if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
                         if (customOpts)  customOpts.style.display  = binding!.format === 'CUSTOM' ? 'block' : 'none';
+                        if (specialOpts) specialOpts.style.display = binding!.format === 'SPECIAL_DATE' ? 'block' : 'none';
                         notify();
                     };
+                    specialCatBoxes.forEach(box => {
+                        box.onchange = () => {
+                            // An empty array here is a valid, deliberate
+                            // choice (user unchecked every category) --
+                            // _formatSpecialDate() only falls back to "all
+                            // four" when this is `undefined`, never for a
+                            // real empty array, so the stored value and the
+                            // checkbox state stay in sync (unlike falling
+                            // back to "all checked" here, which would leave
+                            // every box visibly unchecked while the
+                            // formatter quietly showed everything anyway).
+                            binding!.specialDateCategories = [...specialCatBoxes].filter(c => c.checked).map(c => c.value);
+                            notify();
+                        };
+                    });
+                    if (specialSep)   specialSep.oninput   = () => { binding!.specialDateSeparator = specialSep.value;   notify(); };
+                    if (specialEmpty) specialEmpty.oninput = () => { binding!.specialDateEmptyText = specialEmpty.value; notify(); };
                     if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius = parseInt(daysBoxRadius.value, 10);   notify(); };
                     if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding      = parseInt(daysBoxPad.value, 10);      notify(); };
                     if (daysBoxHeight) daysBoxHeight.oninput = () => {

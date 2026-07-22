@@ -199,13 +199,33 @@ export function loadEmojiKitchenCombo(left: string, right: string): Promise<any>
   return _cache[key];
 }
 
+/**
+ * Loads craftools_api's `calendar-dates` resource for a single month/day --
+ * feriados/comemorações/santos/eventos for that recurring day (no year: the
+ * API always resolves against month+day only, see repo.php's
+ * calendarEntryForDate()). Returns the raw `data` object (`{month, day,
+ * feriados[], comemoracoes[], santos[], eventos[]}`) or `null` on any
+ * failure (network error, API down, invalid month/day) -- callers (see
+ * VariableEngine.ts's "SPECIAL_DATE" format) already treat a missing/empty
+ * result as "nothing special this day", so failing soft here needs no
+ * separate error-handling path.
+ */
+export function loadCalendarDate(month: number, day: number): Promise<any> {
+  const key = `calendarDate:${month}:${day}`;
+  if (_cache[key] !== undefined) return _cache[key];
+  _cache[key] = fetchResourceRaw('calendar-dates', { month, day }).then(data => {
+      return (data && typeof data === 'object') ? data : null;
+  });
+  return _cache[key];
+}
+
 export function invalidateApiDataCache(): void {
   delete _cache.gridSizes;
   delete _cache.albumTemplates;
   delete _cache.emojiKitchenSupported;
   delete _cache.phraseCollections;
   Object.keys(_cache).forEach(k => {
-      if (k.startsWith('phrases:') || k.startsWith('emojiKitchenPartners:') || k.startsWith('emojiKitchenCombo:')) {
+      if (k.startsWith('phrases:') || k.startsWith('emojiKitchenPartners:') || k.startsWith('emojiKitchenCombo:') || k.startsWith('calendarDate:')) {
           delete _cache[k];
       }
   });
