@@ -670,7 +670,7 @@ export class ImageSlicerTool {
 }
 
 ToolRegistry.register({
-  key: 'fatiador',
+  key: 'imageslicer',
   label: 'editor.imageSlicer',
   icon: 'content_cut',
   panelOnly: true,

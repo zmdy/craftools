@@ -97,7 +97,7 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gerador:   () => import('../tools/gerador/GeradorTool.js').then((m: any) => m.GeradorTool.setup.bind(m.GeradorTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fatiador:  () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
+  imageslicer: () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -760,7 +760,7 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'gerador','agenda','calendario','album','fatiador','curvedtext','stamp',
+        'gerador','agenda','calendario','album','imageslicer','curvedtext','stamp',
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -804,7 +804,7 @@ export class Craftools_Editor extends HTMLElement {
             }
           }
 
-          // panel-only tools: agenda / calendario / gerador / fatiador
+          // panel-only tools: agenda / calendario / gerador / imageslicer
           openPanelMenu();
           this.activePage = null;
           const setupLoader = PANEL_SETUP_MAP[tool];
