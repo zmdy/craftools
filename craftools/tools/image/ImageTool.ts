@@ -30,6 +30,10 @@ interface ImageMeta {
   posX:        number;
   posY:        number;
   rotation:    number;
+  /** Mirrors the image horizontally (scaleX(-1)) -- composed into ImageTransform.applyTransform()'s single `transform` string. */
+  flipH:       boolean;
+  /** Mirrors the image vertically (scaleY(-1)) -- same composition as flipH. */
+  flipV:       boolean;
   bgBlur:      number;
   blendMode:   string;
   borderWidth: number;
@@ -42,6 +46,7 @@ interface ImageMeta {
 const getMeta = (element: HTMLElement): ImageMeta =>
   (element as HTMLElement & { _craftoolsMeta?: ImageMeta })._craftoolsMeta ?? {
     src: '', objectFit: 'cover', zoom: 1, posX: 0, posY: 0, rotation: 0,
+    flipH: false, flipV: false,
     bgBlur: 0, blendMode: 'normal',
     borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
     filters: { brightness: 1, contrast: 1, saturate: 1, 'hue-rotate': 0, blur: 0, grayscale: 0, sepia: 0, invert: 0, opacity: 1 },
@@ -65,6 +70,7 @@ export class ImageTool extends BaseTool {
     });
     return {
       src: '', objectFit: 'cover', zoom: 1, posX: 0, posY: 0, rotation: 0,
+      flipH: false, flipV: false,
       bgBlur: 0, blendMode: 'normal',
       borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
       filters,
@@ -304,7 +310,7 @@ export class ImageTool extends BaseTool {
     const patch: Record<string, unknown> = {};
 
     const topKeys: (keyof ImageMeta)[] = [
-      'src', 'objectFit', 'zoom', 'posX', 'posY', 'rotation',
+      'src', 'objectFit', 'zoom', 'posX', 'posY', 'rotation', 'flipH', 'flipV',
       'bgBlur', 'blendMode', 'borderWidth', 'borderStyle', 'borderRadius',
     ];
 
@@ -368,6 +374,8 @@ export class ImageTool extends BaseTool {
           { type: 'slider', key: 'rotation', label: 'Rotation', min: -180, max: 180, step: 1 },
           { type: 'number', key: 'posX',     label: 'X',        unit: 'px' },
           { type: 'number', key: 'posY',     label: 'Y',        unit: 'px' },
+          { type: 'toggle', key: 'flipH',    label: 'Flip horizontal', i18nKey: 'imageTool.flipHorizontal' },
+          { type: 'toggle', key: 'flipV',    label: 'Flip vertical',   i18nKey: 'imageTool.flipVertical' },
         ],
       },
       {
@@ -432,7 +440,7 @@ export class ImageTool extends BaseTool {
       const filterKey = key.replace('filter_', '').replace('_', '-') as FilterKey;
       if (meta.filters) meta.filters[filterKey] = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-filters-apply', { bubbles: false }));
-    } else if (['zoom', 'posX', 'posY', 'rotation'].includes(key)) {
+    } else if (['zoom', 'posX', 'posY', 'rotation', 'flipH', 'flipV'].includes(key)) {
       (meta as unknown as Record<string, unknown>)[key] = value;
       element.dispatchEvent(new CustomEvent('craftools-image-transform-apply', { bubbles: false }));
       // Was missing entirely: only a photo *swap* (the 'src' branch above)

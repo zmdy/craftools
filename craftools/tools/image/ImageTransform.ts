@@ -27,8 +27,18 @@ export class ImageTransform {
       const img = content.querySelector('img');
       if (!img) return;
 
-      // Internal transform: Positioning (translate), Zoom (scale), and Internal Rotation
-      img.style.transform = `translate(${meta.posX || 0}px, ${meta.posY || 0}px) scale(${meta.zoom || 1}) rotate(${meta.rotation || 0}deg)`;
+      // Internal transform: Positioning (translate), Zoom + flip (scale),
+      // and Internal Rotation. Flip is folded into the zoom's own scale()
+      // term (a single non-uniform scale(sx, sy)) rather than appended as
+      // a separate scaleX(-1)/scaleY(-1) -- this whole style.transform is
+      // always rebuilt wholesale here (never merged with a previous
+      // value), so flip has to be composed into this same string, not set
+      // independently elsewhere, or it would get clobbered the next time
+      // zoom/position/rotation changes re-run this function.
+      const zoom = meta.zoom || 1;
+      const sx = zoom * (meta.flipH ? -1 : 1);
+      const sy = zoom * (meta.flipV ? -1 : 1);
+      img.style.transform = `translate(${meta.posX || 0}px, ${meta.posY || 0}px) scale(${sx}, ${sy}) rotate(${meta.rotation || 0}deg)`;
       img.style.transformOrigin = 'center center';
   }
 
