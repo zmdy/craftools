@@ -82,6 +82,7 @@ I18n.addTranslations('variablePanel', {
         dateBtnMonth: "Mês",
         dateBtnYear: "Ano",
         dateBtnWeekday: "Dia da semana",
+        dateBtnDayOfYear: "Dia do ano",
         dateBtnSeason: "Estação",
         dateBtnMoonPhase: "Fase da Lua",
         dateBtnZodiac: "Signo",
@@ -89,7 +90,7 @@ I18n.addTranslations('variablePanel', {
 
         dateCustomLabel: "Formato de exibição personalizado",
         dateCustomPlaceholder: "ex: dd/mm/yyyy",
-        dateCustomLegend: "Clique nos botões acima para montar seu formato, ou digite os códigos diretamente: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso, <b>{season}</b> = estação do ano, <b>{moon}</b> = fase da lua, <b>{zodiac}</b> = signo do zodíaco, <b>{holiday}</b> = feriado/data comemorativa. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
+        dateCustomLegend: "Clique nos botões acima para montar seu formato, ou digite os códigos diretamente: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso, <b>{dayofyear}</b> = dia do ano (ex: 10 de abril = 100), <b>{season}</b> = estação do ano, <b>{moon}</b> = fase da lua, <b>{zodiac}</b> = signo do zodíaco, <b>{holiday}</b> = feriado/data comemorativa. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Início",
         seqNumberStepLabel: "Passo",
@@ -236,6 +237,7 @@ I18n.addTranslations('variablePanel', {
         dateBtnMonth: "Month",
         dateBtnYear: "Year",
         dateBtnWeekday: "Weekday",
+        dateBtnDayOfYear: "Day of year",
         dateBtnSeason: "Season",
         dateBtnMoonPhase: "Moon phase",
         dateBtnZodiac: "Zodiac sign",
@@ -243,7 +245,7 @@ I18n.addTranslations('variablePanel', {
 
         dateCustomLabel: "Custom display format",
         dateCustomPlaceholder: "e.g. dd/mm/yyyy",
-        dateCustomLegend: "Click the buttons above to build your format, or type the tokens directly: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name, <b>{season}</b> = season, <b>{moon}</b> = moon phase, <b>{zodiac}</b> = zodiac sign, <b>{holiday}</b> = holiday/commemorative date. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
+        dateCustomLegend: "Click the buttons above to build your format, or type the tokens directly: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name, <b>{dayofyear}</b> = day of the year (e.g. April 10 = 100), <b>{season}</b> = season, <b>{moon}</b> = moon phase, <b>{zodiac}</b> = zodiac sign, <b>{holiday}</b> = holiday/commemorative date. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
 
         seqNumberStartLabel: "Start",
         seqNumberStepLabel: "Step",
@@ -390,6 +392,7 @@ I18n.addTranslations('variablePanel', {
         dateBtnMonth: "Mes",
         dateBtnYear: "Año",
         dateBtnWeekday: "Día de la semana",
+        dateBtnDayOfYear: "Día del año",
         dateBtnSeason: "Estación",
         dateBtnMoonPhase: "Fase lunar",
         dateBtnZodiac: "Signo zodiacal",
@@ -397,7 +400,7 @@ I18n.addTranslations('variablePanel', {
 
         dateCustomLabel: "Formato de visualización personalizado",
         dateCustomPlaceholder: "ej: dd/mm/yyyy",
-        dateCustomLegend: "Haz clic en los botones de arriba para armar tu formato, o escribe los códigos directamente: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo, <b>{season}</b> = estación del año, <b>{moon}</b> = fase lunar, <b>{zodiac}</b> = signo zodiacal, <b>{holiday}</b> = feriado/fecha conmemorativa. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
+        dateCustomLegend: "Haz clic en los botones de arriba para armar tu formato, o escribe los códigos directamente: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo, <b>{dayofyear}</b> = día del año (ej: 10 de abril = 100), <b>{season}</b> = estación del año, <b>{moon}</b> = fase lunar, <b>{zodiac}</b> = signo zodiacal, <b>{holiday}</b> = feriado/fecha conmemorativa. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Inicio",
         seqNumberStepLabel: "Paso",
