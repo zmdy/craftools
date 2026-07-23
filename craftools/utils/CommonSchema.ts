@@ -324,6 +324,30 @@ export const pageAlignSection = (): Section => ({
   ],
 });
 
+// ── Internal (content) alignment ─────────────────────────────────────────────
+
+/**
+ * 6-button grid ("Alinhamento interno") that positions an element's own
+ * CONTENT within its box -- same visual layout as pageAlignSection() above
+ * (that's the explicit reference pattern), but a real persisted value
+ * ("h-v", e.g. "center-center") instead of a fire-and-forget action. Each
+ * opting-in tool applies it its own way in _applyProperty() (text-family
+ * tools via BaseTool._applyTextContentAlign(); ImageTool via native CSS
+ * object-position) since there's no single CSS property that means
+ * "content alignment" the same way across every tool's DOM shape -- see
+ * content-align.field.ts's own doc comment.
+ */
+export const contentAlignSection = (): Section => ({
+  section: 'Internal alignment',
+  i18nKey: 'common.contentAlign',
+  icon: 'filter_center_focus',
+  collapsible: true,
+  defaultOpen: false,
+  fields: [
+    { type: 'content-align', key: 'contentAlign' },
+  ],
+});
+
 // ── Variable binding ──────────────────────────────────────────────────────────
 
 /**
