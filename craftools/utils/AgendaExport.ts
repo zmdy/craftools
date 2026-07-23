@@ -524,12 +524,13 @@ export class AgendaExport {
           ce.innerHTML = resolved
             ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
             : '';
-        } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && binding.format === 'DAYS_BOX')) {
-          // VariableEngine's DAYS_BOX date format returns real markup (a
-          // row of day-letter boxes), not typed text -- was falling into
-          // the plain-text branch below, which rendered the exported
-          // Agenda page with the literal "<div style=...>S</div>..." tags
-          // visible as text instead of the actual days strip.
+        } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && VariableEngine.isHtmlDateFormat(binding.format))) {
+          // VariableEngine's DAYS_BOX/MOON_PHASE date formats return real
+          // markup (a row of day-letter boxes / an icon+emoji+text span),
+          // not typed text -- was falling into the plain-text branch
+          // below, which rendered the exported Agenda page with the
+          // literal "<div style=...>S</div>..." tags visible as text
+          // instead of the actual rendered markup.
           ce.innerHTML = resolved || '';
         } else {
           ce.textContent = resolved;

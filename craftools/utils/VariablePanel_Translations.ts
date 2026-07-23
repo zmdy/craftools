@@ -46,6 +46,7 @@ I18n.addTranslations('variablePanel', {
         dateFormatMonthOnly: "Dezembro (Apenas o mês)",
         dateFormatCustom: "Personalizado...",
         dateFormatSpecialDate: "Feriado / Data comemorativa (via API)",
+        dateFormatMoonPhase: "Fase da Lua",
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionais",
@@ -58,6 +59,11 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separador (quando houver mais de um item no dia)",
         dateSpecialEmptyTextLabel: "Texto quando não há nada nesse dia",
         dateSpecialEmptyTextPlaceholder: "deixe em branco para não mostrar nada",
+
+        dateCalendarShowLabel: "Mostrar",
+        dateCalendarShowIcon: "Ícone",
+        dateCalendarShowEmoji: "Emoji",
+        dateCalendarShowText: "Texto",
 
         dateDaysBoxColor: "Cor de Destaque",
         dateDaysBoxRadius: "Arredondamento da Borda (px)",
@@ -180,6 +186,7 @@ I18n.addTranslations('variablePanel', {
         dateFormatMonthOnly: "December (Month only)",
         dateFormatCustom: "Custom...",
         dateFormatSpecialDate: "Holiday / Commemorative date (via API)",
+        dateFormatMoonPhase: "Moon phase",
 
         dateSpecialCategoriesLabel: "Show",
         dateSpecialCategoryHoliday: "National holidays",
@@ -192,6 +199,11 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separator (when the day has more than one item)",
         dateSpecialEmptyTextLabel: "Text shown when the day has nothing special",
         dateSpecialEmptyTextPlaceholder: "leave blank to show nothing",
+
+        dateCalendarShowLabel: "Show",
+        dateCalendarShowIcon: "Icon",
+        dateCalendarShowEmoji: "Emoji",
+        dateCalendarShowText: "Text",
 
         dateDaysBoxColor: "Highlight Color",
         dateDaysBoxRadius: "Border Radius (px)",
@@ -314,6 +326,7 @@ I18n.addTranslations('variablePanel', {
         dateFormatMonthOnly: "Diciembre (Solo el mes)",
         dateFormatCustom: "Personalizado...",
         dateFormatSpecialDate: "Feriado / Fecha conmemorativa (vía API)",
+        dateFormatMoonPhase: "Fase de la Luna",
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionales",
@@ -326,6 +339,11 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separador (cuando haya más de un elemento en el día)",
         dateSpecialEmptyTextLabel: "Texto cuando no hay nada ese día",
         dateSpecialEmptyTextPlaceholder: "deje en blanco para no mostrar nada",
+
+        dateCalendarShowLabel: "Mostrar",
+        dateCalendarShowIcon: "Ícono",
+        dateCalendarShowEmoji: "Emoji",
+        dateCalendarShowText: "Texto",
 
         dateDaysBoxColor: "Color de Resalte",
         dateDaysBoxRadius: "Radio de Borde (px)",

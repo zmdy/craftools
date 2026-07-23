@@ -154,7 +154,7 @@ export class VariablePanel {
             ['YYYY-MM-DD','ISO'],['DAY_MONTH_LONG','DayMonthLong'],['DAY_MONTH_YEAR_LONG','DayMonthYearLong'],
             ['WEEKDAY','Weekday'],['WEEKDAY_SHORT','WeekdayShort'],['WEEKDAY_DATE','WeekdayDate'],
             ['DAYS_BOX','DaysBox'],['DAY_ONLY','DayOnly'],['MONTH_ONLY','MonthOnly'],
-            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],
+            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],['MOON_PHASE','MoonPhase'],
         ];
     }
 
@@ -273,7 +273,36 @@ export class VariablePanel {
                         value="${this._esc(b.specialDateEmptyText)}">
                 </div>
             </div>
+
+            <div id="var-date-calendar-options" style="display: ${this._isCalendarPartsFormat(b.format) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <span class="craftools-label">${I18n.t('variablePanel.dateCalendarShowLabel')}</span>
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
+                    <input type="checkbox" id="var-date-calendar-show-icon" ${b.calendarShowIcon !== false ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowIcon')}</span>
+                </label>
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
+                    <input type="checkbox" id="var-date-calendar-show-emoji" ${b.calendarShowEmoji !== false ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowEmoji')}</span>
+                </label>
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
+                    <input type="checkbox" id="var-date-calendar-show-text" ${b.calendarShowText !== false ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowText')}</span>
+                </label>
+            </div>
         `;
+    }
+
+    /**
+     * Which 'date' formats expose the shared icon/emoji/text display
+     * toggle (VariableBinding's calendarShowIcon/Emoji/Text -- see
+     * VariableEngine.ts's _composeCalendarParts()). 'DAYS_BOX' is
+     * intentionally excluded even though it's also an HTML-returning
+     * format (VariableEngine.HTML_DATE_FORMATS) -- it has its own,
+     * unrelated set of options (colors/border/padding), not an icon or
+     * emoji.
+     */
+    private static _isCalendarPartsFormat(format?: string): boolean {
+        return format === 'MOON_PHASE';
     }
 
     private static _specialDateCategories(): [string, string][] {
@@ -530,12 +559,13 @@ export class VariablePanel {
                     previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
                 } else if (binding!.type === 'miniCalendar' && val) {
                     previewValue.innerHTML = `<div style="width:120px; height:135px; margin:0 auto;">${val}</div>`;
-                } else if (binding!.type === 'date' && binding!.format === 'DAYS_BOX' && val) {
-                    // _formatDate()'s DAYS_BOX case returns real markup (a
-                    // row of day-letter boxes), not typed text -- was falling
-                    // into the plain-text branch below, which showed the
-                    // literal "<div style=...>S</div>..." tags as text
-                    // instead of rendering them.
+                } else if (binding!.type === 'date' && VariableEngine.isHtmlDateFormat(binding!.format) && val) {
+                    // _formatDate()'s DAYS_BOX/MOON_PHASE cases return real
+                    // markup (a row of day-letter boxes / an icon+emoji+text
+                    // span), not typed text -- was falling into the
+                    // plain-text branch below, which showed the literal
+                    // "<div style=...>S</div>..." tags as text instead of
+                    // rendering them.
                     previewValue.innerHTML = val;
                 } else {
                     previewValue.textContent = (val?.length) ? val : '—';
@@ -586,17 +616,46 @@ export class VariablePanel {
                     const specialRandom   = container.querySelector<HTMLInputElement>('#var-date-special-randomize');
                     const specialSep      = container.querySelector<HTMLInputElement>('#var-date-special-separator');
                     const specialEmpty    = container.querySelector<HTMLInputElement>('#var-date-special-emptytext');
+                    const calendarOpts    = container.querySelector<HTMLElement>('#var-date-calendar-options');
+                    const calShowIcon     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-icon');
+                    const calShowEmoji    = container.querySelector<HTMLInputElement>('#var-date-calendar-show-emoji');
+                    const calShowText     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-text');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
                     if (formatSel)   formatSel.onchange    = () => {
                         binding!.format = formatSel.value;
-                        if (daysBoxOpts) daysBoxOpts.style.display = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
-                        if (customOpts)  customOpts.style.display  = binding!.format === 'CUSTOM' ? 'block' : 'none';
-                        if (specialOpts) specialOpts.style.display = binding!.format === 'SPECIAL_DATE' ? 'block' : 'none';
+                        if (daysBoxOpts)   daysBoxOpts.style.display   = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
+                        if (customOpts)    customOpts.style.display    = binding!.format === 'CUSTOM' ? 'block' : 'none';
+                        if (specialOpts)   specialOpts.style.display   = binding!.format === 'SPECIAL_DATE' ? 'block' : 'none';
+                        if (calendarOpts)  calendarOpts.style.display  = VariablePanel._isCalendarPartsFormat(binding!.format) ? 'block' : 'none';
                         notify();
                     };
+                    // At least one of icon/emoji/text must always stay
+                    // checked -- an unchecked checkbox here means "this
+                    // variable renders as nothing at all", almost never
+                    // what the user actually wants, and _composeCalendarParts()
+                    // would silently fall back to text-only anyway, leaving
+                    // the checkbox UI state (all unchecked) out of sync with
+                    // what's actually being shown. Re-checking the box the
+                    // user just tried to uncheck (instead of forcing a
+                    // DIFFERENT one on) keeps the interaction simple/obvious.
+                    const calendarShowBoxes = [calShowIcon, calShowEmoji, calShowText].filter((b): b is HTMLInputElement => !!b);
+                    const bindCalendarShow = (input: HTMLInputElement | null, key: 'calendarShowIcon' | 'calendarShowEmoji' | 'calendarShowText'): void => {
+                        if (!input) return;
+                        input.onchange = () => {
+                            if (!input.checked && calendarShowBoxes.every(b => !b.checked)) {
+                                input.checked = true;
+                                return;
+                            }
+                            binding![key] = input.checked;
+                            notify();
+                        };
+                    };
+                    bindCalendarShow(calShowIcon,  'calendarShowIcon');
+                    bindCalendarShow(calShowEmoji, 'calendarShowEmoji');
+                    bindCalendarShow(calShowText,  'calendarShowText');
                     specialCatBoxes.forEach(box => {
                         box.onchange = () => {
                             // An empty array here is a valid, deliberate

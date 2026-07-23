@@ -2,6 +2,8 @@
 import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners, loadCalendarDate } from './ApiDataLoader.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { CalendarRenderer } from './CalendarRenderer.js';
+import { MoonPhases } from './MoonPhases.js';
+import { EMOJI_FONT_STACK } from './EmojiFont.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,27 @@ export interface VariableBinding {
     specialDateLimit?: number | string;
     /** Shuffles the matched titles (deterministically -- see _seededShuffle()) before specialDateLimit is applied, instead of always showing them in category/sort_order. */
     specialDateRandomize?: boolean;
+    /**
+     * Which hemisphere's season names/dates to use -- only read when
+     * format === 'SEASON'. 'south' (Brazil's own) is the app-wide default
+     * (defaultBinding() below) since every other calendrical default here
+     * (BrazilianHolidays.ts, pt-BR month/weekday names) is already
+     * Brazil-first. See _formatSeason()/Seasons.ts.
+     */
+    hemisphere?: 'south' | 'north';
+    /**
+     * Shared by 'SEASON' and 'MOON_PHASE' (only one is ever active per
+     * binding, so these three toggles cover both instead of duplicating
+     * them per format) -- which of icon/emoji/text to include in the
+     * resolved output, in that fixed order. At least one is always kept
+     * on in the panel UI (VariablePanel.ts); _formatMoonPhase()/
+     * _formatSeason() also defensively fall back to text-only if a saved
+     * binding somehow has all three off, so the variable never resolves
+     * to a silently empty string.
+     */
+    calendarShowIcon?:  boolean;
+    calendarShowEmoji?: boolean;
+    calendarShowText?:  boolean;
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -149,6 +172,23 @@ export class VariableEngine {
         'link','emoji','apiPhrase','emojiKitchen','miniCalendar',
     ];
 
+    /**
+     * Every `format === '...'` value (type 'date' only) whose resolved
+     * value is real HTML rather than a plain string -- every caller that
+     * applies a resolved 'date' value to the DOM (VariableContentTool.ts's
+     * _applyVariablePreview(), AgendaExport.ts's _applyResolvedValue(),
+     * VariablePanel.ts's own live preview) needs to innerHTML these
+     * instead of textContent-ing them, exactly like they already do for
+     * binding.type === 'miniCalendar'. Centralized here (instead of each
+     * of those three call sites hardcoding its own format list) so adding
+     * a future HTML-returning date format only means adding it here once.
+     */
+    static readonly HTML_DATE_FORMATS: string[] = ['DAYS_BOX', 'MOON_PHASE'];
+
+    static isHtmlDateFormat(format: string | undefined): boolean {
+        return !!format && this.HTML_DATE_FORMATS.includes(format);
+    }
+
     // ── Default bindings ─────────────────────────────────────────────────────
 
     static defaultBinding(type: string): VariableBinding | null {
@@ -164,6 +204,10 @@ export class VariableEngine {
                 specialDateEmptyText: '',
                 specialDateLimit: '',
                 specialDateRandomize: false,
+                hemisphere: 'south',
+                calendarShowIcon: true,
+                calendarShowEmoji: true,
+                calendarShowText: true,
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
@@ -444,6 +488,7 @@ export class VariableEngine {
             case 'MONTH_ONLY':         return mPt[d.getMonth()];
             case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
+            case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
             case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -553,6 +598,68 @@ export class VariableEngine {
             .split(/(\[[^\]]*\])/g)
             .map(part => (part.startsWith('[') && part.endsWith(']')) ? part.slice(1, -1) : applyTokens(part))
             .join('');
+    }
+
+    /**
+     * Joins whichever of icon/emoji/text `b.calendarShow*` has enabled
+     * (icon, then emoji, then text, always in that order) into one
+     * resolved value -- shared by _formatMoonPhase() and _formatSeason(),
+     * since both formats expose the exact same 3-way display toggle (see
+     * VariableBinding's calendarShowIcon/Emoji/Text doc comment). Falls
+     * back to text-only if a binding somehow has all three off (should
+     * only ever happen for corrupted/hand-edited state -- the panel UI
+     * itself always keeps at least one checked), so the variable never
+     * silently resolves to ''.
+     *
+     * ALWAYS returns real HTML, even for the text-only case -- unlike
+     * every other _formatDate() branch (which return plain strings), this
+     * format needs to conditionally include markup (the icon's <svg>, the
+     * emoji's own font-family span), so every consumer that applies this
+     * value to the DOM must use innerHTML for it, same as it already does
+     * for 'DAYS_BOX'/'miniCalendar' (see VariableContentTool.ts's
+     * _applyVariablePreview(), AgendaExport.ts's _applyResolvedValue(),
+     * VariablePanel.ts's own live preview -- all three keep a per-format
+     * innerHTML-vs-textContent check that 'MOON_PHASE'/'SEASON' had to be
+     * added to alongside 'DAYS_BOX'). Keeping this format's output type
+     * consistent (always HTML, never sometimes-plain-sometimes-HTML)
+     * means those checks only need the format name, not a peek at which
+     * calendarShow* toggles are on. The emoji gets its own
+     * `font-family: EMOJI_FONT_STACK` span: the surrounding text almost
+     * certainly uses the box's own chosen font (DM Sans, etc.), which
+     * doesn't reliably have color emoji glyphs, so without this the emoji
+     * can render as a black-and-white fallback glyph or tofu box instead
+     * of the intended colorful pictograph (see EmojiFont.ts).
+     */
+    private static _composeCalendarParts(b: VariableBinding, iconHtml: string, emoji: string, text: string): string {
+        let showIcon  = !!b.calendarShowIcon;
+        let showEmoji = !!b.calendarShowEmoji;
+        let showText  = !!b.calendarShowText;
+        if (!showIcon && !showEmoji && !showText) showText = true;
+
+        const parts: string[] = [];
+        if (showIcon)  parts.push(iconHtml);
+        if (showEmoji) parts.push(`<span style="font-family: ${EMOJI_FONT_STACK};">${emoji}</span>`);
+        if (showText)  parts.push(this._escHtml(text));
+
+        return `<span style="display:inline-flex; align-items:center; gap:0.3em;">${parts.join('')}</span>`;
+    }
+
+    /** Minimal HTML-escape for the plain-text part of a composed icon/emoji/text value (see _composeCalendarParts()). */
+    private static _escHtml(s: string): string {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /**
+     * format === 'MOON_PHASE' -- 100% client-computed (MoonPhases.ts, same
+     * synodic-month approximation already used for the calendar grid's
+     * moon legend), no API/database involved -- unlike 'SPECIAL_DATE'
+     * above, there's no curated data to look up, just a date-driven
+     * astronomical approximation, so this can run directly here instead
+     * of needing an apiCache/prefetch step.
+     */
+    private static _formatMoonPhase(d: Date, b: VariableBinding): string {
+        const info = MoonPhases.getPhaseInfo(d);
+        return this._composeCalendarParts(b, info.iconHtml, info.emoji, info.label);
     }
 
     /**
