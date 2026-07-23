@@ -57,6 +57,14 @@ export class VariableContentTool extends BaseTool {
   protected static _syncFromDOM(element: HTMLElement): void {
     const content = getContent(element);
     if (!content) return;
+
+    // Backfills `overflow: hidden` onto elements created before this was
+    // part of createElement()'s baseline style -- see TextTool.ts's
+    // _syncFromDOM() for the full explanation (same fix, same reasoning,
+    // applies identically here). Not part of dataset.ctState -- always
+    // enforced, not a user toggle.
+    content.style.overflow = 'hidden';
+
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
     if (!('font'     in existing)) patch.font     = (content.style.fontFamily || 'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
@@ -273,6 +281,7 @@ export class VariableContentTool extends BaseTool {
       display: block;
       width: 100%;
       height: 100%;
+      overflow: hidden;
       white-space: pre-wrap;
       word-break: break-word;
       cursor: default;

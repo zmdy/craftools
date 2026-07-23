@@ -86,6 +86,7 @@ export class TextTool extends BaseTool {
       display: block;
       width: 100%;
       height: 100%;
+      overflow: hidden;
       white-space: pre-wrap;
       word-break: break-word;
       cursor: text;
@@ -105,6 +106,17 @@ export class TextTool extends BaseTool {
   protected static _syncFromDOM(element: HTMLElement): void {
     const textEl = getTextEl(element);
     if (!textEl) return;
+
+    // Backfills `overflow: hidden` onto elements created before this was
+    // part of createElement()'s baseline style -- without it, once
+    // auto-fit is off and the box is manually resized smaller than the
+    // text needs, the text visually spills straight past the selection
+    // handles instead of clipping to the box (Element.ts's shared
+    // `_content` wrapper is deliberately `overflow: visible`, for
+    // CurvedText/Stamp's SVGs that legitimately bleed past their box, so
+    // clipping has to happen on this tool's own text node instead).
+    // Not part of `dataset.ctState` -- always enforced, not a user toggle.
+    textEl.style.overflow = 'hidden';
 
     const existing = PropertyRenderer._readState(element);
     // Only populate keys that aren't already stored
