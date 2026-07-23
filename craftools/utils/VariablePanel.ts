@@ -167,10 +167,10 @@ export class VariablePanel {
             { token: 'mm',        i18nKey: 'dateBtnMonth' },
             { token: 'yyyy',      i18nKey: 'dateBtnYear' },
             { token: 'wwww',      i18nKey: 'dateBtnWeekday' },
-            { token: '{estacao}', i18nKey: 'dateBtnSeason' },
-            { token: '{lua}',     i18nKey: 'dateBtnMoonPhase' },
-            { token: '{signo}',   i18nKey: 'dateBtnZodiac' },
-            { token: '{feriado}', i18nKey: 'dateBtnHoliday' },
+            { token: '{season}',  i18nKey: 'dateBtnSeason' },
+            { token: '{moon}',    i18nKey: 'dateBtnMoonPhase' },
+            { token: '{zodiac}',  i18nKey: 'dateBtnZodiac' },
+            { token: '{holiday}', i18nKey: 'dateBtnHoliday' },
         ];
     }
 
@@ -202,10 +202,10 @@ export class VariablePanel {
             case 'WEEKDAY_DATE':        return 'wwww, dd/mm';
             case 'DAY_ONLY':            return 'd';
             case 'MONTH_ONLY':          return 'mmmm';
-            case 'SPECIAL_DATE':        return '{feriado}';
-            case 'MOON_PHASE':          return '{lua}';
-            case 'SEASON':              return '{estacao}';
-            case 'ZODIAC':              return '{signo}';
+            case 'SPECIAL_DATE':        return '{holiday}';
+            case 'MOON_PHASE':          return '{moon}';
+            case 'SEASON':              return '{season}';
+            case 'ZODIAC':              return '{zodiac}';
             case 'DAYS_BOX':            return '';
             case 'CUSTOM':              return '';
             default:                    return 'dd/mm/yyyy';
@@ -309,7 +309,7 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-special-options" style="display: ${hasToken('{feriado}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
                     <div class="ct-field">
@@ -336,7 +336,7 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-season-options" style="display: ${hasToken('{estacao}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-season-options" style="display: ${hasToken('{season}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateHemisphereLabel')}</span>
                     <select id="var-date-hemisphere" class="craftools-select" style="width:100%;">
@@ -346,7 +346,7 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{estacao}') || hasToken('{lua}') || hasToken('{signo}')) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{season}') || hasToken('{moon}') || hasToken('{zodiac}')) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <span class="craftools-label">${I18n.t('variablePanel.dateCalendarModeLabel')}</span>
                 <div class="ct-field-row" style="gap:4px; margin-top:4px;">
                     <button type="button" class="craftools-pill var-date-calendar-mode-btn ${(b.calendarDisplay ?? 'text') === 'text' ? 'active' : ''}" data-mode="text">${I18n.t('variablePanel.dateCalendarModeText')}</button>
@@ -367,7 +367,7 @@ export class VariablePanel {
      * emoji. Only matters for a binding still on one of these legacy whole
      * formats (pre-dating the multi-select custom-token redesign) --
      * once on 'CUSTOM', visibility instead follows whether any of
-     * {estacao}/{lua}/{signo} is present in the text (see the `hasToken`
+     * {season}/{moon}/{zodiac} is present in the text (see the `hasToken`
      * checks at this method's call site).
      */
     private static _isCalendarPartsFormat(format?: string): boolean {
@@ -702,7 +702,7 @@ export class VariablePanel {
                     // and shows/hides the Estação/Signo/Fase da Lua/Feriado
                     // sub-option blocks by whether their token is present.
                     // The text/icon/emoji single-select (calendarOpts) is
-                    // shared by all three of {estacao}/{lua}/{signo} -- see
+                    // shared by all three of {season}/{moon}/{zodiac} -- see
                     // _renderCalendarInfo() in VariableEngine.ts, which every
                     // one of those tokens (and their whole-format
                     // counterparts) render through -- so it shows whenever
@@ -717,9 +717,9 @@ export class VariablePanel {
                             btn.classList.toggle('active', !!token && lower.includes(token));
                         });
                         if (daysBoxOpts)  daysBoxOpts.style.display  = 'none';
-                        if (specialOpts)  specialOpts.style.display  = lower.includes('{feriado}') ? 'block' : 'none';
-                        if (seasonOpts)   seasonOpts.style.display   = lower.includes('{estacao}') ? 'block' : 'none';
-                        if (calendarOpts) calendarOpts.style.display = (lower.includes('{estacao}') || lower.includes('{lua}') || lower.includes('{signo}')) ? 'block' : 'none';
+                        if (specialOpts)  specialOpts.style.display  = lower.includes('{holiday}') ? 'block' : 'none';
+                        if (seasonOpts)   seasonOpts.style.display   = lower.includes('{season}') ? 'block' : 'none';
+                        if (calendarOpts) calendarOpts.style.display = (lower.includes('{season}') || lower.includes('{moon}') || lower.includes('{zodiac}')) ? 'block' : 'none';
                         notify();
                     };
                     formatButtons.forEach(btn => {
