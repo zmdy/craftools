@@ -148,17 +148,72 @@ export class VariablePanel {
 
     // ── Config HTML per type ──────────────────────────────────────────────────
 
-    private static _dateFormats(): [string, string][] {
+    /**
+     * The 6 multi-select "piece" buttons shown above the always-visible
+     * custom format box (replaces the old single-select `<select>` of ~17
+     * mutually-exclusive whole formats). Clicking one inserts/removes its
+     * `token` inside the custom format text (see _formatCustomDate() in
+     * VariableEngine.ts) -- several can be active at once, composing
+     * together into the same string, instead of picking one whole format.
+     * Display order here is also the button row's order.
+     */
+    private static _dateFormatButtons(): { token: string; i18nKey: string }[] {
         return [
-            ['DD/MM/YYYY','DDMMYYYY'],['DD/MM/YY','DDMMYY'],['DD/MM','DDMM'],['MM/YYYY','MMYYYY'],
-            ['YYYY-MM-DD','ISO'],['DAY_MONTH_LONG','DayMonthLong'],['DAY_MONTH_YEAR_LONG','DayMonthYearLong'],
-            ['WEEKDAY','Weekday'],['WEEKDAY_SHORT','WeekdayShort'],['WEEKDAY_DATE','WeekdayDate'],
-            ['DAYS_BOX','DaysBox'],['DAY_ONLY','DayOnly'],['MONTH_ONLY','MonthOnly'],
-            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],['MOON_PHASE','MoonPhase'],['SEASON','Season'],
+            { token: 'dd',        i18nKey: 'dateBtnDay' },
+            { token: 'mmmm',      i18nKey: 'dateBtnMonth' },
+            { token: 'wwww',      i18nKey: 'dateBtnWeekday' },
+            { token: '{estacao}', i18nKey: 'dateBtnSeason' },
+            { token: '{lua}',     i18nKey: 'dateBtnMoonPhase' },
+            { token: '{feriado}', i18nKey: 'dateBtnHoliday' },
         ];
     }
 
+    /**
+     * Best-effort custom-token equivalent of a legacy whole `format` value
+     * (every format that isn't 'CUSTOM' itself), used ONLY to pre-fill the
+     * now-always-visible custom format box + button active-states the
+     * first time a binding saved under the old single-select system is
+     * opened in the panel -- doesn't mutate the binding by itself, so a
+     * binding untouched by the user keeps resolving exactly as before
+     * (still via _formatDate()'s own dedicated case for that format, see
+     * VariableEngine.ts). Only once the user actually edits a button/the
+     * custom box does bindConfigFields() flip `binding.format` to 'CUSTOM'
+     * for real, seeded from this same string. 'DAYS_BOX' has no text
+     * equivalent (its own dedicated option block stays reachable via
+     * `b.format === 'DAYS_BOX'` instead, see _dateConfig()).
+     */
+    private static _legacyFormatToCustomToken(format?: string): string {
+        switch (format) {
+            case 'DD/MM/YYYY':          return 'dd/mm/yyyy';
+            case 'DD/MM/YY':            return 'dd/mm/yy';
+            case 'DD/MM':               return 'dd/mm';
+            case 'MM/YYYY':             return 'mm/yyyy';
+            case 'YYYY-MM-DD':          return 'yyyy-mm-dd';
+            case 'DAY_MONTH_LONG':      return 'd [de] mmmm';
+            case 'DAY_MONTH_YEAR_LONG': return 'd [de] mmmm [de] yyyy';
+            case 'WEEKDAY':             return 'wwww';
+            case 'WEEKDAY_SHORT':       return 'ww';
+            case 'WEEKDAY_DATE':        return 'wwww, dd/mm';
+            case 'DAY_ONLY':            return 'd';
+            case 'MONTH_ONLY':          return 'mmmm';
+            case 'SPECIAL_DATE':        return '{feriado}';
+            case 'MOON_PHASE':          return '{lua}';
+            case 'SEASON':              return '{estacao}';
+            case 'DAYS_BOX':            return '';
+            case 'CUSTOM':              return '';
+            default:                    return 'dd/mm/yyyy';
+        }
+    }
+
     private static _dateConfig(b: VariableBinding): string {
+        // Best-effort text driving both the always-visible custom box and
+        // the buttons' initial active state: the binding's own customFormat
+        // when it's already 'CUSTOM', otherwise a derived equivalent for
+        // whatever legacy whole format it currently has (see
+        // _legacyFormatToCustomToken()) -- purely for display until the
+        // user actually edits something (see that method's doc comment).
+        const customValue = b.format === 'CUSTOM' ? (b.customFormat ?? '') : this._legacyFormatToCustomToken(b.format);
+        const hasToken = (t: string) => customValue.toLowerCase().includes(t.toLowerCase());
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.dateStartLabel')}</span>
@@ -182,13 +237,13 @@ export class VariablePanel {
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.dateFormatLabel')}</span>
-                <select id="var-date-format" class="craftools-select" style="width:100%;">
-                    ${this._dateFormats().map(([fmt, key]) => `
-                        <option value="${fmt}" ${b.format === fmt ? 'selected' : ''}>${I18n.t('variablePanel.dateFormat' + key)}</option>
+                <div id="var-date-format-buttons" class="ct-field-row" style="gap:4px; flex-wrap:wrap;">
+                    ${this._dateFormatButtons().map(({ token, i18nKey }) => `
+                        <button type="button" class="craftools-pill var-date-fmt-btn ${hasToken(token) ? 'active' : ''}" data-token="${this._esc(token)}">${I18n.t('variablePanel.' + i18nKey)}</button>
                     `).join('')}
-                </select>
+                </div>
             </div>
-            
+
             <div id="var-date-daysbox-options" style="display: ${b.format === 'DAYS_BOX' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
@@ -235,7 +290,7 @@ export class VariablePanel {
                 </label>
             </div>
 
-            <div id="var-date-custom-options" style="display: ${b.format === 'CUSTOM' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-custom-options" style="display: block; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div style="font-size:11px; color:var(--text-muted); line-height:1.6; margin-bottom:8px;">
                     ${I18n.t('variablePanel.dateCustomLegend')}
                 </div>
@@ -243,11 +298,11 @@ export class VariablePanel {
                     <span class="craftools-label">${I18n.t('variablePanel.dateCustomLabel')}</span>
                     <input type="text" id="var-date-custom-format" class="craftools-input" style="width:100%;"
                         placeholder="${this._esc(I18n.t('variablePanel.dateCustomPlaceholder'))}"
-                        value="${this._esc(b.customFormat)}">
+                        value="${this._esc(customValue)}">
                 </div>
             </div>
 
-            <div id="var-date-special-options" style="display: ${b.format === 'SPECIAL_DATE' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-special-options" style="display: ${hasToken('{feriado}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
                     <div class="ct-field">
@@ -274,7 +329,7 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-season-options" style="display: ${b.format === 'SEASON' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-season-options" style="display: ${hasToken('{estacao}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateHemisphereLabel')}</span>
                     <select id="var-date-hemisphere" class="craftools-select" style="width:100%;">
@@ -608,7 +663,7 @@ export class VariablePanel {
                     const startInput      = container.querySelector<HTMLInputElement>('#var-date-start');
                     const intervalSel     = container.querySelector<HTMLSelectElement>('#var-date-interval');
                     const stepInput       = container.querySelector<HTMLInputElement>('#var-date-step');
-                    const formatSel       = container.querySelector<HTMLSelectElement>('#var-date-format');
+                    const formatButtons   = container.querySelectorAll<HTMLButtonElement>('.var-date-fmt-btn');
                     const daysBoxOpts     = container.querySelector<HTMLElement>('#var-date-daysbox-options');
                     const daysBoxColorEl  = container.querySelector<HTMLElement>('#var-date-daysbox-color-picker');
                     const daysBoxRadius   = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
@@ -618,7 +673,6 @@ export class VariablePanel {
                     const daysBoxBWidth   = container.querySelector<HTMLInputElement>('#var-date-daysbox-borderwidth');
                     const daysBoxBColorEl = container.querySelector<HTMLElement>('#var-date-daysbox-bordercolor-picker');
                     const daysBoxSun      = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
-                    const customOpts      = container.querySelector<HTMLElement>('#var-date-custom-options');
                     const customFormat    = container.querySelector<HTMLInputElement>('#var-date-custom-format');
                     const specialOpts     = container.querySelector<HTMLElement>('#var-date-special-options');
                     const specialCatBoxes = container.querySelectorAll<HTMLInputElement>('.var-date-special-cat');
@@ -636,15 +690,52 @@ export class VariablePanel {
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
-                    if (formatSel)   formatSel.onchange    = () => {
-                        binding!.format = formatSel.value;
-                        if (daysBoxOpts)   daysBoxOpts.style.display   = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
-                        if (customOpts)    customOpts.style.display    = binding!.format === 'CUSTOM' ? 'block' : 'none';
-                        if (specialOpts)   specialOpts.style.display   = binding!.format === 'SPECIAL_DATE' ? 'block' : 'none';
-                        if (seasonOpts)    seasonOpts.style.display    = binding!.format === 'SEASON' ? 'block' : 'none';
-                        if (calendarOpts)  calendarOpts.style.display  = VariablePanel._isCalendarPartsFormat(binding!.format) ? 'block' : 'none';
+                    // Applies a new custom-format string from either a
+                    // button click or free typing: writes it into the text
+                    // box + binding (always flipping `format` to 'CUSTOM'
+                    // from this point on -- see _legacyFormatToCustomToken()'s
+                    // doc comment for why a mere panel-open doesn't do this),
+                    // re-derives every button's active state from the text
+                    // (so typing "reflects in the marked buttons", per spec),
+                    // and shows/hides the Estação/Feriado sub-option blocks
+                    // by whether their token is present. The icon/emoji/text
+                    // toggle block only ever applied to the OLD standalone
+                    // MOON_PHASE/SEASON whole formats (which return
+                    // icon+emoji+text HTML) -- the {estacao}/{lua} tokens
+                    // used here always resolve to plain-text labels (see
+                    // _formatCustomDate()), so that block has nothing to
+                    // control once a binding is on the new system.
+                    const applyCustomText = (text: string): void => {
+                        if (customFormat) customFormat.value = text;
+                        binding!.format       = 'CUSTOM';
+                        binding!.customFormat = text;
+                        const lower = text.toLowerCase();
+                        formatButtons.forEach(btn => {
+                            const token = (btn.dataset.token || '').toLowerCase();
+                            btn.classList.toggle('active', !!token && lower.includes(token));
+                        });
+                        if (daysBoxOpts)  daysBoxOpts.style.display  = 'none';
+                        if (specialOpts)  specialOpts.style.display  = lower.includes('{feriado}') ? 'block' : 'none';
+                        if (seasonOpts)   seasonOpts.style.display   = lower.includes('{estacao}') ? 'block' : 'none';
+                        if (calendarOpts) calendarOpts.style.display = 'none';
                         notify();
                     };
+                    formatButtons.forEach(btn => {
+                        btn.onclick = () => {
+                            const token   = btn.dataset.token || '';
+                            const current = customFormat ? customFormat.value : '';
+                            const isActive = btn.classList.contains('active');
+                            let next: string;
+                            if (isActive) {
+                                next = current.split(token).join('').replace(/[ \t]{2,}/g, ' ').trim();
+                            } else {
+                                const sep = current && !/\s$/.test(current) ? ' ' : '';
+                                next = current + sep + token;
+                            }
+                            applyCustomText(next);
+                        };
+                    });
+                    if (customFormat) customFormat.oninput = () => applyCustomText(customFormat.value);
                     if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
                     // At least one of icon/emoji/text must always stay
                     // checked -- an unchecked checkbox here means "this
@@ -708,7 +799,6 @@ export class VariablePanel {
                     if (daysBoxBStyle) daysBoxBStyle.onchange = () => { binding!.daysBoxBorderStyle = daysBoxBStyle.value;                  notify(); };
                     if (daysBoxBWidth) daysBoxBWidth.oninput  = () => { binding!.daysBoxBorderWidth = parseInt(daysBoxBWidth.value, 10);    notify(); };
                     if (daysBoxSun)    daysBoxSun.onchange   = () => { binding!.daysBoxStartSunday    = daysBoxSun.checked;                  notify(); };
-                    if (customFormat)  customFormat.oninput  = () => { binding!.customFormat          = customFormat.value;                  notify(); };
 
                     // Highlight/border color -- the same standardized picker
                     // every other color field in the app uses (palette

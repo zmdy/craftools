@@ -199,7 +199,7 @@ export class VariableEngine {
 
         switch (type) {
             case 'date':           return {
-                type, startDate: isoToday, interval: 'daily', step: 1, format: 'DD/MM/YYYY', linkedTo: '',
+                type, startDate: isoToday, interval: 'daily', step: 1, format: 'CUSTOM', customFormat: 'dd/mm/yyyy', linkedTo: '',
                 specialDateCategories: ['holiday', 'commemoration', 'saint', 'event'],
                 specialDateSeparator: ', ',
                 specialDateEmptyText: '',
@@ -271,11 +271,22 @@ export class VariableEngine {
             totalPages:      sampleContext.totalPages      ?? 1,
             now:             new Date(),
         };
-        if (binding.type === 'apiPhrase' || binding.type === 'emojiKitchen' || (binding.type === 'date' && binding.format === 'SPECIAL_DATE')) {
+        if (binding.type === 'apiPhrase' || binding.type === 'emojiKitchen' || (binding.type === 'date' && this._usesSpecialDateToken(binding))) {
             const apiCache = await this.prefetchApiResources([binding]);
             return this.resolve(binding, context, apiCache);
         }
         return this.resolve(binding, context, {});
+    }
+
+    /**
+     * Whether a 'date' binding needs craftools_api's calendar-dates
+     * resource prefetched -- either the whole format IS 'SPECIAL_DATE', or
+     * it's 'CUSTOM' and the pattern embeds the {feriado} token (see
+     * _formatCustomDate()). Shared by prefetchApiResources()'s bulk filter
+     * and resolvePreview()'s single-binding check so both stay in sync.
+     */
+    private static _usesSpecialDateToken(b: VariableBinding): boolean {
+        return b.format === 'SPECIAL_DATE' || (b.format === 'CUSTOM' && (b.customFormat ?? '').toLowerCase().includes('{feriado}'));
     }
 
     /**
@@ -370,7 +381,7 @@ export class VariableEngine {
         // fetch (deduped via the Set below); loadCalendarDate() also caches
         // per month/day across separate prefetchApiResources() calls (e.g.
         // one per live-preview keystroke).
-        const specialDateBindings = list.filter((b): b is VariableBinding => !!b && b.type === 'date' && b.format === 'SPECIAL_DATE');
+        const specialDateBindings = list.filter((b): b is VariableBinding => !!b && b.type === 'date' && this._usesSpecialDateToken(b));
         if (specialDateBindings.length) {
             const now = new Date();
             const pairs = new Set<string>();
@@ -487,7 +498,7 @@ export class VariableEngine {
             case 'WEEKDAY_DATE':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
             case 'DAY_ONLY':         return `${d.getDate()}`;
             case 'MONTH_ONLY':         return mPt[d.getMonth()];
-            case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
+            case 'CUSTOM':      return this._formatCustomDate(d, b, ctx, apiCache);
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
             case 'SEASON':      return this._formatSeason(d, b);
@@ -555,6 +566,22 @@ export class VariableEngine {
      * year TWICE concatenated, e.g. "2626" instead of "26"). A run whose
      * length doesn't match a known token (e.g. "ddd") is left untouched.
      *
+     * Also recognizes three curly-brace "calendar" tokens -- {estacao}
+     * (season), {lua} (moon phase), {feriado} (holiday/commemorative date)
+     * -- so the multi-select buttons in VariablePanel.ts's date config
+     * (Dia/Mês/Dia da semana/Estação/Fase da Lua/Feriado) can all compose
+     * into the SAME custom string instead of needing separate mutually
+     * exclusive whole formats. Deliberately resolve to their PLAIN-TEXT
+     * label only (Seasons.ts/MoonPhases.ts's `.label`, _formatSpecialDate()'s
+     * joined titles) rather than the icon+emoji HTML those formats produce
+     * when used standalone (see _formatSeason()/_formatMoonPhase()) -- a
+     * custom pattern is free-form text the user is actively typing into,
+     * so embedding markup there would either show as literal tags or force
+     * every consumer of a 'CUSTOM' value to start treating it as
+     * conditionally-HTML depending on its content, unlike every other
+     * 'CUSTOM' pattern today. Curly braces can't collide with the d/m/y/w
+     * letter-run tokens above, so both kinds are matched in one pass.
+     *
      * Any other character (including regular letters like 'e', 'a', 's'
      * that show up in ordinary words) passes through unchanged -- EXCEPT
      * that a bare single letter from {d,m,y,w} inside a literal word (e.g.
@@ -565,7 +592,8 @@ export class VariableEngine {
      * format input (VariablePanel.ts's _dateConfig()), which must stay in
      * sync with this exact token list.
      */
-    private static _formatCustomDate(d: Date, pattern: string): string {
+    private static _formatCustomDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
+        const pattern = b.customFormat ?? '';
         if (!pattern) return '';
         const pad     = (v: number) => String(v).padStart(2, '0');
         const mFull   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -586,10 +614,13 @@ export class VariableEngine {
             wwww: () => wFull[d.getDay()],
             ww:   () => wAbrev[d.getDay()],
             w:    () => wFirst[d.getDay()],
+            '{estacao}': () => Seasons.getSeasonInfo(d, b.hemisphere ?? 'south').label,
+            '{lua}':     () => MoonPhases.getPhaseInfo(d).label,
+            '{feriado}': () => this._formatSpecialDate(d, b, ctx, apiCache),
         };
 
         const applyTokens = (text: string): string =>
-            text.replace(/d+|m+|y+|w+/gi, run => {
+            text.replace(/\{estacao\}|\{lua\}|\{feriado\}|d+|m+|y+|w+/gi, run => {
                 const fn = tokens[run.toLowerCase()];
                 return fn ? fn() : run;
             });

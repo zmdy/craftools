@@ -78,9 +78,16 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxHeightPlaceholder: "auto",
         dateDaysBoxHeightHelp: "Deixe em branco para altura automática. Combine com a largura (Preenchimento interno) para deixar a caixa perfeitamente circular ou oval.",
 
-        dateCustomLabel: "Formato personalizado",
+        dateBtnDay: "Dia",
+        dateBtnMonth: "Mês",
+        dateBtnWeekday: "Dia da semana",
+        dateBtnSeason: "Estação",
+        dateBtnMoonPhase: "Fase da Lua",
+        dateBtnHoliday: "Feriado/Data comemorativa",
+
+        dateCustomLabel: "Formato de exibição personalizado",
         dateCustomPlaceholder: "ex: dd/mm/yyyy",
-        dateCustomLegend: "Use códigos para montar seu próprio formato: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
+        dateCustomLegend: "Clique nos botões acima para montar seu formato, ou digite os códigos diretamente: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso, <b>{estacao}</b> = estação do ano, <b>{lua}</b> = fase da lua, <b>{feriado}</b> = feriado/data comemorativa. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Início",
         seqNumberStepLabel: "Passo",
@@ -223,9 +230,16 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxHeightPlaceholder: "auto",
         dateDaysBoxHeightHelp: "Leave blank for automatic height. Combine with the width (Internal Padding) to make the box a perfect circle or oval.",
 
-        dateCustomLabel: "Custom format",
+        dateBtnDay: "Day",
+        dateBtnMonth: "Month",
+        dateBtnWeekday: "Weekday",
+        dateBtnSeason: "Season",
+        dateBtnMoonPhase: "Moon phase",
+        dateBtnHoliday: "Holiday/Commemorative date",
+
+        dateCustomLabel: "Custom display format",
         dateCustomPlaceholder: "e.g. dd/mm/yyyy",
-        dateCustomLegend: "Use tokens to build your own format: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
+        dateCustomLegend: "Click the buttons above to build your format, or type the tokens directly: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name, <b>{estacao}</b> = season, <b>{lua}</b> = moon phase, <b>{feriado}</b> = holiday/commemorative date. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
 
         seqNumberStartLabel: "Start",
         seqNumberStepLabel: "Step",
@@ -368,9 +382,16 @@ I18n.addTranslations('variablePanel', {
         dateDaysBoxHeightPlaceholder: "auto",
         dateDaysBoxHeightHelp: "Deja en blanco para altura automática. Combínalo con el ancho (Relleno Interno) para que la caja quede perfectamente circular u ovalada.",
 
-        dateCustomLabel: "Formato personalizado",
+        dateBtnDay: "Día",
+        dateBtnMonth: "Mes",
+        dateBtnWeekday: "Día de la semana",
+        dateBtnSeason: "Estación",
+        dateBtnMoonPhase: "Fase lunar",
+        dateBtnHoliday: "Feriado/Fecha conmemorativa",
+
+        dateCustomLabel: "Formato de visualización personalizado",
         dateCustomPlaceholder: "ej: dd/mm/yyyy",
-        dateCustomLegend: "Usa códigos para armar tu propio formato: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
+        dateCustomLegend: "Haz clic en los botones de arriba para armar tu formato, o escribe los códigos directamente: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo, <b>{estacao}</b> = estación del año, <b>{lua}</b> = fase lunar, <b>{feriado}</b> = feriado/fecha conmemorativa. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
 
         seqNumberStartLabel: "Inicio",
         seqNumberStepLabel: "Paso",
