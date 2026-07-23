@@ -49,8 +49,16 @@ export class PaperPatterns {
 
         let svgContent = '';
 
-        // 1. Cor de Fundo da Folha
-        svgContent += `<rect width="100%" height="100%" fill="${bgColor}"/>`;
+        // 1. Cor de Fundo da Folha: NÃO desenhamos mais um <rect> opaco aqui.
+        // Este SVG de papel fica sobreposto (como filho) ao elemento .craftools-page,
+        // e o background de um elemento filho sempre é pintado por cima do
+        // background do elemento pai, não importa o z-index -- por isso, com esse
+        // <rect> aqui, a cor de fundo escolhida na aba "Fundo" das Configurações de
+        // Página nunca aparecia enquanto o papel personalizado estivesse ativo.
+        // Deixamos o fundo da página (pageEl.style.background) ficar visível através
+        // do SVG do papel, que passa a desenhar apenas o padrão de escrita em si.
+        // `bgColor`/`bgPaint` seguem calculados acima (podem ainda ser úteis a
+        // outros usos futuros do tema) mas não são mais usados para pintar um rect.
 
         // 2. Desenho do Padrão de Fundo Adicional (se houver)
         if (meta.bgPattern && meta.bgPattern !== 'none') {
