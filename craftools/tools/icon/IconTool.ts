@@ -19,6 +19,11 @@ import './IconTool_Translations.js';
 // IconTool.js), IconLibrary.getPacks() returns an empty list and the picker
 // always shows "no icons found", regardless of createElement working.
 import '../../utils/icons/MaterialSymbolsPack.js';
+// Registers the "Font Awesome" pack (see FontAwesomePack.ts's own header
+// comment) -- the picker automatically shows a pack-selector tab row once
+// more than one pack is registered (renderPickerPanel()'s `packs.length > 1`
+// check below), so this import is the entire integration surface.
+import '../../utils/icons/FontAwesomePack.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface IconMeta {
