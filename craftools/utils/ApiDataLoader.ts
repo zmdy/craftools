@@ -201,10 +201,10 @@ export function loadEmojiKitchenCombo(left: string, right: string): Promise<any>
 
 /**
  * Loads craftools_api's `calendar-dates` resource for a single month/day --
- * feriados/comemorações/santos/eventos for that recurring day (no year: the
+ * holidays/commemorations/saints/events for that recurring day (no year: the
  * API always resolves against month+day only, see repo.php's
  * calendarEntryForDate()). Returns the raw `data` object (`{month, day,
- * feriados[], comemoracoes[], santos[], eventos[]}`) or `null` on any
+ * holidays[], commemorations[], saints[], events[]}`) or `null` on any
  * failure (network error, API down, invalid month/day) -- callers (see
  * VariableEngine.ts's "SPECIAL_DATE" format) already treat a missing/empty
  * result as "nothing special this day", so failing soft here needs no

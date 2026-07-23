@@ -118,12 +118,12 @@ export interface CalendarDateApiEntry {
 
 /** craftools_api's `calendar-dates` resource response `data` shape (repo.php's calendarEntryForDate()). */
 export interface CalendarDateApiResult {
-    month:        number;
-    day:          number;
-    feriados:     CalendarDateApiEntry[];
-    comemoracoes: CalendarDateApiEntry[];
-    santos:       CalendarDateApiEntry[];
-    eventos:      CalendarDateApiEntry[];
+    month:          number;
+    day:            number;
+    holidays:       CalendarDateApiEntry[];
+    commemorations: CalendarDateApiEntry[];
+    saints:         CalendarDateApiEntry[];
+    events:         CalendarDateApiEntry[];
 }
 
 export interface ApiCache {
@@ -735,10 +735,10 @@ export class VariableEngine {
      * prefetchApiResources()).
      */
     private static readonly SPECIAL_DATE_GROUP_KEYS: Record<string, keyof CalendarDateApiResult> = {
-        holiday:       'feriados',
-        commemoration: 'comemoracoes',
-        saint:         'santos',
-        event:         'eventos',
+        holiday:       'holidays',
+        commemoration: 'commemorations',
+        saint:         'saints',
+        event:         'events',
     };
 
     private static _formatSpecialDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
