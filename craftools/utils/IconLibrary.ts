@@ -15,13 +15,21 @@
  * Expected pack format:
  *   {
  *     label: 'Material Symbols',           // name shown on the picker tab
- *     viewBox: '0 -960 960 960',           // shared viewBox for all icons in the pack
+ *     viewBox: '0 -960 960 960',           // DEFAULT viewBox for icons in the pack
+ *                                          // that don't set their own (see below)
  *     categories: [{ id, label }, ...],    // categories for the inner picker tabs
  *     icons: [
- *       { id, category, label, keywords: [...], paths: ['M...', ...] },
+ *       { id, category, label, keywords: [...], paths: ['M...', ...], viewBox: '0 0 W H' },
  *       ...
  *     ],
  *   }
+ *
+ * `viewBox` on an individual icon is optional and overrides the pack's own --
+ * added for FontAwesomePack.js (utils/icons/FontAwesomePack.js), whose icons
+ * each have their own natural width (unlike Material Symbols' fixed 960x960
+ * grid), so a single shared pack-level viewBox would stretch/crop most of
+ * them. Falls back to `pack.viewBox` when unset, so every pre-existing pack
+ * (which never set this) renders exactly as before.
  *
  * `paths` is always an array (even when the icon has only one <path>) so that
  * multi-subpath icons (e.g. a pack that needs more than one <path> per glyph)
@@ -114,7 +122,8 @@ export class IconLibrary {
 
         const pathsHtml = icon.paths.map(d => `<path d="${this._esc(d)}"/>`).join('');
         const defs = fillPaint.defs + strokeDefs;
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this._esc(pack.viewBox)}" preserveAspectRatio="xMidYMid meet">${defs ? `<defs>${defs}</defs>` : ''}<g fill="${this._esc(fillPaint.paint)}" ${strokeAttrs} stroke-linejoin="round">${pathsHtml}</g></svg>`;
+        const viewBox = icon.viewBox || pack.viewBox;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this._esc(viewBox)}" preserveAspectRatio="xMidYMid meet">${defs ? `<defs>${defs}</defs>` : ''}<g fill="${this._esc(fillPaint.paint)}" ${strokeAttrs} stroke-linejoin="round">${pathsHtml}</g></svg>`;
     }
 
     /** Same as buildSvgString, but returns an SVGElement ready to append to the DOM. */
