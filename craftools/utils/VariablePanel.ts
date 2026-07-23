@@ -149,18 +149,23 @@ export class VariablePanel {
     // ── Config HTML per type ──────────────────────────────────────────────────
 
     /**
-     * The 6 multi-select "piece" buttons shown above the always-visible
+     * The 7 multi-select "piece" buttons shown above the always-visible
      * custom format box (replaces the old single-select `<select>` of ~17
      * mutually-exclusive whole formats). Clicking one inserts/removes its
      * `token` inside the custom format text (see _formatCustomDate() in
      * VariableEngine.ts) -- several can be active at once, composing
      * together into the same string, instead of picking one whole format.
-     * Display order here is also the button row's order.
+     * Display order here is also the button row's order. Dia/Mês/Ano use
+     * the compact 2-/4-digit tokens (not e.g. 'mmmm') specifically so they
+     * match defaultBinding()'s starting customFormat ('dd/mm/yyyy') --
+     * those three are the ones selected by default (see defaultBinding()
+     * in VariableEngine.ts).
      */
     private static _dateFormatButtons(): { token: string; i18nKey: string }[] {
         return [
             { token: 'dd',        i18nKey: 'dateBtnDay' },
-            { token: 'mmmm',      i18nKey: 'dateBtnMonth' },
+            { token: 'mm',        i18nKey: 'dateBtnMonth' },
+            { token: 'yyyy',      i18nKey: 'dateBtnYear' },
             { token: 'wwww',      i18nKey: 'dateBtnWeekday' },
             { token: '{estacao}', i18nKey: 'dateBtnSeason' },
             { token: '{lua}',     i18nKey: 'dateBtnMoonPhase' },
@@ -728,6 +733,14 @@ export class VariablePanel {
                             let next: string;
                             if (isActive) {
                                 next = current.split(token).join('').replace(/[ \t]{2,}/g, ' ').trim();
+                                // Deselecting the LAST active piece resets
+                                // the box to fully empty (per spec) rather
+                                // than leaving behind whatever literal
+                                // separators/text the user had typed around
+                                // the pieces (e.g. the leftover "//" from
+                                // "dd/mm/yyyy" once all three are removed).
+                                const anyLeft = VariablePanel._dateFormatButtons().some(o => next.toLowerCase().includes(o.token.toLowerCase()));
+                                if (!anyLeft) next = '';
                             } else {
                                 const sep = current && !/\s$/.test(current) ? ' ' : '';
                                 next = current + sep + token;
