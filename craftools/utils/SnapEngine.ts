@@ -22,6 +22,10 @@ const SNAP_THRESHOLD = 4;  // screen pixels within which a snap activates
 const GUIDE_COLOR    = 'rgba(249,115,22,0.9)';
 const OVERLAY_ID     = 'ct-snap-overlay';
 const MM_PX          = 3.7795275591; // CSS pixels per mm at 96dpi
+// Same floor Element.ts's own resize handler already clamps pw/ph to
+// (Math.max(2, ...)) -- a resize snap must never shrink an element below
+// it, even when the closest target would otherwise put it there.
+const MIN_SIZE        = 2;
 
 /**
  * Minimal shape of a `craftools-element` custom element as seen by SnapEngine.
@@ -98,23 +102,7 @@ export class SnapEngine {
     const pageRect = page.getBoundingClientRect();
 
     // ── Collect snap targets in screen space ──────────────────────────────
-    const xTargets: number[] = [
-      pageRect.left,
-      pageRect.right,
-      (pageRect.left + pageRect.right) / 2,
-    ];
-    const yTargets: number[] = [
-      pageRect.top,
-      pageRect.bottom,
-      (pageRect.top + pageRect.bottom) / 2,
-    ];
-
-    page.querySelectorAll('craftools-element').forEach(sib => {
-      if (sib === element) return;
-      const r = sib.getBoundingClientRect();
-      xTargets.push(r.left, r.right, (r.left + r.right) / 2);
-      yTargets.push(r.top,  r.bottom, (r.top  + r.bottom) / 2);
-    });
+    const { xTargets, yTargets } = this._gatherTargets(element, page, pageRect);
 
     // ── Find best X snap ─────────────────────────────────────────────────
     const eCX = (elRect.left + elRect.right)  / 2;
@@ -163,6 +151,94 @@ export class SnapEngine {
       const scY = element.unitY === 'mm' ? scale * MM_PX : scale;
       element.py += bestYDelta / scY;
       guides.push({ type: 'h', pct: bestYPct });
+    }
+
+    this._updateOverlay(page, guides);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Live snap — called every pointermove while resizing
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Adjusts element.pw/ph (and px/py, for handles that move the top/left
+   * edge) to the nearest snap position, and updates the guide line overlay
+   * -- the resize counterpart to snap() above.
+   *
+   * Unlike snap() (whole element moves, so its left/center/right AND
+   * top/center/bottom are all candidate positions), a resize handle only
+   * ever drags ONE edge per axis -- the opposite edge stays anchored in
+   * place -- so only that single edge's position is tested against the
+   * same target list (page edges/center + sibling elements' edges/center).
+   * `dir` is the handle's own `data-dir` ('l'/'r'/'t'/'b'/'tl'/'tr'/'bl'/'br',
+   * see Element.ts's resize handles), which determines which edge(s) are
+   * actively moving on each axis.
+   *
+   * IMPORTANT: same calling convention as snap() -- call AFTER
+   * _applyTransform() so getBoundingClientRect() reflects the element's
+   * current proposed size, and call _applyTransform() again afterwards to
+   * apply any snap correction.
+   *
+   * Disabled when window.craftoolsSnapGuides === false.
+   */
+  static snapResize(element: CraftoolsSnapTarget, dir: string): void {
+    const page = element.closest<HTMLElement>('.craftools-page');
+    if (!page) return;
+
+    if (window.craftoolsSnapGuides === false) {
+      this._clearOverlay(page);
+      return;
+    }
+
+    const scale    = this._getScale(element);
+    const elRect   = element.getBoundingClientRect();
+    const pageRect = page.getBoundingClientRect();
+
+    const { xTargets, yTargets } = this._gatherTargets(element, page, pageRect);
+
+    // Which single edge is actively being dragged on each axis, per handle
+    // -- mirrors exactly which px/py/pw/ph fields Element.ts's own resize
+    // handler already writes for each `dir` value.
+    const xEdge: 'left' | 'right' | null =
+      dir === 'l' || dir === 'tl' || dir === 'bl' ? 'left' :
+      dir === 'r' || dir === 'tr' || dir === 'br' ? 'right' : null;
+    const yEdge: 'top' | 'bottom' | null =
+      dir === 't' || dir === 'tl' || dir === 'tr' ? 'top' :
+      dir === 'b' || dir === 'bl' || dir === 'br' ? 'bottom' : null;
+
+    const guides: SnapGuide[] = [];
+
+    if (xEdge) {
+      const edgePos = xEdge === 'left' ? elRect.left : elRect.right;
+      const tgt     = this._bestSnapTarget(edgePos, xTargets);
+      if (tgt !== null) {
+        // Same scale convention Element.ts's own resize handler already
+        // uses for this axis (derived from unitW, applied to both px and
+        // pw -- see its 'l'/'tl'/'bl' branch).
+        const scX        = element.unitW === 'mm' ? scale * MM_PX : scale;
+        const deltaUnits = (tgt - edgePos) / scX;
+        const newPw      = xEdge === 'left' ? element.pw - deltaUnits : element.pw + deltaUnits;
+        if (newPw >= MIN_SIZE) {
+          if (xEdge === 'left') element.px += deltaUnits;
+          element.pw = newPw;
+          guides.push({ type: 'v', pct: (tgt - pageRect.left) / pageRect.width * 100 });
+        }
+      }
+    }
+
+    if (yEdge) {
+      const edgePos = yEdge === 'top' ? elRect.top : elRect.bottom;
+      const tgt     = this._bestSnapTarget(edgePos, yTargets);
+      if (tgt !== null) {
+        const scY        = element.unitH === 'mm' ? scale * MM_PX : scale;
+        const deltaUnits = (tgt - edgePos) / scY;
+        const newPh      = yEdge === 'top' ? element.ph - deltaUnits : element.ph + deltaUnits;
+        if (newPh >= MIN_SIZE) {
+          if (yEdge === 'top') element.py += deltaUnits;
+          element.ph = newPh;
+          guides.push({ type: 'h', pct: (tgt - pageRect.top) / pageRect.height * 100 });
+        }
+      }
     }
 
     this._updateOverlay(page, guides);
@@ -275,6 +351,52 @@ export class SnapEngine {
   // ─────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Screen-space snap candidates shared by snap() and snapResize(): the
+   * page's own left/right/h-center + top/bottom/v-center, plus every
+   * sibling `<craftools-element>`'s edges/center (the dragged/resized
+   * element itself excluded).
+   */
+  private static _gatherTargets(
+    element: CraftoolsSnapTarget,
+    page: HTMLElement,
+    pageRect: DOMRect,
+  ): { xTargets: number[]; yTargets: number[] } {
+    const xTargets: number[] = [
+      pageRect.left,
+      pageRect.right,
+      (pageRect.left + pageRect.right) / 2,
+    ];
+    const yTargets: number[] = [
+      pageRect.top,
+      pageRect.bottom,
+      (pageRect.top + pageRect.bottom) / 2,
+    ];
+
+    page.querySelectorAll('craftools-element').forEach(sib => {
+      if (sib === element) return;
+      const r = sib.getBoundingClientRect();
+      xTargets.push(r.left, r.right, (r.left + r.right) / 2);
+      yTargets.push(r.top,  r.bottom, (r.top  + r.bottom) / 2);
+    });
+
+    return { xTargets, yTargets };
+  }
+
+  /** Closest target to `pos` within SNAP_THRESHOLD screen px, or null if none qualify. */
+  private static _bestSnapTarget(pos: number, targets: number[]): number | null {
+    let best: number | null = null;
+    let bestDist = SNAP_THRESHOLD + 1;
+    for (const tgt of targets) {
+      const d = Math.abs(pos - tgt);
+      if (d <= SNAP_THRESHOLD && d < bestDist) {
+        bestDist = d;
+        best     = tgt;
+      }
+    }
+    return best;
+  }
 
   private static _getScale(element: CraftoolsSnapTarget): number {
     return element._getScale?.() ?? (window.craftoolsZoomLevel ?? 1);

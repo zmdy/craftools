@@ -560,6 +560,12 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
         this.py = this.origY + (this.origH - nh);
       }
 
+      // Apply the proposed size/position first so getBoundingClientRect()
+      // is current before SnapEngine reads screen position for snap
+      // calculation, same pattern as the isDragging branch above.
+      this._applyTransform();
+      SnapEngine.snapResize(this, d); // may nudge px/py/pw/ph; re-applies transform below
+
     } else if (this.isRotating) {
       const r  = this.getBoundingClientRect();
       const cx = r.left + r.width  / 2;
