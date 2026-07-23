@@ -81,6 +81,7 @@ export class VariableContentTool extends BaseTool {
       patch.color = JSON.stringify({ mode: 'solid', solid: hexColor, gradient: { type: 'linear', angle: 90, stops: ['#f97316', '#facc15'] } });
     }
     if (!('textAlign' in existing)) patch.textAlign = content.style.textAlign || 'left';
+    if (!('textTransform' in existing)) patch.textTransform = content.style.textTransform || 'none';
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
     // The binding lives on the element itself (element._craftoolsVariable),
@@ -313,6 +314,18 @@ export class VariableContentTool extends BaseTool {
           { type: 'align',       key: 'textAlign' },
           { type: 'toggle',      key: 'bold',      label: 'Bold' },
           { type: 'toggle',      key: 'italic',    label: 'Italic' },
+          // Same field as TextTool.ts's Title/Paragraph -- see its schema
+          // for why (only the value is applied to `content`, not resolved
+          // per-repetition, so it composes fine with variable bindings).
+          {
+            type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
+            options: [
+              { value: 'none',       label: 'None',       i18nKey: 'textTool.textTransformNone' },
+              { value: 'uppercase',  label: 'UPPERCASE',  i18nKey: 'textTool.textTransformUppercase' },
+              { value: 'lowercase',  label: 'lowercase',  i18nKey: 'textTool.textTransformLowercase' },
+              { value: 'capitalize', label: 'Capitalize', i18nKey: 'textTool.textTransformCapitalize' },
+            ],
+          },
           // Gradient-capable (BaseTool._paintTextColor(), the same
           // background-clip:text technique TextTool.ts uses). No explicit
           // defaultSolid needed: ColorPickerUI.ts's shared default is
@@ -367,6 +380,7 @@ export class VariableContentTool extends BaseTool {
       case 'textAlign': content.style.textAlign   = String(value); break;
       case 'bold':      content.style.fontWeight  = value ? 'bold' : 'normal'; break;
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;
+      case 'textTransform': content.style.textTransform = String(value); break;
       case 'borderRadius': content.style.borderRadius = `${value}px`; break;
       case 'zIndex':    element.style.zIndex       = String(value); break;
     }

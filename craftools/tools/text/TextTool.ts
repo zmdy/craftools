@@ -141,6 +141,9 @@ export class TextTool extends BaseTool {
     if (!('italic' in existing)) {
       patch.italic = textEl.style.fontStyle === 'italic';
     }
+    if (!('textTransform' in existing)) {
+      patch.textTransform = textEl.style.textTransform || 'none';
+    }
     if (!('underline' in existing)) {
       patch.underline = textEl.style.textDecoration?.includes('underline') ?? false;
     }
@@ -218,6 +221,15 @@ export class TextTool extends BaseTool {
           { type: 'toggle',      key: 'bold',       label: 'Bold' },
           { type: 'toggle',      key: 'italic',     label: 'Italic' },
           { type: 'toggle',      key: 'underline',  label: 'Underline' },
+          {
+            type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
+            options: [
+              { value: 'none',       label: 'None',       i18nKey: 'textTool.textTransformNone' },
+              { value: 'uppercase',  label: 'UPPERCASE',  i18nKey: 'textTool.textTransformUppercase' },
+              { value: 'lowercase',  label: 'lowercase',  i18nKey: 'textTool.textTransformLowercase' },
+              { value: 'capitalize', label: 'Capitalize', i18nKey: 'textTool.textTransformCapitalize' },
+            ],
+          },
         ],
       },
       {
@@ -361,6 +373,10 @@ export class TextTool extends BaseTool {
 
       case 'underline':
         textEl.style.textDecoration = value ? 'underline' : 'none';
+        break;
+
+      case 'textTransform':
+        textEl.style.textTransform = String(value);
         break;
 
       case 'color':
