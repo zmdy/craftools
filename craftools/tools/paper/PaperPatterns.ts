@@ -1,35 +1,28 @@
 // @ts-nocheck
 import { PaperThemes } from "./PaperTool.js"; // Importa os temas se necessário
-import { normalizeValue, svgPaintFromValue } from "../../utils/ColorPickerUI.js";
+import { normalizeValue } from "../../utils/ColorPickerUI.js";
 
 export class PaperPatterns {
-    
+
+    // Counter for unique gradient <defs> ids across however many times
+    // generateSVG() runs in the same document (once per page that has
+    // custom paper enabled, plus every regeneration after an edit) --
+    // reusing an id would make a later page's gradient silently redefine
+    // (and repaint) an earlier page's <linearGradient>.
+    static _gradIdCounter = 0;
+
     /**
-     * Gera o conteúdo interno do SVG (elementos gráficos e patterns) 
+     * Gera o conteúdo interno do SVG (elementos gráficos e patterns)
      * com base nas configurações da ferramenta de papel.
      */
     static generateSVG(meta, width, height) {
         const theme = meta.theme || 'default';
         const themeConfig = PaperThemes[theme] || PaperThemes['default'];
-        
-        // Cores do tema como fallback. bgColor/lineColor may be a bare hex
-        // (legacy value / theme default) or a JSON ColorPickerValue string
-        // when the user has picked a gradient (standardized color-picker
-        // field, same as ShapeGenerator.ts/IconLibrary.ts) -- resolved once
-        // here into either a plain color or a `url(#id)` gradient reference,
-        // so every _render*() call/interpolation below keeps working
-        // completely unchanged (they only ever treat these as opaque
-        // fill/stroke strings). The matching <defs> entries are spliced into
-        // the final <svg> in the `return` below.
-        const bgPaint   = svgPaintFromValue(normalizeValue(meta.bgColor   || themeConfig.bg),   'paper-bg');
-        const linePaint = svgPaintFromValue(normalizeValue(meta.lineColor || themeConfig.line), 'paper-line');
-        const bgColor   = bgPaint.paint;
-        const lineColor = linePaint.paint;
 
         const spacing = parseFloat(meta.lineSpacing) || 8;
         const lWidth = parseFloat(meta.lineWidth) || 0.5;
         const lStyle = meta.lineStyle || 'solid';
-        
+
         // Configurar stroke-dasharray para estilo de linha
         let dashStyle = '';
         if (lStyle === 'dashed') {
@@ -47,48 +40,102 @@ export class PaperPatterns {
         const availW = Math.max(0, width - mL - mR);
         const availH = Math.max(0, height - mT - mB);
 
+        // lineColor may be a bare hex (legacy value / theme default) or a
+        // JSON ColorPickerValue string when the user has picked a gradient
+        // (standardized color-picker field, same as ShapeGenerator.ts/
+        // IconLibrary.ts). Resolved once here into either a plain hex
+        // color, or a single shared gradient paint reused identically by
+        // every line ("per-line" mode, meta.lineGradientMode !== 'per-page')
+        // -- see _buildLineGradientPaint() for why this uses its own
+        // dedicated userSpaceOnUse gradient builder instead of the shared
+        // svgPaintFromValue() helper every other tool uses: that helper's
+        // gradients default to objectBoundingBox units, which the SVG spec
+        // makes invisible on any shape whose bounding box has zero width or
+        // height -- exactly what every horizontal <line> below has. That's
+        // the entire reason a gradient line color used to render nothing at
+        // all (a blank page).
+        //
+        // "per-page" mode doesn't use an SVG gradient paint server at all --
+        // `lineColor` here is just a sane single-color fallback (the
+        // gradient's first stop) for the pattern types that don't implement
+        // row-by-row interpolation. The real per-row work is
+        // `lineColorForRow` below, read by the renderers that DO support it
+        // (_renderLined, _renderGrid, _renderDot, _renderSplitGrid,
+        // _renderCornell).
+        const lineValue = normalizeValue(meta.lineColor || themeConfig.line);
+        const isLineGradient = lineValue.mode === 'gradient';
+        const lineGradientMode = meta.lineGradientMode === 'per-page' ? 'per-page' : 'per-line';
+
+        let lineColor = lineValue.solid;
+        let lineGradientDefs = '';
+        if (isLineGradient) {
+            if (lineGradientMode === 'per-page') {
+                lineColor = lineValue.gradient.stops[0] || '#000000';
+            } else {
+                const built = this._buildLineGradientPaint(lineValue.gradient, mL, mT, availW);
+                lineColor = built.paint;
+                lineGradientDefs = built.defs;
+            }
+        }
+
+        // Only meaningful when isLineGradient && lineGradientMode ===
+        // 'per-page' -- resolves the discrete SOLID color for row `i` of
+        // `totalRows` (0-indexed), interpolating through the gradient's
+        // stops so the FIRST row/line is the first stop's color and the
+        // LAST row/line is the last stop's color (exactly the "starts with
+        // one color on the first line, ends with the last gradient color on
+        // the last line" behavior requested). `null` otherwise, so
+        // renderers just fall back to the flat `lineColor` above.
+        const lineColorForRow = (isLineGradient && lineGradientMode === 'per-page')
+            ? (i, totalRows) => this._sampleGradientColor(lineValue.gradient.stops, totalRows > 1 ? i / (totalRows - 1) : 0)
+            : null;
+
         let svgContent = '';
 
-        // 1. Cor de Fundo da Folha: NÃO desenhamos mais um <rect> opaco aqui.
-        // Este SVG de papel fica sobreposto (como filho) ao elemento .craftools-page,
-        // e o background de um elemento filho sempre é pintado por cima do
-        // background do elemento pai, não importa o z-index -- por isso, com esse
-        // <rect> aqui, a cor de fundo escolhida na aba "Fundo" das Configurações de
-        // Página nunca aparecia enquanto o papel personalizado estivesse ativo.
-        // Deixamos o fundo da página (pageEl.style.background) ficar visível através
-        // do SVG do papel, que passa a desenhar apenas o padrão de escrita em si.
-        // `bgColor`/`bgPaint` seguem calculados acima (podem ainda ser úteis a
-        // outros usos futuros do tema) mas não são mais usados para pintar um rect.
-
-        // 2. Desenho do Padrão de Fundo Adicional (se houver)
+        // 1. Desenho do Padrão de Fundo Adicional (se houver)
+        //
+        // NOTE: there used to be an opaque `<rect fill="${bgColor}">`
+        // painted here first, as the page's own "background color". It's
+        // gone -- that rect is a DOM descendant of the page element that
+        // hosts this SVG, and a descendant's own background/fill ALWAYS
+        // paints over its ancestor's CSS `background`, regardless of
+        // z-index (z-index only orders siblings/stacking contexts, it
+        // never lets a parent's background show through its own children).
+        // That's exactly why enabling "papel personalizado" made the page's
+        // real background-color control (Page Settings' "Fundo" tab) look
+        // broken: this rect silently covered it every time. The custom
+        // paper's own `bgColor`/theme background is intentionally no longer
+        // rendered -- background color now has exactly one source of truth
+        // (the page's own "Fundo" tab), and custom paper only ever
+        // contributes its line/grid/dot pattern on top of it.
         if (meta.bgPattern && meta.bgPattern !== 'none') {
             svgContent += this._renderBgPattern(meta.bgPattern, lineColor, width, height);
         }
 
-        // 3. Renderizar Padrão de Escrita Específico (dentro da área útil das margens)
+        // 2. Renderizar Padrão de Escrita Específico (dentro da área útil das margens)
         const paperType = meta.paperType || 'lined';
         svgContent += `<g class="paper-writing-pattern">`;
-        
+
         switch (paperType) {
             case 'lined':
-                svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle);
+                svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
                 break;
             case 'vertical_lined':
                 // Pautado com linha vertical de margem
-                svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle);
+                svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
                 svgContent += `<line x1="${mL}" y1="0" x2="${mL}" y2="${height}" stroke="#ef4444" stroke-width="${lWidth * 1.5}"/>`;
                 break;
             case 'grid':
-                svgContent += this._renderGrid(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle);
+                svgContent += this._renderGrid(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
                 break;
             case 'dot':
-                svgContent += this._renderDot(mL, mT, availW, availH, spacing, lineColor, lWidth);
+                svgContent += this._renderDot(mL, mT, availW, availH, spacing, lineColor, lWidth, lineColorForRow);
                 break;
             case 'pink_millimeter_grid':
                 svgContent += this._renderMillimeterGrid(mL, mT, availW, availH, lineColor, lWidth);
                 break;
             case 'grid_lined_split':
-                svgContent += this._renderSplitGrid(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle);
+                svgContent += this._renderSplitGrid(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
                 break;
             case 'music':
                 svgContent += this._renderMusic(mL, mT, availW, availH, spacing, lineColor, lWidth);
@@ -106,7 +153,7 @@ export class PaperPatterns {
                 svgContent += this._renderCalligraphy(mL, mT, availW, availH, lineColor, lWidth);
                 break;
             case 'cornell':
-                svgContent += this._renderCornell(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, width, height);
+                svgContent += this._renderCornell(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, width, height, lineColorForRow);
                 break;
             case 'isometric':
                 svgContent += this._renderIsometric(mL, mT, availW, availH, spacing, lineColor, lWidth);
@@ -130,12 +177,12 @@ export class PaperPatterns {
         }
         svgContent += `</g>`;
 
-        // 4. Barra Lateral Guiada (se ativada independentemente do padrão)
+        // 3. Barra Lateral Guiada (se ativada independentemente do padrão)
         if (meta.sidebar && meta.sidebar.enabled) {
             svgContent += `<line x1="${mL}" y1="0" x2="${mL}" y2="${height}" stroke="#3b82f6" stroke-width="${lWidth * 1.5}" stroke-dasharray="4,2"/>`;
         }
 
-        // 6. Logomarca no topo esquerdo
+        // 4. Logomarca no topo esquerdo
         if (meta.logo && meta.logo.enabled && mT > 10) {
             svgContent += `<g transform="translate(${mL}, ${mT - 14})" style="opacity: 0.6;">
                 <circle cx="6" cy="6" r="5" fill="none" stroke="${lineColor}" stroke-width="1"/>
@@ -144,17 +191,17 @@ export class PaperPatterns {
             </g>`;
         }
 
-        // 7. Marca d'água no fundo
+        // 5. Marca d'água no fundo
         if (meta.watermark && meta.watermark.enabled) {
             svgContent += `<g transform="translate(${width / 2}, ${height / 2}) rotate(-45)" style="pointer-events: none; user-select: none;">
-                <text text-anchor="middle" dominant-baseline="middle" 
+                <text text-anchor="middle" dominant-baseline="middle"
                       style="font-family:'DM Sans', sans-serif; font-size: 24px; font-weight: 800; fill:${lineColor}; opacity: 0.05; letter-spacing: 4px;">
                     CRAFTOOLS
                 </text>
             </g>`;
         }
 
-        // 8. Número de página no rodapé
+        // 6. Número de página no rodapé
         if (meta.pageSettings && meta.pageSettings.showPageNumber && mB > 8) {
             // Nota: o número da página é calculado dinamicamente na renderização real.
             // Para o preview/estático, usamos um número de página fictício '1'.
@@ -162,31 +209,37 @@ export class PaperPatterns {
                 style="font-family:'DM Sans', sans-serif; font-size: 8px; fill:${lineColor}; opacity: 0.7;">1</text>`;
         }
 
-        const defs = bgPaint.defs + linePaint.defs;
+        const defs = lineGradientDefs;
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block; overflow:hidden; position:absolute; inset:0;">${defs ? `<defs>${defs}</defs>` : ''}${svgContent}</svg>`;
     }
 
     // ── Métodos de Renderização de Papéis ─────────────────────────────────────
 
-    static _renderLined(x, y, w, h, spacing, color, width, dash) {
+    static _renderLined(x, y, w, h, spacing, color, width, dash, rowColorFn) {
         let lines = '';
         const rows = Math.floor(h / spacing);
         for (let i = 1; i <= rows; i++) {
             const ly = y + i * spacing;
-            lines += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+            const strokeColor = rowColorFn ? rowColorFn(i - 1, rows) : color;
+            lines += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
         }
         return lines;
     }
 
-    static _renderGrid(x, y, w, h, spacing, color, width, dash) {
+    static _renderGrid(x, y, w, h, spacing, color, width, dash, rowColorFn) {
         let lines = '';
         const rows = Math.floor(h / spacing);
         const cols = Math.floor(w / spacing);
-        
-        // Linhas horizontais
+
+        // Linhas horizontais -- only these participate in row-by-row
+        // (per-page) gradient interpolation; the vertical lines below
+        // always keep the flat `color` (a column-by-column gradient wasn't
+        // requested, and mixing both axes would fight over which one "the"
+        // gradient direction is).
         for (let i = 0; i <= rows; i++) {
             const ly = y + i * spacing;
-            lines += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+            const strokeColor = rowColorFn ? rowColorFn(i, rows + 1) : color;
+            lines += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
         }
         // Linhas verticais
         for (let j = 0; j <= cols; j++) {
@@ -196,16 +249,17 @@ export class PaperPatterns {
         return lines;
     }
 
-    static _renderDot(x, y, w, h, spacing, color, width) {
+    static _renderDot(x, y, w, h, spacing, color, width, rowColorFn) {
         let dots = '';
         const rows = Math.floor(h / spacing);
         const cols = Math.floor(w / spacing);
         const r = Math.max(0.4, width * 1.5);
         for (let i = 0; i <= rows; i++) {
             const ly = y + i * spacing;
+            const fillColor = rowColorFn ? rowColorFn(i, rows + 1) : color;
             for (let j = 0; j <= cols; j++) {
                 const lx = x + j * spacing;
-                dots += `<circle cx="${lx}" cy="${ly}" r="${r}" fill="${color}"/>`;
+                dots += `<circle cx="${lx}" cy="${ly}" r="${r}" fill="${fillColor}"/>`;
             }
         }
         return dots;
@@ -236,20 +290,21 @@ export class PaperPatterns {
         return lines;
     }
 
-    static _renderSplitGrid(x, y, w, h, spacing, color, width, dash) {
+    static _renderSplitGrid(x, y, w, h, spacing, color, width, dash, rowColorFn) {
         let out = '';
         const splitX = x + w * 0.3; // 30% esquerda, 70% direita
-        
+
         // Linha divisória vertical
         out += `<line x1="${splitX}" y1="${y}" x2="${splitX}" y2="${y + h}" stroke="${color}" stroke-width="${width * 1.5}"/>`;
-        
+
         // Linhas pautadas direita
         const rows = Math.floor(h / spacing);
         for (let i = 1; i <= rows; i++) {
             const ly = y + i * spacing;
-            out += `<line x1="${splitX}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+            const strokeColor = rowColorFn ? rowColorFn(i - 1, rows) : color;
+            out += `<line x1="${splitX}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
         }
-        
+
         // Pautado largo no lado esquerdo (tópicos/sumários)
         const leftSpacing = spacing * 1.5;
         const leftRows = Math.floor(h / leftSpacing);
@@ -266,7 +321,7 @@ export class PaperPatterns {
         const staffHeight = 4 * lineSpacing; // 8mm total da pauta
         const gapBetweenStaves = 14; // Espaço entre as pautas
         const step = staffHeight + gapBetweenStaves; // 22mm
-        
+
         const count = Math.floor((h - staffHeight) / step) + 1;
         for (let s = 0; s < count; s++) {
             const sy = y + s * step;
@@ -290,7 +345,7 @@ export class PaperPatterns {
         const staffHeight = 5 * lineSpacing; // 10mm total
         const gap = 15;
         const step = staffHeight + gap;
-        
+
         const count = Math.floor((h - staffHeight) / step) + 1;
         for (let s = 0; s < count; s++) {
             const sy = y + s * step;
@@ -349,7 +404,7 @@ export class PaperPatterns {
             // 3. Linha conectora vertical lateral
             out += `<line x1="${x}" y1="${sy}" x2="${x}" y2="${tabY + tabH}" stroke="${color}" stroke-width="${width * 1.5}"/>`;
             out += `<line x1="${x + w}" y1="${sy}" x2="${x + w}" y2="${tabY + tabH}" stroke="${color}" stroke-width="${width * 1.5}"/>`;
-            
+
             // Colchete de junção de sistema à esquerda
             out += `<path d="M ${x + 1} ${sy} C ${x - 1} ${sy}, ${x - 1} ${tabY + tabH}, ${x + 1} ${tabY + tabH}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
         }
@@ -377,7 +432,7 @@ export class PaperPatterns {
             for (let c = 1; c <= numChords; c++) {
                 const cx = x + c * chordSpacing - 4; // Centraliza a caixa de 8mm
                 const cy = sy;
-                
+
                 // Caixa 5 strings × 4 frets (8mm × 6mm)
                 // Linha de topo grossa (pestana)
                 out += `<line x1="${cx}" y1="${cy}" x2="${cx + 8}" y2="${cy}" stroke="${color}" stroke-width="${width * 2}"/>`;
@@ -437,24 +492,24 @@ export class PaperPatterns {
         return out;
     }
 
-    static _renderCornell(x, y, w, h, spacing, color, width, dash, fullW, fullH) {
+    static _renderCornell(x, y, w, h, spacing, color, width, dash, fullW, fullH, rowColorFn) {
         let out = '';
-        
+
         const headerH = 20; // 20mm
         const summaryH = 30; // 30mm
         const noteAreaH = h - headerH - summaryH;
-        
+
         const splitX = x + w * 0.28; // 28% tópicos à esquerda
-        
+
         // 1. Cabeçalho (Header)
         out += `<rect x="${x}" y="${y}" width="${w}" height="${headerH}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
         out += `<g transform="translate(${x + 4}, ${y + 6})" style="font-family:'DM Sans', sans-serif; font-size: 7px; fill:${color}; font-weight: bold; opacity:0.85;">
             <text x="0" y="0">SUBJECT / TEMA:</text>
             <line x1="72" y1="2" x2="${w - 8}" y2="2" stroke="${color}" stroke-width="0.5"/>
-            
+
             <text x="0" y="8">NAME / NOME:</text>
             <line x1="60" y1="10" x2="${w * 0.6}" y2="10" stroke="${color}" stroke-width="0.5"/>
-            
+
             <text x="${w * 0.65}" y="8">DATE / DATA:</text>
             <line x1="${w * 0.65 + 50}" y1="10" x2="${w - 8}" y2="10" stroke="${color}" stroke-width="0.5"/>
         </g>`;
@@ -468,7 +523,8 @@ export class PaperPatterns {
         const rows = Math.floor(noteAreaH / spacing);
         for (let i = 1; i < rows; i++) {
             const ly = centerY + i * spacing;
-            out += `<line x1="${splitX}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+            const strokeColor = rowColorFn ? rowColorFn(i - 1, Math.max(1, rows - 1)) : color;
+            out += `<line x1="${splitX}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
         }
 
         // Pautado muito sutil à esquerda (tópicos/percepções)
@@ -483,7 +539,7 @@ export class PaperPatterns {
         const summaryY = centerY + noteAreaH;
         out += `<rect x="${x}" y="${summaryY}" width="${w}" height="${summaryH}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
         out += `<text x="${x + 4}" y="${summaryY + 5}" style="font-family:'DM Sans', sans-serif; font-size: 6.5px; font-weight: bold; fill:${color}; opacity:0.85;">SUMMARY / RESUMO:</text>`;
-        
+
         // Pautado no sumário
         const sumRows = Math.floor((summaryH - 6) / spacing);
         for (let i = 1; i <= sumRows; i++) {
@@ -512,7 +568,7 @@ export class PaperPatterns {
         // Usamos equações de reta para traçar todas as linhas diagonais que cruzam a área útil.
         // Espaçamento vertical entre interseções é hSpacing
         const stepY = hSpacing;
-        
+
         // Para simplificar, desenhamos uma malha cruzada cobrindo um retângulo inflado
         const rad = 30 * Math.PI / 180;
         const slope = Math.tan(rad); // ~0.577
@@ -529,7 +585,7 @@ export class PaperPatterns {
             // Ponto inicial (x_start, y_start) na margem esquerda (x) ou superior (y)
             const y1 = slope * x + b;
             const y2 = slope * (x + w) + b;
-            
+
             // Clipa a reta dentro do box (x, y, w, h)
             if (!(y1 > y + h && y2 > y + h) && !(y1 < y && y2 < y)) {
                 out += `<line x1="${x}" y1="${y1}" x2="${x + w}" y2="${y2}" stroke="${color}" stroke-width="${width * 0.7}" stroke-opacity="0.5"/>`;
@@ -558,11 +614,11 @@ export class PaperPatterns {
         for (let angle = 15; angle < 180; angle += stepAngle) {
             if (angle === 90 || angle === 180) continue;
             const rad = angle * Math.PI / 180;
-            
+
             // Vetor diretor
             const dx = Math.cos(rad);
             const dy = Math.sin(rad);
-            
+
             // Estende a linha até as bordas
             // Encontra distância de colisão com o box
             const length = Math.max(w, h) * 1.5;
@@ -574,7 +630,7 @@ export class PaperPatterns {
         // Acima e abaixo do horizonte
         let dist = 8;
         const decay = 0.78; // Reduz o espaço a cada passo
-        
+
         // Abaixo do horizonte
         let ly = cY + dist;
         while (ly < y + h) {
@@ -602,7 +658,7 @@ export class PaperPatterns {
         const size = spacing / 1.5; // Comprimento da aresta do hexágono
         const hexW = size * Math.sqrt(3);
         const hexH = size * 2;
-        
+
         const stepX = hexW;
         const stepY = size * 1.5;
 
@@ -641,13 +697,13 @@ export class PaperPatterns {
 
     static _renderSeyes(x, y, w, h, color, width) {
         let out = '';
-        
+
         // Seyes: Grade francesa clássica.
         // Linhas principais a cada 8mm (linha grossa azul/roxa ou lineColor)
         // Linhas verticais finas a cada 8mm
         // 3 linhas auxiliares horizontais intermediárias a cada 2mm (muito finas)
         const mainSpacing = 8;
-        
+
         // Cores padrão Seyes se cor for padrão cinza
         const isDefault = color === '#808080' || color === 'var(--text-secondary)';
         const mainColor = isDefault ? '#4f46e5' : color; // Roxo/Azul
@@ -666,10 +722,10 @@ export class PaperPatterns {
         // 2. Linhas horizontais principais e auxiliares
         for (let i = 0; i <= rows; i++) {
             const ly = y + i * mainSpacing;
-            
+
             // Linha principal
             out += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${mainColor}" stroke-width="${width}"/>`;
-            
+
             // 3 Linhas auxiliares acima da principal (só desenha se não passar o limite superior y)
             if (i < rows) {
                 out += `<line x1="${x}" y1="${ly + 2}" x2="${x + w}" y2="${ly + 2}" stroke="${auxColor}" stroke-width="${width * 0.3}" stroke-opacity="0.6"/>`;
@@ -686,7 +742,7 @@ export class PaperPatterns {
 
     static _renderStoryboard(x, y, w, h, color, width) {
         let out = '';
-        
+
         // Storyboard layout:
         // Exibe caixas de desenho proporcionais com linhas para legenda abaixo.
         // Calcula dinamicamente quantas caixas cabem:
@@ -698,7 +754,7 @@ export class PaperPatterns {
         const textH = 8; // 3 linhas
         const frameTotalH = boxH + textH + 4; // ~44mm
         const frameTotalW = boxW;
-        
+
         const gapX = 10;
         const gapY = 12;
 
@@ -716,7 +772,7 @@ export class PaperPatterns {
 
                 // 1. Moldura de Desenho (Retângulo do frame)
                 out += `<rect x="${fx}" y="${fy}" width="${boxW}" height="${boxH}" fill="none" stroke="${color}" stroke-width="${width * 1.2}"/>`;
-                
+
                 // Pequeno ícone ou número do quadro no canto
                 out += `<rect x="${fx}" y="${fy}" width="${7}" height="${5}" fill="${color}" fill-opacity="0.1"/>`;
                 out += `<text x="${fx + 2.2}" y="${fy + 4}" font-family="sans-serif" font-weight="bold" font-size="3.5px" fill="${color}">${r * numCols + c + 1}</text>`;
@@ -732,6 +788,71 @@ export class PaperPatterns {
     }
 
     // ── Métodos Auxiliares ────────────────────────────────────────────────────
+
+    /**
+     * Builds a `url(#id)` linear-gradient paint (+ its `<defs>` entry) for
+     * "per-line" mode -- the SAME gradient repeats identically on every
+     * line regardless of that line's y position. `gradientUnits=
+     * "userSpaceOnUse"` with a horizontal, constant-y vector (y1 === y2) is
+     * what makes both of those true at once:
+     *  - userSpaceOnUse (vs. the default objectBoundingBox every other
+     *    gradient consumer in this app relies on, see svgPaintFromValue()
+     *    in ColorPickerUI.ts) is required for the paint to render AT ALL on
+     *    a horizontal <line>, whose geometric bounding box has zero height
+     *    -- objectBoundingBox paint servers are invisible on zero-area
+     *    shapes per the SVG spec, which is the exact reason a gradient line
+     *    color used to render nothing.
+     *  - a constant-y vector means the gradient's color only ever varies
+     *    along x, so sampling it at any y (i.e. from any line, wherever it
+     *    sits vertically) reproduces the identical left-to-right color
+     *    progression.
+     * The gradient's configured angle is intentionally not applied here --
+     * a 1D horizontal line doesn't have a meaningful "gradient angle" the
+     * way a 2D filled shape does, so this always runs the stops left-to-right.
+     */
+    static _buildLineGradientPaint(gradient, x, y, w) {
+        const id = `paper-line-grad-${++PaperPatterns._gradIdCounter}`;
+        const stops = gradient.stops || [];
+        const stopsMarkup = stops.map((s, i) => {
+            const offset = stops.length === 1 ? 0 : Math.round((i / (stops.length - 1)) * 100);
+            return `<stop offset="${offset}%" stop-color="${String(s).replace(/"/g, '&quot;')}" />`;
+        }).join('');
+        const defs = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x}" y1="${y}" x2="${x + w}" y2="${y}">${stopsMarkup}</linearGradient>`;
+        return { paint: `url(#${id})`, defs };
+    }
+
+    /** Interpolates a color at position `t` (0..1) across an evenly-spaced gradient stop list -- "per-page" mode's row coloring. */
+    static _sampleGradientColor(stops, t) {
+        if (!stops || !stops.length) return '#000000';
+        if (stops.length === 1) return stops[0];
+        const clamped = Math.max(0, Math.min(1, t));
+        const scaled = clamped * (stops.length - 1);
+        const i0 = Math.floor(scaled);
+        const i1 = Math.min(stops.length - 1, i0 + 1);
+        const localT = scaled - i0;
+        return this._lerpHexColor(stops[i0], stops[i1], localT);
+    }
+
+    static _lerpHexColor(a, b, t) {
+        const pa = this._parseHex(a);
+        const pb = this._parseHex(b);
+        if (!pa || !pb) return t < 0.5 ? a : b;
+        const clampByte = v => Math.max(0, Math.min(255, Math.round(v)));
+        const r = clampByte(pa[0] + (pb[0] - pa[0]) * t);
+        const g = clampByte(pa[1] + (pb[1] - pa[1]) * t);
+        const bch = clampByte(pa[2] + (pb[2] - pa[2]) * t);
+        return `#${[r, g, bch].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+    }
+
+    static _parseHex(hex) {
+        if (typeof hex !== 'string') return null;
+        let h = hex.trim().replace(/^#/, '');
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        if (h.length !== 6) return null;
+        const num = parseInt(h, 16);
+        if (isNaN(num)) return null;
+        return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+    }
 
     static _renderBgPattern(patternType, color, width, height) {
         let patternContent = '';

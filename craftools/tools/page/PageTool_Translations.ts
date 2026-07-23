@@ -24,7 +24,10 @@ I18n.addTranslations('pageTool', {
         paperLines: "Linhas",
         paperMargins: "Margens (mm)",
         paperBackground: "Fundo do papel",
-        paperExtras: "Extras"
+        paperExtras: "Extras",
+        paperLineGradientMode: "Modo do gradiente",
+        paperLineGradientPerLine: "Linha por linha (mesmo gradiente em cada linha)",
+        paperLineGradientPerPage: "Referente à página (progride da 1ª à última linha)"
     },
     "en": {
         title: "Page Settings",
@@ -49,7 +52,10 @@ I18n.addTranslations('pageTool', {
         paperLines: "Lines",
         paperMargins: "Margins (mm)",
         paperBackground: "Paper background",
-        paperExtras: "Extras"
+        paperExtras: "Extras",
+        paperLineGradientMode: "Gradient mode",
+        paperLineGradientPerLine: "Per line (same gradient repeated on every line)",
+        paperLineGradientPerPage: "Per page (progresses from the first to the last line)"
     },
     "es": {
         title: "Configuración de Página",
@@ -74,6 +80,9 @@ I18n.addTranslations('pageTool', {
         paperLines: "Líneas",
         paperMargins: "Márgenes (mm)",
         paperBackground: "Fondo del papel",
-        paperExtras: "Extras"
+        paperExtras: "Extras",
+        paperLineGradientMode: "Modo del degradado",
+        paperLineGradientPerLine: "Línea por línea (mismo degradado en cada línea)",
+        paperLineGradientPerPage: "Referente a la página (progresa de la 1ª a la última línea)"
     }
 });

@@ -15,6 +15,15 @@ export type PaperMeta = {
   paperSize: string;
   theme: string;
   lineColor: string;
+  /**
+   * Only meaningful when `lineColor` is a gradient ColorPickerValue.
+   * 'per-line' (default): the same gradient repeats identically on every
+   * line. 'per-page': each line gets a single solid color, interpolated
+   * through the gradient's stops from the first line (first stop) to the
+   * last line (last stop). See PaperPatterns.ts's generateSVG()/
+   * _sampleGradientColor().
+   */
+  lineGradientMode: string;
   lineStyle: string;
   lineSpacing: number;
   lineWidth: number;
@@ -135,6 +144,7 @@ export class PaperTool extends BaseTool {
       paperSize: 'a4',
       theme: 'default',
       lineColor: '#a1a1aa',
+      lineGradientMode: 'per-line',
       lineStyle: 'solid',
       lineSpacing: 8,
       lineWidth: 0.5,
@@ -227,6 +237,7 @@ export class PaperTool extends BaseTool {
     if (!('paperSize'   in existing)) patch.paperSize   = meta.paperSize   ?? 'a4';
     if (!('theme'       in existing)) patch.theme       = meta.theme       ?? 'default';
     if (!('lineColor'   in existing)) patch.lineColor   = meta.lineColor   ?? '#a1a1aa';
+    if (!('lineGradientMode' in existing)) patch.lineGradientMode = meta.lineGradientMode ?? 'per-line';
     if (!('lineStyle'   in existing)) patch.lineStyle   = meta.lineStyle   ?? 'solid';
     if (!('lineSpacing' in existing)) patch.lineSpacing = meta.lineSpacing ?? 8;
     if (!('lineWidth'   in existing)) patch.lineWidth   = meta.lineWidth   ?? 0.5;
@@ -265,6 +276,8 @@ export class PaperTool extends BaseTool {
         icon: 'table_rows',
         fields: [
           { type: 'color-picker', key: 'lineColor', label: 'Line color' },
+          { type: 'select', key: 'lineGradientMode', label: 'Gradient mode',
+            options: [{ value: 'per-line', label: 'Same gradient on every line' }, { value: 'per-page', label: 'Gradient across the page' }] },
           { type: 'select', key: 'lineStyle',   label: 'Line style',
             options: [{ value: 'solid', label: 'Solid' }, { value: 'dashed', label: 'Dashed' }, { value: 'dotted', label: 'Dotted' }] },
           { type: 'slider', key: 'lineSpacing', label: 'Spacing',   min: 4, max: 20, step: 0.5 },
@@ -323,6 +336,7 @@ export class PaperTool extends BaseTool {
         case 'paperSize':         meta.paperSize        = String(value); break;
         case 'theme':             meta.theme            = String(value); break;
         case 'lineColor':         meta.lineColor        = String(value); break;
+        case 'lineGradientMode':  meta.lineGradientMode = String(value); break;
         case 'lineStyle':         meta.lineStyle        = String(value); break;
         case 'lineSpacing':       meta.lineSpacing      = Number(value); break;
         case 'lineWidth':         meta.lineWidth        = Number(value); break;

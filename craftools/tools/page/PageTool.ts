@@ -613,6 +613,13 @@ export class PageTool {
         <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
           <span class="craftools-label">${I18n.t('pageTool.paperLines')}</span>
           <div id="paper-line-color-section" style="margin-bottom:8px;"></div>
+          <div class="ct-field" id="paper-line-gradient-mode-wrap" style="margin-bottom:8px; ${normalizeValue(m.lineColor).mode === 'gradient' ? '' : 'display:none;'}">
+            <span class="craftools-label">${I18n.t('pageTool.paperLineGradientMode')}</span>
+            <select class="craftools-select" id="paper-line-gradient-mode">
+              <option value="per-line" ${m.lineGradientMode !== 'per-page' ? 'selected' : ''}>${I18n.t('pageTool.paperLineGradientPerLine')}</option>
+              <option value="per-page" ${m.lineGradientMode === 'per-page' ? 'selected' : ''}>${I18n.t('pageTool.paperLineGradientPerPage')}</option>
+            </select>
+          </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
             <div>
               <span class="craftools-label">${I18n.t('paperTool.lineStyle')}</span>
@@ -757,12 +764,19 @@ export class PageTool {
     const currentMeta = paperElNow?._craftoolsMeta ?? PaperTool.getDefaultMeta();
 
     const lineColorSection = fieldsWrap.querySelector<HTMLElement>('#paper-line-color-section');
+    const gradientModeWrap = fieldsWrap.querySelector<HTMLElement>('#paper-line-gradient-mode-wrap');
     if (lineColorSection) {
       const val = normalizeValue(currentMeta.lineColor);
       renderColorPicker(lineColorSection, val, (next) => {
         applyMeta({ lineColor: JSON.stringify(next) });
+        // The extra per-line/per-page control only makes sense once a
+        // gradient is actually selected -- show/hide it live as the user
+        // switches the line color picker between solid and gradient,
+        // instead of only reflecting it on the next full tab re-render.
+        if (gradientModeWrap) gradientModeWrap.style.display = next.mode === 'gradient' ? '' : 'none';
       }, { allowGradient: true });
     }
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-gradient-mode')?.addEventListener('change', e => applyMeta({ lineGradientMode: (e.target as HTMLSelectElement).value }));
 
     // Wire standard toggle track/thumb animation for every ct-fi checkbox in the
     // paper tab (extras toggles + the main enable toggle).
