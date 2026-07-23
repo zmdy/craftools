@@ -35,6 +35,27 @@ const UI_STRIP_SELECTORS = [
   '.cell-edit-btn',
 ].join(',');
 
+// Used only by buildOutputPages() (the live canvas preview) -- everything
+// EXCEPT the ctrlbar. That element's own selection border/resize/rotate/
+// delete handles need to stay in the DOM there (just hidden), because
+// unlike the PDF/print path below (which permanently flattens every
+// <craftools-element> into a plain <div> via PdfExport._flattenElement()
+// and never reconnects it), the preview path re-injects its cloned HTML
+// via `mainPage.innerHTML = ...`, which re-triggers every
+// <craftools-element>'s connectedCallback(). Element.ts's _build() uses
+// the presence of a `.craftools-ctrlbar` child as its ONLY signal that an
+// element is already fully built (a real clone) rather than brand new --
+// remove it, and _build() wipes the whole `style` attribute and rebuilds
+// from scratch, including a hardcoded `z-index:2`, silently discarding
+// every element's real z-index / front-back ordering. See
+// buildOutputPages() below for where the ctrlbar is hidden instead.
+const PREVIEW_STRIP_SELECTORS = [
+  '.album-drag-handle',
+  '.slot-drag-handle',
+  '.craftools-sidebar-overlay',
+  '.cell-edit-btn',
+].join(',');
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -274,7 +295,15 @@ export class AgendaExport {
         outputPageNumber++;
 
         const clone = page.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
+        clone.querySelectorAll(PREVIEW_STRIP_SELECTORS).forEach(n => n.remove());
+        // Hide (never remove) each element's ctrlbar here -- see
+        // PREVIEW_STRIP_SELECTORS's doc comment above for why removing it
+        // breaks every element's z-index once this HTML gets reparsed.
+        // It's already `display:none` by default (Element.ts only shows it
+        // while an element is selected), so this only matters for whatever
+        // element happened to be selected at the moment the preview HTML
+        // was generated.
+        clone.querySelectorAll<HTMLElement>('.craftools-ctrlbar').forEach(n => { n.style.display = 'none'; });
 
         const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
         const globalRepetitionIndex = outputPageNumber - 1;
@@ -316,8 +345,9 @@ export class AgendaExport {
 
         // Return the pre-flatten innerHTML — the canvas renders live
         // craftools-element tags natively (no need to flatten for display).
-        // Strip only UI-only nodes (ctrlbar, overlays) which were already
-        // removed above via UI_STRIP_SELECTORS.
+        // UI-only nodes (drag handles, overlays) were already removed
+        // above via PREVIEW_STRIP_SELECTORS; the ctrlbar was hidden, not
+        // removed, and stays in the markup returned here.
         outputInnerHtmls.push(clone.innerHTML);
       }
     }
