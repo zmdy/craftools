@@ -154,7 +154,7 @@ export class VariablePanel {
             ['YYYY-MM-DD','ISO'],['DAY_MONTH_LONG','DayMonthLong'],['DAY_MONTH_YEAR_LONG','DayMonthYearLong'],
             ['WEEKDAY','Weekday'],['WEEKDAY_SHORT','WeekdayShort'],['WEEKDAY_DATE','WeekdayDate'],
             ['DAYS_BOX','DaysBox'],['DAY_ONLY','DayOnly'],['MONTH_ONLY','MonthOnly'],
-            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],['MOON_PHASE','MoonPhase'],
+            ['CUSTOM','Custom'],['SPECIAL_DATE','SpecialDate'],['MOON_PHASE','MoonPhase'],['SEASON','Season'],
         ];
     }
 
@@ -274,6 +274,16 @@ export class VariablePanel {
                 </div>
             </div>
 
+            <div id="var-date-season-options" style="display: ${b.format === 'SEASON' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateHemisphereLabel')}</span>
+                    <select id="var-date-hemisphere" class="craftools-select" style="width:100%;">
+                        <option value="south" ${(b.hemisphere ?? 'south') === 'south' ? 'selected' : ''}>${I18n.t('variablePanel.dateHemisphereSouth')}</option>
+                        <option value="north" ${b.hemisphere === 'north' ? 'selected' : ''}>${I18n.t('variablePanel.dateHemisphereNorth')}</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="var-date-calendar-options" style="display: ${this._isCalendarPartsFormat(b.format) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <span class="craftools-label">${I18n.t('variablePanel.dateCalendarShowLabel')}</span>
                 <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
@@ -302,7 +312,7 @@ export class VariablePanel {
      * emoji.
      */
     private static _isCalendarPartsFormat(format?: string): boolean {
-        return format === 'MOON_PHASE';
+        return format === 'MOON_PHASE' || format === 'SEASON';
     }
 
     private static _specialDateCategories(): [string, string][] {
@@ -620,6 +630,8 @@ export class VariablePanel {
                     const calShowIcon     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-icon');
                     const calShowEmoji    = container.querySelector<HTMLInputElement>('#var-date-calendar-show-emoji');
                     const calShowText     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-text');
+                    const seasonOpts      = container.querySelector<HTMLElement>('#var-date-season-options');
+                    const hemisphereSel   = container.querySelector<HTMLSelectElement>('#var-date-hemisphere');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
@@ -629,9 +641,11 @@ export class VariablePanel {
                         if (daysBoxOpts)   daysBoxOpts.style.display   = binding!.format === 'DAYS_BOX'    ? 'block' : 'none';
                         if (customOpts)    customOpts.style.display    = binding!.format === 'CUSTOM' ? 'block' : 'none';
                         if (specialOpts)   specialOpts.style.display   = binding!.format === 'SPECIAL_DATE' ? 'block' : 'none';
+                        if (seasonOpts)    seasonOpts.style.display    = binding!.format === 'SEASON' ? 'block' : 'none';
                         if (calendarOpts)  calendarOpts.style.display  = VariablePanel._isCalendarPartsFormat(binding!.format) ? 'block' : 'none';
                         notify();
                     };
+                    if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
                     // At least one of icon/emoji/text must always stay
                     // checked -- an unchecked checkbox here means "this
                     // variable renders as nothing at all", almost never

@@ -47,6 +47,11 @@ I18n.addTranslations('variablePanel', {
         dateFormatCustom: "Personalizado...",
         dateFormatSpecialDate: "Feriado / Data comemorativa (via API)",
         dateFormatMoonPhase: "Fase da Lua",
+        dateFormatSeason: "Estação do Ano",
+
+        dateHemisphereLabel: "Hemisfério",
+        dateHemisphereSouth: "Sul (Brasil)",
+        dateHemisphereNorth: "Norte",
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionais",
@@ -187,6 +192,11 @@ I18n.addTranslations('variablePanel', {
         dateFormatCustom: "Custom...",
         dateFormatSpecialDate: "Holiday / Commemorative date (via API)",
         dateFormatMoonPhase: "Moon phase",
+        dateFormatSeason: "Season",
+
+        dateHemisphereLabel: "Hemisphere",
+        dateHemisphereSouth: "South (Brazil)",
+        dateHemisphereNorth: "North",
 
         dateSpecialCategoriesLabel: "Show",
         dateSpecialCategoryHoliday: "National holidays",
@@ -327,6 +337,11 @@ I18n.addTranslations('variablePanel', {
         dateFormatCustom: "Personalizado...",
         dateFormatSpecialDate: "Feriado / Fecha conmemorativa (vía API)",
         dateFormatMoonPhase: "Fase de la Luna",
+        dateFormatSeason: "Estación del Año",
+
+        dateHemisphereLabel: "Hemisferio",
+        dateHemisphereSouth: "Sur (Brasil)",
+        dateHemisphereNorth: "Norte",
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionales",

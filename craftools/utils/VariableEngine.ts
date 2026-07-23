@@ -3,6 +3,7 @@ import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKit
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { CalendarRenderer } from './CalendarRenderer.js';
 import { MoonPhases } from './MoonPhases.js';
+import { Seasons } from './Seasons.js';
 import { EMOJI_FONT_STACK } from './EmojiFont.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -183,7 +184,7 @@ export class VariableEngine {
      * of those three call sites hardcoding its own format list) so adding
      * a future HTML-returning date format only means adding it here once.
      */
-    static readonly HTML_DATE_FORMATS: string[] = ['DAYS_BOX', 'MOON_PHASE'];
+    static readonly HTML_DATE_FORMATS: string[] = ['DAYS_BOX', 'MOON_PHASE', 'SEASON'];
 
     static isHtmlDateFormat(format: string | undefined): boolean {
         return !!format && this.HTML_DATE_FORMATS.includes(format);
@@ -489,6 +490,7 @@ export class VariableEngine {
             case 'CUSTOM':      return this._formatCustomDate(d, b.customFormat ?? '');
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
+            case 'SEASON':      return this._formatSeason(d, b);
             case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -659,6 +661,18 @@ export class VariableEngine {
      */
     private static _formatMoonPhase(d: Date, b: VariableBinding): string {
         const info = MoonPhases.getPhaseInfo(d);
+        return this._composeCalendarParts(b, info.iconHtml, info.emoji, info.label);
+    }
+
+    /**
+     * format === 'SEASON' -- same "100% client-computed, no API" reasoning
+     * as 'MOON_PHASE' above: a season is a pure function of month +
+     * hemisphere (Seasons.ts), not curated content. `b.hemisphere`
+     * defaults to 'south' (see defaultBinding()) when unset, matching a
+     * binding saved before this field existed.
+     */
+    private static _formatSeason(d: Date, b: VariableBinding): string {
+        const info = Seasons.getSeasonInfo(d, b.hemisphere ?? 'south');
         return this._composeCalendarParts(b, info.iconHtml, info.emoji, info.label);
     }
 
