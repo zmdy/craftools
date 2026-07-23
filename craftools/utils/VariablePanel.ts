@@ -149,7 +149,7 @@ export class VariablePanel {
     // ── Config HTML per type ──────────────────────────────────────────────────
 
     /**
-     * The 8 multi-select "piece" buttons shown above the always-visible
+     * The 9 multi-select "piece" buttons shown above the always-visible
      * custom format box (replaces the old single-select `<select>` of ~17
      * mutually-exclusive whole formats). Clicking one inserts/removes its
      * `token` inside the custom format text (see _formatCustomDate() in
@@ -163,14 +163,15 @@ export class VariablePanel {
      */
     private static _dateFormatButtons(): { token: string; i18nKey: string }[] {
         return [
-            { token: 'dd',        i18nKey: 'dateBtnDay' },
-            { token: 'mm',        i18nKey: 'dateBtnMonth' },
-            { token: 'yyyy',      i18nKey: 'dateBtnYear' },
-            { token: 'wwww',      i18nKey: 'dateBtnWeekday' },
-            { token: '{season}',  i18nKey: 'dateBtnSeason' },
-            { token: '{moon}',    i18nKey: 'dateBtnMoonPhase' },
-            { token: '{zodiac}',  i18nKey: 'dateBtnZodiac' },
-            { token: '{holiday}', i18nKey: 'dateBtnHoliday' },
+            { token: 'dd',          i18nKey: 'dateBtnDay' },
+            { token: 'mm',          i18nKey: 'dateBtnMonth' },
+            { token: 'yyyy',        i18nKey: 'dateBtnYear' },
+            { token: 'wwww',        i18nKey: 'dateBtnWeekday' },
+            { token: '{dayofyear}', i18nKey: 'dateBtnDayOfYear' },
+            { token: '{season}',    i18nKey: 'dateBtnSeason' },
+            { token: '{moon}',      i18nKey: 'dateBtnMoonPhase' },
+            { token: '{zodiac}',    i18nKey: 'dateBtnZodiac' },
+            { token: '{holiday}',   i18nKey: 'dateBtnHoliday' },
         ];
     }
 
@@ -202,6 +203,7 @@ export class VariablePanel {
             case 'WEEKDAY_DATE':        return 'wwww, dd/mm';
             case 'DAY_ONLY':            return 'd';
             case 'MONTH_ONLY':          return 'mmmm';
+            case 'DAY_OF_YEAR':         return '{dayofyear}';
             case 'SPECIAL_DATE':        return '{holiday}';
             case 'MOON_PHASE':          return '{moon}';
             case 'SEASON':              return '{season}';
