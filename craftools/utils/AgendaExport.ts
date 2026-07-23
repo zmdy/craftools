@@ -393,6 +393,21 @@ export class AgendaExport {
    * Usa offsetWidth quando disponível (DOM montado) e cai para o parse
    * de style.width (que sempre está na folha de estilo inline do CrafTools)
    * quando o elemento não está renderizado em tela (geração headless).
+   *
+   * Também recalcula `style.transform` para bater com o novo x/r -- os
+   * `cloneEls` aqui nunca são reconectados ao documento (nem
+   * `buildOutputPages()` nem `_buildDocument()` os inserem de volta antes
+   * de usá-los), então o `connectedCallback`/`_applyTransform()` normal de
+   * `Element.ts` (que normalmente é quem deriva `style.transform` a partir
+   * dos atributos x/y/w/h/r) nunca roda de novo para essas cópias. Sem
+   * isso, os ATRIBUTOS x/r ficavam corretamente espelhados, mas a posição
+   * VISUAL (que vem só de `style.transform`) continuava sendo a original,
+   * não espelhada -- inofensivo para a pré-visualização em canvas (que
+   * reconecta via `mainPage.innerHTML = ...` e por isso já recalculava
+   * certo), mas o PDF/impressão de fato exportado/impresso
+   * (`PdfExport._flattenElement()` copia `style.cssText` tal como está,
+   * nunca os atributos) saía com os elementos de páginas alternadas/
+   * espelhadas na posição errada, não espelhada.
    */
   private static _applyAlternateLayout(page: HTMLElement, cloneEls: HTMLElement[]): void {
     const rawPageWidth = page.style.width || '210mm';
@@ -424,9 +439,17 @@ export class AgendaExport {
       // correctly instead of subtracting a px pageWidth from mm coords.
       const effectivePageWidth = unitX === 'px' ? pageWidthPx : this._pageWidthInUnit(rawPageWidth, unitX);
 
-      cl.setAttribute('x', String(Math.round(effectivePageWidth - px - pw)) + unitX);
-      if (pr !== 0) cl.setAttribute('r', String(-pr));
+      const newX = Math.round(effectivePageWidth - px - pw);
+      const newR = pr !== 0 ? -pr : 0;
+      cl.setAttribute('x', String(newX) + unitX);
+      if (newR !== 0) cl.setAttribute('r', String(newR));
       else cl.removeAttribute('r');
+
+      // Keep style.transform in sync with the attributes just changed --
+      // see this method's doc comment above for why that's necessary here.
+      const py    = parseFloat(cl.getAttribute('y') || '0');
+      const unitY = (cl.getAttribute('y') || '').replace(/[0-9.-]/g, '') || 'px';
+      cl.style.transform = `translate(${newX}${unitX}, ${py}${unitY}) rotate(${newR}deg)`;
     }
   }
 
