@@ -80,6 +80,7 @@ I18n.addTranslations('variablePanel', {
 
         dateBtnDay: "Dia",
         dateBtnMonth: "Mês",
+        dateBtnYear: "Ano",
         dateBtnWeekday: "Dia da semana",
         dateBtnSeason: "Estação",
         dateBtnMoonPhase: "Fase da Lua",
@@ -232,6 +233,7 @@ I18n.addTranslations('variablePanel', {
 
         dateBtnDay: "Day",
         dateBtnMonth: "Month",
+        dateBtnYear: "Year",
         dateBtnWeekday: "Weekday",
         dateBtnSeason: "Season",
         dateBtnMoonPhase: "Moon phase",
@@ -384,6 +386,7 @@ I18n.addTranslations('variablePanel', {
 
         dateBtnDay: "Día",
         dateBtnMonth: "Mes",
+        dateBtnYear: "Año",
         dateBtnWeekday: "Día de la semana",
         dateBtnSeason: "Estación",
         dateBtnMoonPhase: "Fase lunar",
