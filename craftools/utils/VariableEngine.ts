@@ -185,7 +185,7 @@ export class VariableEngine {
      */
     /**
      * 'CUSTOM' joined this list once its token vocabulary grew icon/emoji-
-     * capable tokens (see _formatCustomDate()'s {estacao}/{lua}/{signo}
+     * capable tokens (see _formatCustomDate()'s {season}/{moon}/{zodiac}
      * handling) -- every 'CUSTOM' resolution now goes through
      * _formatCustomDate()'s HTML-escaping path even when it ends up being
      * plain text underneath (see that method's own comment), so treating
@@ -287,12 +287,12 @@ export class VariableEngine {
     /**
      * Whether a 'date' binding needs craftools_api's calendar-dates
      * resource prefetched -- either the whole format IS 'SPECIAL_DATE', or
-     * it's 'CUSTOM' and the pattern embeds the {feriado} token (see
+     * it's 'CUSTOM' and the pattern embeds the {holiday} token (see
      * _formatCustomDate()). Shared by prefetchApiResources()'s bulk filter
      * and resolvePreview()'s single-binding check so both stay in sync.
      */
     private static _usesSpecialDateToken(b: VariableBinding): boolean {
-        return b.format === 'SPECIAL_DATE' || (b.format === 'CUSTOM' && (b.customFormat ?? '').toLowerCase().includes('{feriado}'));
+        return b.format === 'SPECIAL_DATE' || (b.format === 'CUSTOM' && (b.customFormat ?? '').toLowerCase().includes('{holiday}'));
     }
 
     /**
@@ -573,13 +573,16 @@ export class VariableEngine {
      * year TWICE concatenated, e.g. "2626" instead of "26"). A run whose
      * length doesn't match a known token (e.g. "ddd") is left untouched.
      *
-     * Also recognizes four curly-brace "calendar" tokens -- {estacao}
-     * (season), {lua} (moon phase), {signo} (zodiac sign), {feriado}
+     * Also recognizes four curly-brace "calendar" tokens -- {season},
+     * {moon} (moon phase), {zodiac} (zodiac sign), {holiday}
      * (holiday/commemorative date) -- so the multi-select buttons in
      * VariablePanel.ts's date config (Dia/Mês/Ano/Dia da semana/Estação/
      * Fase da Lua/Signo/Feriado) can all compose into the SAME custom
      * string instead of needing separate mutually exclusive whole formats.
-     * {estacao}/{lua}/{signo} render via `b.calendarDisplay`
+     * Token NAMES are English (this file's own vocabulary) even though
+     * their pt-BR/en/es display labels stay translated -- see
+     * VariablePanel.ts's _dateFormatButtons()/i18n keys.
+     * {season}/{moon}/{zodiac} render via `b.calendarDisplay`
      * (text/icon/emoji, see _renderCalendarInfo()) exactly like their
      * standalone whole-format counterparts do -- 'icon' mode embeds real
      * markup (a Font Awesome `<svg>`), which is why this method's output is
@@ -626,14 +629,14 @@ export class VariableEngine {
             wwww: () => wFull[d.getDay()],
             ww:   () => wAbrev[d.getDay()],
             w:    () => wFirst[d.getDay()],
-            '{estacao}': () => this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south')),
-            '{lua}':     () => this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d)),
-            '{signo}':   () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d)),
-            '{feriado}': () => this._escHtml(this._formatSpecialDate(d, b, ctx, apiCache)),
+            '{season}':  () => this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south')),
+            '{moon}':    () => this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d)),
+            '{zodiac}':  () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d)),
+            '{holiday}': () => this._escHtml(this._formatSpecialDate(d, b, ctx, apiCache)),
         };
 
         const applyTokens = (text: string): string =>
-            this._escHtml(text).replace(/\{estacao\}|\{lua\}|\{signo\}|\{feriado\}|d+|m+|y+|w+/gi, run => {
+            this._escHtml(text).replace(/\{season\}|\{moon\}|\{zodiac\}|\{holiday\}|d+|m+|y+|w+/gi, run => {
                 const fn = tokens[run.toLowerCase()];
                 return fn ? fn() : run;
             });
@@ -653,7 +656,7 @@ export class VariableEngine {
      * ('text'|'icon'|'emoji', default 'text'; see VariableBinding's doc
      * comment). Shared by _formatMoonPhase()/_formatSeason()/
      * _formatZodiac() (whole-format results) AND _formatCustomDate()'s
-     * {estacao}/{lua}/{signo} tokens (embedded mid-string), so a token
+     * {season}/{moon}/{zodiac} tokens (embedded mid-string), so a token
      * inside a custom pattern renders identically to its whole-format
      * counterpart. Replaces the older _composeCalendarParts(), which
      * combined all three via independent calendarShowIcon/Emoji/Text
