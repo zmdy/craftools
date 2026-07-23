@@ -21,6 +21,14 @@ interface CraftoolsElement extends HTMLElement {
   _craftoolsAutoResize?: boolean;
   pw?: number;
   ph?: number;
+  /** Returns the current zoom scale (1.0 = 100%) -- see Element.ts. */
+  _getScale?(): number;
+}
+
+declare global {
+  interface Window {
+    craftoolsZoomLevel?: number;
+  }
 }
 
 export class AutoFitText {
@@ -30,8 +38,19 @@ export class AutoFitText {
    * altura que ele ocuparia sem estar restrito a 100% do elemento pai —
    * trocando temporariamente width/height para max-content e lendo
    * getBoundingClientRect(). Inclui a margem computada.
+   *
+   * `getBoundingClientRect()` sempre devolve pixels de TELA, já
+   * multiplicados pelo zoom do canvas (o `#pages-wrapper` recebe um
+   * `transform: scale(zoomLevel)` em Editor.ts) -- então sem dividir pela
+   * escala atual, o tamanho "natural" medido aqui varia com o zoom, e não
+   * só com o conteúdo/fonte real. Isso é exatamente o bug relatado: dar
+   * zoom out fazia o autoajuste encolher o tamanho ideal do conteúdo, e
+   * dar zoom in fazia crescer sem controle. `scale` é opcional (params
+   * chamado com um HTMLElement puro, não o craftools-element) e cai para
+   * `window.craftoolsZoomLevel` -- mesma convenção usada em SnapEngine.ts
+   * e em Element.ts (_handleMove/_handleUp).
    */
-  static measureNaturalSize(textElement: HTMLElement): { width: number; height: number } {
+  static measureNaturalSize(textElement: HTMLElement, scale?: number): { width: number; height: number } {
     const prevWidth     = textElement.style.width;
     const prevHeight    = textElement.style.height;
     const prevMaxWidth  = textElement.style.maxWidth;
@@ -52,9 +71,11 @@ export class AutoFitText {
     textElement.style.maxWidth  = prevMaxWidth;
     textElement.style.maxHeight = prevMaxHeight;
 
+    const sc = scale ?? (window.craftoolsZoomLevel ?? 1);
+
     return {
-      width:  Math.ceil(rect.width  + marginW),
-      height: Math.ceil(rect.height + marginH),
+      width:  Math.ceil((rect.width  + marginW) / sc),
+      height: Math.ceil((rect.height + marginH) / sc),
     };
   }
 
@@ -69,7 +90,8 @@ export class AutoFitText {
     if (element._craftoolsAutoResize !== true) return;
     if (!textElement || !textElement.isConnected)  return;
 
-    const { width, height } = this.measureNaturalSize(textElement);
+    const scale = element._getScale?.() ?? (window.craftoolsZoomLevel ?? 1);
+    const { width, height } = this.measureNaturalSize(textElement, scale);
     // Growing to fit typed/pasted content is the most common way an
     // element ends up wider/taller than the page itself -- clamp to the
     // page's own size the same way Element.ts's manual resize-handle drag
