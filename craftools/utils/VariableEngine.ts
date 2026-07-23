@@ -4,6 +4,7 @@ import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKit
 import { CalendarRenderer } from './CalendarRenderer.js';
 import { MoonPhases } from './MoonPhases.js';
 import { Seasons } from './Seasons.js';
+import { Zodiac } from './Zodiac.js';
 import { EMOJI_FONT_STACK } from './EmojiFont.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -56,18 +57,16 @@ export interface VariableBinding {
      */
     hemisphere?: 'south' | 'north';
     /**
-     * Shared by 'SEASON' and 'MOON_PHASE' (only one is ever active per
-     * binding, so these three toggles cover both instead of duplicating
-     * them per format) -- which of icon/emoji/text to include in the
-     * resolved output, in that fixed order. At least one is always kept
-     * on in the panel UI (VariablePanel.ts); _formatMoonPhase()/
-     * _formatSeason() also defensively fall back to text-only if a saved
-     * binding somehow has all three off, so the variable never resolves
-     * to a silently empty string.
+     * Shared by 'SEASON', 'MOON_PHASE' and 'ZODIAC' (see Seasons.ts/
+     * MoonPhases.ts/Zodiac.ts's own getXInfo(), all three return the same
+     * `{label, emoji, iconHtml}` shape) -- which SINGLE one of
+     * text/icon/emoji to show, replacing the older calendarShowIcon/
+     * Emoji/Text independent multi-checkbox (which allowed combining
+     * several at once). 'icon' renders via Font Awesome (FontAwesomeIcon.ts),
+     * not Material Symbols -- see each of those 3 files' own iconHtml.
+     * Defaults to 'text' (defaultBinding() below).
      */
-    calendarShowIcon?:  boolean;
-    calendarShowEmoji?: boolean;
-    calendarShowText?:  boolean;
+    calendarDisplay?: 'text' | 'icon' | 'emoji';
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -184,7 +183,16 @@ export class VariableEngine {
      * of those three call sites hardcoding its own format list) so adding
      * a future HTML-returning date format only means adding it here once.
      */
-    static readonly HTML_DATE_FORMATS: string[] = ['DAYS_BOX', 'MOON_PHASE', 'SEASON'];
+    /**
+     * 'CUSTOM' joined this list once its token vocabulary grew icon/emoji-
+     * capable tokens (see _formatCustomDate()'s {estacao}/{lua}/{signo}
+     * handling) -- every 'CUSTOM' resolution now goes through
+     * _formatCustomDate()'s HTML-escaping path even when it ends up being
+     * plain text underneath (see that method's own comment), so treating
+     * it as HTML unconditionally is always correct, not just when those
+     * tokens happen to be present.
+     */
+    static readonly HTML_DATE_FORMATS: string[] = ['DAYS_BOX', 'MOON_PHASE', 'SEASON', 'ZODIAC', 'CUSTOM'];
 
     static isHtmlDateFormat(format: string | undefined): boolean {
         return !!format && this.HTML_DATE_FORMATS.includes(format);
@@ -206,9 +214,7 @@ export class VariableEngine {
                 specialDateLimit: '',
                 specialDateRandomize: false,
                 hemisphere: 'south',
-                calendarShowIcon: true,
-                calendarShowEmoji: true,
-                calendarShowText: true,
+                calendarDisplay: 'text',
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
@@ -502,6 +508,7 @@ export class VariableEngine {
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
             case 'SEASON':      return this._formatSeason(d, b);
+            case 'ZODIAC':      return this._formatZodiac(d, b);
             case 'DAYS_BOX': {
                 const hlColor  = b.daysBoxHighlightColor || 'var(--accent, #f97316)';
                 const radius   = b.daysBoxBorderRadius !== undefined ? String(b.daysBoxBorderRadius) : '50';
@@ -566,31 +573,36 @@ export class VariableEngine {
      * year TWICE concatenated, e.g. "2626" instead of "26"). A run whose
      * length doesn't match a known token (e.g. "ddd") is left untouched.
      *
-     * Also recognizes three curly-brace "calendar" tokens -- {estacao}
-     * (season), {lua} (moon phase), {feriado} (holiday/commemorative date)
-     * -- so the multi-select buttons in VariablePanel.ts's date config
-     * (Dia/Mês/Dia da semana/Estação/Fase da Lua/Feriado) can all compose
-     * into the SAME custom string instead of needing separate mutually
-     * exclusive whole formats. Deliberately resolve to their PLAIN-TEXT
-     * label only (Seasons.ts/MoonPhases.ts's `.label`, _formatSpecialDate()'s
-     * joined titles) rather than the icon+emoji HTML those formats produce
-     * when used standalone (see _formatSeason()/_formatMoonPhase()) -- a
-     * custom pattern is free-form text the user is actively typing into,
-     * so embedding markup there would either show as literal tags or force
-     * every consumer of a 'CUSTOM' value to start treating it as
-     * conditionally-HTML depending on its content, unlike every other
-     * 'CUSTOM' pattern today. Curly braces can't collide with the d/m/y/w
-     * letter-run tokens above, so both kinds are matched in one pass.
+     * Also recognizes four curly-brace "calendar" tokens -- {estacao}
+     * (season), {lua} (moon phase), {signo} (zodiac sign), {feriado}
+     * (holiday/commemorative date) -- so the multi-select buttons in
+     * VariablePanel.ts's date config (Dia/Mês/Ano/Dia da semana/Estação/
+     * Fase da Lua/Signo/Feriado) can all compose into the SAME custom
+     * string instead of needing separate mutually exclusive whole formats.
+     * {estacao}/{lua}/{signo} render via `b.calendarDisplay`
+     * (text/icon/emoji, see _renderCalendarInfo()) exactly like their
+     * standalone whole-format counterparts do -- 'icon' mode embeds real
+     * markup (a Font Awesome `<svg>`), which is why this method's output is
+     * now UNCONDITIONALLY HTML (see this class's HTML_DATE_FORMATS
+     * including 'CUSTOM'): every literal (non-token) character is
+     * HTML-escaped first via `_escHtml()` -- safe to do BEFORE token
+     * matching since escaping only ever touches `&`/`<`/`>`, none of which
+     * appear in the d/m/y/w or {...} token patterns themselves -- then
+     * token runs are substituted with their (already HTML-safe) resolved
+     * value. A plain pattern with no calendar tokens (e.g. "dd/mm/yyyy")
+     * renders identically either way, since escaping plain digits/slashes
+     * is a no-op. Curly braces can't collide with the d/m/y/w letter-run
+     * tokens above, so both kinds are matched in one pass.
      *
      * Any other character (including regular letters like 'e', 'a', 's'
      * that show up in ordinary words) passes through unchanged -- EXCEPT
      * that a bare single letter from {d,m,y,w} inside a literal word (e.g.
      * the 'd' in "de") is indistinguishable from the token itself and WILL
      * be replaced. Text wrapped in [square brackets] is passed through
-     * completely literally so patterns like "dd [de] mmmm" can safely
-     * include such words -- documented in the legend shown above the
-     * format input (VariablePanel.ts's _dateConfig()), which must stay in
-     * sync with this exact token list.
+     * literally (brackets stripped, still HTML-escaped) so patterns like
+     * "dd [de] mmmm" can safely include such words -- documented in the
+     * legend shown above the format input (VariablePanel.ts's
+     * _dateConfig()), which must stay in sync with this exact token list.
      */
     private static _formatCustomDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
         const pattern = b.customFormat ?? '';
@@ -614,70 +626,64 @@ export class VariableEngine {
             wwww: () => wFull[d.getDay()],
             ww:   () => wAbrev[d.getDay()],
             w:    () => wFirst[d.getDay()],
-            '{estacao}': () => Seasons.getSeasonInfo(d, b.hemisphere ?? 'south').label,
-            '{lua}':     () => MoonPhases.getPhaseInfo(d).label,
-            '{feriado}': () => this._formatSpecialDate(d, b, ctx, apiCache),
+            '{estacao}': () => this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south')),
+            '{lua}':     () => this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d)),
+            '{signo}':   () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d)),
+            '{feriado}': () => this._escHtml(this._formatSpecialDate(d, b, ctx, apiCache)),
         };
 
         const applyTokens = (text: string): string =>
-            text.replace(/\{estacao\}|\{lua\}|\{feriado\}|d+|m+|y+|w+/gi, run => {
+            this._escHtml(text).replace(/\{estacao\}|\{lua\}|\{signo\}|\{feriado\}|d+|m+|y+|w+/gi, run => {
                 const fn = tokens[run.toLowerCase()];
                 return fn ? fn() : run;
             });
 
         // Split out [bracketed] literal segments (kept as-is, brackets
-        // stripped) from everything else (token-replaced).
+        // stripped, still escaped) from everything else (token-replaced).
         return pattern
             .split(/(\[[^\]]*\])/g)
-            .map(part => (part.startsWith('[') && part.endsWith(']')) ? part.slice(1, -1) : applyTokens(part))
+            .map(part => (part.startsWith('[') && part.endsWith(']')) ? this._escHtml(part.slice(1, -1)) : applyTokens(part))
             .join('');
     }
 
     /**
-     * Joins whichever of icon/emoji/text `b.calendarShow*` has enabled
-     * (icon, then emoji, then text, always in that order) into one
-     * resolved value -- shared by _formatMoonPhase() and _formatSeason(),
-     * since both formats expose the exact same 3-way display toggle (see
-     * VariableBinding's calendarShowIcon/Emoji/Text doc comment). Falls
-     * back to text-only if a binding somehow has all three off (should
-     * only ever happen for corrupted/hand-edited state -- the panel UI
-     * itself always keeps at least one checked), so the variable never
-     * silently resolves to ''.
+     * Renders EXACTLY ONE of icon/emoji/text for a `{label, emoji,
+     * iconHtml}` descriptor -- Seasons.ts/MoonPhases.ts/Zodiac.ts's own
+     * getXInfo() all return this same shape -- per `b.calendarDisplay`
+     * ('text'|'icon'|'emoji', default 'text'; see VariableBinding's doc
+     * comment). Shared by _formatMoonPhase()/_formatSeason()/
+     * _formatZodiac() (whole-format results) AND _formatCustomDate()'s
+     * {estacao}/{lua}/{signo} tokens (embedded mid-string), so a token
+     * inside a custom pattern renders identically to its whole-format
+     * counterpart. Replaces the older _composeCalendarParts(), which
+     * combined all three via independent calendarShowIcon/Emoji/Text
+     * checkboxes -- the panel UI (VariablePanel.ts) now offers a
+     * single-select instead.
      *
-     * ALWAYS returns real HTML, even for the text-only case -- unlike
-     * every other _formatDate() branch (which return plain strings), this
-     * format needs to conditionally include markup (the icon's <svg>, the
-     * emoji's own font-family span), so every consumer that applies this
-     * value to the DOM must use innerHTML for it, same as it already does
-     * for 'DAYS_BOX'/'miniCalendar' (see VariableContentTool.ts's
-     * _applyVariablePreview(), AgendaExport.ts's _applyResolvedValue(),
-     * VariablePanel.ts's own live preview -- all three keep a per-format
-     * innerHTML-vs-textContent check that 'MOON_PHASE'/'SEASON' had to be
-     * added to alongside 'DAYS_BOX'). Keeping this format's output type
-     * consistent (always HTML, never sometimes-plain-sometimes-HTML)
-     * means those checks only need the format name, not a peek at which
-     * calendarShow* toggles are on. The emoji gets its own
-     * `font-family: EMOJI_FONT_STACK` span: the surrounding text almost
-     * certainly uses the box's own chosen font (DM Sans, etc.), which
-     * doesn't reliably have color emoji glyphs, so without this the emoji
-     * can render as a black-and-white fallback glyph or tofu box instead
-     * of the intended colorful pictograph (see EmojiFont.ts).
+     * ALWAYS returns real HTML, even for the text case (HTML-escaped) --
+     * unlike most other _formatDate() branches (which return plain
+     * strings), this format needs to conditionally include markup (the
+     * icon's <svg>, the emoji's own font-family span), so every consumer
+     * applying this value to the DOM must use innerHTML for it, same as it
+     * already does for 'DAYS_BOX'/'miniCalendar' (see
+     * VariableContentTool.ts's _applyVariablePreview(), AgendaExport.ts's
+     * _applyResolvedValue(), VariablePanel.ts's own live preview -- all
+     * three keep a per-format innerHTML-vs-textContent check, see
+     * HTML_DATE_FORMATS). The emoji gets its own `font-family:
+     * EMOJI_FONT_STACK` span: the surrounding text almost certainly uses
+     * the box's own chosen font (DM Sans, etc.), which doesn't reliably
+     * have color emoji glyphs, so without this the emoji can render as a
+     * black-and-white fallback glyph or tofu box instead of the intended
+     * colorful pictograph (see EmojiFont.ts).
      */
-    private static _composeCalendarParts(b: VariableBinding, iconHtml: string, emoji: string, text: string): string {
-        let showIcon  = !!b.calendarShowIcon;
-        let showEmoji = !!b.calendarShowEmoji;
-        let showText  = !!b.calendarShowText;
-        if (!showIcon && !showEmoji && !showText) showText = true;
-
-        const parts: string[] = [];
-        if (showIcon)  parts.push(iconHtml);
-        if (showEmoji) parts.push(`<span style="font-family: ${EMOJI_FONT_STACK};">${emoji}</span>`);
-        if (showText)  parts.push(this._escHtml(text));
-
-        return `<span style="display:inline-flex; align-items:center; gap:0.3em;">${parts.join('')}</span>`;
+    private static _renderCalendarInfo(b: VariableBinding, info: { label: string; emoji: string; iconHtml: string }): string {
+        const mode = b.calendarDisplay ?? 'text';
+        if (mode === 'icon')  return info.iconHtml;
+        if (mode === 'emoji') return `<span style="font-family: ${EMOJI_FONT_STACK};">${info.emoji}</span>`;
+        return this._escHtml(info.label);
     }
 
-    /** Minimal HTML-escape for the plain-text part of a composed icon/emoji/text value (see _composeCalendarParts()). */
+    /** Minimal HTML-escape for the plain-text part of a composed icon/emoji/text value (see _renderCalendarInfo()). */
     private static _escHtml(s: string): string {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -691,8 +697,7 @@ export class VariableEngine {
      * of needing an apiCache/prefetch step.
      */
     private static _formatMoonPhase(d: Date, b: VariableBinding): string {
-        const info = MoonPhases.getPhaseInfo(d);
-        return this._composeCalendarParts(b, info.iconHtml, info.emoji, info.label);
+        return this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d));
     }
 
     /**
@@ -703,8 +708,16 @@ export class VariableEngine {
      * binding saved before this field existed.
      */
     private static _formatSeason(d: Date, b: VariableBinding): string {
-        const info = Seasons.getSeasonInfo(d, b.hemisphere ?? 'south');
-        return this._composeCalendarParts(b, info.iconHtml, info.emoji, info.label);
+        return this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south'));
+    }
+
+    /**
+     * format === 'ZODIAC' -- same "100% client-computed, no API" reasoning
+     * as 'MOON_PHASE'/'SEASON' above: a zodiac sign is a pure function of
+     * month/day (Zodiac.ts), not curated content.
+     */
+    private static _formatZodiac(d: Date, b: VariableBinding): string {
+        return this._renderCalendarInfo(b, Zodiac.getSignInfo(d));
     }
 
     /**
