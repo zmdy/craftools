@@ -24,6 +24,7 @@ export type FieldType =
   | 'image-upload'
   | 'divider'
   | 'page-align'
+  | 'content-align'
   | 'variable-binding'
   | 'emoji-picker'
   | 'emoji-kitchen-pair'
@@ -159,6 +160,19 @@ export interface PageAlignField extends BaseField {
   // default _applyProperty(), which special-cases this key.
 }
 
+/**
+ * "Alinhamento interno" 6-button grid (utils/fields/content-align.field.ts)
+ * -- positions an element's own CONTENT within its box, as opposed to
+ * PageAlignField above (which positions the whole element box against the
+ * PAGE). Same visual layout as PageAlignField, but -- unlike it -- this IS
+ * a stored/diffed value: a single "h-v" string (h: 'left'|'center'|'right',
+ * v: 'top'|'center'|'bottom'), e.g. "center-center". See
+ * CommonSchema.ts's contentAlignSection().
+ */
+export interface ContentAlignField extends BaseField {
+  type: 'content-align';
+}
+
 export interface VariableBindingField extends BaseField {
   type: 'variable-binding';
   // No extra config: wraps utils/VariablePanel.js's existing "Texto Variável"
@@ -234,6 +248,7 @@ export type Field =
   | ImageUploadField
   | DividerField
   | PageAlignField
+  | ContentAlignField
   | VariableBindingField
   | EmojiPickerField
   | EmojiKitchenPairField

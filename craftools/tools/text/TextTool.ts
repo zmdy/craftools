@@ -13,7 +13,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { formaSection, sizePositionSection, pageAlignSection, backgroundSection } from '../../utils/CommonSchema';
+import { formaSection, sizePositionSection, pageAlignSection, contentAlignSection, backgroundSection } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
@@ -83,7 +83,9 @@ export class TextTool extends BaseTool {
       font-weight: ${weight};
       color: #1a1a1a;
       font-family: ${withEmojiFallback('DM Sans')};
-      display: block;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -146,6 +148,17 @@ export class TextTool extends BaseTool {
     }
     if (!('underline' in existing)) {
       patch.underline = textEl.style.textDecoration?.includes('underline') ?? false;
+    }
+    if (!('contentAlign' in existing)) {
+      // Reverse-maps whatever's already inline (createElement()'s own
+      // default, or a value from before this backfill existed and so is
+      // still plain 'block'/no justify-content) back into the "h-v" string
+      // -- H has no CSS equivalent to read back (see BaseTool.ts's
+      // _applyTextContentAlign(), which never writes it), so it's always
+      // 'center' here; only V actually varies.
+      const justify = textEl.style.justifyContent;
+      const v = justify === 'flex-start' ? 'top' : justify === 'flex-end' ? 'bottom' : 'center';
+      patch.contentAlign = `center-${v}`;
     }
 
     // Color: detect gradient from webkitTextFillColor, migrate into the
@@ -249,6 +262,7 @@ export class TextTool extends BaseTool {
       backgroundSection(),
       formaSection({ margin: true }),
       sizePositionSection({ autoFit: true }),
+      contentAlignSection(),
       pageAlignSection(),
     ];
   }
@@ -297,6 +311,10 @@ export class TextTool extends BaseTool {
     // hand-rolled borderWidth/borderStyle/borderColor cases below with the
     // shared, gradient-aware implementation.
     if (this._applyBorder(element, key, value)) return;
+
+    // Internal alignment (contentAlignSection()) -- shared with
+    // VariableContentTool.ts, see BaseTool.ts's doc comment.
+    if (this._applyTextContentAlign(element, key, value)) return;
 
     // Persist to state store
     PropertyRenderer.applyChange(element, key, value);

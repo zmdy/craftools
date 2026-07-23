@@ -5,7 +5,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection, contentAlignSection } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback, EMOJI_FONT_STACK } from '../../utils/EmojiFont.js';
@@ -82,6 +82,13 @@ export class VariableContentTool extends BaseTool {
     }
     if (!('textAlign' in existing)) patch.textAlign = content.style.textAlign || 'left';
     if (!('textTransform' in existing)) patch.textTransform = content.style.textTransform || 'none';
+    if (!('contentAlign' in existing)) {
+      // Same reverse-mapping as TextTool.ts's _syncFromDOM() -- see its
+      // comment for why only V is read back.
+      const justify = content.style.justifyContent;
+      const v = justify === 'flex-start' ? 'top' : justify === 'flex-end' ? 'bottom' : 'center';
+      patch.contentAlign = `center-${v}`;
+    }
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
     // The binding lives on the element itself (element._craftoolsVariable),
@@ -279,7 +286,9 @@ export class VariableContentTool extends BaseTool {
       font-weight: 400;
       color: #1a1a1a;
       font-family: ${withEmojiFallback('DM Sans')};
-      display: block;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -336,6 +345,7 @@ export class VariableContentTool extends BaseTool {
       backgroundSection(),
       borderSection(),
       radiusSection(),
+      contentAlignSection(),
       zIndexSection(),
     ];
   }
@@ -348,6 +358,9 @@ export class VariableContentTool extends BaseTool {
     // where borderWidth/borderStyle/borderColor were stored but never
     // actually painted (only borderRadius below was applied).
     if (this._applyBorder(element, key, value)) return;
+    // Internal alignment (contentAlignSection()) -- shared with
+    // TextTool.ts, see BaseTool.ts's doc comment.
+    if (this._applyTextContentAlign(element, key, value)) return;
 
     PropertyRenderer.applyChange(element, key, value);
 

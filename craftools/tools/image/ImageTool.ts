@@ -10,7 +10,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection, backgroundSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, backgroundSection, contentAlignSection } from '../../utils/CommonSchema';
 import { ImageFilters } from './ImageFilters.js';
 import { ImageTransform } from './ImageTransform.js';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -26,6 +26,14 @@ type FilterKey = typeof FILTER_KEYS[number];
 interface ImageMeta {
   src:         string;
   objectFit:   string;
+  /**
+   * "h-v" string (e.g. "center-center"), same shape as every other
+   * content-align.field.ts value -- painted as native CSS object-position
+   * on the `<img>` (see _applyProperty()'s 'contentAlign' case). Only
+   * visible when objectFit === 'contain' (the only fit mode that doesn't
+   * already fill the box edge-to-edge); harmless no-op under 'cover'/'fill'.
+   */
+  contentAlign: string;
   zoom:        number;
   posX:        number;
   posY:        number;
@@ -45,7 +53,7 @@ interface ImageMeta {
 
 const getMeta = (element: HTMLElement): ImageMeta =>
   (element as HTMLElement & { _craftoolsMeta?: ImageMeta })._craftoolsMeta ?? {
-    src: '', objectFit: 'cover', zoom: 1, posX: 0, posY: 0, rotation: 0,
+    src: '', objectFit: 'cover', contentAlign: 'center-center', zoom: 1, posX: 0, posY: 0, rotation: 0,
     flipH: false, flipV: false,
     bgBlur: 0, blendMode: 'normal',
     borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
@@ -69,7 +77,7 @@ export class ImageTool extends BaseTool {
       filters[fk] = fk === 'brightness' || fk === 'contrast' || fk === 'saturate' || fk === 'opacity' ? 1 : 0;
     });
     return {
-      src: '', objectFit: 'cover', zoom: 1, posX: 0, posY: 0, rotation: 0,
+      src: '', objectFit: 'cover', contentAlign: 'center-center', zoom: 1, posX: 0, posY: 0, rotation: 0,
       flipH: false, flipV: false,
       bgBlur: 0, blendMode: 'normal',
       borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
@@ -104,7 +112,7 @@ export class ImageTool extends BaseTool {
 
     const img = document.createElement('img');
     img.src = placeholder;
-    img.style.cssText = `display:block;width:100%;height:100%;object-fit:${el._craftoolsMeta.objectFit};user-select:none;pointer-events:none;`;
+    img.style.cssText = `display:block;width:100%;height:100%;object-fit:${el._craftoolsMeta.objectFit};object-position:${el._craftoolsMeta.contentAlign.replace('-', ' ')};user-select:none;pointer-events:none;`;
 
     el.appendChild(img);
 
@@ -310,7 +318,7 @@ export class ImageTool extends BaseTool {
     const patch: Record<string, unknown> = {};
 
     const topKeys: (keyof ImageMeta)[] = [
-      'src', 'objectFit', 'zoom', 'posX', 'posY', 'rotation', 'flipH', 'flipV',
+      'src', 'objectFit', 'contentAlign', 'zoom', 'posX', 'posY', 'rotation', 'flipH', 'flipV',
       'bgBlur', 'blendMode', 'borderWidth', 'borderStyle', 'borderRadius',
     ];
 
@@ -378,6 +386,10 @@ export class ImageTool extends BaseTool {
           { type: 'toggle', key: 'flipV',    label: 'Flip vertical',   i18nKey: 'imageTool.flipVertical' },
         ],
       },
+      // Only visibly moves the photo within its box when Fit mode is
+      // 'contain' (the only mode that doesn't already fill edge-to-edge) --
+      // see ImageMeta's contentAlign doc comment.
+      contentAlignSection(),
       {
         section: 'Filters',
         icon: 'photo_filter',
@@ -462,6 +474,13 @@ export class ImageTool extends BaseTool {
       meta.objectFit = String(value);
       const img = (el.contentArea ?? element).querySelector<HTMLImageElement>('img');
       if (img) img.style.objectFit = meta.objectFit;
+    } else if (key === 'contentAlign') {
+      // Native CSS object-position -- accepts the same left/center/right +
+      // top/center/bottom keywords our "h-v" value already uses, just
+      // space- instead of hyphen-separated.
+      meta.contentAlign = String(value);
+      const img = (el.contentArea ?? element).querySelector<HTMLImageElement>('img');
+      if (img) img.style.objectPosition = meta.contentAlign.replace('-', ' ');
     } else if (key === 'bgBlur') {
       meta.bgBlur = value as number;
       element.dispatchEvent(new CustomEvent('craftools-image-bgblur-apply', { bubbles: false }));

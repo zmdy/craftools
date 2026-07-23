@@ -316,6 +316,56 @@ export abstract class BaseTool {
     }
   }
 
+  // ── Internal (content) alignment (CommonSchema.ts's contentAlignSection()) ──
+
+  /**
+   * Applies the 'contentAlign' key from CommonSchema.ts's
+   * contentAlignSection() -- call from a tool's own `_applyProperty()`
+   * override the same way as `_applyBackground()`/`_applyBorder()` (returns
+   * `true` when it handled the key):
+   *
+   *   protected static _applyProperty(element, key, value) {
+   *     if (this._applyTextContentAlign(element, key, value)) return;
+   *     ...tool-specific keys...
+   *   }
+   *
+   * Shared by TextTool.ts (title/paragraph) and VariableContentTool.ts,
+   * whose text-holding node is found the same generic way here --
+   * `[contenteditable]` (VariableContentTool sets `contenteditable="false"`
+   * on its resolved-content div, but the ATTRIBUTE is still present, which
+   * is all this selector checks) -- so neither tool needs its own copy of
+   * this logic.
+   *
+   * Only the V (vertical) half of the "h-v" value is actually painted, as
+   * `justify-content` on a `display:flex; flex-direction:column` text node
+   * (top/center/bottom → flex-start/center/flex-end): the browser already
+   * wraps a contenteditable's own line/paragraph children into an implicit
+   * per-line flex item, so this positions the whole stack of lines within
+   * the box's fixed height exactly like "vertical align" in any design
+   * tool, without touching the node's existing width/height/overflow
+   * (still 100%/100%/hidden, per TextTool.ts's/VariableContentTool.ts's own
+   * `_syncFromDOM()` comments). The H (horizontal) half is intentionally
+   * NOT applied here -- text always spans the node's full width, so
+   * horizontal position within that width is already governed by the
+   * separate, more granular `textAlign`/'align' field (per-line, not
+   * per-box); wiring H here too would either be redundant or fight with it.
+   */
+  protected static _applyTextContentAlign(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'contentAlign') return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+
+    const textNode = element.querySelector<HTMLElement>('[contenteditable]');
+    if (textNode) {
+      const v = String(value ?? 'center-center').split('-')[1] || 'center';
+      const justify = v === 'top' ? 'flex-start' : v === 'bottom' ? 'flex-end' : 'center';
+      textNode.style.display        = 'flex';
+      textNode.style.flexDirection  = 'column';
+      textNode.style.justifyContent = justify;
+    }
+    return true;
+  }
+
   // ── Rendering (do NOT override) ─────────────────────────────────────────────
 
   /**
