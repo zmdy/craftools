@@ -149,7 +149,7 @@ export class VariablePanel {
     // ── Config HTML per type ──────────────────────────────────────────────────
 
     /**
-     * The 7 multi-select "piece" buttons shown above the always-visible
+     * The 8 multi-select "piece" buttons shown above the always-visible
      * custom format box (replaces the old single-select `<select>` of ~17
      * mutually-exclusive whole formats). Clicking one inserts/removes its
      * `token` inside the custom format text (see _formatCustomDate() in
@@ -169,6 +169,7 @@ export class VariablePanel {
             { token: 'wwww',      i18nKey: 'dateBtnWeekday' },
             { token: '{estacao}', i18nKey: 'dateBtnSeason' },
             { token: '{lua}',     i18nKey: 'dateBtnMoonPhase' },
+            { token: '{signo}',   i18nKey: 'dateBtnZodiac' },
             { token: '{feriado}', i18nKey: 'dateBtnHoliday' },
         ];
     }
@@ -204,6 +205,7 @@ export class VariablePanel {
             case 'SPECIAL_DATE':        return '{feriado}';
             case 'MOON_PHASE':          return '{lua}';
             case 'SEASON':              return '{estacao}';
+            case 'ZODIAC':              return '{signo}';
             case 'DAYS_BOX':            return '';
             case 'CUSTOM':              return '';
             default:                    return 'dd/mm/yyyy';
@@ -344,35 +346,32 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-calendar-options" style="display: ${this._isCalendarPartsFormat(b.format) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
-                <span class="craftools-label">${I18n.t('variablePanel.dateCalendarShowLabel')}</span>
-                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
-                    <input type="checkbox" id="var-date-calendar-show-icon" ${b.calendarShowIcon !== false ? 'checked' : ''}>
-                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowIcon')}</span>
-                </label>
-                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
-                    <input type="checkbox" id="var-date-calendar-show-emoji" ${b.calendarShowEmoji !== false ? 'checked' : ''}>
-                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowEmoji')}</span>
-                </label>
-                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
-                    <input type="checkbox" id="var-date-calendar-show-text" ${b.calendarShowText !== false ? 'checked' : ''}>
-                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateCalendarShowText')}</span>
-                </label>
+            <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{estacao}') || hasToken('{lua}') || hasToken('{signo}')) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <span class="craftools-label">${I18n.t('variablePanel.dateCalendarModeLabel')}</span>
+                <div class="ct-field-row" style="gap:4px; margin-top:4px;">
+                    <button type="button" class="craftools-pill var-date-calendar-mode-btn ${(b.calendarDisplay ?? 'text') === 'text' ? 'active' : ''}" data-mode="text">${I18n.t('variablePanel.dateCalendarModeText')}</button>
+                    <button type="button" class="craftools-pill var-date-calendar-mode-btn ${b.calendarDisplay === 'icon' ? 'active' : ''}" data-mode="icon">${I18n.t('variablePanel.dateCalendarModeIcon')}</button>
+                    <button type="button" class="craftools-pill var-date-calendar-mode-btn ${b.calendarDisplay === 'emoji' ? 'active' : ''}" data-mode="emoji">${I18n.t('variablePanel.dateCalendarModeEmoji')}</button>
+                </div>
             </div>
         `;
     }
 
     /**
-     * Which 'date' formats expose the shared icon/emoji/text display
-     * toggle (VariableBinding's calendarShowIcon/Emoji/Text -- see
-     * VariableEngine.ts's _composeCalendarParts()). 'DAYS_BOX' is
+     * Which 'date' formats expose the shared text/icon/emoji single-select
+     * display mode (VariableBinding's `calendarDisplay` -- see
+     * VariableEngine.ts's _renderCalendarInfo()). 'DAYS_BOX' is
      * intentionally excluded even though it's also an HTML-returning
      * format (VariableEngine.HTML_DATE_FORMATS) -- it has its own,
      * unrelated set of options (colors/border/padding), not an icon or
-     * emoji.
+     * emoji. Only matters for a binding still on one of these legacy whole
+     * formats (pre-dating the multi-select custom-token redesign) --
+     * once on 'CUSTOM', visibility instead follows whether any of
+     * {estacao}/{lua}/{signo} is present in the text (see the `hasToken`
+     * checks at this method's call site).
      */
     private static _isCalendarPartsFormat(format?: string): boolean {
-        return format === 'MOON_PHASE' || format === 'SEASON';
+        return format === 'MOON_PHASE' || format === 'SEASON' || format === 'ZODIAC';
     }
 
     private static _specialDateCategories(): [string, string][] {
@@ -686,9 +685,7 @@ export class VariablePanel {
                     const specialSep      = container.querySelector<HTMLInputElement>('#var-date-special-separator');
                     const specialEmpty    = container.querySelector<HTMLInputElement>('#var-date-special-emptytext');
                     const calendarOpts    = container.querySelector<HTMLElement>('#var-date-calendar-options');
-                    const calShowIcon     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-icon');
-                    const calShowEmoji    = container.querySelector<HTMLInputElement>('#var-date-calendar-show-emoji');
-                    const calShowText     = container.querySelector<HTMLInputElement>('#var-date-calendar-show-text');
+                    const calendarModeBtns = container.querySelectorAll<HTMLButtonElement>('.var-date-calendar-mode-btn');
                     const seasonOpts      = container.querySelector<HTMLElement>('#var-date-season-options');
                     const hemisphereSel   = container.querySelector<HTMLSelectElement>('#var-date-hemisphere');
 
@@ -702,14 +699,14 @@ export class VariablePanel {
                     // doc comment for why a mere panel-open doesn't do this),
                     // re-derives every button's active state from the text
                     // (so typing "reflects in the marked buttons", per spec),
-                    // and shows/hides the Estação/Feriado sub-option blocks
-                    // by whether their token is present. The icon/emoji/text
-                    // toggle block only ever applied to the OLD standalone
-                    // MOON_PHASE/SEASON whole formats (which return
-                    // icon+emoji+text HTML) -- the {estacao}/{lua} tokens
-                    // used here always resolve to plain-text labels (see
-                    // _formatCustomDate()), so that block has nothing to
-                    // control once a binding is on the new system.
+                    // and shows/hides the Estação/Signo/Fase da Lua/Feriado
+                    // sub-option blocks by whether their token is present.
+                    // The text/icon/emoji single-select (calendarOpts) is
+                    // shared by all three of {estacao}/{lua}/{signo} -- see
+                    // _renderCalendarInfo() in VariableEngine.ts, which every
+                    // one of those tokens (and their whole-format
+                    // counterparts) render through -- so it shows whenever
+                    // ANY of the three is present, not just one.
                     const applyCustomText = (text: string): void => {
                         if (customFormat) customFormat.value = text;
                         binding!.format       = 'CUSTOM';
@@ -722,7 +719,7 @@ export class VariablePanel {
                         if (daysBoxOpts)  daysBoxOpts.style.display  = 'none';
                         if (specialOpts)  specialOpts.style.display  = lower.includes('{feriado}') ? 'block' : 'none';
                         if (seasonOpts)   seasonOpts.style.display   = lower.includes('{estacao}') ? 'block' : 'none';
-                        if (calendarOpts) calendarOpts.style.display = 'none';
+                        if (calendarOpts) calendarOpts.style.display = (lower.includes('{estacao}') || lower.includes('{lua}') || lower.includes('{signo}')) ? 'block' : 'none';
                         notify();
                     };
                     formatButtons.forEach(btn => {
@@ -750,30 +747,18 @@ export class VariablePanel {
                     });
                     if (customFormat) customFormat.oninput = () => applyCustomText(customFormat.value);
                     if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
-                    // At least one of icon/emoji/text must always stay
-                    // checked -- an unchecked checkbox here means "this
-                    // variable renders as nothing at all", almost never
-                    // what the user actually wants, and _composeCalendarParts()
-                    // would silently fall back to text-only anyway, leaving
-                    // the checkbox UI state (all unchecked) out of sync with
-                    // what's actually being shown. Re-checking the box the
-                    // user just tried to uncheck (instead of forcing a
-                    // DIFFERENT one on) keeps the interaction simple/obvious.
-                    const calendarShowBoxes = [calShowIcon, calShowEmoji, calShowText].filter((b): b is HTMLInputElement => !!b);
-                    const bindCalendarShow = (input: HTMLInputElement | null, key: 'calendarShowIcon' | 'calendarShowEmoji' | 'calendarShowText'): void => {
-                        if (!input) return;
-                        input.onchange = () => {
-                            if (!input.checked && calendarShowBoxes.every(b => !b.checked)) {
-                                input.checked = true;
-                                return;
-                            }
-                            binding![key] = input.checked;
+                    // Single-select: exactly one of text/icon/emoji is ever
+                    // active (replaces the old independent calendarShowIcon/
+                    // Emoji/Text checkboxes, which allowed combining several
+                    // at once) -- see VariableBinding's calendarDisplay doc
+                    // comment in VariableEngine.ts.
+                    calendarModeBtns.forEach(btn => {
+                        btn.onclick = () => {
+                            binding!.calendarDisplay = (btn.dataset.mode as 'text' | 'icon' | 'emoji') || 'text';
+                            calendarModeBtns.forEach(b => b.classList.toggle('active', b === btn));
                             notify();
                         };
-                    };
-                    bindCalendarShow(calShowIcon,  'calendarShowIcon');
-                    bindCalendarShow(calShowEmoji, 'calendarShowEmoji');
-                    bindCalendarShow(calShowText,  'calendarShowText');
+                    });
                     specialCatBoxes.forEach(box => {
                         box.onchange = () => {
                             // An empty array here is a valid, deliberate

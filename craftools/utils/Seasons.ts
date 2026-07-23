@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { faSpa, faSun, faLeaf, faSnowflake } from '@fortawesome/free-solid-svg-icons';
+import { faIconHtml } from './FontAwesomeIcon.js';
+
 /**
  * Seasons.ts
  *
@@ -19,20 +22,18 @@
 export class Seasons {
 
     /**
-     * pt-BR label + emoji + um ícone do Material Symbols (mesma fonte
-     * "Material Symbols Outlined" já carregada em toda a aplicação, ver
-     * Element.ts) para cada uma das 4 estações. Ao contrário de
-     * MoonPhases.ts (que precisou desenhar um SVG próprio por não existir
-     * um glifo padrão por fase lunar), essas 4 estações têm ícones do
-     * Material Symbols conhecidos e estáveis (símbolos clássicos, parte do
-     * Material Design desde a primeira versão), então usamos o nome do
-     * glifo diretamente em vez de desenhar SVG à mão.
+     * pt-BR label + emoji + ícone (Font Awesome Free Solid, via
+     * FontAwesomeIcon.ts's faIconHtml()) para cada uma das 4 estações.
+     * Antes usava o nome de um glifo do Material Symbols (fonte carregada
+     * globalmente pela aplicação, ver index.html) -- trocado por Font
+     * Awesome para ficar consistente com o mesmo requisito em
+     * MoonPhases.ts/Zodiac.ts.
      */
     static _SEASON_INFO = {
-        spring: { label: 'Primavera', emoji: '🌸', icon: 'local_florist' },
-        summer: { label: 'Verão',     emoji: '☀️', icon: 'wb_sunny' },
-        autumn: { label: 'Outono',    emoji: '🍂', icon: 'eco' },
-        winter: { label: 'Inverno',   emoji: '❄️', icon: 'ac_unit' },
+        spring: { label: 'Primavera', emoji: '🌸', iconHtml: faIconHtml(faSpa) },
+        summer: { label: 'Verão',     emoji: '☀️', iconHtml: faIconHtml(faSun) },
+        autumn: { label: 'Outono',    emoji: '🍂', iconHtml: faIconHtml(faLeaf) },
+        winter: { label: 'Inverno',   emoji: '❄️', iconHtml: faIconHtml(faSnowflake) },
     };
 
     /**
@@ -76,7 +77,6 @@ export class Seasons {
     static getSeasonInfo(date, hemisphere = 'south') {
         const season = this._seasonForMonth(date.getMonth() + 1, hemisphere);
         const info = this._SEASON_INFO[season];
-        const iconHtml = `<span class="material-symbols-outlined" style="font-size:1em; line-height:1; vertical-align:-0.2em;" aria-hidden="true">${info.icon}</span>`;
-        return { season, label: info.label, emoji: info.emoji, iconHtml };
+        return { season, label: info.label, emoji: info.emoji, iconHtml: info.iconHtml };
     }
 }

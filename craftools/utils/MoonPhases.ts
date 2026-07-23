@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { faMoon } from '@fortawesome/free-solid-svg-icons';
+import { faIconHtml } from './FontAwesomeIcon.js';
+
 /**
  * MoonPhases.js
  *
@@ -56,39 +59,39 @@ export class MoonPhases {
     }
 
     /**
-     * pt-BR label + emoji + a small self-contained line-art SVG icon for
-     * each of the 4 named phases. Kept as data alongside the calculation
-     * itself (not left for a caller to maintain a separate lookup table)
-     * so every consumer of "what phase is date X in" -- today just the
-     * "Fase da Lua" Conteúdo Variável date format, see VariableEngine.ts's
-     * _formatMoonPhase() -- gets the full descriptor from one call.
+     * pt-BR label + emoji + icon for each of the 4 named phases. Kept as
+     * data alongside the calculation itself (not left for a caller to
+     * maintain a separate lookup table) so every consumer of "what phase is
+     * date X in" -- today just the "Fase da Lua" Conteúdo Variável date
+     * format, see VariableEngine.ts's _formatMoonPhase() -- gets the full
+     * descriptor from one call.
      *
-     * `iconHtml` is a hand-drawn <svg> (not a font-icon ligature name):
-     * there is no single Material Symbols glyph per lunar quarter, so
-     * instead of guessing at font glyph names that might not exist (and
-     * would silently render as literal text if wrong), each phase draws
-     * its own outlined circle with the illuminated portion filled in
-     * `currentColor` -- sized `1em` so it scales with the surrounding
-     * text's font-size like a real icon font would, and recolors with it
-     * too (mirrors Element.ts's own precedent of a hand-drawn inline SVG
-     * over a font glyph when precision matters more than convenience).
+     * `iconHtml` uses Font Awesome's Free Solid `moon` glyph (via
+     * FontAwesomeIcon.ts's faIconHtml()) -- the SAME icon for all 4 phases,
+     * since Font Awesome's Free tier only ships one generic moon icon (the
+     * per-phase variants -- first-quarter/last-quarter/etc -- are Pro-only,
+     * not available in the @fortawesome/free-solid-svg-icons package this
+     * app depends on). Previously drew 4 distinct hand-drawn SVGs (one per
+     * phase) before Font Awesome was wired up as an option; the emoji
+     * (already phase-distinct: 🌑🌓🌕🌗) and label remain the
+     * phase-accurate choices when icon mode can't be.
      */
     static _PHASE_INFO = {
         nova: {
             label: 'Lua Nova', emoji: '🌑',
-            iconHtml: '<svg width="1em" height="1em" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-0.125em;" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
+            iconHtml: faIconHtml(faMoon),
         },
         crescente: {
             label: 'Lua Crescente', emoji: '🌓',
-            iconHtml: '<svg width="1em" height="1em" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-0.125em;" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>',
+            iconHtml: faIconHtml(faMoon),
         },
         cheia: {
             label: 'Lua Cheia', emoji: '🌕',
-            iconHtml: '<svg width="1em" height="1em" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-0.125em;" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>',
+            iconHtml: faIconHtml(faMoon),
         },
         minguante: {
             label: 'Lua Minguante', emoji: '🌗',
-            iconHtml: '<svg width="1em" height="1em" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-0.125em;" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>',
+            iconHtml: faIconHtml(faMoon),
         },
     };
 
