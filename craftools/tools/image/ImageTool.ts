@@ -384,6 +384,15 @@ export class ImageTool extends BaseTool {
           { type: 'number', key: 'posY',     label: 'Y',        unit: 'px' },
           { type: 'toggle', key: 'flipH',    label: 'Flip horizontal', i18nKey: 'imageTool.flipHorizontal' },
           { type: 'toggle', key: 'flipV',    label: 'Flip vertical',   i18nKey: 'imageTool.flipVertical' },
+          // Distinct from flipH/flipV above (which flip the photo right
+          // now, on THIS page, permanently) -- this one does nothing to the
+          // current canvas. It only marks the element so PageTool.ts's
+          // "duplicar página" (alternate clone) and AgendaExport.ts's
+          // alternate-page export additionally mirror the photo itself
+          // (on top of the position mirroring they already do) on the
+          // ALTERNATED copy specifically -- see flipAlternateSection()'s
+          // doc comment in CommonSchema.ts.
+          { type: 'toggle', key: 'flipAlternate', label: 'Flip content on alternate pages', i18nKey: 'common.flipAlternate' },
         ],
       },
       // Only visibly moves the photo within its box when Fit mode is

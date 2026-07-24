@@ -487,7 +487,17 @@ export class AgendaExport {
       // see this method's doc comment above for why that's necessary here.
       const py    = parseFloat(cl.getAttribute('y') || '0');
       const unitY = (cl.getAttribute('y') || '').replace(/[0-9.-]/g, '') || 'px';
-      cl.style.transform = `translate(${newX}${unitX}, ${py}${unitY}) rotate(${newR}deg)`;
+
+      // Opt-in per-element "Espelhar conteúdo em páginas alternadas"
+      // (CommonSchema.ts's flipAlternateSection(), `flipAlternate` key) --
+      // everything above only mirrors the element's POSITION/rotation on
+      // the alternated page; this additionally mirrors what's actually
+      // RENDERED inside the box (a photo, a directional shape/icon...),
+      // via a trailing scaleX(-1) on the same transform. Off by default --
+      // most content (text, variable content, ...) reads wrong mirrored.
+      const flipAlt = PropertyRenderer._readState(cl).flipAlternate === true;
+
+      cl.style.transform = `translate(${newX}${unitX}, ${py}${unitY}) rotate(${newR}deg)${flipAlt ? ' scaleX(-1)' : ''}`;
     }
   }
 

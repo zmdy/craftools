@@ -9,7 +9,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { zIndexSection } from '../../utils/CommonSchema';
+import { zIndexSection, flipAlternateSection } from '../../utils/CommonSchema';
 import { ShapeGenerator, LINE_SHAPE_TYPES, type ShapeMeta } from '../../utils/ShapeGenerator';
 import {
   SHAPE_COLLECTIONS, isAssetShapeType, assetShapeTypeFor, assetIdFromShapeType, findShapeAsset,
@@ -421,6 +421,7 @@ export class ShapeTool extends BaseTool {
             { type: 'color-picker', key: 'strokeColor', label: 'Stroke' },
           ],
         },
+        flipAlternateSection(),
         zIndexSection(),
       ] as PropertySchema;
     }
@@ -534,6 +535,7 @@ export class ShapeTool extends BaseTool {
         defaultOpen: true,
         fields: shapeSpecificFields,
       }] : []),
+      flipAlternateSection(),
       zIndexSection(),
     ] as PropertySchema;
   }

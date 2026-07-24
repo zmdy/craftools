@@ -351,6 +351,16 @@ input[type="number"] { -moz-appearance:textfield; }
 .craftools-element:hover { border-color:rgba(249,115,22,.3); }
 .craftools-element.craftools-selected { border-color:var(--accent) !important; box-shadow:0 0 0 3px rgba(249,115,22,.15) !important; }
 
+/* Editor-only cue for a Variable Content/QR/Barcode bound via "Vincular a"
+   (VariablePanel.ts's linkedTo select) -- toggled purely via this CLASS
+   (never an inline style) specifically so PdfExport.ts's/AgendaExport.ts's
+   _flattenElement() -- which only ever copies each node's inline
+   style.cssText onto the flattened export markup, never class names --
+   can't carry it into the exported PDF. `!important` is needed to beat
+   VariableContentTool.createElement()'s own permanent inline
+   `outline: 1px dashed ...` on the content node. */
+.ct-var-linked { outline: 2px solid #8b5cf6 !important; outline-offset: 2px; }
+
 /* Grid Cell Border Rendering */
 .craftools-grid-cell {
     border: none !important;

@@ -3,6 +3,7 @@ import { PanelUI } from '../../utils/PanelUI.js';
 import { Notify } from '../../utils/Notify.js';
 import { renderColorPicker, cssFromValue, parseCssBackground, normalizeValue, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
 import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, type PaperMeta } from '../paper/PaperTool.js';
+import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
 import './PageTool_Translations.js';
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -821,6 +822,17 @@ export class PageTool {
     const origEls = Array.from(pageEl.querySelectorAll<HTMLElement>('craftools-element'));
     const cloneEls = Array.from(clone.querySelectorAll<HTMLElement>('craftools-element'));
 
+    // Elements with CommonSchema.ts's "Espelhar conteúdo em páginas
+    // alternadas" (flipAlternate) turned on -- collected here and applied
+    // AFTER `pageEl.after(clone)` below reconnects the clone to the
+    // document, not inline in this loop. Reason: `cl` isn't connected yet
+    // at this point, and the moment it IS (via that DOM insertion),
+    // Element.ts's connectedCallback()/_applyTransform() rebuilds
+    // style.transform from scratch purely from the x/y/w/h/r attributes
+    // just set below -- any style.transform written before that point
+    // would be silently discarded.
+    const flipTargets: HTMLElement[] = [];
+
     for (let i = 0; i < origEls.length; i++) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orig = origEls[i] as any;
@@ -851,14 +863,27 @@ export class PageTool {
         // e fará o _applyTransform() ler os atributos!
         cl.setAttribute('x', String(Math.round(effectivePageWidth - px - pw)) + unitX);
         if (pr !== 0) cl.setAttribute('r', String(-pr));
+
+        if (PropertyRenderer._readState(cl).flipAlternate === true) {
+          flipTargets.push(cl);
+        }
       }
     }
 
     this.attachPageEvents(editor, clone);
     pageEl.after(clone);
 
+    // Now that connectedCallback() has already derived the base
+    // translate/rotate transform from the mirrored x/r attributes above,
+    // tack the content-mirroring scaleX(-1) onto the end of it -- see
+    // flipTargets' own comment above for why this has to happen here,
+    // after insertion, instead of inside the loop.
+    flipTargets.forEach(cl => {
+      cl.style.transform = `${cl.style.transform} scaleX(-1)`.trim();
+    });
+
     document.dispatchEvent(new CustomEvent('craftools-page-add', { bubbles: true }));
-    
+
     // Rolagem suave para a nova página
     clone.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }

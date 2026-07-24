@@ -126,6 +126,38 @@ export const marginSection = (): Section => ({
   ],
 });
 
+/**
+ * "Espelhar em páginas alternadas" -- a single per-element toggle
+ * (`flipAlternate`, stored in `dataset.ctState` like any other schema
+ * field, no special `_applyProperty()` handling needed on the tool's own
+ * side) that PageTool.ts's "duplicar página" (alternate clone) and
+ * AgendaExport.ts's alternate-page export both read to decide whether to
+ * mirror the element's actual CONTENT (an extra `scaleX(-1)` on top of the
+ * position/rotation mirroring those two already do) on the alternated
+ * copy, not just its position. Off by default -- most elements (text,
+ * variable content, etc.) look wrong mirrored; this is opt-in specifically
+ * for content where a horizontal flip still reads correctly, e.g. photos
+ * (a person looking left instead of right is usually fine) or directional
+ * shapes/icons (an arrow, a decorative corner flourish). See
+ * PageTool.ts's `_duplicatePage()` and AgendaExport.ts's
+ * `_applyAlternateLayout()` for where this is actually consumed.
+ */
+export const flipAlternateSection = (): Section => ({
+  section: 'Alternate Flip',
+  i18nKey: 'common.flipAlternateSection',
+  icon: 'flip',
+  collapsible: true,
+  defaultOpen: false,
+  fields: [
+    {
+      type: 'toggle',
+      key: 'flipAlternate',
+      label: 'Flip content on alternate pages',
+      i18nKey: 'common.flipAlternate',
+    },
+  ],
+});
+
 // ── Layer & visibility ────────────────────────────────────────────────────────
 
 export const zIndexSection = (): Section => ({
