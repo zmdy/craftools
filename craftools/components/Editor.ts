@@ -51,6 +51,7 @@ interface PositionedElement extends HTMLElement {
   _applyTransform: () => void;
   _craftoolsMeta?: unknown;
   _craftoolsAutoResize?: boolean;
+  _craftoolsVariable?: unknown;
 }
 
 // ── Canvas-element tools: key → lazy module import ────────────────────────────
@@ -363,8 +364,22 @@ export class Craftools_Editor extends HTMLElement {
     // directly, and TextTool.ts's autoFit toggle lives in
     // `_craftoolsAutoResize` the same way -- without this, pasting any of
     // those would create a visually-blank or default-state clone.
-    clone._craftoolsMeta       = source._craftoolsMeta;
+    //
+    // Deep-cloned (JSON round-trip, both are always plain JSON-safe data),
+    // NOT assigned by reference -- `clone._craftoolsMeta = source._craftoolsMeta`
+    // used to point both elements at the very SAME object, so editing
+    // either one's config (QR/Barcode payload, Shape/Icon/Stamp/etc.
+    // settings) after a paste silently mutated the "other" one too, since
+    // both were reading/writing through one shared reference.
+    clone._craftoolsMeta       = source._craftoolsMeta ? JSON.parse(JSON.stringify(source._craftoolsMeta)) : source._craftoolsMeta;
     clone._craftoolsAutoResize = source._craftoolsAutoResize;
+    // Variable Content's own binding cache (VariablePanel.ts's "Vincular a"
+    // reads this first, before falling back to `dataset.ctState`) -- same
+    // deep-clone reasoning as `_craftoolsMeta` above. Copying it here means
+    // a pasted copy shows up as a link candidate (and keeps working as a
+    // leader/follower itself) immediately, without requiring the user to
+    // select it once first to prime it via `_syncFromDOM()`.
+    clone._craftoolsVariable = source._craftoolsVariable ? JSON.parse(JSON.stringify(source._craftoolsVariable)) : source._craftoolsVariable;
 
     // The paste is a new, independent element -- it must not join the
     // source's "linked" clone group (Business Card mode, see PageTool.ts)
