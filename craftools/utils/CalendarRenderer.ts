@@ -39,6 +39,26 @@ export interface CalendarOptions {
       holidaysBox?: boolean;
       moonBox?: boolean;
   };
+  /**
+   * Highlights a single chosen day-of-month in the days grid with its own
+   * background/text/border, independent of the sunday/holiday color logic
+   * in buildCardHtml()'s day loop -- same "highlight one cell out of a
+   * grid, with a configurable color+border" idea as VariableEngine.ts's
+   * DAYS_BOX date format (daysBoxHighlightColor/daysBoxBorderColor/
+   * daysBoxBorderStyle/daysBoxBorderWidth), applied here to a month grid
+   * instead of a week-letters row. `day` is 1-based (day-of-month); no
+   * effect if it falls outside the rendered month's actual day count.
+   */
+  highlight?: {
+      enabled?: boolean;
+      day?: number;
+      bg?: string;
+      textColor?: string;
+      borderWidth?: number;
+      borderStyle?: string;
+      borderColor?: string;
+      borderRadius?: number;
+  };
 }
 
 export class CalendarRenderer {
@@ -91,6 +111,7 @@ export class CalendarRenderer {
       const dayCellBorder = (t.dayNumbers.innerBorderWidth > 0)
           ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
           : '';
+      const highlight = options.highlight;
       let cells = '';
       for (let i = 0; i < startWeekday; i++) {
           cells += `<span style="display:block; ${dayCellBorder}"></span>`;
@@ -99,9 +120,32 @@ export class CalendarRenderer {
           const weekday = (startWeekday + day - 1) % 7;
           const isSunday = weekday === 0;
           const isHoliday = holidayByDay.has(day);
-          const color = (isSunday || isHoliday) ? t.dayNumbers.sundayColor : t.dayNumbers.color;
-          const weight = (isSunday || isHoliday) ? '700' : '400';
-          cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight}; ${dayCellBorder}">${day}</span>`;
+          const isHighlighted = !!highlight?.enabled && highlight.day === day;
+
+          const color = isHighlighted && highlight!.textColor
+              ? highlight!.textColor
+              : (isSunday || isHoliday) ? t.dayNumbers.sundayColor : t.dayNumbers.color;
+          const weight = (isSunday || isHoliday || isHighlighted) ? '700' : '400';
+
+          // The highlighted cell's own background/border REPLACE the
+          // ambient grid's `dayCellBorder` entirely (rather than combining
+          // with it) -- a highlighted day is meant to stand out as its own
+          // distinct cell, not inherit the plain grid-line look every other
+          // cell has.
+          let cellExtra = dayCellBorder;
+          if (isHighlighted) {
+              const hlBg          = this._esc(highlight!.bg || 'var(--accent, #f97316)');
+              const hlBorderWidth = highlight!.borderWidth ?? 1;
+              const hlBorderStyle = this._esc(highlight!.borderStyle || 'solid');
+              const hlBorderColor = this._esc(highlight!.borderColor || hlBg);
+              const hlRadius      = highlight!.borderRadius ?? 0;
+              const hlBorderCss   = hlBorderWidth > 0
+                  ? `border:${hlBorderWidth}px ${hlBorderStyle} ${hlBorderColor}; box-sizing:border-box;`
+                  : '';
+              cellExtra = `background:${hlBg}; ${hlBorderCss} ${hlRadius ? `border-radius:${hlRadius}px;` : ''}`;
+          }
+
+          cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight}; ${cellExtra}">${day}</span>`;
       }
 
       const daysGridHtml = parts.days ? `

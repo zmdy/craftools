@@ -359,7 +359,7 @@ input[type="number"] { -moz-appearance:textfield; }
    can't carry it into the exported PDF. `!important` is needed to beat
    VariableContentTool.createElement()'s own permanent inline
    `outline: 1px dashed ...` on the content node. */
-.ct-var-linked { outline: 2px solid #8b5cf6 !important; outline-offset: 2px; }
+.ct-var-linked { outline: 2px dotted #8b5cf6 !important; outline-offset: 2px; }
 
 /* Grid Cell Border Rendering */
 .craftools-grid-cell {
