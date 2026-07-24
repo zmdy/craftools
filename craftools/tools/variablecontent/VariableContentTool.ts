@@ -144,6 +144,12 @@ export class VariableContentTool extends BaseTool {
    */
   public static _applyVariablePreview(element: HTMLElement, textEl: HTMLElement | null, binding: VariableBinding | null): void {
     if (!textEl) return;
+    // Editor-only "this box is Vinculado a another element" cue -- pure CSS
+    // class (see craftools.css's `.ct-var-linked` rule for why it's a class
+    // and never an inline style), toggled in real time as the user links/
+    // unlinks it in the panel (this method runs again on every binding
+    // save, via _applyProperty()'s 'variableBinding' case).
+    textEl.classList.toggle('ct-var-linked', !!binding?.linkedTo);
     if (binding && binding.type) {
       // A bound "emoji" value is ALWAYS a single emoji character, never
       // mixed with regular text -- putting the panel's chosen text font
@@ -167,7 +173,7 @@ export class VariableContentTool extends BaseTool {
       textEl.style.whiteSpace = 'pre-wrap';
       textEl.textContent = I18n.t('variablePanel.previewLoading');
       import('../../utils/VariableEngine.js').then(({ VariableEngine }) => {
-        VariableEngine.resolvePreview(binding).then(val => {
+        const applyResolved = (val: string): void => {
           if (binding.type === 'emojiKitchen') {
             // Real markup (not typed text) -- see the miniCalendar note below
             // about why whiteSpace goes back to 'normal' for HTML content.
@@ -188,12 +194,107 @@ export class VariableContentTool extends BaseTool {
             textEl.textContent = (val && String(val).length) ? val : '—';
           }
           AutoFitText.applyAutoSize(element, textEl);
-        });
+        };
+
+        // Linked ("Vincular a") follower: resolve through the SAME pick the
+        // leader itself would produce (shared `picks` registry, exactly the
+        // pattern VariablePanel.ts's own small preview box already uses for
+        // the panel that's currently open) instead of resolving
+        // independently. Previously this branch didn't exist at all --
+        // `resolvePreview()` never received a `linkCtx`, so a follower's
+        // CANVAS content (as opposed to that one open panel's own preview
+        // box) never actually tracked its leader; it just happened to
+        // resolve to its own, unrelated value. See `_refreshLinkedFollowers()`
+        // below for the other half: telling followers to re-run this
+        // whenever the LEADER's own binding changes.
+        if (binding.linkedTo) {
+          const leaderEl      = VariableContentTool._findVarElementById(element, binding.linkedTo);
+          const leaderBinding = leaderEl ? VariableContentTool._readAnyVariableBinding(leaderEl) : null;
+          if (leaderBinding && leaderBinding.type === binding.type) {
+            VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
+              const picks = VariableEngine.newLinkRegistry();
+              VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
+              const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, {}, apiCache, { id: '__me__', picks });
+              applyResolved(val);
+            });
+            return;
+          }
+        }
+
+        VariableEngine.resolvePreview(binding).then(applyResolved);
       });
     } else {
       textEl.style.whiteSpace = 'pre-wrap';
       textEl.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
     }
+  }
+
+  /**
+   * Scoped lookup of another `craftools-element` on the SAME page by its
+   * stable `_craftoolsVarId` (assigned lazily by VariablePanel.ts's
+   * `_ensureVarId()` the first time any element is listed as a "Vincular a"
+   * candidate). Deliberately duplicated here rather than imported from
+   * VariablePanel.ts/AgendaExport.ts (which already have their own near-
+   * identical copies) -- pulling in either would risk a circular import
+   * (both transitively touch tool modules that import THIS file back).
+   */
+  private static _findVarElementById(from: HTMLElement, id: string): HTMLElement | null {
+    const page  = from.closest<HTMLElement>('.craftools-page');
+    const scope = page ?? document;
+    let found: HTMLElement | null = null;
+    scope.querySelectorAll<HTMLElement & { _craftoolsVarId?: string }>('craftools-element').forEach(el => {
+      if (!found && el._craftoolsVarId === id) found = el;
+    });
+    return found;
+  }
+
+  /**
+   * Same in-memory-first, `dataset.ctState`-fallback binding read as
+   * VariablePanel.ts's `_getElementBinding()`/AgendaExport.ts's
+   * `_getBinding()` -- a leader can be a Variable Content, QR Code, or
+   * Barcode element, so this isn't narrowed to `_craftoolsVariable` alone.
+   */
+  private static _readAnyVariableBinding(el: HTMLElement): VariableBinding | null {
+    const toolType = el.getAttribute('data-craftool');
+    if (toolType === 'variablecontent') {
+      const memory = (el as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable;
+      if (memory) return memory;
+      const state = PropertyRenderer._readState(el);
+      return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
+    }
+    if (toolType === 'qrcode' || toolType === 'barcode') {
+      const meta = (el as HTMLElement & { _craftoolsMeta?: { variableBinding?: VariableBinding | null } })._craftoolsMeta;
+      if (meta?.variableBinding) return meta.variableBinding;
+      const state = PropertyRenderer._readState(el);
+      return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
+    }
+    return null;
+  }
+
+  /**
+   * The other half of the "Vincular a" live-canvas fix (see the
+   * `binding.linkedTo` branch in `_applyVariablePreview()` above): called
+   * right after THIS element's own binding is saved, so any sibling
+   * Variable Content element on the same page whose binding points back at
+   * this one (`linkedTo === this element's _craftoolsVarId`) re-resolves
+   * and re-renders immediately too, instead of only catching up the next
+   * time someone happens to select/reopen it. Scoped to `variablecontent`
+   * followers only (QR/Barcode followers have their own separate
+   * regeneration path -- `QRCodeTool._regenerate()`/its Barcode
+   * equivalent -- not wired to this yet).
+   */
+  private static _refreshLinkedFollowers(element: HTMLElement): void {
+    const myId = (element as HTMLElement & { _craftoolsVarId?: string })._craftoolsVarId;
+    if (!myId) return; // Never listed as a link candidate yet -- nothing could be pointing at it.
+    const page = element.closest<HTMLElement>('.craftools-page');
+    if (!page) return;
+    page.querySelectorAll<HTMLElement>('craftools-element[data-craftool="variablecontent"]').forEach(el => {
+      if (el === element) return;
+      const binding = VariableContentTool._readAnyVariableBinding(el);
+      if (binding?.linkedTo !== myId) return;
+      const content = getContent(el);
+      if (content) VariableContentTool._applyVariablePreview(el, content, binding);
+    });
   }
   // ───────────────────────────────────────────────────────────────────────────
 
@@ -369,6 +470,12 @@ export class VariableContentTool extends BaseTool {
       (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable = binding;
       const content = getContent(element);
       if (content) VariableContentTool._applyVariablePreview(element, content, binding);
+      // This element just became (or stayed) a leader for whoever else is
+      // "Vinculado a" it -- refresh those followers' own canvas content
+      // right now instead of leaving them showing a stale/independent
+      // value until someone happens to reselect them. See
+      // _refreshLinkedFollowers()'s doc comment for the full picture.
+      VariableContentTool._refreshLinkedFollowers(element);
       return;
     }
 
