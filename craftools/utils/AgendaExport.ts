@@ -144,12 +144,36 @@ export class AgendaExport {
     const pageSizes:       ReturnType<typeof PdfExport._parsePageSize>[] = [];
     const pagesHtmlParts:  string[] = [];
     let outputPageNumber = 0;
+    // Running index for the NEXT page's own batch, IF that page opts in to
+    // continuing the previous one's sequence (see `continuesSequence`
+    // below) -- kept updated after every page regardless of whether that
+    // page itself continued or reset, so a later page can always resume
+    // from wherever the page immediately before it left off.
+    let sequenceBase = 0;
 
     outer:
     for (const page of pages) {
       const size        = PdfExport._parsePageSize(page);
       const repeatCount = this._repeatCount(page);
       const origEls     = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+
+      // Every page's own date/sequence/pageNumber variables start counting
+      // from 0 on ITS OWN first repetition by default -- so e.g. a
+      // non-repeating cover page ahead of a repeatable daily page never
+      // shifts that page's configured Start Date by however many pages
+      // happen to precede it (previously a single GLOBAL running index
+      // spanned the entire document regardless of page identity, so the
+      // repeatable page's first repetition silently started at "Start Date
+      // + 1 day" whenever anything -- even an unrelated, variable-less
+      // cover -- came before it in the document). Checking "Continuar
+      // sequência da página anterior" in the Pages tab
+      // (`data-agenda-continue-sequence="true"`) opts a specific page into
+      // resuming exactly where the page immediately before it left off
+      // instead, for the deliberate case of one continuous sequence spread
+      // across several distinct page designs (e.g. a weekday layout
+      // followed by a weekend layout, both covering the same week).
+      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
+      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
 
       for (let i = 0; i < repeatCount; i++) {
         if (outputPageNumber >= renderLimit) break outer;
@@ -161,18 +185,14 @@ export class AgendaExport {
 
         const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
 
-        // Root cause of "variable keeps the same value on every page": `i`
-        // is only the LOCAL index within the CURRENT page's own repeat
-        // batch (0..repeatCount-1) -- it resets to 0 for every distinct
-        // `.craftools-page` in the document. A date/sequence/pageNumber
-        // variable is meant to advance across the WHOLE generated document
-        // (that's the entire point of an "Agenda"), whether that advance
-        // comes from repeating one page N times or from simply having N
-        // separate pages -- so it must use a GLOBAL running index instead.
-        // `outputPageNumber` already increments exactly once per rendered
-        // output page across the entire loop (see above), so `- 1` gives
-        // the correct 0-based global equivalent of the old (buggy) `i`.
-        const globalRepetitionIndex = outputPageNumber - 1;
+        // This page's own repetition index -- `i` (0-based, LOCAL to this
+        // page's batch) unless this page continues the previous one's
+        // sequence, in which case it resumes from `pageStartIndex` (see
+        // above). Deliberately NOT the raw output-page counter -- see this
+        // block's header comment for why that broke a repeatable page's
+        // Start Date whenever an earlier page (repeating or not) preceded
+        // it in the document.
+        const globalRepetitionIndex = pageStartIndex + i;
 
         // Alternância de layout (Frente e Verso espelhados)
         if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
@@ -227,6 +247,13 @@ export class AgendaExport {
           `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${clone.innerHTML}</div>`
         );
       }
+
+      // Wherever the NEXT page's sequence would resume from, if it opts in
+      // via "Continuar sequência" -- always advanced by this page's own
+      // full repeatCount, regardless of whether this page itself continued
+      // or reset (so a chain of several continuing pages still adds up
+      // correctly, one immediate predecessor at a time).
+      sequenceBase = pageStartIndex + repeatCount;
     }
 
     const css      = PdfExport._buildCSS(pageSizes);
@@ -284,11 +311,20 @@ export class AgendaExport {
 
     const outputInnerHtmls: string[] = [];
     let outputPageNumber = 0;
+    // Same per-page reset (with opt-in continuation) as _buildDocument() --
+    // see that method's matching comment. Kept identical here so the
+    // canvas Preview tab always shows EXACTLY what the real PDF export
+    // will produce: a page with no "Continuar sequência" flag always shows
+    // its own configured Start Date/first value on its first repetition,
+    // regardless of which pages (bound or not) come before it.
+    let sequenceBase = 0;
 
     outer:
     for (const page of pages) {
       const repeatCount = this._repeatCount(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
+      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
 
       for (let i = 0; i < repeatCount; i++) {
         if (outputPageNumber >= renderLimit) break outer;
@@ -306,7 +342,7 @@ export class AgendaExport {
         clone.querySelectorAll<HTMLElement>('.craftools-ctrlbar').forEach(n => { n.style.display = 'none'; });
 
         const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
-        const globalRepetitionIndex = outputPageNumber - 1;
+        const globalRepetitionIndex = pageStartIndex + i;
 
         // Alternância de layout (Frente e Verso espelhados)
         if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
@@ -350,6 +386,8 @@ export class AgendaExport {
         // removed, and stays in the markup returned here.
         outputInnerHtmls.push(clone.innerHTML);
       }
+
+      sequenceBase = pageStartIndex + repeatCount;
     }
 
     return outputInnerHtmls.length ? outputInnerHtmls : null;

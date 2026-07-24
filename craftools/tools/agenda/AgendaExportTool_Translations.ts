@@ -15,6 +15,8 @@ I18n.addTranslations('agendaExportTool', {
         alternateToggle: "Páginas Alternadas (Frente e Verso)",
         repeatCheckLabel: "Repetir esta página várias vezes",
         repeatCountLabel: "Quantas vezes repetir",
+        continueSequenceToggle: "Continuar sequência (data/número) da página anterior",
+        continueSequenceHint: "Desmarcado (padrão): a 1ª repetição desta página sempre usa a Data/Início configurados nela, não importa quantas páginas vêm antes. Marque só se esta página faz parte da mesma sequência contínua da página anterior (ex: um layout de dia útil seguido por um layout de fim de semana, cobrindo a mesma semana).",
         variablesFoundSuffix: "elemento(s) com variável configurada nesta página.",
         noVariablesWarning: "Esta página está marcada para repetir, mas nenhum elemento dela tem uma variável configurada (aba \"Texto Variável\" no Texto/Título/QR Code/Código de Barras) — todas as repetições ficarão idênticas.",
 

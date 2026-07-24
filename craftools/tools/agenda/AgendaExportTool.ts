@@ -131,6 +131,22 @@ export class AgendaExportTool {
         });
       });
 
+      // Opts a page into resuming the previous page's date/sequence index
+      // instead of starting fresh at 0 -- see AgendaExport.ts's
+      // `_buildDocument()`/`buildOutputPages()` header comments for what
+      // this controls and the bug it fixes when left unchecked (the
+      // default).
+      root.querySelectorAll<HTMLInputElement>('.agenda-page-continue-check').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const pageId = chk.dataset.pageId as string;
+          const page   = document.getElementById(pageId);
+          if (page) {
+            if (chk.checked) page.dataset.agendaContinueSequence = 'true';
+            else delete page.dataset.agendaContinueSequence;
+          }
+        });
+      });
+
       // ── Tab 2: Preview — single on/off toggle ──────────────────────────
       // Entirely decoupled from the accordion's own open/closed state now
       // (previously opening the accordion silently triggered a load) --
@@ -209,6 +225,7 @@ export class AgendaExportTool {
       const boundCount = AgendaExportTool._collectPageBindings(page).length;
 
       const alternate = page.dataset.agendaAlternate === 'true';
+      const continuesSequence = page.dataset.agendaContinueSequence === 'true';
 
       return `
         <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
@@ -218,6 +235,12 @@ export class AgendaExportTool {
             <span style="font-size:10px; color:var(--text-muted); margin-left:auto; white-space:nowrap;">${size.width} × ${size.height}</span>
           </label>
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px; margin-left:24px;">${boundCount} ${a('variablesFoundSuffix')}</span>
+          ${idx > 0 ? `
+            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:8px 0 0 24px;" title="${a('continueSequenceHint')}">
+              <input type="checkbox" class="agenda-page-continue-check" data-page-id="${page.id}" ${continuesSequence ? 'checked' : ''} style="margin-top:2px;">
+              <span style="font-size:11px;">${a('continueSequenceToggle')}</span>
+            </label>
+          ` : ''}
           <div class="agenda-page-repeat-count-wrap" data-page-id="${page.id}" style="margin-top:8px; margin-left:24px; ${checked ? '' : 'display:none;'}">
             <span class="craftools-label">${a('repeatCountLabel')}</span>
             <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" style="width:100%; margin-bottom:8px;">
