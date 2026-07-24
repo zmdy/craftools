@@ -5,6 +5,13 @@ export interface ElementState {
   dataset: Record<string, string>;
   attributes: Record<string, string>;
   contentHTML: string;
+  /**
+   * Deep-cloned snapshot of element._craftoolsMeta (ImageTool, QRCodeTool,
+   * BarcodeTool, etc.) at serialization time. Undefined for tools that don't
+   * use _craftoolsMeta (Stamp, CurvedText — they mirror their state to
+   * dataset.ctState instead, which is captured in `dataset`).
+   */
+  meta?: Record<string, unknown>;
 }
 
 export interface PageState {
@@ -51,7 +58,7 @@ export class StateSerializer {
         // Grab attributes we care about for the element positioning and type
         const attributes: Record<string, string> = {};
         for (const attr of htmlEl.attributes) {
-          if (['x', 'y', 'w', 'h', 'r', 'data-type', 'data-locked'].includes(attr.name)) {
+          if (['x', 'y', 'w', 'h', 'r', 'data-craftool', 'data-locked'].includes(attr.name)) {
             attributes[attr.name] = attr.value;
           }
         }
@@ -65,13 +72,20 @@ export class StateSerializer {
           if (val !== undefined) datasetObj[key] = val;
         }
 
+        // _craftoolsMeta is a plain JS object property (not a DOM attribute or
+        // dataset entry) used by ImageTool, QRCodeTool, BarcodeTool and others
+        // to store tool-specific state. Deep-clone it so mutations after the
+        // snapshot don't silently corrupt history.
+        const craftoolsMeta = (htmlEl as HTMLElement & { _craftoolsMeta?: Record<string, unknown> })._craftoolsMeta;
+
         pageState.elements.push({
           id: htmlEl.dataset.ctId,
-          type: htmlEl.dataset.type || htmlEl.tagName.toLowerCase(),
+          type: htmlEl.getAttribute('data-craftool') || htmlEl.tagName.toLowerCase(),
           cssText: htmlEl.style.cssText,
           dataset: datasetObj,
           attributes,
-          contentHTML
+          contentHTML,
+          meta: craftoolsMeta ? JSON.parse(JSON.stringify(craftoolsMeta)) : undefined,
         });
       });
       
@@ -123,8 +137,8 @@ export class StateSerializer {
         if (!el) {
           el = document.createElement('craftools-element') as HTMLElement;
           el.dataset.ctId = elState.id;
-          if (elState.attributes['data-type']) {
-            el.dataset.type = elState.attributes['data-type'];
+          if (elState.attributes['data-craftool']) {
+            el.setAttribute('data-craftool', elState.attributes['data-craftool']);
           }
           pageEl.appendChild(el);
           
@@ -136,7 +150,7 @@ export class StateSerializer {
         
         // 1. Restore attributes
         // First clear relevant old attributes to avoid leftovers
-        ['x', 'y', 'w', 'h', 'r', 'data-type', 'data-locked'].forEach(attr => el!.removeAttribute(attr));
+        ['x', 'y', 'w', 'h', 'r', 'data-craftool', 'data-locked'].forEach(attr => el!.removeAttribute(attr));
         for (const [key, val] of Object.entries(elState.attributes)) {
           el.setAttribute(key, val);
         }
@@ -150,16 +164,34 @@ export class StateSerializer {
           el.dataset[key] = val;
         }
         
-        // 3. Restore style
+        // 3. Restore in-memory tool state objects
+        // _craftoolsMeta: used by ImageTool, QRCodeTool, BarcodeTool, etc.
+        // Without this, editing properties after an undo would use the stale
+        // pre-undo meta as the base, silently discarding the undone changes.
+        if (elState.meta) {
+          (el as HTMLElement & { _craftoolsMeta?: Record<string, unknown> })._craftoolsMeta =
+            JSON.parse(JSON.stringify(elState.meta));
+        }
+        // _ctState: used by StampTool and CurvedTextTool (mirrored to
+        // dataset.ctState on every write, so it's implicitly in `dataset`
+        // above -- re-parse it here so _applyProperty()'s
+        // `if (!e._ctState)` guard doesn't fall back to DEFAULT_STATE()).
+        if (el.dataset.ctState) {
+          try {
+            (el as HTMLElement & { _ctState?: unknown })._ctState = JSON.parse(el.dataset.ctState);
+          } catch { /* corrupted ctState -- leave _ctState as-is */ }
+        }
+
+        // 4. Restore style
         el.style.cssText = elState.cssText;
         
-        // 4. Restore Inner Content
+        // 5. Restore Inner Content
         const contentEl = el.children[0] as HTMLElement;
         if (contentEl) {
           contentEl.innerHTML = elState.contentHTML;
         }
-        
-        // 5. Force custom element to visually update its transforms and UI handles
+
+        // 6. Force custom element to visually update its transforms and UI handles
         if (typeof (el as any)._applyTransform === 'function') {
            (el as any)._applyTransform();
         }
