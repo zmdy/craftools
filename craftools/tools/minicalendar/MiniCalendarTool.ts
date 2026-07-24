@@ -2,7 +2,8 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
-import { CalendarRenderer, type CalendarTheme } from '../../utils/CalendarRenderer';
+import { normalizeValue } from '../../utils/ColorPickerUI.js';
+import { CalendarRenderer, type CalendarTheme, type CalendarOptions } from '../../utils/CalendarRenderer';
 import type { PropertySchema } from '../../types/PropertySchema';
 // Registers the 'miniCalendarTool.*' i18n keys used by DISPLAY_MODES' per-
 // option i18nKey below (falls back to the literal English labels without
@@ -14,6 +15,7 @@ interface MiniCalendarMeta {
   year:        number;
   month:       number;
   theme:       CalendarTheme;
+  highlight?:  CalendarOptions['highlight'];
 }
 
 const getMeta = (el: HTMLElement): Partial<MiniCalendarMeta> =>
@@ -77,6 +79,7 @@ export class MiniCalendarTool extends BaseTool {
     const card = CalendarRenderer.buildCardElement(meta.year, meta.month, {
       theme: meta.theme,
       parts: MiniCalendarTool._currentParts(meta.displayMode),
+      highlight: meta.highlight,
     });
     card.style.userSelect = 'none';
     return card;
@@ -192,9 +195,50 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'color', key: 'themeWeekendBg',   label: 'Weekend background' },
         ],
       },
+      // Highlights a single chosen day-of-month in the days grid with its
+      // own background/text/border -- e.g. "today", or any other date the
+      // user wants to stand out. Same standardized color-picker/border
+      // vocabulary CommonSchema.ts's borderSection() uses elsewhere in the
+      // app (solid-or-gradient color-picker + width/style/color/radius),
+      // rather than the plain flat 'color' fields the Theme section above
+      // uses (see that section's own _syncFromDOM() comment -- those are a
+      // known pre-existing gap, not the pattern to extend).
+      {
+        section: 'Highlight',
+        icon: 'star',
+        collapsible: true,
+        defaultOpen: false,
+        fields: [
+          { type: 'toggle', key: 'highlightEnabled', label: 'Highlight a day' },
+          { type: 'number', key: 'highlightDay', label: 'Day', min: 1, max: 31, step: 1 },
+          { type: 'color-picker', key: 'highlightBg', label: 'Background' },
+          { type: 'color-picker', key: 'highlightTextColor', label: 'Text color' },
+          { type: 'number', key: 'highlightBorderWidth', label: 'Border width', min: 0, max: 20, unit: 'px' },
+          {
+            type: 'select', key: 'highlightBorderStyle', label: 'Border style',
+            options: [
+              { value: 'solid',  label: 'Solid' },
+              { value: 'dashed', label: 'Dashed' },
+              { value: 'dotted', label: 'Dotted' },
+              { value: 'double', label: 'Double' },
+              { value: 'none',   label: 'None' },
+            ],
+          },
+          { type: 'color-picker', key: 'highlightBorderColor', label: 'Border color' },
+          { type: 'number', key: 'highlightBorderRadius', label: 'Border radius', min: 0, max: 100, unit: 'px' },
+        ],
+      },
       zIndexSection(),
     ];
   }
+
+  /** Keys whose value is a JSON ColorPickerValue string (color-picker field
+   * type) rather than a plain literal -- extracted down to a bare solid hex
+   * for CalendarRenderer.ts, which paints a plain CSS background/border
+   * color, not a gradient (same "solid-only, no gradient" call DAYS_BOX
+   * makes for its own day-highlight color -- see VariablePanel.ts's
+   * `renderColorPicker(..., { allowGradient: false })`). */
+  private static readonly HIGHLIGHT_COLOR_KEYS = new Set(['highlightBg', 'highlightTextColor', 'highlightBorderColor']);
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
@@ -207,6 +251,13 @@ export class MiniCalendarTool extends BaseTool {
         const themeKey = key.replace('theme', '').replace(/^./, c => c.toLowerCase());
         theme[themeKey] = value;
         (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
+      } else if (key.startsWith('highlight')) {
+        const highlight = (e._craftoolsMeta.highlight as unknown as Record<string, unknown>) ?? {};
+        const highlightKey = key.replace('highlight', '').replace(/^./, c => c.toLowerCase());
+        highlight[highlightKey] = MiniCalendarTool.HIGHLIGHT_COLOR_KEYS.has(key)
+          ? normalizeValue(value as string).solid
+          : value;
+        (e._craftoolsMeta as unknown as Record<string, unknown>).highlight = highlight;
       } else if (key === 'zIndex') {
         element.style.zIndex = String(value);
       }
