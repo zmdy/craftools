@@ -250,6 +250,7 @@ export class VariablePanel {
                     ${this._dateFormatButtons().map(({ token, i18nKey }) => `
                         <button type="button" class="craftools-pill var-date-fmt-btn ${hasToken(token) ? 'active' : ''}" data-token="${this._esc(token)}">${I18n.t('variablePanel.' + i18nKey)}</button>
                     `).join('')}
+                    <button type="button" id="var-date-daysbox-btn" class="craftools-pill ${b.format === 'DAYS_BOX' ? 'active' : ''}">${I18n.t('variablePanel.dateFormatDaysBox')}</button>
                 </div>
             </div>
 
@@ -724,30 +725,92 @@ export class VariablePanel {
                         if (calendarOpts) calendarOpts.style.display = (lower.includes('{season}') || lower.includes('{moon}') || lower.includes('{zodiac}')) ? 'block' : 'none';
                         notify();
                     };
+                    // Dia/mês/ano are the one trio in the pill row that the
+                    // legacy default ('dd/mm/yyyy') and this UI's own
+                    // convention always glue together with "/" -- so unlike
+                    // the other pieces (which just get appended/removed with
+                    // a plain space), toggling any of the three rebuilds
+                    // that whole slash-joined group from scratch instead of
+                    // literally inserting/stripping the token text. This
+                    // avoids the leftover "/" that a plain token-removal
+                    // would leave behind (e.g. unchecking "Dia" from
+                    // "dd/mm/yyyy" now yields "mm/yyyy", not "/mm/yyyy"),
+                    // and inserts a fresh "/" automatically when re-checking
+                    // one, in the canonical dd/mm/yyyy order regardless of
+                    // click order.
+                    const DATE_PART_TOKENS = ['dd', 'mm', 'yyyy'];
                     formatButtons.forEach(btn => {
                         btn.onclick = () => {
-                            const token   = btn.dataset.token || '';
-                            const current = customFormat ? customFormat.value : '';
+                            const token    = btn.dataset.token || '';
+                            const current  = customFormat ? customFormat.value : '';
                             const isActive = btn.classList.contains('active');
+                            const isDatePart = DATE_PART_TOKENS.includes(token);
                             let next: string;
-                            if (isActive) {
+
+                            if (isDatePart) {
+                                const activeDateParts = new Set(
+                                    DATE_PART_TOKENS.filter(t => [...formatButtons].some(b => b.dataset.token === t && b.classList.contains('active')))
+                                );
+                                if (isActive) activeDateParts.delete(token); else activeDateParts.add(token);
+                                const group = DATE_PART_TOKENS.filter(t => activeDateParts.has(t)).join('/');
+
+                                // Everything that isn't a dd/mm/yyyy token or
+                                // the "/" gluing them is "the rest" (other
+                                // pieces/literal text the user added) and is
+                                // kept as-is, reattached after the group.
+                                let rest = current;
+                                DATE_PART_TOKENS.forEach(t => { rest = rest.split(t).join(''); });
+                                rest = rest.replace(/\//g, '').replace(/[ \t]{2,}/g, ' ').trim();
+
+                                next = [group, rest].filter(Boolean).join(' ');
+                            } else if (isActive) {
                                 next = current.split(token).join('').replace(/[ \t]{2,}/g, ' ').trim();
-                                // Deselecting the LAST active piece resets
-                                // the box to fully empty (per spec) rather
-                                // than leaving behind whatever literal
-                                // separators/text the user had typed around
-                                // the pieces (e.g. the leftover "//" from
-                                // "dd/mm/yyyy" once all three are removed).
-                                const anyLeft = VariablePanel._dateFormatButtons().some(o => next.toLowerCase().includes(o.token.toLowerCase()));
-                                if (!anyLeft) next = '';
                             } else {
                                 const sep = current && !/\s$/.test(current) ? ' ' : '';
                                 next = current + sep + token;
                             }
+
+                            if (isActive) {
+                                // Deselecting the LAST active piece resets
+                                // the box to fully empty (per spec) rather
+                                // than leaving behind whatever literal
+                                // separators/text the user had typed around
+                                // the pieces.
+                                const anyLeft = VariablePanel._dateFormatButtons().some(o => next.toLowerCase().includes(o.token.toLowerCase()));
+                                if (!anyLeft) next = '';
+                            }
+
                             applyCustomText(next);
                         };
                     });
                     if (customFormat) customFormat.oninput = () => applyCustomText(customFormat.value);
+                    // "Caixa de dias" is a whole separate render mode (a row
+                    // of colored weekday boxes -- see VariableEngine.ts's
+                    // 'DAYS_BOX' case), not a text token, so it can't compose
+                    // with the pieces above the way they compose with each
+                    // other. Clicking it flips the binding to 'DAYS_BOX'
+                    // outright (deselecting every text-token pill); clicking
+                    // it again goes back to 'CUSTOM', restoring whatever was
+                    // last in the custom-format box.
+                    const daysBoxBtn = container.querySelector<HTMLButtonElement>('#var-date-daysbox-btn');
+                    if (daysBoxBtn) {
+                        daysBoxBtn.onclick = () => {
+                            const turningOn = !daysBoxBtn.classList.contains('active');
+                            if (turningOn) {
+                                binding!.format = 'DAYS_BOX';
+                                daysBoxBtn.classList.add('active');
+                                formatButtons.forEach(b => b.classList.remove('active'));
+                                if (daysBoxOpts)  daysBoxOpts.style.display  = 'block';
+                                if (specialOpts)  specialOpts.style.display  = 'none';
+                                if (seasonOpts)   seasonOpts.style.display   = 'none';
+                                if (calendarOpts) calendarOpts.style.display = 'none';
+                                notify();
+                            } else {
+                                daysBoxBtn.classList.remove('active');
+                                applyCustomText(customFormat ? customFormat.value : 'dd/mm/yyyy');
+                            }
+                        };
+                    }
                     if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
                     // Single-select: exactly one of text/icon/emoji is ever
                     // active (replaces the old independent calendarShowIcon/
