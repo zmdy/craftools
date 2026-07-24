@@ -1065,27 +1065,44 @@
     <script>
         /**
          * CRAFTOOLS_CONFIG — global app configuration.
-         * Change apiBase to point to the production server before deploying.
-         * The token is NOT set here; requests without a token return Free-tier content.
-         * Premium user tokens will be added via authentication in a future version.
+         * apiBase comes from VITE_API_BASE (.env.development / .env.production
+         * at the repo root -- see https://vite.dev/guide/env-and-mode.html),
+         * substituted by Vite's %VAR% HTML replacement -- this runs both for
+         * `npm run dev` (uses .env.development) and `vite build` (uses
+         * .env.production), so this file itself never needs manual editing
+         * before a deploy. The token is NOT set here; requests without a
+         * token return Free-tier content. Premium user tokens will be added
+         * via authentication in a future version.
          */
         window.CRAFTOOLS_CONFIG = {
-            apiBase: 'http://127.0.0.1/craftools_api/public',
+            apiBase: '%VITE_API_BASE%',
         };
 
-        // Environment check: if the page is not on localhost but apiBase still
-        // points to 127.0.0.1 (the dev default), warn loudly in the console
-        // instead of failing silently (ApiDataLoader.js would fall back to local
-        // data with no visible indication).
+        // Environment check: if %VITE_API_BASE% wasn't substituted (missing
+        // .env file/var -- Vite leaves the literal placeholder untouched and
+        // just warns at build time) or still resolves to the dev default on a
+        // non-localhost host, warn loudly in the console instead of failing
+        // silently (ApiDataLoader.js would fall back to local data with no
+        // visible indication).
         (function () {
+            const apiBase = window.CRAFTOOLS_CONFIG.apiBase || '';
+            if (apiBase.indexOf('%VITE_API_BASE%') !== -1) {
+                console.error(
+                    '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase is still the literal "%VITE_API_BASE%" ' +
+                    'placeholder -- Vite did not find a VITE_API_BASE value to substitute. Check that ' +
+                    '.env.development (npm run dev) / .env.production (vite build) exist at the repo root ' +
+                    'and define VITE_API_BASE.'
+                );
+                return;
+            }
             const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-            const usingDevApiBase = (window.CRAFTOOLS_CONFIG.apiBase || '').indexOf('127.0.0.1') !== -1;
+            const usingDevApiBase = apiBase.indexOf('127.0.0.1') !== -1;
             if (usingDevApiBase && !isLocalHost) {
                 console.error(
                     '[CrafTools] window.CRAFTOOLS_CONFIG.apiBase still points to 127.0.0.1 (dev default) ' +
                     'on this production host (' + window.location.hostname + '). ' +
                     'GridSizes, album templates and the craftools_api image library will fall back to ' +
-                    'local data. Set apiBase to the real craftools_api URL before deploying.'
+                    'local data. Set VITE_API_BASE in .env.production before deploying.'
                 );
             }
         })();
