@@ -638,10 +638,16 @@ export class AgendaExport {
     while (month > 12) { month -= 12; year += 1; }
     while (month < 1)  { month += 12; year -= 1; }
 
+    // Pre-existing bug fixed here: this used to call a nonexistent
+    // `_currentMode(meta)` (threw TypeError, so exporting an Agenda with a
+    // standalone/repeating Mini Calendar element crashed). The real method
+    // is `_currentParts(displayMode: string)`, which returns the parts
+    // object directly (not wrapped in `{ parts }`). `highlight` is now also
+    // forwarded so exported PDFs match the live-editor highlight-day config.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { parts } = (MiniCalendarTool as any)._currentMode(meta);
+    const parts = (MiniCalendarTool as any)._currentParts(meta['displayMode'] as string);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts });
+    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts, highlight: meta['highlight'] });
   }
 
   static _escAttr(val: unknown): string {
