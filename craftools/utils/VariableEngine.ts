@@ -516,17 +516,22 @@ export class VariableEngine {
                 const padding  = b.daysBoxPadding !== undefined ? String(b.daysBoxPadding) : '4';
                 const startSun = !!b.daysBoxStartSunday;
 
-                // Explicit height (px) is independent from the content-driven
-                // width (min-width + padding) -- lets the box be shaped into
-                // a perfect circle (height === effective width) or an oval
-                // (height different from width), instead of always being a
-                // roughly-square box sized purely from the letter + padding.
-                // Falls back to the original min-height:1.5em when unset, so
-                // existing bindings saved before this control existed render
-                // exactly as before.
-                const heightCss = (b.daysBoxHeight !== undefined && String(b.daysBoxHeight).trim() !== '')
-                    ? `height: ${b.daysBoxHeight}px;`
-                    : `min-height: 1.5em;`;
+                // Explicit height (px) still shapes each box independently
+                // from its width (e.g. a perfect circle/oval) and, in that
+                // case, the row keeps its own natural size, vertically
+                // centered in the element -- same as before. With NO
+                // explicit height (the common case), the row instead
+                // stretches to fill the element's actual box (height:100%
+                // top to bottom, flex:1 left to right on every letter) --
+                // previously it was always a fixed-size `min-height:1.5em` /
+                // `min-width:1.5em` cluster centered in the middle, so
+                // dragging the element's resize handles (with auto-fit ON
+                // OR OFF -- this has nothing to do with auto-fit, which only
+                // resizes the *box* to match content, never the reverse)
+                // never redistributed the letters across the new size.
+                const hasExplicitHeight = b.daysBoxHeight !== undefined && String(b.daysBoxHeight).trim() !== '';
+                const rowHeightCss  = hasExplicitHeight ? 'height: auto;' : 'height: 100%;';
+                const cellHeightCss = hasExplicitHeight ? `height: ${b.daysBoxHeight}px;` : 'height: 100%;';
 
                 // Border style/width/color, independently controllable --
                 // previously hardcoded to "1px solid currentColor" (always
@@ -556,10 +561,21 @@ export class VariableEngine {
                     const isActive = idx === todayIdx;
                     const bg = isActive ? hlColor : 'transparent';
                     const color = isActive ? '#ffffff' : 'inherit';
-                    return `<div style="display:flex; align-items:center; justify-content:center; border: ${borderCss}; border-radius: ${radius}px; padding: ${padding}px; background-color: ${bg}; color: ${color}; min-width: 1.5em; ${heightCss}">${letter}</div>`;
+                    // flex:1 (not a plain min-width) makes the 7 cells
+                    // always split the row's actual width evenly -- the
+                    // width side of the redistribution fix, independent of
+                    // whether the height is explicit or container-filled.
+                    return `<div style="display:flex; align-items:center; justify-content:center; border: ${borderCss}; border-radius: ${radius}px; padding: ${padding}px; background-color: ${bg}; color: ${color}; flex: 1 1 0; min-width: 1.5em; ${cellHeightCss}">${letter}</div>`;
                 }).join('');
-                
-                return `<div style="display:flex; align-items:center; gap:6px; font-weight:bold;">${html}</div>`;
+
+                // font-weight/font-style now INHERIT from the surrounding
+                // text node instead of a hardcoded "font-weight:bold" --
+                // that hardcoded value silently overrode the Bold/Italic
+                // toggles in the Typography panel (VariableContentTool.ts's
+                // _applyProperty() sets bold/italic on the *parent* content
+                // node, which this box's own inline style was shadowing no
+                // matter what the toggles said).
+                return `<div style="display:flex; align-items:${hasExplicitHeight ? 'center' : 'stretch'}; justify-content:space-between; gap:6px; width:100%; ${rowHeightCss} font-weight:inherit; font-style:inherit;">${html}</div>`;
             }
             default:                   return `${dd}/${mm}/${yyyy}`;
         }
