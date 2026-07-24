@@ -4,6 +4,8 @@ import { loadEmojiKitchenPartners, loadEmojiKitchenSupported } from './ApiDataLo
 import { renderEmojiPicker } from './EmojiPickerUI';
 import { withEmojiFallback } from './EmojiFont.js';
 import { renderColorPicker, normalizeValue } from './ColorPickerUI.js';
+import { PropertyRenderer } from './PropertyRenderer.js';
+import { parseVariableBinding } from './fields/variable-binding.field.js';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -107,10 +109,34 @@ export class VariablePanel {
         return results;
     }
 
+    /**
+     * Same in-memory-first, `dataset.ctState`-fallback pattern as
+     * AgendaExport.ts's own `_getBinding()` (kept in sync with it
+     * deliberately -- see that method's doc comment for the full
+     * rationale). Without the fallback, a freshly pasted Variable Content
+     * copy never showed up as a "Vincular a" candidate for any OTHER
+     * element: Editor.ts's paste only copies `_craftoolsMeta`/
+     * `_craftoolsAutoResize` onto the clone, never `_craftoolsVariable`
+     * (an in-memory-only property, deliberately not shared by reference
+     * with the original -- see the paste code), so the copy's binding
+     * stayed invisible to `_findLinkCandidates()` until the user happened
+     * to select it once (which is what actually primes
+     * `_craftoolsVariable`, via `VariableContentTool._syncFromDOM()`).
+     * `dataset.ctState` is a real HTML attribute that DOES survive the
+     * clone, so it's always at least as current as whatever was last saved
+     * through the panel.
+     */
     private static _getElementBinding(el: VarElement, toolType: string | null): VariableBinding | null {
-        if (toolType === 'variablecontent') return el._craftoolsVariable ?? null;
+        if (toolType === 'variablecontent') {
+            if (el._craftoolsVariable) return el._craftoolsVariable;
+            const state = PropertyRenderer._readState(el);
+            return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
+        }
         if (toolType === 'qrcode' || toolType === 'barcode') {
-            return (el._craftoolsMeta?.variableBinding as VariableBinding | undefined) ?? null;
+            const meta = el._craftoolsMeta as (Record<string, unknown> & { variableBinding?: VariableBinding }) | undefined;
+            if (meta?.variableBinding) return meta.variableBinding;
+            const state = PropertyRenderer._readState(el);
+            return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
         }
         return null;
     }
