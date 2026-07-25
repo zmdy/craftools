@@ -24,6 +24,7 @@ import '../../utils/icons/MaterialSymbolsPack.js';
 // more than one pack is registered (renderPickerPanel()'s `packs.length > 1`
 // check below), so this import is the entire integration surface.
 import '../../utils/icons/FontAwesomePack.js';
+import { AppSettings } from '../../utils/AppSettings.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 interface IconMeta {
@@ -164,7 +165,11 @@ export class IconTool extends BaseTool {
       return;
     }
 
-    let activePackId = packs[0].id as string;
+    // Default to the user's preferred pack (Configurações panel) when it's
+    // actually registered; fall back to the first pack otherwise (e.g. a
+    // saved preference for a pack that isn't installed in this build).
+    const preferredPackId = AppSettings.get('defaultIconPack');
+    let activePackId = (packs.some(p => p.id === preferredPackId) ? preferredPackId : packs[0].id) as string;
     let activeCategoryId: string | null = null; // null = "all"
     let searchQuery = '';
 

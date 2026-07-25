@@ -33,6 +33,7 @@ import { SessionManager } from '../utils/SessionManager.js';
 import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
+import { AppSettings } from '../utils/AppSettings.js';
 
 // ── Keyboard shortcuts: element clipboard ──────────────────────────────────────
 // Holds the source element for Ctrl+C/Ctrl+V (see _initHistoryAndSession()'s
@@ -100,6 +101,8 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   generator: () => import('../tools/generator/GeneratorTool.js').then((m: any) => m.GeneratorTool.setup.bind(m.GeneratorTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   imageslicer: () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: () => import('../tools/settings/SettingsTool.js').then((m: any) => m.SettingsTool.setup.bind(m.SettingsTool)),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -132,7 +135,12 @@ export class Craftools_Editor extends HTMLElement {
 
   constructor() { super(); }
 
-  connectedCallback() { this.render(); }
+  connectedCallback() {
+    // Apply the saved snap/align defaults (Configurações panel) to their
+    // runtime globals before anything is dragged or selected this session.
+    AppSettings.applyRuntimeDefaults();
+    this.render();
+  }
 
   disconnectedCallback() {
     if (this._onHistoryChange) document.removeEventListener('craftools-history-change', this._onHistoryChange);
@@ -500,7 +508,7 @@ export class Craftools_Editor extends HTMLElement {
       // only the canvas, never the properties panel or anything else.
       // getBoundingClientRect() on both sides is post-zoom-transform, so
       // this still needs no manual zoom math.
-      if (!isMobile()) {
+      if (!isMobile() && AppSettings.get('defaultAutoCenterOnSelect')) {
         const canvasArea = document.getElementById('canvas-area');
         if (canvasArea) {
           const canvasRect = canvasArea.getBoundingClientRect();
@@ -809,7 +817,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'calendar', 'album', 'imageslicer',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {

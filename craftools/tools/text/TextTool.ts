@@ -17,6 +17,7 @@ import { formaSection, sizePositionSection, pageAlignSection, contentAlignSectio
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
+import { AppSettings } from '../../utils/AppSettings.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -62,8 +63,13 @@ export class TextTool extends BaseTool {
     if (type === 'title') {
       tag = 'h1'; size = 48; weight = 700; w = 300; h = 70;
     } else if (type === 'paragraph') {
-      tag = 'p'; size = 16; weight = 400; w = 200; h = 40;
+      // Title keeps its own structural 48px default (typographic
+      // hierarchy, not a "preference") -- only paragraph's body-text size
+      // follows the user's global AppSettings default.
+      tag = 'p'; size = AppSettings.get('defaultFontSize'); weight = 400; w = 200; h = 40;
     }
+    const defaultFont  = AppSettings.get('defaultFontFamily');
+    const defaultAlign = AppSettings.get('defaultTextAlign');
 
     const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsAutoResize?: boolean };
     el.setAttribute('x', '50');
@@ -82,7 +88,8 @@ export class TextTool extends BaseTool {
       font-size: ${size}px;
       font-weight: ${weight};
       color: #1a1a1a;
-      font-family: ${withEmojiFallback('DM Sans')};
+      font-family: ${withEmojiFallback(defaultFont)};
+      text-align: ${defaultAlign};
       display: flex;
       flex-direction: column;
       justify-content: center;
