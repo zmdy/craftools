@@ -4,6 +4,7 @@
 
 import { GridSizes as GridSizesFallback, type GridTemplate } from './GridSizes.js';
 import { UserTemplates } from './UserTemplates.js';
+import { BrazilianCommemorativeDates } from './BrazilianCommemorativeDates.js';
 
 declare global {
   interface Window {
@@ -201,21 +202,28 @@ export function loadEmojiKitchenCombo(left: string, right: string): Promise<any>
 
 /**
  * Loads craftools_api's `calendar-dates` resource for a single month/day --
- * holidays/commemorations/saints/events for that recurring day (no year: the
- * API always resolves against month+day only, see repo.php's
- * calendarEntryForDate()). Returns the raw `data` object (`{month, day,
- * holidays[], commemorations[], saints[], events[]}`) or `null` on any
- * failure (network error, API down, invalid month/day) -- callers (see
- * VariableEngine.ts's "SPECIAL_DATE" format) already treat a missing/empty
- * result as "nothing special this day", so failing soft here needs no
- * separate error-handling path.
+ * holidays/commemorationsMain/commemorationsMisc/saints/events for that
+ * recurring day (no year: the API always resolves against month+day only,
+ * see repo.php's calendarEntryForDate()). Returns the raw `data` object, OR
+ * -- on any failure (network error, API down, invalid month/day, malformed
+ * response) -- a locally computed backup covering just national holidays
+ * and the main commercial/cultural commemorative dates (see
+ * BrazilianCommemorativeDates.ts; same fallback role GridSizes.ts plays for
+ * loadGridSizes(), just error-triggered here instead of always-concatenated,
+ * since duplicating a holiday the API DID return correctly would show it
+ * twice). Callers (see VariableEngine.ts's "SPECIAL_DATE" format) already
+ * treat a missing/empty result as "nothing special this day", so a day with
+ * genuinely nothing to show -- API up, just an empty response -- still
+ * comes back as that empty (not null) object and never triggers the
+ * fallback.
  */
 export function loadCalendarDate(month: number, day: number): Promise<any> {
   const key = `calendarDate:${month}:${day}`;
   if (_cache[key] !== undefined) return _cache[key];
   _cache[key] = fetchResourceRaw('calendar-dates', { month, day }).then(data => {
-      return (data && typeof data === 'object') ? data : null;
-  });
+      if (data && typeof data === 'object') return data;
+      return BrazilianCommemorativeDates.forDate(month, day);
+  }).catch(() => BrazilianCommemorativeDates.forDate(month, day));
   return _cache[key];
 }
 
