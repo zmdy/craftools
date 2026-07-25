@@ -82,6 +82,16 @@ export class PageTool {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mod: any = await import('../calendar/CalendarTool.js');
         mod.CalendarTool.setup(editor);
+      } else if (toolType === 'generator' || toolType === 'agenda' || toolType === 'imageslicer') {
+        // Delegate to the real sidebar button click instead of duplicating
+        // its setup logic here: generator's click handler in Editor.ts also
+        // saves the page's original HTML/cssText (this._savedPageHtml)
+        // before opening the live preview, state restoreOriginalCanvas()
+        // depends on later. PageTool.ts has no access to that Editor-only
+        // bookkeeping, so re-triggering the actual button click keeps
+        // drag-activation and click-activation for these tools identical by
+        // construction, with no risk of drift between the two paths.
+        (document.querySelector(`[data-tool="${toolType}"]`) as HTMLElement | null)?.click();
       } else if (toolType === 'emoji') {
         const emoji = e.dataTransfer!.getData('EmojiChar');
         if (!emoji) return;
@@ -128,6 +138,7 @@ export class PageTool {
       } else if ([
         'title', 'paragraph', 'image', 'qrcode', 'barcode',
         'minicalendar', 'emojikitchen', 'variablecontent',
+        'curvedtext', 'stamp',
       ].includes(toolType)) {
         const pRect  = pageEl.getBoundingClientRect();
         const scale  = window.craftoolsZoomLevel || 1;
@@ -138,6 +149,8 @@ export class PageTool {
                   : toolType === 'barcode'          ? 220
                   : toolType === 'minicalendar'   ? 190
                   : toolType === 'emojikitchen'     ? 160
+                  : toolType === 'curvedtext'       ? 160
+                  : toolType === 'stamp'            ? 160
                   : toolType === 'variablecontent' ? 220 : 120;
 
         const elH = toolType === 'image'           ? 150
@@ -145,6 +158,8 @@ export class PageTool {
                   : toolType === 'barcode'          ? 100
                   : toolType === 'minicalendar'   ? 210
                   : toolType === 'emojikitchen'     ? 160
+                  : toolType === 'curvedtext'       ? 160
+                  : toolType === 'stamp'            ? 160
                   : toolType === 'variablecontent' ?  50 :  40;
 
         let dropX: number;
@@ -177,6 +192,7 @@ export class PageTool {
           else if (toolType === 'barcode')          { dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220)); dropY = Math.max(10, Math.min(dropY -  50, (pRect.height / scale) - 100)); }
           else if (toolType === 'minicalendar')   { dropX = Math.max(10, Math.min(dropX -  95, (pRect.width / scale) - 190)); dropY = Math.max(10, Math.min(dropY - 105, (pRect.height / scale) - 210)); }
           else if (toolType === 'emojikitchen')     { dropX = Math.max(10, Math.min(dropX -  80, (pRect.width / scale) - 160)); dropY = Math.max(10, Math.min(dropY -  80, (pRect.height / scale) - 160)); }
+          else if (toolType === 'curvedtext' || toolType === 'stamp') { dropX = Math.max(10, Math.min(dropX - 80, (pRect.width / scale) - 160)); dropY = Math.max(10, Math.min(dropY - 80, (pRect.height / scale) - 160)); }
           else if (toolType === 'variablecontent') { dropX = Math.max(10, Math.min(dropX - 110, (pRect.width / scale) - 220)); dropY = Math.max(10, Math.min(dropY -  25, (pRect.height / scale) -  50)); }
           else                                      { dropX = Math.max(10, Math.min(dropX -  60, (pRect.width / scale) - 120)); dropY = Math.max(10, Math.min(dropY -  20, (pRect.height / scale) -  40)); }
         }
@@ -202,6 +218,12 @@ export class PageTool {
         } else if (toolType === 'variablecontent') {
           const mod = await import('../variablecontent/VariableContentTool.js') as AnyMod;
           el = mod['VariableContentTool'].createElement(toolType, editor) as HTMLElement;
+        } else if (toolType === 'curvedtext') {
+          const mod = await import('../curvedtext/CurvedTextTool.js') as AnyMod;
+          el = mod['CurvedTextTool'].createElement(toolType, editor) as HTMLElement;
+        } else if (toolType === 'stamp') {
+          const mod = await import('../stamp/StampTool.js') as AnyMod;
+          el = mod['StampTool'].createElement(toolType, editor) as HTMLElement;
         } else {
           // title, paragraph (default text tool)
           const mod = await import('../text/TextTool.js') as AnyMod;
