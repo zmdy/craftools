@@ -488,14 +488,27 @@ export class Craftools_Editor extends HTMLElement {
       const toolType = el.getAttribute('data-craftool') ?? '';
 
       // Desktop: pan/scroll #canvas-area so the selected element is
-      // centered in the visible viewport -- the same behavior mobile
-      // already has via MobileToolbar._keepElementVisible() (triggered
-      // below through openPanelMenu()'s isMobile() branch). scrollIntoView
-      // reads the element's live, post-transform bounding box, so it
-      // already accounts for the current zoom (`transform: scale(...)` on
-      // #pages-wrapper) with no manual math needed.
+      // centered in the visible viewport -- the same idea mobile already
+      // has via MobileToolbar._keepElementVisible(), but computed manually
+      // instead of via el.scrollIntoView(). scrollIntoView() walks and
+      // scrolls EVERY scrollable ancestor between the element and the
+      // viewport (and respects scroll-padding CSS, which MobileToolbar's
+      // _updateScrollReserve() sets on #canvas-area for its own bottom-bar
+      // reserve) -- in practice that ended up also nudging #right-panel's
+      // size/position and leaving stray blank space above the bottom bar.
+      // Scrolling #canvas-area's own scrollTop/scrollLeft directly touches
+      // only the canvas, never the properties panel or anything else.
+      // getBoundingClientRect() on both sides is post-zoom-transform, so
+      // this still needs no manual zoom math.
       if (!isMobile()) {
-        el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+        const canvasArea = document.getElementById('canvas-area');
+        if (canvasArea) {
+          const canvasRect = canvasArea.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const deltaX = (elRect.left + elRect.width / 2) - (canvasRect.left + canvasRect.width / 2);
+          const deltaY = (elRect.top + elRect.height / 2) - (canvasRect.top + canvasRect.height / 2);
+          canvasArea.scrollBy({ left: deltaX, top: deltaY, behavior: 'smooth' });
+        }
       }
 
       const rightPanel  = document.getElementById('right-panel');
