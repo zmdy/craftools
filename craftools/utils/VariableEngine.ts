@@ -9,6 +9,21 @@ import { EMOJI_FONT_STACK } from './EmojiFont.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Shared shape for the miniCalendar format's pick → format handoff.
+ * Used as both _pickMiniCalendar()'s return type and _formatMiniCalendar()'s
+ * parameter type, and as the cast in _format()'s 'miniCalendar' case below --
+ * having one alias instead of three independently-typed literals is what
+ * keeps them from drifting out of sync (weekStart was added to the pick/
+ * format signatures but the _format() cast was missed, silently breaking
+ * `tsc --noEmit` -- and therefore the whole `npm run build`, since
+ * package.json's build script is `tsc --noEmit && vite build`).
+ */
+type MiniCalendarPick = {
+    year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
+    highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
+};
+
 export type VariableType =
     | 'date' | 'sequenceNumber' | 'sequenceText' | 'pageNumber'
     | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar';
@@ -105,6 +120,20 @@ export interface VariableBinding {
      * binding config, resolved fresh per repetition in _formatMiniCalendar().
      */
     miniCalendarHighlightEnabled?:      boolean;
+    /**
+     * 'today' (default) = highlight day is recomputed as the current
+     * day-of-month on every resolve, so the highlighted cell always tracks
+     * the real "today" instead of a value frozen at whichever day it was
+     * when the toggle was first turned on. 'fixed' = use
+     * miniCalendarHighlightDay as a permanent manual value (e.g. a
+     * birthday). 'linked' = read the day-of-month from another element's
+     * `date`-type variable, picked via miniCalendarHighlightLinkedTo (same
+     * cross-element link registry `linkedTo` already uses, just scoped to
+     * 'date'-type candidates instead of same-type ones).
+     */
+    miniCalendarHighlightDaySource?:    'today' | 'fixed' | 'linked';
+    /** Target element id (VariablePanel._ensureVarId()) when miniCalendarHighlightDaySource === 'linked'. */
+    miniCalendarHighlightLinkedTo?:     string;
     miniCalendarHighlightDay?:          number | string;
     miniCalendarHighlightBg?:           string;
     miniCalendarHighlightTextColor?:    string;
@@ -275,7 +304,7 @@ export class VariableEngine {
         }
 
         if (!usedLeader) {
-            pick = this._pick(binding, ctx, apiCache);
+            pick = this._pick(binding, ctx, apiCache, picks);
             if (picks && myId) picks.set(myId, { type: binding.type, pick });
         }
 
@@ -451,7 +480,7 @@ export class VariableEngine {
 
     // ── Pick dispatch ─────────────────────────────────────────────────────────
 
-    private static _pick(binding: VariableBinding, ctx: Required<ResolveContext> & { now: Date }, apiCache: ApiCache): unknown {
+    private static _pick(binding: VariableBinding, ctx: Required<ResolveContext> & { now: Date }, apiCache: ApiCache, picks: Map<string, LinkPick> | null = null): unknown {
         switch (binding.type) {
             case 'date':           return this._pickDate(binding, ctx);
             case 'sequenceNumber': return this._pickSequenceNumber(binding, ctx);
@@ -461,7 +490,7 @@ export class VariableEngine {
             case 'emoji':          return this._pickEmoji(binding, ctx);
             case 'apiPhrase':      return this._pickApiPhrase(binding, ctx, apiCache);
             case 'emojiKitchen':   return this._pickEmojiKitchen(binding, ctx, apiCache);
-            case 'miniCalendar':   return this._pickMiniCalendar(binding, ctx);
+            case 'miniCalendar':   return this._pickMiniCalendar(binding, ctx, picks);
             default:               return null;
         }
     }
@@ -478,7 +507,7 @@ export class VariableEngine {
             case 'emoji':          return pick == null ? '' : String(pick);
             case 'apiPhrase':      return this._formatApiPhrase(pick, binding);
             case 'emojiKitchen':   return (pick && (pick as { url: string }).url) ? (pick as { url: string }).url : '';
-            case 'miniCalendar':   return pick ? this._formatMiniCalendar(pick as { year: number; month: number; displayMode: string }) : '';
+            case 'miniCalendar':   return pick ? this._formatMiniCalendar(pick as MiniCalendarPick) : '';
             default:               return '';
         }
     }
@@ -1006,10 +1035,34 @@ export class VariableEngine {
 
     // ── miniCalendar ──────────────────────────────────────────────────────────
 
-    private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }): {
-        year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
-        highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
-    } {
+    /**
+     * Resolves the highlight day-of-month per miniCalendarHighlightDaySource:
+     *  - 'fixed'  -- the manually-entered miniCalendarHighlightDay, same as
+     *                before this field existed.
+     *  - 'linked' -- day-of-month of another element's already-resolved
+     *                `date`-type pick (looked up in the shared `picks`
+     *                registry via miniCalendarHighlightLinkedTo). Falls back
+     *                to 'today' if the target hasn't resolved yet (e.g. it
+     *                appears later in the page than this element) or isn't
+     *                actually a 'date' binding.
+     *  - 'today' (default) -- always the real current day, recomputed fresh
+     *                on every resolve instead of ever freezing.
+     */
+    private static _resolveHighlightDay(b: VariableBinding, picks: Map<string, LinkPick> | null): number {
+        const source = b.miniCalendarHighlightDaySource ?? 'today';
+        if (source === 'fixed') {
+            return parseInt(String(b.miniCalendarHighlightDay), 10) || new Date().getDate();
+        }
+        if (source === 'linked' && b.miniCalendarHighlightLinkedTo && picks?.has(b.miniCalendarHighlightLinkedTo)) {
+            const leader = picks.get(b.miniCalendarHighlightLinkedTo)!;
+            if (leader.type === 'date' && leader.pick instanceof Date) {
+                return leader.pick.getDate();
+            }
+        }
+        return new Date().getDate();
+    }
+
+    private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }, picks: Map<string, LinkPick> | null = null): MiniCalendarPick {
         let year  = parseInt(String(b.year), 10)  || new Date().getFullYear();
         let month = parseInt(String(b.month), 10) || (new Date().getMonth() + 1);
         if (b.mode === 'sequentialMonthly') {
@@ -1020,7 +1073,7 @@ export class VariableEngine {
         const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'complete1';
         const highlight = b.miniCalendarHighlightEnabled ? {
             enabled:      true,
-            day:          parseInt(String(b.miniCalendarHighlightDay), 10) || new Date().getDate(),
+            day:          this._resolveHighlightDay(b, picks),
             bg:           b.miniCalendarHighlightBg,
             textColor:    b.miniCalendarHighlightTextColor,
             borderColor:  b.miniCalendarHighlightBorderColor,
@@ -1032,10 +1085,7 @@ export class VariableEngine {
         return { year, month, displayMode, weekStart, highlight };
     }
 
-    private static _formatMiniCalendar(pick: {
-        year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
-        highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
-    }): string {
+    private static _formatMiniCalendar(pick: MiniCalendarPick): string {
         const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.complete1;
         // CalendarRenderer stays JS — any type here is acceptable
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access

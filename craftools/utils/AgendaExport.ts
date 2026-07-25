@@ -647,8 +647,15 @@ export class AgendaExport {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parts = (MiniCalendarTool as any)._currentParts(meta['displayMode'] as string);
     const weekStart = meta['weekStartSunday'] === false ? 'monday' : 'sunday';
+    // _resolveHighlight() recomputes highlight.day from "today" unless the
+    // element was set to a fixed day -- reused here (instead of forwarding
+    // meta['highlight'] as-is) so a repeated/advanced standalone Mini
+    // Calendar in an exported Agenda PDF highlights each page's own current
+    // day rather than baking in whatever day it was in the live editor.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts, highlight: meta['highlight'], weekStart });
+    const highlight = (MiniCalendarTool as any)._resolveHighlight(meta);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts, highlight, weekStart });
   }
 
   static _escAttr(val: unknown): string {

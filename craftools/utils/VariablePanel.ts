@@ -67,7 +67,7 @@ export class VariablePanel {
             case 'emoji':          return linkRow + this._emojiConfig(binding);
             case 'apiPhrase':      return linkRow + this._apiPhraseConfig(binding);
             case 'emojiKitchen':   return linkRow + this._emojiKitchenConfig(binding);
-            case 'miniCalendar':   return linkRow + this._miniCalendarConfig(binding);
+            case 'miniCalendar':   return linkRow + this._miniCalendarConfig(binding, element);
             default:               return '';
         }
     }
@@ -596,9 +596,20 @@ export class VariablePanel {
         return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     }
 
-    private static _miniCalendarConfig(b: VariableBinding): string {
+    private static _miniCalendarConfig(b: VariableBinding, element: VarElement | null): string {
         const monthOptions = this._monthNamesPt().map((name, i) =>
             `<option value="${i + 1}" ${b.month === i + 1 ? 'selected' : ''}>${name}</option>`
+        ).join('');
+        const highlightDaySource = b.miniCalendarHighlightDaySource ?? 'today';
+        // Candidates for "link to a date variable" -- any OTHER 'date'-type
+        // binding on the page (same _findLinkCandidates() the generic
+        // "Vincular a" row above uses, just called with the literal 'date'
+        // type instead of this binding's own 'miniCalendar' type, since the
+        // highlight day is sourced from a *different*-typed element than
+        // the miniCalendar binding itself).
+        const dateLinkCandidates = element ? this._findLinkCandidates('date', element) : [];
+        const dateLinkOptions = dateLinkCandidates.map(c =>
+            `<option value="${this._esc(c.id)}" ${b.miniCalendarHighlightLinkedTo === c.id ? 'selected' : ''}>${this._esc(c.label)}</option>`
         ).join('');
         return `
             <div class="ct-field">
@@ -638,8 +649,24 @@ export class VariablePanel {
             </label>
             <div id="var-minical-highlight-options" style="display: ${b.miniCalendarHighlightEnabled ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightDaySource')}</span>
+                    <select id="var-minical-highlight-source" class="craftools-select" style="width:100%;">
+                        <option value="today"  ${highlightDaySource === 'today'  ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceToday')}</option>
+                        <option value="fixed"  ${highlightDaySource === 'fixed'  ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceFixed')}</option>
+                        ${dateLinkCandidates.length ? `<option value="linked" ${highlightDaySource === 'linked' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceLinked')}</option>` : ''}
+                    </select>
+                    <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.miniCalendarHighlightSourceHelp')}</span>
+                </div>
+                <div class="ct-field" id="var-minical-highlight-day-wrap" style="display:${highlightDaySource === 'fixed' ? '' : 'none'};">
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightDay')}</span>
                     <input type="number" id="var-minical-highlight-day" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightDay ?? new Date().getDate()}" min="1" max="31">
+                </div>
+                <div class="ct-field" id="var-minical-highlight-linked-wrap" style="display:${highlightDaySource === 'linked' ? '' : 'none'};">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightLinkedTo')}</span>
+                    <select id="var-minical-highlight-linked" class="craftools-select" style="width:100%;">
+                        <option value="">${I18n.t('variablePanel.linkTargetNone')}</option>
+                        ${dateLinkOptions}
+                    </select>
                 </div>
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightBg')}</span>
@@ -1174,7 +1201,11 @@ export class VariablePanel {
                     // turn highlighting on.
                     const hlEnabled     = container.querySelector<HTMLInputElement>('#var-minical-highlight-enabled');
                     const hlOptions     = container.querySelector<HTMLElement>('#var-minical-highlight-options');
+                    const hlSource      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-source');
+                    const hlDayWrap     = container.querySelector<HTMLElement>('#var-minical-highlight-day-wrap');
+                    const hlLinkedWrap  = container.querySelector<HTMLElement>('#var-minical-highlight-linked-wrap');
                     const hlDay         = container.querySelector<HTMLInputElement>('#var-minical-highlight-day');
+                    const hlLinked      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-linked');
                     const hlBgEl        = container.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
                     const hlTextEl      = container.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
                     const hlBorderStyle = container.querySelector<HTMLSelectElement>('#var-minical-highlight-borderstyle');
@@ -1187,6 +1218,14 @@ export class VariablePanel {
                         if (hlOptions) hlOptions.style.display = hlEnabled.checked ? 'block' : 'none';
                         notify();
                     };
+                    if (hlSource) hlSource.onchange = () => {
+                        const source = hlSource.value as 'today' | 'fixed' | 'linked';
+                        binding!.miniCalendarHighlightDaySource = source;
+                        if (hlDayWrap)    hlDayWrap.style.display    = source === 'fixed'  ? '' : 'none';
+                        if (hlLinkedWrap) hlLinkedWrap.style.display = source === 'linked' ? '' : 'none';
+                        notify();
+                    };
+                    if (hlLinked) hlLinked.onchange = () => { binding!.miniCalendarHighlightLinkedTo = hlLinked.value; notify(); };
                     if (hlDay)         hlDay.oninput         = () => { binding!.miniCalendarHighlightDay         = parseInt(hlDay.value, 10);         notify(); };
                     if (hlBorderStyle) hlBorderStyle.onchange = () => { binding!.miniCalendarHighlightBorderStyle = hlBorderStyle.value;               notify(); };
                     if (hlBorderWidth) hlBorderWidth.oninput  = () => { binding!.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
