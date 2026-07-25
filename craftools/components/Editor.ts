@@ -32,6 +32,7 @@ import { HistoryManager } from '../utils/HistoryManager.js';
 import { SessionManager } from '../utils/SessionManager.js';
 import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
+import { centerElementOnPage } from '../utils/ElementPlacement.js';
 
 // ── Keyboard shortcuts: element clipboard ──────────────────────────────────────
 // Holds the source element for Ctrl+C/Ctrl+V (see _initHistoryAndSession()'s
@@ -486,6 +487,17 @@ export class Craftools_Editor extends HTMLElement {
       const el = ce.detail.element;
       const toolType = el.getAttribute('data-craftool') ?? '';
 
+      // Desktop: pan/scroll #canvas-area so the selected element is
+      // centered in the visible viewport -- the same behavior mobile
+      // already has via MobileToolbar._keepElementVisible() (triggered
+      // below through openPanelMenu()'s isMobile() branch). scrollIntoView
+      // reads the element's live, post-transform bounding box, so it
+      // already accounts for the current zoom (`transform: scale(...)` on
+      // #pages-wrapper) with no manual math needed.
+      if (!isMobile()) {
+        el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+      }
+
       const rightPanel  = document.getElementById('right-panel');
       const panelTitle  = document.getElementById('panel-title');
       const panelBody   = document.getElementById('panel-body');
@@ -774,8 +786,18 @@ export class Craftools_Editor extends HTMLElement {
       }
 
       // ── Panel-only tools + element-creator sidebar tools ─────────────────
+      // Every tool button now activates the same way whether clicked or
+      // dragged onto the canvas (see the matching drop-handler branches in
+      // PageTool.ts): panel/wizard tools open their panel either way;
+      // element-creator tools place a new element either way -- centered on
+      // simple click, at the drop point when dragged.
+      const ELEMENT_CREATOR_TOOLS = new Set([
+        'curvedtext', 'stamp', 'title', 'paragraph', 'variablecontent',
+        'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
+      ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator','agenda','calendar','album','imageslicer','curvedtext','stamp',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer',
+        ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
@@ -792,21 +814,28 @@ export class Craftools_Editor extends HTMLElement {
             return;
           }
 
-          // curvedtext / stamp: create element directly on the active page
-          if (tool === 'curvedtext') {
+          // Element-creator tools: create directly on the active page,
+          // centered (mobile has its own equivalent tap-to-add handler
+          // above -- DRAGGABLE_CANVAS_TOOLS -- so this branch no-ops there
+          // to avoid double-creating).
+          if (ELEMENT_CREATOR_TOOLS.has(tool)) {
             if (isMobile()) return;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const m: any = await import('../tools/curvedtext/CurvedTextTool.js');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = m.CurvedTextTool.createElement('curvedtext', this); targetPage.appendChild(el); closeSidebar(); }
-            return;
-          }
-          if (tool === 'stamp') {
-            if (isMobile()) return;
+            const loader = LAZY_TOOL_LOADERS[tool];
+            if (!targetPage || !loader) return;
+            const mod = await loader();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const m: any = await import('../tools/stamp/StampTool.js');
-            const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
-            if (targetPage) { const el = m.StampTool.createElement('stamp', this); targetPage.appendChild(el); closeSidebar(); }
+            const ToolClass = Object.values(mod as object)[0] as any;
+            if (!ToolClass?.createElement) return;
+            const el = ToolClass.createElement(tool, this) as HTMLElement & { select?: () => void };
+            centerElementOnPage(el, targetPage);
+            targetPage.appendChild(el);
+            closeSidebar();
+            // Select the new element so desktop matches mobile's UX after
+            // creation (also triggers the auto-center-on-select scroll
+            // above). Same rAF+timeout pattern the mobile handler and the
+            // Emoji/Shape/Icon pickers already use.
+            requestAnimationFrame(() => { setTimeout(() => el.select?.(), 20); });
             return;
           }
 
