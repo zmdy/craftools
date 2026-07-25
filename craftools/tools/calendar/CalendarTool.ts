@@ -22,6 +22,7 @@ import { Notify } from '../../utils/Notify';
 import { CalendarRenderer, type CalendarTheme } from '../../utils/CalendarRenderer';
 import { PageTool } from '../page/PageTool.js';
 import { ToolRegistry } from '../../utils/ToolRegistry';
+import { AppSettings } from '../../utils/AppSettings.js';
 import './CalendarTool_Translations.js';
 import '../../components/CtFontSelect.js';
 
@@ -86,6 +87,8 @@ interface CalendarState {
   endYear: number;
   endMonth: number;
   theme: CalendarTheme;
+  /** true (default) = week starts Sunday; false = Monday. Same option CalendarRenderer.ts's buildCardHtml()/buildCardElement() already support for MiniCalendarTool.ts. */
+  weekStartSunday: boolean;
 }
 
 type MonthSlot = { year: number; month: number } | null;
@@ -144,6 +147,7 @@ export class CalendarTool {
       endYear: now.getFullYear(),
       endMonth: 12,
       theme: CalendarRenderer.defaultTheme(),
+      weekStartSunday: AppSettings.get('defaultWeekStart') === 'sunday',
     };
 
     const currentPreset = (): GridPreset =>
@@ -185,6 +189,12 @@ export class CalendarTool {
           state.model = btn.dataset.model as CalendarModel;
           renderPanel();
         });
+      });
+
+      const weekSundayCheckbox = root.querySelector<HTMLInputElement>('#cal-week-sunday');
+      if (weekSundayCheckbox) weekSundayCheckbox.addEventListener('change', () => {
+        state.weekStartSunday = weekSundayCheckbox.checked;
+        updatePreview();
       });
 
       // ── Layout ──────────────────────────────────────────────────────
@@ -302,6 +312,10 @@ export class CalendarTool {
           </button>
         `).join('')}
       </div>
+      <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:12px;">
+        <input type="checkbox" id="cal-week-sunday" ${state.weekStartSunday !== false ? 'checked' : ''}>
+        <span class="craftools-label" style="margin:0;">${c('weekStartSunday')}</span>
+      </label>
     `;
   }
 
@@ -651,7 +665,11 @@ export class CalendarTool {
       cell.className = 'craftools-grid-cell';
       cell.style.cssText = `width:${preset.cellWidth}mm; height:${preset.cellHeight}mm; box-sizing:border-box; position:relative; overflow:hidden;`;
       if (slot) {
-        const card = CalendarRenderer.buildCardElement(slot.year, slot.month, { model: state.model, theme: state.theme });
+        const card = CalendarRenderer.buildCardElement(slot.year, slot.month, {
+          model: state.model,
+          theme: state.theme,
+          weekStart: state.weekStartSunday === false ? 'monday' : 'sunday',
+        });
         cell.appendChild(card);
       }
       grid.appendChild(cell);

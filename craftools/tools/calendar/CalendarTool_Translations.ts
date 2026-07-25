@@ -17,6 +17,7 @@ I18n.addTranslations('calendarTool', {
         modelSimplesDesc: "Dias da semana com feriados marcados",
         modelCompleto: "Completo",
         modelCompletoDesc: "Feriados + fases da lua",
+        weekStartSunday: "Começar semana no Domingo",
 
         layout20: "20 slots (5x5cm)",
         layout8sq: "8 slots quadrado (7x7cm)",
@@ -78,6 +79,7 @@ I18n.addTranslations('calendarTool', {
         modelSimplesDesc: "Weekdays with holidays marked",
         modelCompleto: "Complete",
         modelCompletoDesc: "Holidays + moon phases",
+        weekStartSunday: "Start week on Sunday",
 
         layout20: "20 slots (5x5cm)",
         layout8sq: "8 square slots (7x7cm)",
@@ -139,6 +141,7 @@ I18n.addTranslations('calendarTool', {
         modelSimplesDesc: "Días de la semana con feriados marcados",
         modelCompleto: "Completo",
         modelCompletoDesc: "Feriados + fases de la luna",
+        weekStartSunday: "Comenzar semana en Domingo",
 
         layout20: "20 espacios (5x5cm)",
         layout8sq: "8 espacios cuadrados (7x7cm)",

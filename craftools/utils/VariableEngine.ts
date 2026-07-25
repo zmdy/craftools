@@ -93,6 +93,25 @@ export interface VariableBinding {
     year?:         number;
     month?:        number;
     displayMode?:  string;
+    /** true (default) = week starts Sunday; false = Monday. Same concept as MiniCalendarTool.ts's weekStartSunday meta field / DAYS_BOX's daysBoxStartSunday. */
+    weekStartSunday?: boolean;
+    /**
+     * Highlight a single day-of-month in the miniCalendar format's days
+     * grid -- same concept/shape as MiniCalendarTool.ts's own "Highlight"
+     * schema section (both ultimately feed CalendarRenderer.ts's
+     * `CalendarOptions['highlight']`). Kept as its own prefixed set of
+     * fields here (rather than reusing the tool's meta keys directly)
+     * since Variable Content's miniCalendar format has its own independent
+     * binding config, resolved fresh per repetition in _formatMiniCalendar().
+     */
+    miniCalendarHighlightEnabled?:      boolean;
+    miniCalendarHighlightDay?:          number | string;
+    miniCalendarHighlightBg?:           string;
+    miniCalendarHighlightTextColor?:    string;
+    miniCalendarHighlightBorderColor?:  string;
+    miniCalendarHighlightBorderWidth?:  number | string;
+    miniCalendarHighlightBorderRadius?: number | string;
+    miniCalendarHighlightBorderStyle?:  string;
 }
 
 export interface ResolveContext {
@@ -987,7 +1006,10 @@ export class VariableEngine {
 
     // ── miniCalendar ──────────────────────────────────────────────────────────
 
-    private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }): { year: number; month: number; displayMode: string } {
+    private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }): {
+        year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
+        highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
+    } {
         let year  = parseInt(String(b.year), 10)  || new Date().getFullYear();
         let month = parseInt(String(b.month), 10) || (new Date().getMonth() + 1);
         if (b.mode === 'sequentialMonthly') {
@@ -996,14 +1018,28 @@ export class VariableEngine {
             while (month < 1)  { month += 12; year -= 1; }
         }
         const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'complete1';
-        return { year, month, displayMode };
+        const highlight = b.miniCalendarHighlightEnabled ? {
+            enabled:      true,
+            day:          parseInt(String(b.miniCalendarHighlightDay), 10) || new Date().getDate(),
+            bg:           b.miniCalendarHighlightBg,
+            textColor:    b.miniCalendarHighlightTextColor,
+            borderColor:  b.miniCalendarHighlightBorderColor,
+            borderWidth:  b.miniCalendarHighlightBorderWidth  !== undefined ? parseInt(String(b.miniCalendarHighlightBorderWidth), 10)  : undefined,
+            borderRadius: b.miniCalendarHighlightBorderRadius !== undefined ? parseInt(String(b.miniCalendarHighlightBorderRadius), 10) : undefined,
+            borderStyle:  b.miniCalendarHighlightBorderStyle,
+        } : undefined;
+        const weekStart: 'sunday' | 'monday' = b.weekStartSunday === false ? 'monday' : 'sunday';
+        return { year, month, displayMode, weekStart, highlight };
     }
 
-    private static _formatMiniCalendar(pick: { year: number; month: number; displayMode: string }): string {
+    private static _formatMiniCalendar(pick: {
+        year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
+        highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
+    }): string {
         const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.complete1;
         // CalendarRenderer stays JS — any type here is acceptable
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts }) as string;
+        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts, highlight: pick.highlight, weekStart: pick.weekStart }) as string;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

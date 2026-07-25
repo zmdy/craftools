@@ -158,7 +158,12 @@ I18n.addTranslations('variablePanel', {
         miniCalendarModeSequential: "Sequencial (avança 1 mês por repetição)",
         miniCalendarModeHelp: "No modo sequencial, cada repetição da página mostra o mês seguinte, a partir do mês/ano configurado.",
         miniCalendarMonthYearLabel: "Mês / Ano inicial",
-        miniCalendarDisplayModeLabel: "O que exibir"
+        miniCalendarDisplayModeLabel: "O que exibir",
+        miniCalendarWeekStartSunday: "Começar semana no Domingo",
+        miniCalendarHighlightToggle: "Destacar um dia do mês",
+        miniCalendarHighlightDay: "Dia a destacar",
+        miniCalendarHighlightBg: "Cor de fundo do destaque",
+        miniCalendarHighlightTextColor: "Cor do texto do destaque"
     },
     "en": {
         title: "Variable Text",
@@ -313,7 +318,12 @@ I18n.addTranslations('variablePanel', {
         miniCalendarModeSequential: "Sequential (advances 1 month per repetition)",
         miniCalendarModeHelp: "In sequential mode, each repetition of the page shows the next month, starting from the configured month/year.",
         miniCalendarMonthYearLabel: "Starting month / year",
-        miniCalendarDisplayModeLabel: "What to show"
+        miniCalendarDisplayModeLabel: "What to show",
+        miniCalendarWeekStartSunday: "Start week on Sunday",
+        miniCalendarHighlightToggle: "Highlight a day of the month",
+        miniCalendarHighlightDay: "Day to highlight",
+        miniCalendarHighlightBg: "Highlight background color",
+        miniCalendarHighlightTextColor: "Highlight text color"
     },
     "es": {
         title: "Texto Variable",
@@ -468,6 +478,11 @@ I18n.addTranslations('variablePanel', {
         miniCalendarModeSequential: "Secuencial (avanza 1 mes por repetición)",
         miniCalendarModeHelp: "En modo secuencial, cada repetición de la página muestra el mes siguiente, a partir del mes/año configurado.",
         miniCalendarMonthYearLabel: "Mes / Año inicial",
-        miniCalendarDisplayModeLabel: "Qué mostrar"
+        miniCalendarDisplayModeLabel: "Qué mostrar",
+        miniCalendarWeekStartSunday: "Comenzar semana en Domingo",
+        miniCalendarHighlightToggle: "Destacar un día del mes",
+        miniCalendarHighlightDay: "Día a destacar",
+        miniCalendarHighlightBg: "Color de fondo del destaque",
+        miniCalendarHighlightTextColor: "Color del texto del destaque"
     }
 });

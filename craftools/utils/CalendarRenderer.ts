@@ -59,6 +59,16 @@ export interface CalendarOptions {
       borderColor?: string;
       borderRadius?: number;
   };
+  /**
+   * Which day starts the week's column order -- 'sunday' (default, matches
+   * the original hardcoded behavior) or 'monday'. Only affects the leading
+   * blank-cell count in the days grid and the weekHeader letter order;
+   * `isSunday`'s red-highlight logic in buildCardHtml()'s day loop always
+   * stays keyed to the standard 0=Sunday JS `Date.getDay()` reference frame
+   * regardless of this option, since a Monday-start grid still needs to
+   * know which cell is *actually* a Sunday to color it correctly.
+   */
+  weekStart?: 'sunday' | 'monday';
 }
 
 export class CalendarRenderer {
@@ -103,7 +113,14 @@ export class CalendarRenderer {
 
       const firstDay = new Date(year, month - 1, 1);
       const daysInMonth = new Date(year, month, 0).getDate();
-      const startWeekday = firstDay.getDay(); 
+      const startWeekday = firstDay.getDay();
+      const weekStartsMonday = options.weekStart === 'monday';
+      // Leading blank cells before day 1: with a Sunday-first grid this is
+      // just `startWeekday` (0 blanks if the month starts on a Sunday).
+      // With a Monday-first grid, Sunday (0) is now the LAST column, so a
+      // month starting on Sunday needs 6 leading blanks instead of 0 --
+      // shift the 0-6 range by -1 (mod 7) to re-anchor it on Monday=0.
+      const leadingEmpty = weekStartsMonday ? (startWeekday + 6) % 7 : startWeekday;
 
       const holidays = BrazilianHolidays.getHolidaysForMonth(year, month);
       const holidayByDay = new Map(holidays.map((h: any) => [h.day, h.name]));
@@ -113,7 +130,7 @@ export class CalendarRenderer {
           : '';
       const highlight = options.highlight;
       let cells = '';
-      for (let i = 0; i < startWeekday; i++) {
+      for (let i = 0; i < leadingEmpty; i++) {
           cells += `<span style="display:block; ${dayCellBorder}"></span>`;
       }
       for (let day = 1; day <= daysInMonth; day++) {
@@ -177,10 +194,17 @@ export class CalendarRenderer {
                   ${MONTH_NAMES_PT[month - 1]} ${year}
               </div>` : '';
 
+      // Rotate the Sunday-first letters array left by 1 for a Monday-first
+      // grid (S T Q Q S S D instead of D S T Q Q S S), matching the same
+      // shift applied to `leadingEmpty` above.
+      const weekHeaderLetters = weekStartsMonday
+          ? [...WEEKDAY_LETTERS_PT.slice(1), WEEKDAY_LETTERS_PT[0]]
+          : WEEKDAY_LETTERS_PT;
+
       const weekHeaderHtml = parts.week ? `
               <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt;">
-                  ${WEEKDAY_LETTERS_PT.map((l, i) => {
-                      const isLast = i === WEEKDAY_LETTERS_PT.length - 1;
+                  ${weekHeaderLetters.map((l, i) => {
+                      const isLast = i === weekHeaderLetters.length - 1;
                       const border = (t.weekHeader.innerBorderWidth > 0 && !isLast)
                           ? `border-right:${t.weekHeader.innerBorderWidth}px ${this._esc(t.weekHeader.innerBorderStyle)} ${this._esc(t.weekHeader.innerBorderColor)}; box-sizing:border-box;`
                           : '';

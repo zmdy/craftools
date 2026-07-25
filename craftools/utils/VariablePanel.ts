@@ -628,6 +628,50 @@ export class VariablePanel {
                     <option value="complete2"   ${b.displayMode === 'complete2'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete2')}</option>
                 </select>
             </div>
+            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
+                <input type="checkbox" id="var-minical-week-sunday" ${b.weekStartSunday !== false ? 'checked' : ''}>
+                <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarWeekStartSunday')}</span>
+            </label>
+            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
+                <input type="checkbox" id="var-minical-highlight-enabled" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
+                <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarHighlightToggle')}</span>
+            </label>
+            <div id="var-minical-highlight-options" style="display: ${b.miniCalendarHighlightEnabled ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightDay')}</span>
+                    <input type="number" id="var-minical-highlight-day" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightDay ?? new Date().getDate()}" min="1" max="31">
+                </div>
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightBg')}</span>
+                    <div id="var-minical-highlight-bg-picker"></div>
+                </div>
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightTextColor')}</span>
+                    <div id="var-minical-highlight-text-picker"></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
+                        <select id="var-minical-highlight-borderstyle" class="craftools-select" style="width:100%;">
+                            ${['solid','dashed','dotted','double','none'].map(style => `
+                                <option value="${style}" ${(b.miniCalendarHighlightBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                        <input type="number" id="var-minical-highlight-borderwidth" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderWidth !== undefined ? b.miniCalendarHighlightBorderWidth : 1}" min="0">
+                    </div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
+                    <div id="var-minical-highlight-bordercolor-picker"></div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderRadius')}</span>
+                    <input type="number" id="var-minical-highlight-radius" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderRadius !== undefined ? b.miniCalendarHighlightBorderRadius : 0}" min="0">
+                </div>
+            </div>
         `;
     }
 
@@ -1115,6 +1159,57 @@ export class VariablePanel {
                     if (monthSel)       monthSel.onchange       = () => { binding!.month       = parseInt(monthSel.value, 10);               notify(); };
                     if (yearInput)      yearInput.oninput       = () => { binding!.year        = parseInt(yearInput.value, 10) || binding!.year; notify(); };
                     if (displayModeSel) displayModeSel.onchange = () => { binding!.displayMode = displayModeSel.value;                       notify(); };
+
+                    const weekSundaySel = container.querySelector<HTMLInputElement>('#var-minical-week-sunday');
+                    if (weekSundaySel) weekSundaySel.onchange = () => { binding!.weekStartSunday = weekSundaySel.checked; notify(); };
+
+                    // Highlight (single day-of-month, styled independently of
+                    // the sunday/holiday coloring) -- same option shape as
+                    // MiniCalendarTool.ts's own "Highlight" schema section,
+                    // both ultimately feed CalendarRenderer.ts's `highlight`
+                    // option. Was previously missing here entirely: the
+                    // miniCalendar variable format rendered through
+                    // CalendarRenderer just like the standalone Mini
+                    // Calendar tool, but had no UI (or binding fields) to
+                    // turn highlighting on.
+                    const hlEnabled     = container.querySelector<HTMLInputElement>('#var-minical-highlight-enabled');
+                    const hlOptions     = container.querySelector<HTMLElement>('#var-minical-highlight-options');
+                    const hlDay         = container.querySelector<HTMLInputElement>('#var-minical-highlight-day');
+                    const hlBgEl        = container.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
+                    const hlTextEl      = container.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
+                    const hlBorderStyle = container.querySelector<HTMLSelectElement>('#var-minical-highlight-borderstyle');
+                    const hlBorderWidth = container.querySelector<HTMLInputElement>('#var-minical-highlight-borderwidth');
+                    const hlBorderColorEl = container.querySelector<HTMLElement>('#var-minical-highlight-bordercolor-picker');
+                    const hlRadius      = container.querySelector<HTMLInputElement>('#var-minical-highlight-radius');
+
+                    if (hlEnabled) hlEnabled.onchange = () => {
+                        binding!.miniCalendarHighlightEnabled = hlEnabled.checked;
+                        if (hlOptions) hlOptions.style.display = hlEnabled.checked ? 'block' : 'none';
+                        notify();
+                    };
+                    if (hlDay)         hlDay.oninput         = () => { binding!.miniCalendarHighlightDay         = parseInt(hlDay.value, 10);         notify(); };
+                    if (hlBorderStyle) hlBorderStyle.onchange = () => { binding!.miniCalendarHighlightBorderStyle = hlBorderStyle.value;               notify(); };
+                    if (hlBorderWidth) hlBorderWidth.oninput  = () => { binding!.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
+                    if (hlRadius)      hlRadius.oninput       = () => { binding!.miniCalendarHighlightBorderRadius = parseInt(hlRadius.value, 10);     notify(); };
+
+                    if (hlBgEl) {
+                        renderColorPicker(hlBgEl, normalizeValue(binding!.miniCalendarHighlightBg || '#f97316'), (next) => {
+                            binding!.miniCalendarHighlightBg = next.solid;
+                            notify();
+                        }, { allowGradient: false });
+                    }
+                    if (hlTextEl) {
+                        renderColorPicker(hlTextEl, normalizeValue(binding!.miniCalendarHighlightTextColor || '#ffffff'), (next) => {
+                            binding!.miniCalendarHighlightTextColor = next.solid;
+                            notify();
+                        }, { allowGradient: false });
+                    }
+                    if (hlBorderColorEl) {
+                        renderColorPicker(hlBorderColorEl, normalizeValue(binding!.miniCalendarHighlightBorderColor || '#f97316'), (next) => {
+                            binding!.miniCalendarHighlightBorderColor = next.solid;
+                            notify();
+                        }, { allowGradient: false });
+                    }
                     break;
                 }
             }
