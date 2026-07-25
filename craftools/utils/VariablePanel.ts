@@ -363,6 +363,16 @@ export class VariablePanel {
                         placeholder="${this._esc(I18n.t('variablePanel.dateSpecialEmptyTextPlaceholder'))}"
                         value="${this._esc(b.specialDateEmptyText)}">
                 </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                        <input type="checkbox" id="var-date-special-includedesc" class="ct-fi" style="display:none;" ${b.specialDateIncludeDescription ? 'checked' : ''}>
+                        <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.specialDateIncludeDescription ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                            <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${b.specialDateIncludeDescription ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                        </span>
+                        <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateSpecialIncludeDescriptionLabel')}</span>
+                    </label>
+                    <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateSpecialIncludeDescriptionHelp')}</span>
+                </div>
             </div>
 
             <div id="var-date-season-options" style="display: ${hasToken('{season}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
@@ -405,15 +415,16 @@ export class VariablePanel {
 
     private static _specialDateCategories(): [string, string][] {
         return [
-            ['holiday',       'dateSpecialCategoryHoliday'],
-            ['commemoration', 'dateSpecialCategoryCommemoration'],
-            ['saint',         'dateSpecialCategorySaint'],
-            ['event',         'dateSpecialCategoryEvent'],
+            ['holiday',            'dateSpecialCategoryHoliday'],
+            ['commemoration_main', 'dateSpecialCategoryCommemorationMain'],
+            ['commemoration_misc', 'dateSpecialCategoryCommemorationMisc'],
+            ['saint',              'dateSpecialCategorySaint'],
+            ['event',              'dateSpecialCategoryEvent'],
         ];
     }
 
     private static _specialDateCategoriesFields(b: VariableBinding): string {
-        const active = b.specialDateCategories?.length ? b.specialDateCategories : ['holiday', 'commemoration', 'saint', 'event'];
+        const active = b.specialDateCategories?.length ? b.specialDateCategories : ['holiday', 'commemoration_main', 'commemoration_misc', 'saint', 'event'];
         return `
             <span class="craftools-label">${I18n.t('variablePanel.dateSpecialCategoriesLabel')}</span>
             ${this._specialDateCategories().map(([cat, key]) => `
@@ -819,6 +830,7 @@ export class VariablePanel {
                     const specialRandom   = container.querySelector<HTMLInputElement>('#var-date-special-randomize');
                     const specialSep      = container.querySelector<HTMLInputElement>('#var-date-special-separator');
                     const specialEmpty    = container.querySelector<HTMLInputElement>('#var-date-special-emptytext');
+                    const specialIncludeDesc = container.querySelector<HTMLInputElement>('#var-date-special-includedesc');
                     const calendarOpts    = container.querySelector<HTMLElement>('#var-date-calendar-options');
                     const calendarModeBtns = container.querySelectorAll<HTMLButtonElement>('.var-date-calendar-mode-btn');
                     const seasonOpts      = container.querySelector<HTMLElement>('#var-date-season-options');
@@ -961,7 +973,7 @@ export class VariablePanel {
                             // An empty array here is a valid, deliberate
                             // choice (user unchecked every category) --
                             // _formatSpecialDate() only falls back to "all
-                            // four" when this is `undefined`, never for a
+                            // five" when this is `undefined`, never for a
                             // real empty array, so the stored value and the
                             // checkbox state stay in sync (unlike falling
                             // back to "all checked" here, which would leave
@@ -982,6 +994,14 @@ export class VariablePanel {
                     if (specialRandom) specialRandom.onchange = () => { binding!.specialDateRandomize = specialRandom.checked; notify(); };
                     if (specialSep)    specialSep.oninput     = () => { binding!.specialDateSeparator = specialSep.value;   notify(); };
                     if (specialEmpty)  specialEmpty.oninput   = () => { binding!.specialDateEmptyText = specialEmpty.value; notify(); };
+                    if (specialIncludeDesc) specialIncludeDesc.onchange = () => {
+                        binding!.specialDateIncludeDescription = specialIncludeDesc.checked;
+                        const track = specialIncludeDesc.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+                        const thumb = specialIncludeDesc.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+                        if (track) track.style.background = specialIncludeDesc.checked ? 'var(--accent)' : 'var(--border)';
+                        if (thumb) thumb.style.transform  = specialIncludeDesc.checked ? 'translateX(14px)' : 'translateX(0)';
+                        notify();
+                    };
                     if (daysBoxRadius) daysBoxRadius.oninput = () => { binding!.daysBoxBorderRadius = parseInt(daysBoxRadius.value, 10);   notify(); };
                     if (daysBoxPad)    daysBoxPad.oninput    = () => { binding!.daysBoxPadding      = parseInt(daysBoxPad.value, 10);      notify(); };
                     if (daysBoxHeight) daysBoxHeight.oninput = () => {

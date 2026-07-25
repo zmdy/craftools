@@ -55,7 +55,8 @@ I18n.addTranslations('variablePanel', {
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionais",
-        dateSpecialCategoryCommemoration: "Datas comemorativas",
+        dateSpecialCategoryCommemorationMain: "Datas comemorativas principais",
+        dateSpecialCategoryCommemorationMisc: "Datas comemorativas diversas",
         dateSpecialCategorySaint: "Santo do dia",
         dateSpecialCategoryEvent: "Eventos históricos",
         dateSpecialLimitLabel: "Quantidade de itens",
@@ -64,6 +65,8 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separador (quando houver mais de um item no dia)",
         dateSpecialEmptyTextLabel: "Texto quando não há nada nesse dia",
         dateSpecialEmptyTextPlaceholder: "deixe em branco para não mostrar nada",
+        dateSpecialIncludeDescriptionLabel: "Incluir detalhe",
+        dateSpecialIncludeDescriptionHelp: "Quando disponível, acrescenta a descrição (e o ano, em eventos históricos) depois do título.",
 
         dateCalendarModeLabel: "Exibir como",
         dateCalendarModeText: "Texto",
@@ -222,7 +225,8 @@ I18n.addTranslations('variablePanel', {
 
         dateSpecialCategoriesLabel: "Show",
         dateSpecialCategoryHoliday: "National holidays",
-        dateSpecialCategoryCommemoration: "Commemorative dates",
+        dateSpecialCategoryCommemorationMain: "Main commemorative dates",
+        dateSpecialCategoryCommemorationMisc: "Misc commemorative dates",
         dateSpecialCategorySaint: "Saint of the day",
         dateSpecialCategoryEvent: "Historical events",
         dateSpecialLimitLabel: "Number of items",
@@ -231,6 +235,8 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separator (when the day has more than one item)",
         dateSpecialEmptyTextLabel: "Text shown when the day has nothing special",
         dateSpecialEmptyTextPlaceholder: "leave blank to show nothing",
+        dateSpecialIncludeDescriptionLabel: "Include detail",
+        dateSpecialIncludeDescriptionHelp: "When available, appends the description (and the year, for historical events) after the title.",
 
         dateCalendarModeLabel: "Display as",
         dateCalendarModeText: "Text",
@@ -389,7 +395,8 @@ I18n.addTranslations('variablePanel', {
 
         dateSpecialCategoriesLabel: "Mostrar",
         dateSpecialCategoryHoliday: "Feriados nacionales",
-        dateSpecialCategoryCommemoration: "Fechas conmemorativas",
+        dateSpecialCategoryCommemorationMain: "Fechas conmemorativas principales",
+        dateSpecialCategoryCommemorationMisc: "Fechas conmemorativas diversas",
         dateSpecialCategorySaint: "Santo del día",
         dateSpecialCategoryEvent: "Eventos históricos",
         dateSpecialLimitLabel: "Cantidad de elementos",
@@ -398,6 +405,8 @@ I18n.addTranslations('variablePanel', {
         dateSpecialSeparatorLabel: "Separador (cuando haya más de un elemento en el día)",
         dateSpecialEmptyTextLabel: "Texto cuando no hay nada ese día",
         dateSpecialEmptyTextPlaceholder: "deje en blanco para no mostrar nada",
+        dateSpecialIncludeDescriptionLabel: "Incluir detalle",
+        dateSpecialIncludeDescriptionHelp: "Cuando esté disponible, agrega la descripción (y el año, en eventos históricos) después del título.",
 
         dateCalendarModeLabel: "Mostrar como",
         dateCalendarModeText: "Texto",

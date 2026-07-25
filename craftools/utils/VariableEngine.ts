@@ -51,8 +51,13 @@ export interface VariableBinding {
     /**
      * Only read when format === 'SPECIAL_DATE' -- which craftools_api
      * calendar_entries categories to include (subset of 'holiday'/
-     * 'commemoration'/'saint'/'event'). Defaults to all four in
-     * defaultBinding(). See _formatDate()'s 'SPECIAL_DATE' case.
+     * 'commemoration_main'/'commemoration_misc'/'saint'/'event'). Defaults
+     * to all five in defaultBinding(). See _formatDate()'s 'SPECIAL_DATE'
+     * case. 'commemoration_main' is the small curated list of major
+     * commercial/cultural dates; 'commemoration_misc' is the much broader,
+     * less curated list -- kept as separate categories specifically so this
+     * filter can mean "just the important dates" (main only) instead of
+     * both kinds being merged and unfilterable.
      */
     specialDateCategories?: string[];
     /** Joiner between multiple matched titles on the same day. Default ', '. */
@@ -63,6 +68,14 @@ export interface VariableBinding {
     specialDateLimit?: number | string;
     /** Shuffles the matched titles (deterministically -- see _seededShuffle()) before specialDateLimit is applied, instead of always showing them in category/sort_order. */
     specialDateRandomize?: boolean;
+    /**
+     * When true, each matched item appends its `description` (a free-text
+     * "Detalhe" the API/admin already stores per row but which was
+     * otherwise never surfaced here) and, for 'event' items, its `year` --
+     * e.g. "Independência do Brasil (1822) — Assinada por Dom Pedro I".
+     * Default false (existing bindings keep showing bare titles).
+     */
+    specialDateIncludeDescription?: boolean;
     /**
      * Which hemisphere's season names/dates to use -- only read when
      * format === 'SEASON'. 'south' (Brazil's own) is the app-wide default
@@ -164,14 +177,24 @@ export interface CalendarDateApiEntry {
     city?:       string;
 }
 
-/** craftools_api's `calendar-dates` resource response `data` shape (repo.php's calendarEntryForDate()). */
+/**
+ * craftools_api's `calendar-dates` resource response `data` shape (repo.php's
+ * calendarEntryForDate()). `commemorationsMain` is the small, hand-curated
+ * list of major commercial/cultural dates (Dia das Mães, Carnaval, Páscoa
+ * etc -- feriados-brasil/joaopbini GitHub import); `commemorationsMisc` is
+ * the much broader, less curated list the biduinfo API import produces
+ * (often several per day). They used to be a single merged `commemorations`
+ * array, which made "show only the important dates" effectively impossible
+ * since both kinds of rows were indistinguishable once merged.
+ */
 export interface CalendarDateApiResult {
-    month:          number;
-    day:            number;
-    holidays:       CalendarDateApiEntry[];
-    commemorations: CalendarDateApiEntry[];
-    saints:         CalendarDateApiEntry[];
-    events:         CalendarDateApiEntry[];
+    month:               number;
+    day:                 number;
+    holidays:            CalendarDateApiEntry[];
+    commemorationsMain:  CalendarDateApiEntry[];
+    commemorationsMisc:  CalendarDateApiEntry[];
+    saints:              CalendarDateApiEntry[];
+    events:              CalendarDateApiEntry[];
 }
 
 export interface ApiCache {
@@ -256,9 +279,10 @@ export class VariableEngine {
         switch (type) {
             case 'date':           return {
                 type, startDate: isoToday, interval: 'daily', step: 1, format: 'CUSTOM', customFormat: 'dd/mm/yyyy', linkedTo: '',
-                specialDateCategories: ['holiday', 'commemoration', 'saint', 'event'],
+                specialDateCategories: ['holiday', 'commemoration_main', 'commemoration_misc', 'saint', 'event'],
                 specialDateSeparator: ', ',
                 specialDateEmptyText: '',
+                specialDateIncludeDescription: false,
                 specialDateLimit: '',
                 specialDateRandomize: false,
                 hemisphere: 'south',
@@ -819,11 +843,27 @@ export class VariableEngine {
      * prefetchApiResources()).
      */
     private static readonly SPECIAL_DATE_GROUP_KEYS: Record<string, keyof CalendarDateApiResult> = {
-        holiday:       'holidays',
-        commemoration: 'commemorations',
-        saint:         'saints',
-        event:         'events',
+        holiday:            'holidays',
+        commemoration_main: 'commemorationsMain',
+        commemoration_misc: 'commemorationsMisc',
+        saint:              'saints',
+        event:              'events',
     };
+
+    /**
+     * Builds the display string for one matched calendar_entries item --
+     * bare title by default, or title + year (events) + description
+     * ("Detalhe") when `specialDateIncludeDescription` is on. The API/admin
+     * already store `description` per row (a free-text field, e.g. what
+     * happened on a historical event, or extra context for a commemorative
+     * date) but nothing on the frontend ever read it before this.
+     */
+    private static _formatSpecialDateItem(item: CalendarDateApiEntry, includeDescription: boolean): string {
+        let text = item.title;
+        if (item.year !== undefined) text += ` (${item.year})`;
+        if (includeDescription && item.description) text += ` — ${item.description}`;
+        return text;
+    }
 
     private static _formatSpecialDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
         const key   = `${d.getMonth() + 1}-${d.getDate()}`;
@@ -832,18 +872,19 @@ export class VariableEngine {
         if (!entry) return emptyText;
 
         // Distinguishes "never configured" (undefined -- defensive; every
-        // real binding gets all four from defaultBinding()) from "user
+        // real binding gets all five from defaultBinding()) from "user
         // unchecked every category in the panel" (a real empty array,
         // meaning show nothing/only the empty text) -- an `?.length` check
         // here would treat both the same and silently ignore the user
         // having cleared every checkbox.
-        const categories = b.specialDateCategories ?? ['holiday', 'commemoration', 'saint', 'event'];
+        const categories = b.specialDateCategories ?? ['holiday', 'commemoration_main', 'commemoration_misc', 'saint', 'event'];
+        const includeDescription = !!b.specialDateIncludeDescription;
         let titles: string[] = [];
         categories.forEach(cat => {
             const groupKey = this.SPECIAL_DATE_GROUP_KEYS[cat];
             if (!groupKey) return;
             const items = entry[groupKey] as CalendarDateApiEntry[] | undefined;
-            (items ?? []).forEach(item => { if (item?.title) titles.push(item.title); });
+            (items ?? []).forEach(item => { if (item?.title) titles.push(this._formatSpecialDateItem(item, includeDescription)); });
         });
 
         if (b.specialDateRandomize) {
