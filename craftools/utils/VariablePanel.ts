@@ -601,17 +601,39 @@ export class VariablePanel {
             `<option value="${i + 1}" ${b.month === i + 1 ? 'selected' : ''}>${name}</option>`
         ).join('');
         const highlightDaySource = b.miniCalendarHighlightDaySource ?? 'today';
-        // Candidates for "link to a date variable" -- any OTHER 'date'-type
-        // binding on the page (same _findLinkCandidates() the generic
-        // "Vincular a" row above uses, just called with the literal 'date'
-        // type instead of this binding's own 'miniCalendar' type, since the
-        // highlight day is sourced from a *different*-typed element than
-        // the miniCalendar binding itself).
+        const highlightLinked = highlightDaySource === 'linked';
+        // Candidates for "link the highlight day to a date variable" -- any
+        // OTHER 'date'-type binding on the page (same _findLinkCandidates()
+        // the generic "Vincular a" row above uses, just called with the
+        // literal 'date' type instead of this binding's own 'miniCalendar'
+        // type, since the highlight day is sourced from a *different*-typed
+        // element than the miniCalendar binding itself). Rendered in the
+        // SAME top position the generic link row occupies for every other
+        // variable type, as a single toggle -- ON pulls the highlight day
+        // from the chosen date variable, OFF falls back to today.
         const dateLinkCandidates = element ? this._findLinkCandidates('date', element) : [];
         const dateLinkOptions = dateLinkCandidates.map(c =>
             `<option value="${this._esc(c.id)}" ${b.miniCalendarHighlightLinkedTo === c.id ? 'selected' : ''}>${this._esc(c.label)}</option>`
         ).join('');
+        const highlightLinkRow = dateLinkCandidates.length ? `
+            <div class="ct-field" id="var-minical-highlightlink-wrap">
+                <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                    <input type="checkbox" id="var-minical-highlight-linked-toggle" class="ct-fi" style="display:none;" ${highlightLinked ? 'checked' : ''}>
+                    <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${highlightLinked ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                        <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${highlightLinked ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                    </span>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarHighlightLinkToggle')}</span>
+                </label>
+                <div id="var-minical-highlight-linked-wrap" style="display:${highlightLinked ? '' : 'none'}; margin-top:8px;">
+                    <select id="var-minical-highlight-linked" class="craftools-select" style="width:100%;">
+                        <option value="">${I18n.t('variablePanel.linkTargetNone')}</option>
+                        ${dateLinkOptions}
+                    </select>
+                </div>
+            </div>
+        ` : '';
         return `
+            ${highlightLinkRow}
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarModeLabel')}</span>
                 <select id="var-minical-mode" class="craftools-select" style="width:100%;">
@@ -639,35 +661,25 @@ export class VariablePanel {
                     <option value="complete2"   ${b.displayMode === 'complete2'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete2')}</option>
                 </select>
             </div>
-            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
-                <input type="checkbox" id="var-minical-week-sunday" ${b.weekStartSunday !== false ? 'checked' : ''}>
-                <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarWeekStartSunday')}</span>
-            </label>
-            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
-                <input type="checkbox" id="var-minical-highlight-enabled" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
-                <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarHighlightToggle')}</span>
-            </label>
+            <div class="ct-field" style="margin-top:6px;">
+                <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                    <input type="checkbox" id="var-minical-week-sunday" class="ct-fi" style="display:none;" ${b.weekStartSunday !== false ? 'checked' : ''}>
+                    <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.weekStartSunday !== false ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                        <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${b.weekStartSunday !== false ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                    </span>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarWeekStartSunday')}</span>
+                </label>
+            </div>
+            <div class="ct-field" style="margin-top:6px;">
+                <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                    <input type="checkbox" id="var-minical-highlight-enabled" class="ct-fi" style="display:none;" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
+                    <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.miniCalendarHighlightEnabled ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                        <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${b.miniCalendarHighlightEnabled ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                    </span>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarHighlightToggle')}</span>
+                </label>
+            </div>
             <div id="var-minical-highlight-options" style="display: ${b.miniCalendarHighlightEnabled ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightDaySource')}</span>
-                    <select id="var-minical-highlight-source" class="craftools-select" style="width:100%;">
-                        <option value="today"  ${highlightDaySource === 'today'  ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceToday')}</option>
-                        <option value="fixed"  ${highlightDaySource === 'fixed'  ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceFixed')}</option>
-                        ${dateLinkCandidates.length ? `<option value="linked" ${highlightDaySource === 'linked' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarHighlightSourceLinked')}</option>` : ''}
-                    </select>
-                    <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.miniCalendarHighlightSourceHelp')}</span>
-                </div>
-                <div class="ct-field" id="var-minical-highlight-day-wrap" style="display:${highlightDaySource === 'fixed' ? '' : 'none'};">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightDay')}</span>
-                    <input type="number" id="var-minical-highlight-day" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightDay ?? new Date().getDate()}" min="1" max="31">
-                </div>
-                <div class="ct-field" id="var-minical-highlight-linked-wrap" style="display:${highlightDaySource === 'linked' ? '' : 'none'};">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightLinkedTo')}</span>
-                    <select id="var-minical-highlight-linked" class="craftools-select" style="width:100%;">
-                        <option value="">${I18n.t('variablePanel.linkTargetNone')}</option>
-                        ${dateLinkOptions}
-                    </select>
-                </div>
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightBg')}</span>
                     <div id="var-minical-highlight-bg-picker"></div>
@@ -1187,8 +1199,25 @@ export class VariablePanel {
                     if (yearInput)      yearInput.oninput       = () => { binding!.year        = parseInt(yearInput.value, 10) || binding!.year; notify(); };
                     if (displayModeSel) displayModeSel.onchange = () => { binding!.displayMode = displayModeSel.value;                       notify(); };
 
+                    // Standard toggle-switch visual update (track background +
+                    // thumb translateX) -- same pattern as fields/toggle.field.ts's
+                    // own bind(), just scoped to the specific <label> each
+                    // checkbox lives in (this container can hold several
+                    // toggles at once, so a container-wide query would grab
+                    // the wrong track/thumb).
+                    const _paintToggle = (input: HTMLInputElement) => {
+                        const track = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+                        const thumb = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+                        if (track) track.style.background = input.checked ? 'var(--accent)' : 'var(--border)';
+                        if (thumb) thumb.style.transform  = input.checked ? 'translateX(14px)' : 'translateX(0)';
+                    };
+
                     const weekSundaySel = container.querySelector<HTMLInputElement>('#var-minical-week-sunday');
-                    if (weekSundaySel) weekSundaySel.onchange = () => { binding!.weekStartSunday = weekSundaySel.checked; notify(); };
+                    if (weekSundaySel) weekSundaySel.onchange = () => {
+                        binding!.weekStartSunday = weekSundaySel.checked;
+                        _paintToggle(weekSundaySel);
+                        notify();
+                    };
 
                     // Highlight (single day-of-month, styled independently of
                     // the sunday/holiday coloring) -- same option shape as
@@ -1201,10 +1230,14 @@ export class VariablePanel {
                     // turn highlighting on.
                     const hlEnabled     = container.querySelector<HTMLInputElement>('#var-minical-highlight-enabled');
                     const hlOptions     = container.querySelector<HTMLElement>('#var-minical-highlight-options');
-                    const hlSource      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-source');
-                    const hlDayWrap     = container.querySelector<HTMLElement>('#var-minical-highlight-day-wrap');
+                    // The "link highlight day to a date variable" toggle lives
+                    // at the TOP of the config (same position the generic
+                    // "Vincular a" row occupies for every other variable
+                    // type), not inside #var-minical-highlight-options --
+                    // it's a source for the highlight day, independent of
+                    // whether highlighting itself is currently switched on.
+                    const hlLinkToggle  = container.querySelector<HTMLInputElement>('#var-minical-highlight-linked-toggle');
                     const hlLinkedWrap  = container.querySelector<HTMLElement>('#var-minical-highlight-linked-wrap');
-                    const hlDay         = container.querySelector<HTMLInputElement>('#var-minical-highlight-day');
                     const hlLinked      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-linked');
                     const hlBgEl        = container.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
                     const hlTextEl      = container.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
@@ -1216,17 +1249,16 @@ export class VariablePanel {
                     if (hlEnabled) hlEnabled.onchange = () => {
                         binding!.miniCalendarHighlightEnabled = hlEnabled.checked;
                         if (hlOptions) hlOptions.style.display = hlEnabled.checked ? 'block' : 'none';
+                        _paintToggle(hlEnabled);
                         notify();
                     };
-                    if (hlSource) hlSource.onchange = () => {
-                        const source = hlSource.value as 'today' | 'fixed' | 'linked';
-                        binding!.miniCalendarHighlightDaySource = source;
-                        if (hlDayWrap)    hlDayWrap.style.display    = source === 'fixed'  ? '' : 'none';
-                        if (hlLinkedWrap) hlLinkedWrap.style.display = source === 'linked' ? '' : 'none';
+                    if (hlLinkToggle) hlLinkToggle.onchange = () => {
+                        binding!.miniCalendarHighlightDaySource = hlLinkToggle.checked ? 'linked' : 'today';
+                        if (hlLinkedWrap) hlLinkedWrap.style.display = hlLinkToggle.checked ? '' : 'none';
+                        _paintToggle(hlLinkToggle);
                         notify();
                     };
                     if (hlLinked) hlLinked.onchange = () => { binding!.miniCalendarHighlightLinkedTo = hlLinked.value; notify(); };
-                    if (hlDay)         hlDay.oninput         = () => { binding!.miniCalendarHighlightDay         = parseInt(hlDay.value, 10);         notify(); };
                     if (hlBorderStyle) hlBorderStyle.onchange = () => { binding!.miniCalendarHighlightBorderStyle = hlBorderStyle.value;               notify(); };
                     if (hlBorderWidth) hlBorderWidth.oninput  = () => { binding!.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
                     if (hlRadius)      hlRadius.oninput       = () => { binding!.miniCalendarHighlightBorderRadius = parseInt(hlRadius.value, 10);     notify(); };
