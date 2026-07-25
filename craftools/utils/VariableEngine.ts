@@ -1041,34 +1041,73 @@ export class VariableEngine {
      *                before this field existed.
      *  - 'linked' -- day-of-month of another element's already-resolved
      *                `date`-type pick (looked up in the shared `picks`
-     *                registry via miniCalendarHighlightLinkedTo). Falls back
-     *                to 'today' if the target hasn't resolved yet (e.g. it
-     *                appears later in the page than this element) or isn't
-     *                actually a 'date' binding.
+     *                registry via miniCalendarHighlightLinkedTo). When
+     *                linked, `_pickMiniCalendar()` below ALSO switches the
+     *                whole card's month/year to the leader date's own
+     *                month/year (see `_resolveLinkedDate()`) -- so the
+     *                highlighted day always lands on the month actually
+     *                being shown, instead of a day-of-month number
+     *                highlighted on an unrelated, separately-configured
+     *                month. Falls back to 'today' if the target hasn't
+     *                resolved yet (e.g. it appears later in the page than
+     *                this element, or wasn't resolved as a leader first --
+     *                see the leader-before-follower ordering callers of
+     *                `resolve()` are responsible for) or isn't actually a
+     *                'date' binding.
      *  - 'today' (default) -- always the real current day, recomputed fresh
      *                on every resolve instead of ever freezing.
      */
+    /**
+     * The actual leader Date when this binding is linked to a 'date'-type
+     * element AND that leader has already been resolved into the SAME
+     * `picks` registry under its own real element id (see
+     * VariableContentTool.ts's/VariablePanel.ts's/AgendaExport.ts's own
+     * leader-before-follower ordering for how that's guaranteed). Returns
+     * null for every other case (not linked, leader not resolved yet, or
+     * the target isn't actually a 'date' binding) so callers can fall back
+     * to their own non-linked behavior.
+     */
+    private static _resolveLinkedDate(b: VariableBinding, picks: Map<string, LinkPick> | null): Date | null {
+        if (b.miniCalendarHighlightDaySource !== 'linked' || !b.miniCalendarHighlightLinkedTo) return null;
+        const leader = picks?.get(b.miniCalendarHighlightLinkedTo);
+        if (leader && leader.type === 'date' && leader.pick instanceof Date) return leader.pick;
+        return null;
+    }
+
     private static _resolveHighlightDay(b: VariableBinding, picks: Map<string, LinkPick> | null): number {
         const source = b.miniCalendarHighlightDaySource ?? 'today';
         if (source === 'fixed') {
             return parseInt(String(b.miniCalendarHighlightDay), 10) || new Date().getDate();
         }
-        if (source === 'linked' && b.miniCalendarHighlightLinkedTo && picks?.has(b.miniCalendarHighlightLinkedTo)) {
-            const leader = picks.get(b.miniCalendarHighlightLinkedTo)!;
-            if (leader.type === 'date' && leader.pick instanceof Date) {
-                return leader.pick.getDate();
-            }
-        }
+        const linked = this._resolveLinkedDate(b, picks);
+        if (linked) return linked.getDate();
         return new Date().getDate();
     }
 
     private static _pickMiniCalendar(b: VariableBinding, ctx: { repetitionIndex: number }, picks: Map<string, LinkPick> | null = null): MiniCalendarPick {
-        let year  = parseInt(String(b.year), 10)  || new Date().getFullYear();
-        let month = parseInt(String(b.month), 10) || (new Date().getMonth() + 1);
-        if (b.mode === 'sequentialMonthly') {
-            month += ctx.repetitionIndex;
-            while (month > 12) { month -= 12; year += 1; }
-            while (month < 1)  { month += 12; year -= 1; }
+        const linkedDate = this._resolveLinkedDate(b, picks);
+        let year: number;
+        let month: number;
+        if (linkedDate) {
+            // Linked mode mirrors the leader date's own month/year outright
+            // -- 'sequentialMonthly's +N-per-repetition advance would be
+            // meaningless here since the LEADER (often itself advancing
+            // per page/day, e.g. a daily agenda's Start Date) is what
+            // should decide which month is shown. Previously month/year
+            // stayed purely manual/sequential even when linked, so the
+            // highlighted day (now correctly the leader's day-of-month)
+            // could land on a completely different month than the one the
+            // calendar was actually displaying.
+            year  = linkedDate.getFullYear();
+            month = linkedDate.getMonth() + 1;
+        } else {
+            year  = parseInt(String(b.year), 10)  || new Date().getFullYear();
+            month = parseInt(String(b.month), 10) || (new Date().getMonth() + 1);
+            if (b.mode === 'sequentialMonthly') {
+                month += ctx.repetitionIndex;
+                while (month > 12) { month -= 12; year += 1; }
+                while (month < 1)  { month += 12; year -= 1; }
+            }
         }
         const displayMode = MINI_CALENDAR_PARTS[b.displayMode ?? ''] ? b.displayMode! : 'complete1';
         const highlight = b.miniCalendarHighlightEnabled ? {

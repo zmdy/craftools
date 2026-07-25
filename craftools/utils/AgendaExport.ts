@@ -218,9 +218,10 @@ export class AgendaExport {
           })
           .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
 
-        // 1ª passada: líderes (sem linkedTo) primeiro
-        const leaders   = jobs.filter(j => !j.binding.linkedTo);
-        const followers = jobs.filter(j =>  j.binding.linkedTo);
+        // 1ª passada: líderes primeiro (ver _isFollowerJob() para os dois
+        // tipos de vínculo que contam como "seguidor" aqui)
+        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
 
         [...leaders, ...followers].forEach(j => {
           const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
@@ -367,8 +368,8 @@ export class AgendaExport {
           })
           .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
 
-        const leaders   = jobs.filter(j => !j.binding.linkedTo);
-        const followers = jobs.filter(j =>  j.binding.linkedTo);
+        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
         [...leaders, ...followers].forEach(j => {
           const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
           this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
@@ -544,6 +545,26 @@ export class AgendaExport {
       return 'variableBinding' in state ? parseVariableBinding(state.variableBinding) : null;
     }
     return null;
+  }
+
+  /**
+   * True for any binding that must resolve AFTER some other element on the
+   * page -- either the generic "Vincular a" sync (`binding.linkedTo`,
+   * same-type leader/follower) or a miniCalendar's narrower "highlight day"
+   * link to a 'date' element (`miniCalendarHighlightLinkedTo`). Both render
+   * passes below split their jobs into leaders-first/followers-second using
+   * this, so a linked miniCalendar's `picks` lookup always finds its date
+   * leader already resolved -- previously only `linkedTo` was checked here,
+   * so a miniCalendar linked via `miniCalendarHighlightLinkedTo` was
+   * (mis)classified as a leader with no ordering guarantee against its own
+   * date leader, and on whichever pages it happened to resolve first, the
+   * highlighted day (and, now, the whole displayed month) silently fell
+   * back to "today" instead of the linked date.
+   */
+  static _isFollowerJob(binding: VariableBinding): boolean {
+    if (binding.linkedTo) return true;
+    if (binding.type === 'miniCalendar' && binding.miniCalendarHighlightDaySource === 'linked' && binding.miniCalendarHighlightLinkedTo) return true;
+    return false;
   }
 
   /**

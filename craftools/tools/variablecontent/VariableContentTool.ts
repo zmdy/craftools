@@ -210,23 +210,39 @@ export class VariableContentTool extends BaseTool {
         if (binding.linkedTo) {
           const leaderEl      = VariableContentTool._findVarElementById(element, binding.linkedTo);
           const leaderBinding = leaderEl ? VariableContentTool._readAnyVariableBinding(leaderEl) : null;
-          // Same-type leader/follower pairs (the common case) always share
-          // a registry. The one deliberate exception is a 'miniCalendar'
-          // follower pointing at a 'date' leader -- that's not a generic
-          // "sync my whole value" link, it's the narrower "highlight day"
-          // link (see VariableEngine.ts's `_resolveHighlightDay()`), but it
-          // still needs the leader resolved into the SAME `picks` registry
-          // first so the follower's own resolve() can read the leader's
-          // Date out of it. Without this exception the canvas fell through
-          // to a context-free `resolvePreview()` and never saw the leader's
-          // value at all, which is why linking a mini calendar's highlight
-          // to a date variable never updated live on the canvas.
-          const isCrossTypeHighlightLink = binding.type === 'miniCalendar' && leaderBinding?.type === 'date';
-          if (leaderBinding && (leaderBinding.type === binding.type || isCrossTypeHighlightLink)) {
+          if (leaderBinding && leaderBinding.type === binding.type) {
             VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
               const picks = VariableEngine.newLinkRegistry();
               VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
               const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, {}, apiCache, { id: '__me__', picks });
+              applyResolved(val);
+            });
+            return;
+          }
+        }
+
+        // miniCalendar's "highlight day" link is a SEPARATE, narrower link
+        // from the generic `binding.linkedTo` above -- it targets a
+        // different-typed ('date') element via `miniCalendarHighlightLinkedTo`
+        // (see VariablePanel.ts's own toggle for it). `VariableEngine`'s
+        // `_pickMiniCalendar()`/`_resolveHighlightDay()` read the leader's
+        // Date back out of the SAME `picks` registry to drive BOTH the
+        // highlighted day-of-month AND (so the two always agree) the whole
+        // card's displayed month/year -- but keyed by the leader's own real
+        // element id (not a synthetic placeholder), so the leader has to be
+        // resolved first under that exact id for the lookup to find it.
+        // This was missing entirely, which is why linking a mini calendar
+        // to a date variable never reflected the date changing, live on
+        // the canvas.
+        if (binding.type === 'miniCalendar' && binding.miniCalendarHighlightDaySource === 'linked' && binding.miniCalendarHighlightLinkedTo) {
+          const dateLeaderId = binding.miniCalendarHighlightLinkedTo;
+          const leaderEl      = VariableContentTool._findVarElementById(element, dateLeaderId);
+          const leaderBinding = leaderEl ? VariableContentTool._readAnyVariableBinding(leaderEl) : null;
+          if (leaderBinding && leaderBinding.type === 'date') {
+            VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
+              const picks = VariableEngine.newLinkRegistry();
+              VariableEngine.resolve(leaderBinding, {}, apiCache, { id: dateLeaderId, picks });
+              const val = VariableEngine.resolve(binding, {}, apiCache, { id: '__me__', picks });
               applyResolved(val);
             });
             return;
@@ -290,10 +306,15 @@ export class VariableContentTool extends BaseTool {
    * Variable Content element on the same page whose binding points back at
    * this one (`linkedTo === this element's _craftoolsVarId`) re-resolves
    * and re-renders immediately too, instead of only catching up the next
-   * time someone happens to select/reopen it. Scoped to `variablecontent`
-   * followers only (QR/Barcode followers have their own separate
-   * regeneration path -- `QRCodeTool._regenerate()`/its Barcode
-   * equivalent -- not wired to this yet).
+   * time someone happens to select/reopen it. Also matches followers
+   * pointing back via `miniCalendarHighlightLinkedTo` -- the separate,
+   * narrower "highlight day" link a miniCalendar can have to a 'date'
+   * element (see the matching branch in `_applyVariablePreview()`) -- so a
+   * mini calendar's highlighted day live-updates when the date variable it
+   * points at changes, exactly like a same-type `linkedTo` follower does.
+   * Scoped to `variablecontent` followers only (QR/Barcode followers have
+   * their own separate regeneration path -- `QRCodeTool._regenerate()`/its
+   * Barcode equivalent -- not wired to this yet).
    */
   private static _refreshLinkedFollowers(element: HTMLElement): void {
     const myId = (element as HTMLElement & { _craftoolsVarId?: string })._craftoolsVarId;
@@ -303,7 +324,12 @@ export class VariableContentTool extends BaseTool {
     page.querySelectorAll<HTMLElement>('craftools-element[data-craftool="variablecontent"]').forEach(el => {
       if (el === element) return;
       const binding = VariableContentTool._readAnyVariableBinding(el);
-      if (binding?.linkedTo !== myId) return;
+      if (!binding) return;
+      const isGenericFollower       = binding.linkedTo === myId;
+      const isHighlightDayFollower  = binding.type === 'miniCalendar'
+        && binding.miniCalendarHighlightDaySource === 'linked'
+        && binding.miniCalendarHighlightLinkedTo === myId;
+      if (!isGenericFollower && !isHighlightDayFollower) return;
       const content = getContent(el);
       if (content) VariableContentTool._applyVariablePreview(el, content, binding);
     });

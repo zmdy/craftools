@@ -767,6 +767,29 @@ export class VariablePanel {
                 }
             }
 
+            // miniCalendar's own "highlight day" link to a 'date' element
+            // (a separate field from the generic linkedTo above -- see
+            // VariableContentTool.ts's matching branch for the full
+            // rationale). Without this, the panel's own live Preview box
+            // never reflected the linked date at all, even after fixing
+            // the canvas: it would fall straight through to
+            // resolvePreview() below, which has no `picks` registry to
+            // look the leader up in.
+            if (binding!.type === 'miniCalendar' && binding!.miniCalendarHighlightDaySource === 'linked' && binding!.miniCalendarHighlightLinkedTo && element) {
+                const dateLeaderId  = binding!.miniCalendarHighlightLinkedTo;
+                const leaderEl      = this._findElementById(element, dateLeaderId);
+                const leaderBinding = leaderEl ? this._getElementBinding(leaderEl, leaderEl.getAttribute('data-craftool')) : null;
+                if (leaderBinding?.type === 'date') {
+                    VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
+                        const picks = VariableEngine.newLinkRegistry();
+                        VariableEngine.resolve(leaderBinding, {}, apiCache, { id: dateLeaderId, picks });
+                        const val = VariableEngine.resolve(binding!, {}, apiCache, { id: '__me__', picks });
+                        renderPreviewValue(val);
+                    });
+                    return;
+                }
+            }
+
             VariableEngine.resolvePreview(binding!).then(val => { renderPreviewValue(val); });
         };
 
