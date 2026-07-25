@@ -646,8 +646,9 @@ export class AgendaExport {
     // forwarded so exported PDFs match the live-editor highlight-day config.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parts = (MiniCalendarTool as any)._currentParts(meta['displayMode'] as string);
+    const weekStart = meta['weekStartSunday'] === false ? 'monday' : 'sunday';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts, highlight: meta['highlight'] });
+    card.outerHTML = (CalendarRenderer as any).buildCardHtml(year, month, { theme: meta['theme'], parts, highlight: meta['highlight'], weekStart });
   }
 
   static _escAttr(val: unknown): string {

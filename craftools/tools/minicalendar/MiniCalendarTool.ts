@@ -4,6 +4,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import { normalizeValue } from '../../utils/ColorPickerUI.js';
 import { CalendarRenderer, type CalendarTheme, type CalendarOptions } from '../../utils/CalendarRenderer';
+import { AppSettings } from '../../utils/AppSettings.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 // Registers the 'miniCalendarTool.*' i18n keys used by DISPLAY_MODES' per-
 // option i18nKey below (falls back to the literal English labels without
@@ -16,6 +17,8 @@ interface MiniCalendarMeta {
   month:       number;
   theme:       CalendarTheme;
   highlight?:  CalendarOptions['highlight'];
+  /** true (default, matches original behavior) = week starts Sunday; false = Monday. */
+  weekStartSunday?: boolean;
 }
 
 const getMeta = (el: HTMLElement): Partial<MiniCalendarMeta> =>
@@ -68,6 +71,7 @@ export class MiniCalendarTool extends BaseTool {
       year: now.getFullYear(),
       month: now.getMonth() + 1,
       theme: CalendarRenderer.defaultTheme(),
+      weekStartSunday: AppSettings.get('defaultWeekStart') === 'sunday',
     };
   }
 
@@ -80,6 +84,7 @@ export class MiniCalendarTool extends BaseTool {
       theme: meta.theme,
       parts: MiniCalendarTool._currentParts(meta.displayMode),
       highlight: meta.highlight,
+      weekStart: meta.weekStartSunday === false ? 'monday' : 'sunday',
     });
     card.style.userSelect = 'none';
     return card;
@@ -157,6 +162,7 @@ export class MiniCalendarTool extends BaseTool {
     if (!('displayMode' in existing)) patch.displayMode = meta.displayMode ?? 'complete1';
     if (!('year'        in existing)) patch.year        = meta.year  ?? now.getFullYear();
     if (!('month'       in existing)) patch.month       = meta.month ?? (now.getMonth() + 1);
+    if (!('weekStartSunday' in existing)) patch.weekStartSunday = meta.weekStartSunday ?? (AppSettings.get('defaultWeekStart') === 'sunday');
     // NOTE: these flattened theme.* colors don't map onto CalendarTheme's
     // real (nested titleBar/weekHeader/dayNumbers/...) shape used by
     // CalendarRenderer -- the Theme panel below is schema-driven UI that
@@ -182,6 +188,7 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'select', key: 'displayMode', label: 'Display', options: DISPLAY_MODES },
           { type: 'number', key: 'year',  label: 'Year',  min: 2000, max: 2100, step: 1 },
           { type: 'number', key: 'month', label: 'Month', min: 1,    max: 12,   step: 1 },
+          { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)' },
         ],
       },
       {
@@ -244,7 +251,7 @@ export class MiniCalendarTool extends BaseTool {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
     if (e._craftoolsMeta) {
-      if (key === 'displayMode' || key === 'year' || key === 'month') {
+      if (key === 'displayMode' || key === 'year' || key === 'month' || key === 'weekStartSunday') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
       } else if (key.startsWith('theme')) {
         const theme = (e._craftoolsMeta.theme as unknown as Record<string, unknown>) ?? {};
