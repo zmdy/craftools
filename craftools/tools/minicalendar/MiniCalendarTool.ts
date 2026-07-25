@@ -17,6 +17,15 @@ interface MiniCalendarMeta {
   month:       number;
   theme:       CalendarTheme;
   highlight?:  CalendarOptions['highlight'];
+  /**
+   * 'today' (default) = highlight.day is recomputed as the current
+   * day-of-month every time the card is rebuilt, so the highlighted cell
+   * always tracks the real "today" instead of freezing at whatever day it
+   * happened to be when the toggle was first turned on. 'fixed' = use the
+   * manually-entered highlight.day as a permanent stored value (e.g. to
+   * always mark a birthday, independent of the current date).
+   */
+  highlightDaySource?: 'today' | 'fixed';
   /** true (default, matches original behavior) = week starts Sunday; false = Monday. */
   weekStartSunday?: boolean;
 }
@@ -72,6 +81,7 @@ export class MiniCalendarTool extends BaseTool {
       month: now.getMonth() + 1,
       theme: CalendarRenderer.defaultTheme(),
       weekStartSunday: AppSettings.get('defaultWeekStart') === 'sunday',
+      highlightDaySource: 'today',
     };
   }
 
@@ -79,11 +89,25 @@ export class MiniCalendarTool extends BaseTool {
     return DISPLAY_MODE_PARTS[displayMode] ?? DISPLAY_MODE_PARTS.complete1;
   }
 
+  /**
+   * Resolves the final highlight object passed to CalendarRenderer, with
+   * `day` computed fresh from "today" unless the user explicitly opted into
+   * a fixed day (see MiniCalendarMeta.highlightDaySource's doc comment).
+   */
+  private static _resolveHighlight(meta: MiniCalendarMeta): CalendarOptions['highlight'] {
+    if (!meta.highlight?.enabled) return meta.highlight;
+    const useFixed = meta.highlightDaySource === 'fixed';
+    return {
+      ...meta.highlight,
+      day: useFixed ? (meta.highlight.day ?? new Date().getDate()) : new Date().getDate(),
+    };
+  }
+
   private static _buildCard(meta: MiniCalendarMeta): HTMLElement {
     const card = CalendarRenderer.buildCardElement(meta.year, meta.month, {
       theme: meta.theme,
       parts: MiniCalendarTool._currentParts(meta.displayMode),
-      highlight: meta.highlight,
+      highlight: MiniCalendarTool._resolveHighlight(meta),
       weekStart: meta.weekStartSunday === false ? 'monday' : 'sunday',
     });
     card.style.userSelect = 'none';
@@ -163,6 +187,7 @@ export class MiniCalendarTool extends BaseTool {
     if (!('year'        in existing)) patch.year        = meta.year  ?? now.getFullYear();
     if (!('month'       in existing)) patch.month       = meta.month ?? (now.getMonth() + 1);
     if (!('weekStartSunday' in existing)) patch.weekStartSunday = meta.weekStartSunday ?? (AppSettings.get('defaultWeekStart') === 'sunday');
+    if (!('highlightDaySource' in existing)) patch.highlightDaySource = meta.highlightDaySource ?? 'today';
     // NOTE: these flattened theme.* colors don't map onto CalendarTheme's
     // real (nested titleBar/weekHeader/dayNumbers/...) shape used by
     // CalendarRenderer -- the Theme panel below is schema-driven UI that
@@ -217,7 +242,20 @@ export class MiniCalendarTool extends BaseTool {
         defaultOpen: false,
         fields: [
           { type: 'toggle', key: 'highlightEnabled', label: 'Highlight a day' },
-          { type: 'number', key: 'highlightDay', label: 'Day', min: 1, max: 31, step: 1 },
+          {
+            type: 'select', key: 'highlightDaySource', label: 'Day to highlight',
+            options: [
+              { value: 'today', label: 'Today (automatic)' },
+              { value: 'fixed', label: 'Fixed day' },
+            ],
+          },
+          {
+            type: 'number', key: 'highlightDay', label: 'Day', min: 1, max: 31, step: 1,
+            // Only meaningful (and only shown) when highlightDaySource is
+            // 'fixed' -- with 'today' the day is always recomputed, so a
+            // manual number here would be misleading dead UI.
+            hidden: (el) => PropertyRenderer._readState(el).highlightDaySource !== 'fixed',
+          },
           { type: 'color-picker', key: 'highlightBg', label: 'Background' },
           { type: 'color-picker', key: 'highlightTextColor', label: 'Text color' },
           { type: 'number', key: 'highlightBorderWidth', label: 'Border width', min: 0, max: 20, unit: 'px' },
@@ -251,7 +289,7 @@ export class MiniCalendarTool extends BaseTool {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
     if (e._craftoolsMeta) {
-      if (key === 'displayMode' || key === 'year' || key === 'month' || key === 'weekStartSunday') {
+      if (key === 'displayMode' || key === 'year' || key === 'month' || key === 'weekStartSunday' || key === 'highlightDaySource') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
       } else if (key.startsWith('theme')) {
         const theme = (e._craftoolsMeta.theme as unknown as Record<string, unknown>) ?? {};
