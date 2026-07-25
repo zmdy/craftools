@@ -210,7 +210,19 @@ export class VariableContentTool extends BaseTool {
         if (binding.linkedTo) {
           const leaderEl      = VariableContentTool._findVarElementById(element, binding.linkedTo);
           const leaderBinding = leaderEl ? VariableContentTool._readAnyVariableBinding(leaderEl) : null;
-          if (leaderBinding && leaderBinding.type === binding.type) {
+          // Same-type leader/follower pairs (the common case) always share
+          // a registry. The one deliberate exception is a 'miniCalendar'
+          // follower pointing at a 'date' leader -- that's not a generic
+          // "sync my whole value" link, it's the narrower "highlight day"
+          // link (see VariableEngine.ts's `_resolveHighlightDay()`), but it
+          // still needs the leader resolved into the SAME `picks` registry
+          // first so the follower's own resolve() can read the leader's
+          // Date out of it. Without this exception the canvas fell through
+          // to a context-free `resolvePreview()` and never saw the leader's
+          // value at all, which is why linking a mini calendar's highlight
+          // to a date variable never updated live on the canvas.
+          const isCrossTypeHighlightLink = binding.type === 'miniCalendar' && leaderBinding?.type === 'date';
+          if (leaderBinding && (leaderBinding.type === binding.type || isCrossTypeHighlightLink)) {
             VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
               const picks = VariableEngine.newLinkRegistry();
               VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
