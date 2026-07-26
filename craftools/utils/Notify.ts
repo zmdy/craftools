@@ -1,13 +1,27 @@
 /**
  * Notify.ts — Substituto leve para alert()/confirm() nativos.
  * API:
- *   Notify.toast(message, type?, duration?) → () => void
+ *   Notify.toast(message, type?, duration?) → ToastHandle
  *   Notify.confirm(message, opts?)          → Promise<boolean>
  */
 
 import { I18n } from '../settings/Translations.js';
 
 type ToastType = 'info' | 'success' | 'error';
+
+/**
+ * Calling the handle directly still just dismisses the toast (100%
+ * backward compatible with every existing `const dismiss = Notify.toast(...);
+ * ...; dismiss();` call site) -- `.update()` is new, for long-running
+ * operations (e.g. a multi-page export) that want to rewrite the same
+ * toast's text in place (progress %) instead of spawning/animating a new
+ * one per step.
+ */
+export interface ToastHandle {
+    (): void;
+    dismiss: () => void;
+    update:  (message: string) => void;
+}
 
 interface ConfirmOpts {
     confirmLabel?: string;
@@ -44,7 +58,7 @@ function ensureToastContainer(): HTMLElement {
 }
 
 export const Notify = {
-    toast(message: string, type: ToastType = 'info', duration = 4000): () => void {
+    toast(message: string, type: ToastType = 'info', duration = 4000): ToastHandle {
         const container = ensureToastContainer();
         const colorVar  = TYPE_COLOR_VAR[type] ?? TYPE_COLOR_VAR.info;
         const icon      = TYPE_ICON[type]       ?? TYPE_ICON.info;
@@ -63,6 +77,7 @@ export const Notify = {
             <span class="material-symbols-outlined" style="font-size:18px; color: var(${colorVar}, #f97316); flex-shrink:0;">${icon}</span>
             <span style="flex:1;">${message}</span>
         `;
+        const textEl = el.querySelector<HTMLElement>('span:last-child');
 
         const dismiss = (): void => {
             el.style.opacity   = '0';
@@ -78,7 +93,11 @@ export const Notify = {
         });
 
         if (duration > 0) setTimeout(dismiss, duration);
-        return dismiss;
+
+        const handle = dismiss as ToastHandle;
+        handle.dismiss = dismiss;
+        handle.update  = (msg: string): void => { if (textEl) textEl.textContent = msg; };
+        return handle;
     },
 
     confirm(message: string, opts: ConfirmOpts = {}): Promise<boolean> {

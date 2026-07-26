@@ -1,0 +1,127 @@
+diff --git a/node_modules/@tooooools/html-to-svg/README.md b/node_modules/@tooooools/html-to-svg/README.md
+old mode 100644
+new mode 100755
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js
+old mode 100644
+new mode 100755
+index 0079353..6311d5c
+--- a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js
++++ b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js
+@@ -1142,8 +1142,21 @@ var text = (function (_ref2) {
+       line('leading', leading, {
+         stroke: '#4b96ff'
+       });
+-      if (letterSpacing !== 'normal' || splitText) {
+-        var ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
++      var ls = letterSpacing === 'normal' ? 0 : (parseFloat(letterSpacing) || 0);
++      // Patched (patch-package) -- getComputedStyle's W3C-spec-compliant resolved
++      // value for 'letter-spacing: normal' is the STRING "0px", not the keyword
++      // 'normal' (confirmed: W3C CSS Text Module resolved-value table). Every text
++      // node in a browser-rendered page therefore fails the original `!== 'normal'`
++      // check and always takes the per-CHARACTER render path below, which calls
++      // font.getAdvanceWidth() one glyph at a time -- skipping the font's kerning
++      // pairs that the whole-string font.getPath() branch (the `else` below) applies
++      // automatically. Visually this makes ALL exported text look more "spaced out"
++      // than the live page, regardless of whether any real letter-spacing was ever
++      // set. Branching on the numeric VALUE of `ls` instead of the raw string
++      // preserves per-character rendering for a genuine non-zero letter-spacing
++      // while routing the (extremely common) zero/unset case through the kerned
++      // whole-string path instead.
++      if (ls !== 0 || splitText) {
+ 
+         // Render letter by letter in case of non-default letter-spacing or explicit split
+         for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js.map b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.js.map
+old mode 100644
+new mode 100755
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs
+old mode 100644
+new mode 100755
+index 568ad12..2624c16
+--- a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs
++++ b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs
+@@ -574,8 +574,13 @@ var text = (({
+   line('leading', leading, {
+     stroke: '#4b96ff'
+   });
+-  if (letterSpacing !== 'normal' || _splitText) {
+-    const ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
++  const ls = letterSpacing === 'normal' ? 0 : (parseFloat(letterSpacing) || 0);
++  // Patched (patch-package) -- see html-to-svg.js for the full explanation:
++  // getComputedStyle resolves 'letter-spacing: normal' to the string "0px", not
++  // the keyword 'normal', so branching on `ls` (the parsed number) instead of the
++  // raw string keeps the kerned whole-string render path for the common
++  // zero/unset case instead of always falling into unkerned per-character glyphs.
++  if (ls !== 0 || _splitText) {
+ 
+     // Render letter by letter in case of non-default letter-spacing or explicit split
+     for (const c of string) {
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs.map b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.modern.mjs.map
+old mode 100644
+new mode 100755
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js
+old mode 100644
+new mode 100755
+index 6a9eb3c..e16e586
+--- a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js
++++ b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js
+@@ -1122,8 +1122,21 @@ var text = (function (_ref2) {
+       line('leading', leading, {
+         stroke: '#4b96ff'
+       });
+-      if (letterSpacing !== 'normal' || splitText) {
+-        var ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
++      var ls = letterSpacing === 'normal' ? 0 : (parseFloat(letterSpacing) || 0);
++      // Patched (patch-package) -- getComputedStyle's W3C-spec-compliant resolved
++      // value for 'letter-spacing: normal' is the STRING "0px", not the keyword
++      // 'normal' (confirmed: W3C CSS Text Module resolved-value table). Every text
++      // node in a browser-rendered page therefore fails the original `!== 'normal'`
++      // check and always takes the per-CHARACTER render path below, which calls
++      // font.getAdvanceWidth() one glyph at a time -- skipping the font's kerning
++      // pairs that the whole-string font.getPath() branch (the `else` below) applies
++      // automatically. Visually this makes ALL exported text look more "spaced out"
++      // than the live page, regardless of whether any real letter-spacing was ever
++      // set. Branching on the numeric VALUE of `ls` instead of the raw string
++      // preserves per-character rendering for a genuine non-zero letter-spacing
++      // while routing the (extremely common) zero/unset case through the kerned
++      // whole-string path instead.
++      if (ls !== 0 || splitText) {
+ 
+         // Render letter by letter in case of non-default letter-spacing or explicit split
+         for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js.map b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.module.js.map
+old mode 100644
+new mode 100755
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js
+old mode 100644
+new mode 100755
+index a92e773..d8ce42b
+--- a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js
++++ b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js
+@@ -1142,8 +1142,21 @@
+         line('leading', leading, {
+           stroke: '#4b96ff'
+         });
+-        if (letterSpacing !== 'normal' || splitText) {
+-          var ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
++        var ls = letterSpacing === 'normal' ? 0 : (parseFloat(letterSpacing) || 0);
++        // Patched (patch-package) -- getComputedStyle's W3C-spec-compliant resolved
++        // value for 'letter-spacing: normal' is the STRING "0px", not the keyword
++        // 'normal' (confirmed: W3C CSS Text Module resolved-value table). Every text
++        // node in a browser-rendered page therefore fails the original `!== 'normal'`
++        // check and always takes the per-CHARACTER render path below, which calls
++        // font.getAdvanceWidth() one glyph at a time -- skipping the font's kerning
++        // pairs that the whole-string font.getPath() branch (the `else` below) applies
++        // automatically. Visually this makes ALL exported text look more "spaced out"
++        // than the live page, regardless of whether any real letter-spacing was ever
++        // set. Branching on the numeric VALUE of `ls` instead of the raw string
++        // preserves per-character rendering for a genuine non-zero letter-spacing
++        // while routing the (extremely common) zero/unset case through the kerned
++        // whole-string path instead.
++        if (ls !== 0 || splitText) {
+ 
+           // Render letter by letter in case of non-default letter-spacing or explicit split
+           for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
+diff --git a/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js.map b/node_modules/@tooooools/html-to-svg/dist/html-to-svg.umd.js.map
+old mode 100644
+new mode 100755

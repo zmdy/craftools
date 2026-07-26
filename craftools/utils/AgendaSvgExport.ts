@@ -139,7 +139,14 @@ export class AgendaSvgExport {
       return;
     }
 
-    Notify.toast(t('generating'), 'info', 4000);
+    // Persistent progress toast, updated in place (see Notify.ts's
+    // ToastHandle.update()) as each page finishes instead of spawning a new
+    // toast per page -- with a few hundred pages that would otherwise be a
+    // few hundred stacked/animating toasts. `duration: 0` means it never
+    // auto-dismisses; explicitly dismissed in `finally` below once the real
+    // done/error toast is about to show.
+    const totalPages   = pages.length;
+    const progressToast = Notify.toast(this._progressText(0, totalPages), 'info', 0);
 
     const styleTag = document.createElement('style');
     styleTag.id = 'agenda-svg-export-css';
@@ -204,17 +211,22 @@ export class AgendaSvgExport {
           console.error('[AgendaSvgExport] Failed to render page', i, err);
           errCount++;
         }
+
+        progressToast.update(this._progressText(i, totalPages));
       }
 
       if (merge && rendered.length) {
+        progressToast.update(t('merging'));
         this._download(this._mergePages(rendered), 'craftools-agenda.svg');
       }
 
+      progressToast.dismiss();
       if (okCount > 0)  Notify.toast(t('done').replace('{n}', String(okCount)), 'success', 5000);
       if (errCount > 0) Notify.toast(t('someFailed').replace('{n}', String(errCount)), 'error', 8000);
 
     } catch (err) {
       console.error('[AgendaSvgExport] Export failed:', err);
+      progressToast.dismiss();
       Notify.toast(t('exportError'), 'error', 6000);
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,6 +234,12 @@ export class AgendaSvgExport {
       stage.remove();
       styleTag.remove();
     }
+  }
+
+  /** "Gerando SVG(s)… 42/365 (12%)" -- used both for the initial 0% state and every update. */
+  private static _progressText(done: number, total: number): string {
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return `${t('generating')} ${done}/${total} (${pct}%)`;
   }
 
   /**
