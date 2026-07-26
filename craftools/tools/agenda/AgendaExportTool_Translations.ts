@@ -32,10 +32,16 @@ I18n.addTranslations('agendaExportTool', {
 
         exportIntro: "Ao exportar, o sistema gera todas as páginas repetidas com as variáveis já substituídas e depois abre a janela de impressão do navegador (Ctrl+P) automaticamente.",
         exportSummaryLabel: "Total de páginas que serão geradas",
-        exportButton: "Exportar Agenda",
+        exportButton: "Exportar PDF",
         generating: "Gerando páginas…",
         exportError: "Não foi possível gerar a Agenda. Tente novamente.",
-        noPagesFound: "Nenhuma página encontrada para exportar."
+        noPagesFound: "Nenhuma página encontrada para exportar.",
+
+        exportSvgDivider: "ou",
+        exportSvgNotice: "Experimental: exporta como arquivo(s) .svg vetorial(is) em vez de PDF, para testar a qualidade do resultado. Nem todo recurso visual é suportado ainda — confira o arquivo gerado antes de usar em produção.",
+        exportSvgMergeToggle: "Gerar um único arquivo SVG (páginas empilhadas verticalmente). Desmarque para baixar um arquivo separado por página.",
+        exportSvgButton: "Exportar SVG",
+        exportSvgError: "Não foi possível exportar como SVG. Tente novamente."
     },
     "en": {
         panelTitle: "Export Agenda",
@@ -63,10 +69,16 @@ I18n.addTranslations('agendaExportTool', {
 
         exportIntro: "When exporting, the system generates all repeated pages with the variables already substituted, then automatically opens the browser's print window (Ctrl+P).",
         exportSummaryLabel: "Total pages that will be generated",
-        exportButton: "Export Agenda",
+        exportButton: "Export PDF",
         generating: "Generating pages…",
         exportError: "Could not generate the Agenda. Please try again.",
-        noPagesFound: "No pages found to export."
+        noPagesFound: "No pages found to export.",
+
+        exportSvgDivider: "or",
+        exportSvgNotice: "Experimental: exports as vector .svg file(s) instead of PDF, so we can test result quality. Not every visual feature is supported yet — check the generated file before using it in production.",
+        exportSvgMergeToggle: "Generate a single SVG file (pages stacked vertically). Uncheck to download one file per page instead.",
+        exportSvgButton: "Export SVG",
+        exportSvgError: "Could not export as SVG. Please try again."
     },
     "es": {
         panelTitle: "Exportar Agenda",
@@ -94,9 +106,15 @@ I18n.addTranslations('agendaExportTool', {
 
         exportIntro: "Al exportar, el sistema genera todas las páginas repetidas con las variables ya sustituidas y luego abre automáticamente la ventana de impresión del navegador (Ctrl+P).",
         exportSummaryLabel: "Total de páginas que se generarán",
-        exportButton: "Exportar Agenda",
+        exportButton: "Exportar PDF",
         generating: "Generando páginas…",
         exportError: "No se pudo generar la Agenda. Inténtelo de nuevo.",
-        noPagesFound: "No se encontraron páginas para exportar."
+        noPagesFound: "No se encontraron páginas para exportar.",
+
+        exportSvgDivider: "o",
+        exportSvgNotice: "Experimental: exporta como archivo(s) .svg vectorial(es) en lugar de PDF, para probar la calidad del resultado. No todos los recursos visuales están soportados todavía — revisa el archivo generado antes de usarlo en producción.",
+        exportSvgMergeToggle: "Generar un único archivo SVG (páginas apiladas verticalmente). Desmarca para descargar un archivo separado por página.",
+        exportSvgButton: "Exportar SVG",
+        exportSvgError: "No se pudo exportar como SVG. Inténtelo de nuevo."
     }
 });

@@ -110,22 +110,30 @@ const t = (key: string): string => I18n.t('agendaSvgExport.' + key);
 export class AgendaSvgExport {
 
   /**
-   * Entry point -- called from AgendaSvgExportTool.ts. Renders up to
-   * `opts.maxOutputPages` resolved output pages (default 1: this is an
-   * experimental "see how it looks" export, not meant to churn through a
-   * multi-hundred-page agenda). By default (`opts.merge !== false`) all
-   * rendered pages are combined into a SINGLE downloaded .svg, stacked
-   * vertically -- SVG has no native concept of "pages" the way PDF does,
-   * so this is the standard convention for representing several pages in
-   * one file (one tall canvas, one page-height's worth of content per
-   * section). Pass `merge: false` to get the original one-file-per-page
-   * behavior instead.
+   * Entry point -- called from AgendaExportTool.ts's "Exportar SVG" button
+   * (Actions tab), right next to the existing PDF button. Renders every
+   * configured output page (same `data-agenda-repeat`/alternate/sequence
+   * config from the Pages tab that AgendaExport.print() itself reads --
+   * no separate/lower default here, this mirrors the PDF button's "export
+   * everything" behavior exactly) unless `opts.maxOutputPages` caps it.
+   * By default (`opts.merge !== false`) all rendered pages are combined
+   * into a SINGLE downloaded .svg, stacked vertically -- SVG has no native
+   * concept of "pages" the way PDF does, so this is the standard
+   * convention for representing several pages in one file (one tall
+   * canvas, one page-height's worth of content per section). Pass
+   * `merge: false` to get one file per page instead.
+   *
+   * Still EXPERIMENTAL -- see this file's header comment for what
+   * @tooooools/html-to-svg does/doesn't support yet. A large agenda (many
+   * repeated pages) hasn't been performance-tested with this renderer the
+   * way the PDF path has; if it's noticeably slow or a page's font isn't
+   * covered by CORE_FONTS, that failure is caught per-page (see the loop
+   * below) so one bad page doesn't abort the whole run.
    */
   static async print(editor: HTMLElement, opts: { maxOutputPages?: number; merge?: boolean } = {}): Promise<void> {
-    const limit = opts.maxOutputPages ?? 1;
     const merge = opts.merge !== false;
 
-    const pages = await AgendaExport.buildFlattenedOutputPages(editor, { maxOutputPages: limit });
+    const pages = await AgendaExport.buildFlattenedOutputPages(editor, { maxOutputPages: opts.maxOutputPages });
     if (!pages || !pages.length) {
       Notify.toast(t('noPagesFound'), 'error');
       return;

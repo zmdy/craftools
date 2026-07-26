@@ -2,7 +2,9 @@ import { I18n } from "../settings/Translations.js";
 
 /**
  * Runtime toasts for AgendaSvgExport.ts's export pipeline (distinct from
- * AgendaSvgExportTool_Translations.ts, which covers the panel UI itself).
+ * AgendaExportTool_Translations.ts's own agendaExportTool.exportSvg* keys,
+ * which cover the panel UI -- button label, merge toggle, etc. -- that
+ * triggers this).
  */
 I18n.addTranslations('agendaSvgExport', {
     "pt-br": {

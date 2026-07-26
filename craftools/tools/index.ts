@@ -47,7 +47,6 @@ export { VariableContentTool } from './variablecontent/VariableContentTool';
 // These just run ToolRegistry.register(); they have no exported class.
 import './album/AlbumTool';
 import './agenda/AgendaExportTool';
-import './agenda/AgendaSvgExportTool';
 import './generator/GeneratorTool';
 import './imageslicer/ImageSlicerTool';
 import './calendar/CalendarTool';

@@ -82,7 +82,7 @@ export class PageTool {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mod: any = await import('../calendar/CalendarTool.js');
         mod.CalendarTool.setup(editor);
-      } else if (toolType === 'generator' || toolType === 'agenda' || toolType === 'agendasvg' || toolType === 'imageslicer') {
+      } else if (toolType === 'generator' || toolType === 'agenda' || toolType === 'imageslicer') {
         // Delegate to the real sidebar button click instead of duplicating
         // its setup logic here: generator's click handler in Editor.ts also
         // saves the page's original HTML/cssText (this._savedPageHtml)

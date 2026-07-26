@@ -206,6 +206,36 @@ export class AgendaExportTool {
           }
         });
       }
+
+      // SVG export (experimental) -- same trigger pattern as the PDF button
+      // above, delegating the real work to AgendaSvgExport.ts (dynamic
+      // import, only loaded when actually used). See that file's header
+      // comment for what it does/doesn't support yet.
+      const exportSvgBtn = root.querySelector<HTMLButtonElement>('#agenda-export-svg-btn');
+      const mergeInput   = root.querySelector<HTMLInputElement>('#agenda-export-svg-merge');
+      if (exportSvgBtn) {
+        exportSvgBtn.addEventListener('click', async () => {
+          const currentPages = pagesSnapshot();
+          if (!currentPages.length) {
+            Notify.toast(a('noPagesFound'), 'error');
+            return;
+          }
+          const merge = mergeInput?.checked ?? true;
+          exportSvgBtn.disabled = true;
+          const originalHtml = exportSvgBtn.innerHTML;
+          exportSvgBtn.innerHTML = `<span class="material-symbols-outlined spin" style="font-size:16px;">progress_activity</span> ${a('generating')}`;
+          try {
+            const { AgendaSvgExport } = await import('../../utils/AgendaSvgExport.js');
+            await AgendaSvgExport.print(editor, { merge });
+          } catch (err) {
+            console.error('[AgendaExportTool] Failed to export Agenda as SVG:', err);
+            Notify.toast(a('exportSvgError'), 'error', 6000);
+          } finally {
+            exportSvgBtn.disabled = false;
+            exportSvgBtn.innerHTML = originalHtml;
+          }
+        });
+      }
     };
 
     renderPanel();
@@ -459,6 +489,27 @@ export class AgendaExportTool {
       <button type="button" id="agenda-export-btn" class="craftools-topbtn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px;">
         <span class="material-symbols-outlined" style="font-size:18px;">print</span>
         ${a('exportButton')}
+      </button>
+
+      <div style="display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--text-muted);">
+        <div style="flex:1; height:1px; background:var(--border, #e4e4e7);"></div>
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">${a('exportSvgDivider')}</span>
+        <div style="flex:1; height:1px; background:var(--border, #e4e4e7);"></div>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:flex-start; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3); border-radius:8px; padding:10px; margin-bottom:10px;">
+        <span class="material-symbols-outlined" style="font-size:16px; color:#f97316;">science</span>
+        <span style="font-size:11px; color:var(--text-secondary);">${a('exportSvgNotice')}</span>
+      </div>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:0 0 10px;">
+        <input type="checkbox" id="agenda-export-svg-merge" checked style="margin-top:2px;">
+        <span style="font-size:11.5px;">${a('exportSvgMergeToggle')}</span>
+      </label>
+
+      <button type="button" id="agenda-export-svg-btn" class="craftools-topbtn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">data_object</span>
+        ${a('exportSvgButton')}
       </button>
     `;
   }

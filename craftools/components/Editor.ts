@@ -90,8 +90,6 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // '.js' to '.ts' stubs (side-effect only) that don't export named classes.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   agenda:    () => import('../tools/agenda/AgendaExportTool.js').then((m: any) => m.AgendaExportTool.setup.bind(m.AgendaExportTool)),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  agendasvg: () => import('../tools/agenda/AgendaSvgExportTool.js').then((m: any) => m.AgendaSvgExportTool.setup.bind(m.AgendaSvgExportTool)),
   // AlbumTool.js's wizard logic was ported to AlbumWizard.ts (see that file's
   // header comment for why it's split from AlbumTool.ts, the eagerly-loaded
   // ToolRegistry-only stub above). AlbumTool.js itself is now dead code.
@@ -819,7 +817,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'agendasvg', 'calendar', 'album', 'imageslicer', 'settings',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
