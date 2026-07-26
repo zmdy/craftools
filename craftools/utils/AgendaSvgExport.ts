@@ -71,6 +71,8 @@ import dmMonoMediumUrl          from '../../assets/fonts/DMMono-Medium.woff?url'
 // exported SVG coming out blank. Building the SAME stack string here via
 // the app's own withEmojiFallback() (rather than hand-copying it) keeps
 // this in sync automatically if that fallback stack ever changes.
+import { loadFontCatalog } from './ApiDataLoader.ts';
+
 const fontFamilyKey = (primary: string): string => withEmojiFallback(primary).replace(/['"]/g, '');
 
 const CORE_FONTS = [
@@ -82,6 +84,39 @@ const CORE_FONTS = [
   { family: fontFamilyKey('DM Mono'),          url: dmMonoRegularUrl },
   { family: fontFamilyKey('DM Mono'),          url: dmMonoMediumUrl,          weight: '500' },
 ];
+
+/**
+ * Resolve as declarações de fonte para o @tooooools/html-to-svg.
+ * Tenta buscar o catálogo de fontes da API (arquivos TTF/OTF/WOFF) e montar os objetos;
+ * se a API não retornar dados, utiliza o fallback estático CORE_FONTS.
+ */
+async function resolveSvgExportFonts(): Promise<Array<{ family: string; url: string; weight?: string; style?: string }>> {
+  const apiCatalog = await loadFontCatalog();
+  const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
+
+  if (apiCatalog && apiCatalog.length > 0 && apiBase) {
+    const dynamicFonts: Array<{ family: string; url: string; weight?: string; style?: string }> = [];
+    for (const fam of apiCatalog) {
+      const famKey = fontFamilyKey(fam.name);
+      for (const file of fam.files) {
+        // Opentype.js (usado pelo html-to-svg) suporta ttf, otf, woff (não woff2).
+        if (['ttf', 'otf', 'woff'].includes(file.format)) {
+          dynamicFonts.push({
+            family: famKey,
+            url: apiBase + file.api_url,
+            weight: String(file.weight),
+            style: file.style,
+          });
+        }
+      }
+    }
+    if (dynamicFonts.length > 0) {
+      return dynamicFonts;
+    }
+  }
+
+  return CORE_FONTS;
+}
 
 // Minimal, hand-picked subset of PdfExport._buildCSS()'s rules -- only the
 // ones that actually affect a flattened page's layout (absolute positioning
@@ -166,7 +201,8 @@ export class AgendaSvgExport {
     const rendered: SVGSVGElement[] = [];
 
     try {
-      renderer = new HtmlToSvg({ fonts: CORE_FONTS });
+      const fontsToUse = await resolveSvgExportFonts();
+      renderer = new HtmlToSvg({ fonts: fontsToUse });
       await renderer.preload();
 
       let i = 0;
