@@ -33,23 +33,7 @@ const MONTH_NAMES_PT = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-// Fonts available in the "Estilo" selectors (reduced, print-friendly list;
-// TextTool.ts has its own larger list, but it isn't reusable from here).
-const CALENDAR_FONTS = ['DM Sans', 'DM Serif Display', 'Open Sans', 'Georgia', 'Arial', 'Times New Roman', 'Quicksand', 'Lobster'];
-
-const loadCalendarFonts = (): void => {
-  const googleFonts = CALENDAR_FONTS.filter(f => !['Arial', 'Times New Roman', 'Georgia'].includes(f));
-  const linkId = 'craftools-dynamic-fonts';
-  let link = document.getElementById(linkId) as HTMLLinkElement | null;
-  if (!link) {
-    link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-  }
-  const fontQuery = googleFonts.map(f => f.replace(/\s+/g, '+')).join('|');
-  link.href = `https://fonts.googleapis.com/css?family=${fontQuery}&display=swap`;
-};
+import { loadCraftoolsFonts } from '../../utils/FontList.ts';
 
 interface GridPreset {
   id: string;
