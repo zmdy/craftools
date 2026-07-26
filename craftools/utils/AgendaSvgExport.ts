@@ -154,6 +154,20 @@ export class AgendaSvgExport {
         el.style.minHeight = size.height;
         if (size.background) el.style.background = size.background;
 
+        // craftools.css runs every `.craftools-page` through a `pageIn`
+        // entrance animation (opacity 0 -> 1 over .25s, see @keyframes
+        // pageIn) -- the class survives on this clone since only the
+        // individual `<craftools-element>`s get flattened/replaced, not the
+        // page container itself. html-to-svg reads the element's real
+        // COMPUTED opacity at the moment render() runs (synchronously,
+        // right after insertion) and bakes it into the SVG's root <g> --
+        // catching the animation still at or near its `from { opacity:0 }`
+        // keyframe, so every export came out as a fully present but
+        // opacity="0" (i.e. fully transparent/invisible) SVG. Killing the
+        // animation outright avoids the whole timing race instead of
+        // trying to wait it out.
+        el.style.animation = 'none';
+
         stage.innerHTML = '';
         stage.appendChild(el);
 
