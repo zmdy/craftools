@@ -17,37 +17,64 @@
  *    _renderTextFont() -- desktop never had an equivalent.
  */
 
-/** Base font catalog (same list as TextTool.js / VariableContentTool.js). */
+import { loadFontCatalog, type ApiFontFamily } from './ApiDataLoader.ts';
+
+/** Base font catalog fallback. */
 export const FONTS: string[] = [
   'DM Sans', 'DM Serif Display', 'DM Mono', 'Open Sans', 'Pacifico', 'Lobster',
   'Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Impact',
   'Parisienne', 'Dancing Script', 'Quicksand', 'Quintessential', 'Grenze Gotisch',
 ];
 
-/** Fonts assumed to be pre-installed (OS-provided) -- never fetched from Google Fonts. */
-const SYSTEM_FONTS = new Set(['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Impact']);
+/** Fonts assumed to be pre-installed (OS-provided) -- never fetched remotely. */
+export const SYSTEM_FONTS = new Set(['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Impact']);
 
 const LOCAL_FONTS_KEY = 'craftools-local-fonts';
-const GOOGLE_FONTS_LINK_ID = 'craftools-dynamic-fonts';
+const DYNAMIC_FONTS_LINK_ID = 'craftools-dynamic-fonts';
+
+let _apiFontCatalog: ApiFontFamily[] | null = null;
 
 /**
- * Injects/updates a Google Fonts <link> covering every non-system font in
- * `fonts`. Safe to call repeatedly (single shared <link>, replaced in place).
+ * Retorna os nomes das fontes disponíveis (carregadas da API ou fallback local).
  */
-export function loadGoogleFonts(fonts: string[]): void {
-  const googleFonts = fonts.filter(f => !SYSTEM_FONTS.has(f));
-  if (googleFonts.length === 0) return;
+export async function getActiveFonts(): Promise<string[]> {
+  const catalog = await loadFontCatalog();
+  if (catalog && catalog.length > 0) {
+    _apiFontCatalog = catalog;
+    return catalog.map(f => f.name);
+  }
+  return FONTS;
+}
 
-  let link = document.getElementById(GOOGLE_FONTS_LINK_ID) as HTMLLinkElement | null;
+/**
+ * Carrega as folhas de estilo das fontes dinâmicas.
+ * Tenta carregar do endpoint fonts.css.php da API; se não houver base de API configurada
+ * ou se falhar, utiliza a fallback do Google Fonts.
+ */
+export function loadCraftoolsFonts(fonts: string[]): void {
+  const nonSystemFonts = fonts.filter(f => !SYSTEM_FONTS.has(f));
+  if (nonSystemFonts.length === 0) return;
+
+  let link = document.getElementById(DYNAMIC_FONTS_LINK_ID) as HTMLLinkElement | null;
   if (!link) {
     link = document.createElement('link');
-    link.id = GOOGLE_FONTS_LINK_ID;
+    link.id = DYNAMIC_FONTS_LINK_ID;
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   }
-  const fontQuery = googleFonts.map(f => f.replace(/\s+/g, '+')).join('|');
-  link.href = `https://fonts.googleapis.com/css?family=${fontQuery}&display=swap`;
+
+  const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
+  const fontQuery = nonSystemFonts.map(f => f.replace(/\s+/g, '+')).join('|');
+
+  if (apiBase) {
+    link.href = `${apiBase}/v1/fonts.css.php?family=${fontQuery}`;
+  } else {
+    link.href = `https://fonts.googleapis.com/css?family=${fontQuery}&display=swap`;
+  }
 }
+
+/** Legacy alias */
+export const loadGoogleFonts = loadCraftoolsFonts;
 
 /** Reads the user's saved "local font" names (typed, not uploaded files) from localStorage. */
 export function getSavedLocalFonts(): string[] {
