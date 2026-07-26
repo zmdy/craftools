@@ -113,10 +113,17 @@ export class AgendaSvgExport {
    * Entry point -- called from AgendaSvgExportTool.ts. Renders up to
    * `opts.maxOutputPages` resolved output pages (default 1: this is an
    * experimental "see how it looks" export, not meant to churn through a
-   * multi-hundred-page agenda) to individually downloaded .svg files.
+   * multi-hundred-page agenda). By default (`opts.merge !== false`) all
+   * rendered pages are combined into a SINGLE downloaded .svg, stacked
+   * vertically -- SVG has no native concept of "pages" the way PDF does,
+   * so this is the standard convention for representing several pages in
+   * one file (one tall canvas, one page-height's worth of content per
+   * section). Pass `merge: false` to get the original one-file-per-page
+   * behavior instead.
    */
-  static async print(editor: HTMLElement, opts: { maxOutputPages?: number } = {}): Promise<void> {
+  static async print(editor: HTMLElement, opts: { maxOutputPages?: number; merge?: boolean } = {}): Promise<void> {
     const limit = opts.maxOutputPages ?? 1;
+    const merge = opts.merge !== false;
 
     const pages = await AgendaExport.buildFlattenedOutputPages(editor, { maxOutputPages: limit });
     if (!pages || !pages.length) {
@@ -141,6 +148,7 @@ export class AgendaSvgExport {
     let renderer: any = null;
     let okCount  = 0;
     let errCount = 0;
+    const rendered: SVGSVGElement[] = [];
 
     try {
       renderer = new HtmlToSvg({ fonts: CORE_FONTS });
@@ -178,12 +186,20 @@ export class AgendaSvgExport {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             async (_from: any, to: any) => to,
           );
-          this._download(svg.outerHTML, `craftools-agenda-p${i}.svg`);
+          if (merge) {
+            rendered.push(svg);
+          } else {
+            this._download(svg.outerHTML, `craftools-agenda-p${i}.svg`);
+          }
           okCount++;
         } catch (err) {
           console.error('[AgendaSvgExport] Failed to render page', i, err);
           errCount++;
         }
+      }
+
+      if (merge && rendered.length) {
+        this._download(this._mergePages(rendered), 'craftools-agenda.svg');
       }
 
       if (okCount > 0)  Notify.toast(t('done').replace('{n}', String(okCount)), 'success', 5000);
@@ -198,6 +214,99 @@ export class AgendaSvgExport {
       stage.remove();
       styleTag.remove();
     }
+  }
+
+  /**
+   * Combines several independently-rendered page SVGs into a single
+   * document, stacked vertically (SVG has no native "pages" the way PDF
+   * does -- one tall canvas with each page's content translated to its own
+   * vertical band is the standard convention for this). Namespaces every
+   * id in each page first (see _namespaceIds()): html-to-svg's own ids are
+   * short content-derived hashes (e.g. "clip_d75afb83a7e"), which collide
+   * across pages that render near-identical content -- extremely likely
+   * here, since Agenda pages are usually the same template repeated with
+   * only a few resolved variables differing. Left unprefixed, merging
+   * would silently point later pages' clip-path/filter references at an
+   * earlier page's <defs> entries.
+   */
+  private static _mergePages(svgs: SVGSVGElement[], gap = 24): string {
+    const NS = 'http://www.w3.org/2000/svg';
+    const widths  = svgs.map(s => parseFloat(s.getAttribute('width')  || '0') || 0);
+    const heights = svgs.map(s => parseFloat(s.getAttribute('height') || '0') || 0);
+    const totalWidth  = Math.max(...widths, 1);
+    const totalHeight = heights.reduce((sum, h) => sum + h, 0) + gap * Math.max(0, svgs.length - 1);
+
+    const root = document.createElementNS(NS, 'svg');
+    root.setAttribute('xmlns', NS);
+    root.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+    root.setAttribute('width',  String(totalWidth));
+    root.setAttribute('height', String(totalHeight));
+
+    // Purely cosmetic backdrop so stacked pages read as separate sheets
+    // instead of bleeding into each other -- mirrors how PdfExport's own
+    // on-screen print preview shows pages on a grey background with a gap.
+    const backdrop = document.createElementNS(NS, 'rect');
+    backdrop.setAttribute('width',  String(totalWidth));
+    backdrop.setAttribute('height', String(totalHeight));
+    backdrop.setAttribute('fill', '#e4e4e7');
+    root.appendChild(backdrop);
+
+    const defs = document.createElementNS(NS, 'defs');
+    root.appendChild(defs);
+
+    let offsetY = 0;
+    svgs.forEach((svg, i) => {
+      this._namespaceIds(svg, `p${i + 1}`);
+
+      const pageDefs = svg.querySelector('defs');
+      if (pageDefs) [...pageDefs.children].forEach(child => defs.appendChild(child));
+
+      const g = document.createElementNS(NS, 'g');
+      g.setAttribute('transform', `translate(${(totalWidth - (widths[i] || 0)) / 2}, ${offsetY})`);
+      [...svg.childNodes].forEach(node => {
+        if ((node as Element).tagName?.toLowerCase() === 'defs') return;
+        g.appendChild(node.cloneNode(true));
+      });
+      root.appendChild(g);
+
+      offsetY += (heights[i] || 0) + gap;
+    });
+
+    return new XMLSerializer().serializeToString(root);
+  }
+
+  /** Prefixes every `id` in `svg` with `prefix`, rewriting every attribute
+   *  that references one of those ids (`url(#id)` on clip-path/filter/mask/
+   *  fill/stroke, and `href`/`xlink:href="#id"`) to match -- see
+   *  _mergePages()'s doc comment for why this matters. */
+  private static _namespaceIds(svg: SVGSVGElement, prefix: string): void {
+    const idMap = new Map<string, string>();
+    svg.querySelectorAll('[id]').forEach(el => {
+      const oldId = el.getAttribute('id');
+      if (!oldId) return;
+      const newId = `${prefix}-${oldId}`;
+      idMap.set(oldId, newId);
+      el.setAttribute('id', newId);
+    });
+    if (!idMap.size) return;
+
+    const URL_REF_ATTRS = ['clip-path', 'filter', 'mask', 'fill', 'stroke'];
+    svg.querySelectorAll('*').forEach(el => {
+      for (const attr of URL_REF_ATTRS) {
+        const val = el.getAttribute(attr);
+        if (val && val.startsWith('url(#') && val.endsWith(')')) {
+          const newId = idMap.get(val.slice(5, -1));
+          if (newId) el.setAttribute(attr, `url(#${newId})`);
+        }
+      }
+      for (const attr of ['href', 'xlink:href']) {
+        const val = el.getAttribute(attr);
+        if (val && val.startsWith('#')) {
+          const newId = idMap.get(val.slice(1));
+          if (newId) el.setAttribute(attr, `#${newId}`);
+        }
+      }
+    });
   }
 
   private static _download(svgMarkup: string, filename: string): void {

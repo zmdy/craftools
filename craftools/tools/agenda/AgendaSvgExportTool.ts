@@ -48,6 +48,11 @@ export class AgendaSvgExportTool {
             <div class="help-text" style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">${a('pageCountHint')}</div>
           </div>
 
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:0 0 14px;">
+            <input type="checkbox" id="agenda-svg-merge" checked style="margin-top:2px;">
+            <span style="font-size:11.5px;">${a('mergeToggle')}</span>
+          </label>
+
           <button type="button" id="agenda-svg-export-btn" class="craftools-topbtn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px;">
             <span class="material-symbols-outlined" style="font-size:18px;">data_object</span>
             ${a('exportButton')}
@@ -58,6 +63,7 @@ export class AgendaSvgExportTool {
 
     const exportBtn  = panelBody.querySelector<HTMLButtonElement>('#agenda-svg-export-btn');
     const countInput = panelBody.querySelector<HTMLInputElement>('#agenda-svg-page-count');
+    const mergeInput = panelBody.querySelector<HTMLInputElement>('#agenda-svg-merge');
 
     if (exportBtn) {
       exportBtn.addEventListener('click', async () => {
@@ -66,13 +72,14 @@ export class AgendaSvgExportTool {
           return;
         }
         const maxOutputPages = Math.max(1, Math.min(20, parseInt(countInput?.value ?? '1', 10) || 1));
+        const merge = mergeInput?.checked ?? true;
 
         exportBtn.disabled = true;
         const originalHtml = exportBtn.innerHTML;
         exportBtn.innerHTML = `<span class="material-symbols-outlined spin" style="font-size:16px;">progress_activity</span> ${a('generating')}`;
         try {
           const { AgendaSvgExport } = await import('../../utils/AgendaSvgExport.js');
-          await AgendaSvgExport.print(editor, { maxOutputPages });
+          await AgendaSvgExport.print(editor, { maxOutputPages, merge });
         } catch (err) {
           console.error('[AgendaSvgExportTool] Failed to export Agenda as SVG:', err);
           Notify.toast(a('exportError'), 'error', 6000);
