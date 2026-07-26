@@ -37,10 +37,11 @@
  * fonts a given document actually uses) is expected follow-up once this
  * first pass has actually been tested against real content.
  */
-import { Notify }       from './Notify.js';
-import { I18n }         from '../settings/Translations.js';
-import { AgendaExport } from './AgendaExport.js';
-import HtmlToSvg         from '@tooooools/html-to-svg';
+import { Notify }            from './Notify.js';
+import { I18n }              from '../settings/Translations.js';
+import { AgendaExport }      from './AgendaExport.js';
+import { withEmojiFallback } from './EmojiFont.js';
+import HtmlToSvg              from '@tooooools/html-to-svg';
 import './AgendaSvgExport_Translations.js';
 
 import dmSansRegularUrl         from '../../assets/fonts/DMSans-Regular.woff?url';
@@ -52,14 +53,34 @@ import dmMonoRegularUrl         from '../../assets/fonts/DMMono-Regular.woff?url
 import dmMonoMediumUrl          from '../../assets/fonts/DMMono-Medium.woff?url';
 
 // ── Font declarations -- see file header for why these must be real files ──
+//
+// @tooooools/html-to-svg's text renderer matches a font declaration against
+// a text node's computed font-family via EXACT STRING EQUALITY (confirmed
+// by reading its source, matchFont() in dist/html-to-svg.module.js) --
+// `family === computedStyle.getPropertyValue('font-family').replace(/['"]/g, '')`.
+// It does NOT parse the value as a CSS font-family fallback LIST and match
+// any single name in it. Every text-bearing element in this app sets its
+// font-family via EmojiFont.ts's withEmojiFallback() (see that file), which
+// always appends the emoji fallback stack -- so the computed value for a
+// "DM Sans" text box is never just `DM Sans`, it's the full stack string
+// (`DM Sans, Noto Color Emoji, Apple Color Emoji, Segoe UI Emoji, Segoe UI
+// Symbol, Android Emoji, sans-serif` once getComputedStyle's quotes are
+// stripped). Declaring `family: 'DM Sans'` alone -- what this looked like
+// before actually testing it against a real page -- never matches anything
+// real, hence every text node failing with "Cannot find font" and every
+// exported SVG coming out blank. Building the SAME stack string here via
+// the app's own withEmojiFallback() (rather than hand-copying it) keeps
+// this in sync automatically if that fallback stack ever changes.
+const fontFamilyKey = (primary: string): string => withEmojiFallback(primary).replace(/['"]/g, '');
+
 const CORE_FONTS = [
-  { family: 'DM Sans',          url: dmSansRegularUrl },
-  { family: 'DM Sans',          url: dmSansBoldUrl,            weight: '700' },
-  { family: 'DM Sans',          url: dmSansItalicUrl,          style: 'italic' },
-  { family: 'DM Serif Display', url: dmSerifDisplayRegularUrl },
-  { family: 'DM Serif Display', url: dmSerifDisplayItalicUrl,  style: 'italic' },
-  { family: 'DM Mono',          url: dmMonoRegularUrl },
-  { family: 'DM Mono',          url: dmMonoMediumUrl,          weight: '500' },
+  { family: fontFamilyKey('DM Sans'),          url: dmSansRegularUrl },
+  { family: fontFamilyKey('DM Sans'),          url: dmSansBoldUrl,            weight: '700' },
+  { family: fontFamilyKey('DM Sans'),          url: dmSansItalicUrl,          style: 'italic' },
+  { family: fontFamilyKey('DM Serif Display'), url: dmSerifDisplayRegularUrl },
+  { family: fontFamilyKey('DM Serif Display'), url: dmSerifDisplayItalicUrl,  style: 'italic' },
+  { family: fontFamilyKey('DM Mono'),          url: dmMonoRegularUrl },
+  { family: fontFamilyKey('DM Mono'),          url: dmMonoMediumUrl,          weight: '500' },
 ];
 
 // Minimal, hand-picked subset of PdfExport._buildCSS()'s rules -- only the
