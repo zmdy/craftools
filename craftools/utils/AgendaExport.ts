@@ -394,6 +394,118 @@ export class AgendaExport {
     return outputInnerHtmls.length ? outputInnerHtmls : null;
   }
 
+  /**
+   * Same variable-resolution pipeline as _buildDocument(), but instead of
+   * concatenating every output page into one print-ready HTML string,
+   * returns each FLATTENED page as its own standalone DOM element (plus its
+   * PageSize) -- for callers that need to walk/measure one page's real DOM
+   * at a time (e.g. AgendaSvgExport.ts, which attaches each page to the
+   * live document and feeds it to an SVG renderer that reads computed
+   * layout).
+   *
+   * Deliberately a near-duplicate of _buildDocument()'s loop rather than a
+   * shared refactor -- this file already keeps buildOutputPages() as a
+   * parallel near-duplicate for the same reason (see its own doc comment):
+   * the per-repetition logic here has accumulated several narrow, easy-to-
+   * silently-break bugfixes (sequence continuation, leader/follower
+   * ordering, alternate-layout mirroring, standalone Mini Calendar
+   * advancement), and each consumer needs a different final shape (HTML
+   * string vs. live DOM node) at the very end of an otherwise identical
+   * pipeline.
+   */
+  static async buildFlattenedOutputPages(
+    editor: HTMLElement,
+    opts: { maxOutputPages?: number } = {},
+  ): Promise<{ el: HTMLElement; size: import('./PdfExport.js').PageSize }[] | null> {
+    const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
+    if (!pages.length) return null;
+
+    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
+    const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+
+    const allBindings: (VariableBinding | null)[] = [];
+    const repetitionIndicesSet = new Set<number>();
+    let prefetchCounted = 0;
+    for (const page of pages) {
+      if (prefetchCounted >= renderLimit) break;
+      this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
+      const repeatCount = this._repeatCount(page);
+      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
+        repetitionIndicesSet.add(prefetchCounted);
+      }
+    }
+    const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
+      repetitionIndices: [...repetitionIndicesSet],
+    });
+
+    const result: { el: HTMLElement; size: import('./PdfExport.js').PageSize }[] = [];
+    let outputPageNumber = 0;
+    let sequenceBase = 0;
+
+    outer:
+    for (const page of pages) {
+      const size        = PdfExport._parsePageSize(page);
+      const repeatCount = this._repeatCount(page);
+      const origEls     = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
+      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
+
+      for (let i = 0; i < repeatCount; i++) {
+        if (outputPageNumber >= renderLimit) break outer;
+        outputPageNumber++;
+
+        const clone = page.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
+        const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
+        const globalRepetitionIndex = pageStartIndex + i;
+
+        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+          this._applyAlternateLayout(page, cloneEls);
+        }
+
+        const context: ResolveContext = {
+          repetitionIndex: globalRepetitionIndex,
+          pageNumber:      outputPageNumber,
+          totalPages:      totalOutputPages,
+          now:             new Date(),
+        };
+
+        const picks = VariableEngine.newLinkRegistry();
+
+        const jobs: BindingJob[] = origEls
+          .map((origEl, idx) => {
+            const cloneEl  = cloneEls[idx];
+            const toolType = origEl.getAttribute('data-craftool');
+            const binding  = this._getBinding(origEl, toolType);
+            return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+          })
+          .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
+
+        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
+
+        [...leaders, ...followers].forEach(j => {
+          const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+          this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+        });
+
+        origEls.forEach((origEl, idx) => {
+          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
+          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
+        });
+
+        clone.querySelectorAll<HTMLElement>('craftools-element')
+          .forEach(el => PdfExport._flattenElement(el));
+
+        result.push({ el: clone, size });
+      }
+
+      sequenceBase = pageStartIndex + repeatCount;
+    }
+
+    return result.length ? result : null;
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   static _repeatCount(page: HTMLElement): number {
@@ -448,7 +560,7 @@ export class AgendaExport {
    * nunca os atributos) saía com os elementos de páginas alternadas/
    * espelhadas na posição errada, não espelhada.
    */
-  private static _applyAlternateLayout(page: HTMLElement, cloneEls: HTMLElement[]): void {
+  static _applyAlternateLayout(page: HTMLElement, cloneEls: HTMLElement[]): void {
     const rawPageWidth = page.style.width || '210mm';
 
     // offsetWidth é zero em elementos não visíveis; nesses casos extraímos
