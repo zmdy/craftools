@@ -16,7 +16,18 @@
     <!-- Fonts Originais CrafTools -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        var apiBase = window.CRAFTOOLS_CONFIG && window.CRAFTOOLS_CONFIG.apiBase ? window.CRAFTOOLS_CONFIG.apiBase.replace(/\/$/, '') : null;
+        var fontUrl = apiBase
+          ? apiBase + '/v1/fonts.css.php?family=DM+Sans:300,400,500,700|DM+Serif+Display:400|DM+Mono:400,500'
+          : 'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap';
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = fontUrl;
+        document.head.appendChild(link);
+      })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
