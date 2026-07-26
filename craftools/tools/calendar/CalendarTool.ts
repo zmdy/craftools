@@ -33,7 +33,10 @@ const MONTH_NAMES_PT = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-import { loadCraftoolsFonts } from '../../utils/FontList.ts';
+import { FONTS, loadCraftoolsFonts } from '../../utils/FontList.ts';
+
+const CALENDAR_FONTS = FONTS;
+const loadCalendarFonts = (): void => loadCraftoolsFonts(CALENDAR_FONTS);
 
 interface GridPreset {
   id: string;
