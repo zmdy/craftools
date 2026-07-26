@@ -227,14 +227,45 @@ export function loadCalendarDate(month: number, day: number): Promise<any> {
   return _cache[key];
 }
 
+export interface ApiFontFile {
+  weight: number;
+  style: string;
+  format: string;
+  api_url: string;
+}
+
+export interface ApiFontFamily {
+  id: string;
+  name: string;
+  category: string;
+  tier: string;
+  files: ApiFontFile[];
+}
+
+export async function loadFontCatalog(): Promise<ApiFontFamily[] | null> {
+  if (_cache.fontCatalog) return _cache.fontCatalog;
+
+  const data = await fetchResource('fonts');
+  if (data && Array.isArray(data)) {
+    _cache.fontCatalog = data;
+    console.info('[ApiDataLoader] Catálogo de fontes carregado da API (%d famílias)', data.length);
+    return data;
+  }
+
+  console.warn('[ApiDataLoader] API de fontes indisponível ou sem dados — fallback para catálogo estático.');
+  return null;
+}
+
 export function invalidateApiDataCache(): void {
   delete _cache.gridSizes;
   delete _cache.albumTemplates;
   delete _cache.emojiKitchenSupported;
   delete _cache.phraseCollections;
+  delete _cache.fontCatalog;
   Object.keys(_cache).forEach(k => {
       if (k.startsWith('phrases:') || k.startsWith('emojiKitchenPartners:') || k.startsWith('emojiKitchenCombo:') || k.startsWith('calendarDate:')) {
           delete _cache[k];
       }
   });
 }
+
