@@ -819,7 +819,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings',
+        'generator', 'agenda', 'agendasvg', 'calendar', 'album', 'imageslicer', 'settings',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
