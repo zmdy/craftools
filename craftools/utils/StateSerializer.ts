@@ -184,12 +184,42 @@ export class StateSerializer {
 
         // 4. Restore style
         el.style.cssText = elState.cssText;
-        
+
         // 5. Restore Inner Content
         const contentEl = el.children[0] as HTMLElement;
         if (contentEl) {
           contentEl.innerHTML = elState.contentHTML;
         }
+
+        // 5b. Sync Craftools_Element's internal transform fields (px/py/pw/ph/pr
+        // + unit strings) from the attributes just restored above.
+        // Craftools_Element (Element.ts) only ever parses x/y/w/h/r into these
+        // fields once, inside connectedCallback() -- there's no
+        // attributeChangedCallback, so setAttribute() alone (step 1) never
+        // updates them. For a brand-new node, connectedCallback already fired
+        // during appendChild() above (before attributes were restored), seeding
+        // defaults (50/50/200/80/0); for a reused node (undo/redo), it fired
+        // long ago with whatever position it had at creation time. Either way,
+        // without this step _applyTransform() below repaints using stale
+        // values instead of the ones we just restored, which visually
+        // collapses every element to the same default box.
+        const anyEl = el as unknown as {
+          px: number; py: number; pw: number; ph: number; pr: number;
+          unitX: string; unitY: string; unitW: string; unitH: string;
+        };
+        const rawX = elState.attributes['x'] || '50';
+        const rawY = elState.attributes['y'] || '50';
+        const rawW = elState.attributes['w'] || '200';
+        const rawH = elState.attributes['h'] || '80';
+        anyEl.unitX = rawX.replace(/[0-9.-]/g, '') || 'px';
+        anyEl.unitY = rawY.replace(/[0-9.-]/g, '') || 'px';
+        anyEl.unitW = rawW.replace(/[0-9.-]/g, '') || 'px';
+        anyEl.unitH = rawH.replace(/[0-9.-]/g, '') || 'px';
+        anyEl.px = parseFloat(rawX);
+        anyEl.py = parseFloat(rawY);
+        anyEl.pw = parseFloat(rawW);
+        anyEl.ph = parseFloat(rawH);
+        anyEl.pr = parseFloat(elState.attributes['r'] ?? '') || 0;
 
         // 6. Force custom element to visually update its transforms and UI handles
         if (typeof (el as any)._applyTransform === 'function') {
