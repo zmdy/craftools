@@ -6,6 +6,15 @@ export interface ElementState {
   attributes: Record<string, string>;
   contentHTML: string;
   /**
+   * Inline style of the `.ct-bg-layer` div (BaseTool.ts's
+   * _getOrCreateBgLayer()), if the element has one. That div is inserted as
+   * the element's actual first DOM child the moment any Background field is
+   * touched -- ahead of the real content area -- so it isn't part of
+   * `contentHTML` or the outer element's own `cssText` and needs its own
+   * slot here.
+   */
+  bgLayerCssText?: string;
+  /**
    * Deep-cloned snapshot of element._craftoolsMeta (ImageTool, QRCodeTool,
    * BarcodeTool, etc.) at serialization time. Undefined for tools that don't
    * use _craftoolsMeta (Stamp, CurvedText — they mirror their state to
@@ -63,10 +72,21 @@ export class StateSerializer {
           }
         }
         
-        // Element's first child is ALWAYS the content area (created by _build())
-        const contentEl = htmlEl.children[0] as HTMLElement;
+        // NOT necessarily children[0] -- BaseTool._getOrCreateBgLayer() inserts
+        // a `.ct-bg-layer` div as the element's real first child the moment any
+        // Background field is touched, ahead of the content area built by
+        // Element.ts's _build(). Craftools_Element exposes a stable
+        // `contentArea` accessor (backed by its private _content field)
+        // specifically so callers don't have to guess by DOM position --
+        // VariableContentTool.ts and AgendaExport.ts already special-case this
+        // same hazard when locating an element's real content div.
+        const contentEl = (htmlEl as unknown as { contentArea?: HTMLElement }).contentArea
+          ?? (htmlEl.children[0] as HTMLElement | undefined);
         const contentHTML = contentEl ? contentEl.innerHTML : '';
-        
+
+        const bgLayer = htmlEl.querySelector<HTMLElement>(':scope > .ct-bg-layer');
+        const bgLayerCssText = bgLayer ? bgLayer.style.cssText : undefined;
+
         const datasetObj: Record<string, string> = {};
         for (const [key, val] of Object.entries(htmlEl.dataset)) {
           if (val !== undefined) datasetObj[key] = val;
@@ -85,6 +105,7 @@ export class StateSerializer {
           dataset: datasetObj,
           attributes,
           contentHTML,
+          bgLayerCssText,
           meta: craftoolsMeta ? JSON.parse(JSON.stringify(craftoolsMeta)) : undefined,
         });
       });
@@ -185,10 +206,26 @@ export class StateSerializer {
         // 4. Restore style
         el.style.cssText = elState.cssText;
 
-        // 5. Restore Inner Content
-        const contentEl = el.children[0] as HTMLElement;
+        // 5. Restore Inner Content -- via contentArea, not children[0] (see
+        // serialize()'s comment re: .ct-bg-layer shifting the real content
+        // div to children[1] once a Background field has ever been touched).
+        const contentEl = (el as unknown as { contentArea?: HTMLElement }).contentArea
+          ?? (el.children[0] as HTMLElement | undefined);
         if (contentEl) {
           contentEl.innerHTML = elState.contentHTML;
+        }
+
+        // 5a. Restore the background layer, if the element had one -- same
+        // insertion convention as BaseTool._getOrCreateBgLayer() (always the
+        // element's first DOM child).
+        if (elState.bgLayerCssText) {
+          let bgLayer = el.querySelector<HTMLElement>(':scope > .ct-bg-layer');
+          if (!bgLayer) {
+            bgLayer = document.createElement('div');
+            bgLayer.className = 'ct-bg-layer';
+            el.insertBefore(bgLayer, el.firstChild);
+          }
+          bgLayer.style.cssText = elState.bgLayerCssText;
         }
 
         // 5b. Sync Craftools_Element's internal transform fields (px/py/pw/ph/pr
