@@ -34,6 +34,8 @@ import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
+import { ProjectSerializer } from '../utils/ProjectSerializer.js';
+import { Notify } from '../utils/Notify.js';
 
 // ── Keyboard shortcuts: element clipboard ──────────────────────────────────────
 // Holds the source element for Ctrl+C/Ctrl+V (see _initHistoryAndSession()'s
@@ -936,6 +938,74 @@ export class Craftools_Editor extends HTMLElement {
     // ── PNG / JPG Export ────────────────────────────────────────────────────
     document.querySelectorAll('#pwa-sidebar-png').forEach(btn => {
       btn.addEventListener('click', (e) => { e.preventDefault(); closeSidebar(); ImageExport.export(this); });
+    });
+
+    // ── JSON Project Export / Import ─────────────────────────────────────────
+    const projPagesWrapper = this.querySelector<HTMLElement>('#pages-wrapper')!;
+
+    document.querySelectorAll('#pwa-sidebar-export-project').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        closeSidebar();
+        
+        const defaultTitle = 'Projeto CrafTools';
+        const title = window.prompt(I18n.t('editor.exportProjectPrompt') || 'Digite o nome do seu projeto:', defaultTitle);
+        if (title === null) return; // Cancelled
+        
+        const finalTitle = title.trim() || defaultTitle;
+        
+        const dismissLoading = Notify.toast(I18n.t('editor.generating') || 'Gerando projeto...', 'info', 60_000);
+        try {
+          const blob = await ProjectSerializer.exportProject(projPagesWrapper, finalTitle);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${finalTitle}.craftools`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('[Editor] Export project failed:', err);
+          Notify.toast(I18n.t('agendaExportTool.exportError') || 'Erro ao exportar', 'error');
+        } finally {
+          dismissLoading?.();
+        }
+      });
+    });
+
+    const fileInput = document.getElementById('project-import-file') as HTMLInputElement;
+    document.querySelectorAll('#pwa-sidebar-import-project').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeSidebar();
+        fileInput?.click();
+      });
+    });
+
+    fileInput?.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      const dismissLoading = Notify.toast(I18n.t('editor.generating') || 'Carregando projeto...', 'info', 60_000);
+      try {
+        const importedTitle = await ProjectSerializer.importProject(projPagesWrapper, file);
+        
+        // Re-attach page events to all new pages in projPagesWrapper
+        this._reattachAllPageEvents(projPagesWrapper);
+
+        // Force history snapshot and session autosave
+        HistoryManager.snapshot(projPagesWrapper);
+        SessionManager.markDirty();
+
+        Notify.toast(I18n.t('editor.importSuccess').replace('{title}', importedTitle), 'success');
+      } catch (err) {
+        console.error('[Editor] Import project failed:', err);
+        Notify.toast(I18n.t('editor.importError'), 'error');
+      } finally {
+        fileInput.value = '';
+        dismissLoading?.();
+      }
     });
 
     // ── Attach page events to initial page ─────────────────────────────────
