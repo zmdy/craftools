@@ -15,10 +15,20 @@ I18n.addTranslations('tableTool', {
         templateRounded: "Bordas arredondadas",
 
         sectionTable: "Tabela",
+        templateLabel: "Estilo",
         rows: "Linhas",
         cols: "Colunas",
         headerRow: "Primeira linha é cabeçalho",
         accentColor: "Cor de destaque",
+
+        sectionTypography: "Tipografia",
+        headerLabel: "Cabeçalho",
+        bodyLabel: "Corpo",
+        fontFamily: "Fonte",
+        fontSize: "Tamanho",
+        bold: "Negrito",
+        italic: "Itálico",
+        textColor: "Cor do texto",
 
         defaultHeaderCellPrefix: "Coluna",
         minRows: "A tabela precisa ter pelo menos 1 linha",
@@ -39,10 +49,20 @@ I18n.addTranslations('tableTool', {
         templateRounded: "Rounded cards",
 
         sectionTable: "Table",
+        templateLabel: "Style",
         rows: "Rows",
         cols: "Columns",
         headerRow: "First row is header",
         accentColor: "Accent color",
+
+        sectionTypography: "Typography",
+        headerLabel: "Header",
+        bodyLabel: "Body",
+        fontFamily: "Font",
+        fontSize: "Size",
+        bold: "Bold",
+        italic: "Italic",
+        textColor: "Text color",
 
         defaultHeaderCellPrefix: "Column",
         minRows: "The table needs at least 1 row",
@@ -63,10 +83,20 @@ I18n.addTranslations('tableTool', {
         templateRounded: "Tarjetas redondeadas",
 
         sectionTable: "Tabla",
+        templateLabel: "Estilo",
         rows: "Filas",
         cols: "Columnas",
         headerRow: "La primera fila es encabezado",
         accentColor: "Color de acento",
+
+        sectionTypography: "Tipografía",
+        headerLabel: "Encabezado",
+        bodyLabel: "Cuerpo",
+        fontFamily: "Fuente",
+        fontSize: "Tamaño",
+        bold: "Negrita",
+        italic: "Cursiva",
+        textColor: "Color del texto",
 
         defaultHeaderCellPrefix: "Columna",
         minRows: "La tabla necesita al menos 1 fila",

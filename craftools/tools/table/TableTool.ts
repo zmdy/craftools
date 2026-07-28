@@ -14,9 +14,10 @@
  * on every save (same mechanism TextTool's typed paragraphs rely on), and
  * the real `<table>` markup (colspan/rowspan/colgroup widths/cell text)
  * round-trips through that HTML verbatim. `_craftoolsMeta` only needs to
- * remember the three properties that AREN'T recoverable by reading the
- * DOM: which style template is active, whether row 0 is styled as a
- * header, and the accent color driving that template.
+ * remember what ISN'T recoverable by reading the DOM: which style template
+ * is active, whether row 0 is styled as a header, the accent color driving
+ * that template, and the header/body typography (font family/size/bold/
+ * italic/color) -- all re-applied to every `<td>` by `_restyle()`.
  *
  * All template styling is applied as inline `style` (not CSS classes) —
  * matching CalendarRenderer.ts's approach — since exported output
@@ -37,12 +38,24 @@ import './TableTool_Translations.js';
 
 export type TableTemplateId = 'simple' | 'header-color' | 'zebra' | 'rounded';
 
+interface FontStyle {
+  family: string;
+  size: number;
+  bold: boolean;
+  italic: boolean;
+  color: string;
+}
+
 interface TableMeta {
   templateId: TableTemplateId;
   /** Whether the first row is styled as a distinct header. Default: true. */
   headerRow: boolean;
   /** Drives header background / zebra tint / rounded-header background. */
   accentColor: string;
+  /** Typography for the header row -- independent from the body's. */
+  headerFont: FontStyle;
+  /** Typography for every non-header row. */
+  bodyFont: FontStyle;
 }
 
 type TableElement = HTMLElement & { _craftoolsMeta?: TableMeta; contentArea?: HTMLElement };
@@ -71,73 +84,115 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/** Default font family/size shared by both header and body on a fresh table. */
+function defaultFontStyle(bold: boolean, color: string): FontStyle {
+  return { family: 'DM Sans', size: 13, bold, italic: false, color };
+}
+
 export class TableTool extends BaseTool {
 
+  /** Maps a flattened schema field key (see getPropertySchema()'s Typography
+   * section) to which FontStyle object + property it writes in _applyProperty(). */
+  private static readonly FONT_KEYS: Record<string, { target: 'headerFont' | 'bodyFont'; prop: keyof FontStyle }> = {
+    headerFontFamily: { target: 'headerFont', prop: 'family' },
+    headerFontSize:   { target: 'headerFont', prop: 'size' },
+    headerBold:       { target: 'headerFont', prop: 'bold' },
+    headerItalic:     { target: 'headerFont', prop: 'italic' },
+    headerTextColor:  { target: 'headerFont', prop: 'color' },
+    bodyFontFamily:   { target: 'bodyFont', prop: 'family' },
+    bodyFontSize:     { target: 'bodyFont', prop: 'size' },
+    bodyBold:         { target: 'bodyFont', prop: 'bold' },
+    bodyItalic:       { target: 'bodyFont', prop: 'italic' },
+    bodyTextColor:    { target: 'bodyFont', prop: 'color' },
+  };
+
+  /**
+   * Sensible header/body text colors for a given template -- header text
+   * needs to contrast against that template's header background (white on
+   * the 3 colored-header templates, dark on 'simple', which has no header
+   * fill). Body text is always dark since every template keeps a light
+   * body background. Used both for a freshly-created table's defaults and
+   * to reset colors back to something readable whenever `applyTemplate()`
+   * switches template (see its own comment for why colors specifically
+   * reset on template switch while family/size/bold/italic don't).
+   */
+  private static _defaultFontColors(templateId: TableTemplateId): { header: string; body: string } {
+    return { header: templateId === 'simple' ? '#1a1a1a' : '#ffffff', body: '#1a1a1a' };
+  }
+
   static getDefaultMeta(): TableMeta {
-    return { templateId: 'simple', headerRow: true, accentColor: '#f97316' };
+    const colors = TableTool._defaultFontColors('simple');
+    return {
+      templateId: 'simple',
+      headerRow: true,
+      accentColor: '#f97316',
+      headerFont: defaultFontStyle(true, colors.header),
+      bodyFont: defaultFontStyle(false, colors.body),
+    };
   }
 
   // ── Template styling (inline CSS, export-safe) ──────────────────────────────
 
-  private static _tableStyleCss(preview = false): string {
-    return [
-      'width:100%', 'height:100%',
-      'border-collapse:collapse',
-      'table-layout:fixed',
-      `font-family:${preview ? 'inherit' : "'DM Sans', system-ui, sans-serif"}`,
-      `font-size:${preview ? '7px' : '13px'}`,
-      'color:#1a1a1a',
-    ].join(';');
+  private static _tableStyleCss(): string {
+    return ['width:100%', 'height:100%', 'border-collapse:collapse', 'table-layout:fixed', 'color:#1a1a1a'].join(';');
   }
 
   private static _cellStyleCss(opts: {
-    templateId: TableTemplateId;
-    accentColor: string;
+    meta: Pick<TableMeta, 'templateId' | 'accentColor' | 'headerFont' | 'bodyFont'>;
     isHeader: boolean;
     rowIndex: number;
     preview?: boolean;
   }): string {
-    const { templateId, accentColor, isHeader, rowIndex, preview } = opts;
+    const { meta, isHeader, rowIndex, preview } = opts;
+    const { templateId, accentColor } = meta;
     const pad = preview ? '2px 3px' : '6px 8px';
     const base = [`padding:${pad}`, 'vertical-align:middle', 'overflow-wrap:break-word', 'outline:none'];
 
+    // Background/border only -- text color/font now come entirely from
+    // headerFont/bodyFont below, so a user's explicit choice always wins
+    // regardless of template.
+    let visual: string[];
     if (templateId === 'header-color') {
+      visual = isHeader
+        ? [`background:${accentColor}`, `border:1px solid ${accentColor}`]
+        : ['background:#ffffff', 'border:1px solid #e4e4e7'];
+    } else if (templateId === 'zebra') {
       if (isHeader) {
-        return [...base, `background:${accentColor}`, 'color:#ffffff', 'font-weight:700',
-          'border:1px solid ' + accentColor].join(';');
+        visual = [`background:${accentColor}`, `border-bottom:2px solid ${accentColor}`];
+      } else {
+        const zebraOn = (rowIndex % 2) === 1;
+        visual = [`background:${zebraOn ? hexToRgba(accentColor, 0.1) : '#ffffff'}`, 'border-bottom:1px solid #e4e4e7'];
       }
-      return [...base, 'background:#ffffff', 'color:#1a1a1a',
-        'border:1px solid #e4e4e7'].join(';');
-    }
-
-    if (templateId === 'zebra') {
-      if (isHeader) {
-        return [...base, `background:${accentColor}`, 'color:#ffffff', 'font-weight:700',
-          'border-bottom:2px solid ' + accentColor].join(';');
-      }
-      const zebraOn = (rowIndex % 2) === 1;
-      return [...base, `background:${zebraOn ? hexToRgba(accentColor, 0.1) : '#ffffff'}`,
-        'color:#1a1a1a', 'border-bottom:1px solid #e4e4e7'].join(';');
-    }
-
-    if (templateId === 'rounded') {
+    } else if (templateId === 'rounded') {
       const bg = isHeader ? accentColor : '#ffffff';
-      const color = isHeader ? '#ffffff' : '#1a1a1a';
-      return [...base, `background:${bg}`, `color:${color}`, isHeader ? 'font-weight:700' : '',
-        'border:1px solid #e4e4e7', 'border-radius:8px',
-        preview ? '' : 'box-shadow:0 1px 2px rgba(0,0,0,.06)'].filter(Boolean).join(';');
+      visual = [`background:${bg}`, 'border:1px solid #e4e4e7', 'border-radius:8px',
+        preview ? '' : 'box-shadow:0 1px 2px rgba(0,0,0,.06)'].filter(Boolean);
+    } else {
+      // 'simple'
+      visual = ['background:transparent', 'border:1px solid #d4d4d8'];
     }
 
-    // 'simple'
-    return [...base, 'background:transparent', 'color:#1a1a1a',
-      isHeader ? 'font-weight:700' : '', 'border:1px solid #d4d4d8'].filter(Boolean).join(';');
+    const font = isHeader ? meta.headerFont : meta.bodyFont;
+    const colors = TableTool._defaultFontColors(templateId);
+    const fontFamily = font?.family || 'DM Sans';
+    const fontSizePx = font?.size ?? 13;
+    const fontSize   = preview ? Math.max(5, Math.round(fontSizePx * 0.55)) : fontSizePx;
+    const fontWeight = font?.bold ? 700 : 400;
+    const fontStyle  = font?.italic ? 'italic' : 'normal';
+    const color      = font?.color || (isHeader ? colors.header : colors.body);
+
+    return [
+      ...base, ...visual,
+      `font-family:${fontFamily}`, `font-size:${fontSize}px`, `font-weight:${fontWeight}`,
+      `font-style:${fontStyle}`, `color:${color}`,
+    ].join(';');
   }
 
   /** Table-level cssText for a given template — 'rounded' needs cell spacing
    * (border-spacing) instead of border-collapse so each cell reads as its
    * own little card, per the confirmed template brief. */
   private static _tableStyleForTemplate(templateId: TableTemplateId, preview = false): string {
-    const common = TableTool._tableStyleCss(preview);
+    const common = TableTool._tableStyleCss();
     if (templateId === 'rounded') {
       return common.replace('border-collapse:collapse', `border-collapse:separate;border-spacing:${preview ? '2px' : '6px'}`);
     }
@@ -156,9 +211,7 @@ export class TableTool extends BaseTool {
     rows.forEach((tr, rowIndex) => {
       const isHeader = meta.headerRow && rowIndex === 0;
       Array.from(tr.cells).forEach(cell => {
-        cell.style.cssText = TableTool._cellStyleCss({
-          templateId: meta.templateId, accentColor: meta.accentColor, isHeader, rowIndex,
-        });
+        cell.style.cssText = TableTool._cellStyleCss({ meta, isHeader, rowIndex });
       });
     });
   }
@@ -220,9 +273,23 @@ export class TableTool extends BaseTool {
     const e = element as TableElement;
     const meta = (e._craftoolsMeta ?? TableTool.getDefaultMeta()) as TableMeta;
     meta.templateId = templateId;
+    // Reset just the text COLORS to whatever reads well on this template's
+    // header/body backgrounds (e.g. white header text on a colored header,
+    // dark on 'simple' which has none) -- family/size/bold/italic are kept
+    // as the user set them, since those aren't coupled to the template's
+    // background contrast the way color is.
+    const colors = TableTool._defaultFontColors(templateId);
+    meta.headerFont = { ...meta.headerFont, color: colors.header };
+    meta.bodyFont   = { ...meta.bodyFont, color: colors.body };
     e._craftoolsMeta = meta;
     const table = TableTool._table(element);
     if (table) TableTool._restyle(table, meta);
+    // dataset.ctState may be caching the pre-switch header/body colors --
+    // drop it so the next _syncFromDOM() (triggered by the panel re-render
+    // right after this call) rebuilds every Table/Typography field fresh
+    // from the meta we just wrote, same "force a clean resync" pattern
+    // BaseTool.ts's paste-style-bar handler uses.
+    delete element.dataset.ctState;
   }
 
   private static _table(element: HTMLElement): HTMLTableElement | null {
@@ -668,6 +735,26 @@ export class TableTool extends BaseTool {
 
     // Structural edits (add/remove row/col) invalidate handle positions.
     new ResizeObserver(() => { if (handlesLayer) positionHandles(); }).observe(element);
+
+    // Focus highlight: whichever cell currently has the caret gets a visible
+    // accent outline, so it's obvious which cell you're about to type into
+    // -- especially useful once a template's own cell borders are faint
+    // (e.g. 'simple') or absent between rows (e.g. 'zebra'). Uses `outline`
+    // rather than touching `border` so it never fights with _restyle()'s
+    // template-driven border, and 'focusin'/'focusout' (unlike 'focus'/
+    // 'blur') bubble, so one delegated pair here covers every cell
+    // regardless of how many rows/columns get added later.
+    element.addEventListener('focusin', (ev: FocusEvent) => {
+      const td = (ev.target as HTMLElement | null)?.closest?.('td');
+      if (td && element.contains(td)) {
+        td.style.outline = '2px solid var(--accent, #f97316)';
+        td.style.outlineOffset = '-2px';
+      }
+    });
+    element.addEventListener('focusout', (ev: FocusEvent) => {
+      const td = (ev.target as HTMLElement | null)?.closest?.('td');
+      if (td) { td.style.outline = ''; td.style.outlineOffset = ''; }
+    });
   }
 
   // ── Picker gallery (template selection, ShapeTool.renderPickerPanel pattern) ─
@@ -688,19 +775,25 @@ export class TableTool extends BaseTool {
       .ct-table-tpl-btn:hover { border-color:var(--accent,#f97316); transform:scale(1.02); }
       .ct-table-tpl-btn table { pointer-events:none; }
       .ct-table-tpl-btn span { font-size:11px; text-align:center; color:var(--text-secondary,#52525b); }
+      .ct-table-tpl-btn.active { border-color:var(--accent,#f97316); border-width:2px; box-shadow:0 0 0 1px var(--accent,#f97316); }
+      .ct-table-tpl-grid--inline { padding:2px 0 4px; }
     `;
     document.head.appendChild(s);
   }
 
   private static _previewTable(templateId: TableTemplateId): HTMLTableElement {
-    const meta: TableMeta = { templateId, headerRow: true, accentColor: '#f97316' };
+    const meta = TableTool.getDefaultMeta();
+    meta.templateId = templateId;
+    const colors = TableTool._defaultFontColors(templateId);
+    meta.headerFont = { ...meta.headerFont, color: colors.header };
+    meta.bodyFont   = { ...meta.bodyFont, color: colors.body };
     const table = document.createElement('table');
     table.style.cssText = TableTool._tableStyleForTemplate(templateId, true);
     for (let r = 0; r < 2; r++) {
       const tr = document.createElement('tr');
       for (let c = 0; c < 2; c++) {
         const td = document.createElement('td');
-        td.style.cssText = TableTool._cellStyleCss({ templateId, accentColor: meta.accentColor, isHeader: r === 0, rowIndex: r, preview: true });
+        td.style.cssText = TableTool._cellStyleCss({ meta, isHeader: r === 0, rowIndex: r, preview: true });
         td.innerHTML = '&nbsp;';
         tr.appendChild(td);
       }
@@ -738,12 +831,14 @@ export class TableTool extends BaseTool {
       }
     };
 
+    const activeId = targetElement ? ((targetElement._craftoolsMeta ?? TableTool.getDefaultMeta()) as TableMeta).templateId : null;
+
     panelBody.innerHTML = `<div class="ct-table-tpl-grid" data-part="results"></div>`;
     const grid = panelBody.querySelector<HTMLElement>('[data-part="results"]')!;
     TEMPLATES.forEach(t => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'ct-table-tpl-btn';
+      btn.className = 'ct-table-tpl-btn' + (t.id === activeId ? ' active' : '');
       btn.draggable = !targetElement;
       btn.appendChild(TableTool._previewTable(t.id));
       const label = document.createElement('span');
@@ -757,6 +852,58 @@ export class TableTool extends BaseTool {
       });
       grid.appendChild(btn);
     });
+  }
+
+  /**
+   * Compact in-panel template gallery -- a 'custom' PropertySchema field
+   * (see getPropertySchema() below) so switching style is reachable the
+   * moment a table is selected, without a separate trip through the
+   * ctx-bar's "Trocar modelo" action (still kept too, same as ShapeTool's
+   * own "Change shape"). Rebuilds its own active-state highlighting on
+   * every click rather than relying on PropertyRenderer's normal value-diff
+   * re-render, since CustomField.render() is only ever called once (see
+   * custom.field.ts's header comment).
+   */
+  private static _renderTemplateSwatches(element: HTMLElement, _onChange: (value: unknown) => void): HTMLElement {
+    TableTool._ensurePickerStyles();
+    const wrap = document.createElement('div');
+    wrap.className = 'ct-table-tpl-grid ct-table-tpl-grid--inline';
+
+    const paint = (): void => {
+      wrap.innerHTML = '';
+      const meta = ((element as TableElement)._craftoolsMeta ?? TableTool.getDefaultMeta()) as TableMeta;
+      TEMPLATES.forEach(t => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ct-table-tpl-btn' + (meta.templateId === t.id ? ' active' : '');
+        btn.appendChild(TableTool._previewTable(t.id));
+        const label = document.createElement('span');
+        label.textContent = I18n.t(t.i18nKey);
+        btn.appendChild(label);
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          TableTool.applyTemplate(element, t.id);
+          TableTool._triggerChange(element);
+          // Repaint THIS swatch strip's own active-highlight right away --
+          // 'custom' fields are never rebuilt by PropertyRenderer's normal
+          // value-diff re-render (see custom.field.ts), so nothing else
+          // will do it for us.
+          paint();
+          // applyTemplate() also resets header/body text colors for the new
+          // template and clears dataset.ctState -- re-render the WHOLE
+          // panel so the Typography section's color fields pick up those
+          // fresh values instead of showing stale ones.
+          const panelBody = document.getElementById('panel-body') as (HTMLElement & { _ctRenderedElement?: HTMLElement }) | null;
+          if (panelBody && panelBody._ctRenderedElement === element) {
+            TableTool.renderPropertiesPanel(panelBody, element);
+          }
+        });
+        wrap.appendChild(btn);
+      });
+    };
+
+    paint();
+    return wrap;
   }
 
   static getCtxOptions(): Array<{ icon: string; label: string; command: (element: HTMLElement) => void }> {
@@ -781,12 +928,37 @@ export class TableTool extends BaseTool {
   // ── Property panel ───────────────────────────────────────────────────────────
 
   protected static _syncFromDOM(element: HTMLElement): void {
+    const e = element as TableElement;
+    // Backfill headerFont/bodyFont onto the live meta itself (not just
+    // ctState) for tables created/imported before this feature existed --
+    // _cellStyleCss() already tolerates missing font sub-objects via safe
+    // fallbacks, but _applyProperty()'s font-key handling below spreads
+    // into these objects, so they need to actually exist on the meta.
+    if (e._craftoolsMeta) {
+      const d = TableTool.getDefaultMeta();
+      if (!e._craftoolsMeta.headerFont) e._craftoolsMeta.headerFont = d.headerFont;
+      if (!e._craftoolsMeta.bodyFont)   e._craftoolsMeta.bodyFont   = d.bodyFont;
+    }
     const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
     if (!('templateId'   in existing)) patch.templateId   = meta.templateId ?? 'simple';
     if (!('headerRow'    in existing)) patch.headerRow    = meta.headerRow ?? true;
     if (!('accentColor'  in existing)) patch.accentColor  = meta.accentColor ?? '#f97316';
+
+    const hFont = meta.headerFont;
+    const bFont = meta.bodyFont;
+    if (!('headerFontFamily' in existing)) patch.headerFontFamily = hFont?.family ?? 'DM Sans';
+    if (!('headerFontSize'   in existing)) patch.headerFontSize   = hFont?.size ?? 13;
+    if (!('headerBold'       in existing)) patch.headerBold       = hFont?.bold ?? true;
+    if (!('headerItalic'     in existing)) patch.headerItalic     = hFont?.italic ?? false;
+    if (!('headerTextColor'  in existing)) patch.headerTextColor  = hFont?.color ?? '#1a1a1a';
+    if (!('bodyFontFamily'   in existing)) patch.bodyFontFamily   = bFont?.family ?? 'DM Sans';
+    if (!('bodyFontSize'     in existing)) patch.bodyFontSize     = bFont?.size ?? 13;
+    if (!('bodyBold'         in existing)) patch.bodyBold         = bFont?.bold ?? false;
+    if (!('bodyItalic'       in existing)) patch.bodyItalic       = bFont?.italic ?? false;
+    if (!('bodyTextColor'    in existing)) patch.bodyTextColor    = bFont?.color ?? '#1a1a1a';
+
     // rows/cols are a live view of the DOM, not independently persisted --
     // always recomputed so the steppers reflect reality even after a
     // structural edit made outside the panel (ctx-bar template swap, merge).
@@ -807,10 +979,36 @@ export class TableTool extends BaseTool {
         icon: 'table',
         defaultOpen: true,
         fields: [
+          {
+            type: 'custom', key: 'templateSwatches', label: 'Style', i18nKey: 'tableTool.templateLabel',
+            render: (element, onChange) => TableTool._renderTemplateSwatches(element, onChange),
+          },
           { type: 'number', key: 'rows', label: 'Rows', i18nKey: 'tableTool.rows', min: 1, max: 20, step: 1 },
           { type: 'number', key: 'cols', label: 'Columns', i18nKey: 'tableTool.cols', min: 1, max: 15, step: 1 },
           { type: 'toggle', key: 'headerRow', label: 'Header row', i18nKey: 'tableTool.headerRow' },
           { type: 'color', key: 'accentColor', label: 'Accent color', i18nKey: 'tableTool.accentColor' },
+        ],
+      },
+      {
+        section: 'Typography',
+        i18nKey: 'tableTool.sectionTypography',
+        icon: 'match_case',
+        collapsible: true,
+        defaultOpen: false,
+        fields: [
+          { type: 'divider', key: 'div-header-font', icon: 'view_headline', label: 'Header', i18nKey: 'tableTool.headerLabel' },
+          { type: 'font-select', key: 'headerFontFamily', label: 'Font', i18nKey: 'tableTool.fontFamily' },
+          { type: 'number', key: 'headerFontSize', label: 'Size', i18nKey: 'tableTool.fontSize', min: 6, max: 72, unit: 'px' },
+          { type: 'toggle', key: 'headerBold', label: 'Bold', i18nKey: 'tableTool.bold' },
+          { type: 'toggle', key: 'headerItalic', label: 'Italic', i18nKey: 'tableTool.italic' },
+          { type: 'color', key: 'headerTextColor', label: 'Text color', i18nKey: 'tableTool.textColor' },
+
+          { type: 'divider', key: 'div-body-font', icon: 'table_rows', label: 'Body', i18nKey: 'tableTool.bodyLabel' },
+          { type: 'font-select', key: 'bodyFontFamily', label: 'Font', i18nKey: 'tableTool.fontFamily' },
+          { type: 'number', key: 'bodyFontSize', label: 'Size', i18nKey: 'tableTool.fontSize', min: 6, max: 72, unit: 'px' },
+          { type: 'toggle', key: 'bodyBold', label: 'Bold', i18nKey: 'tableTool.bold' },
+          { type: 'toggle', key: 'bodyItalic', label: 'Italic', i18nKey: 'tableTool.italic' },
+          { type: 'color', key: 'bodyTextColor', label: 'Text color', i18nKey: 'tableTool.textColor' },
         ],
       },
       zIndexSection(),
@@ -842,6 +1040,18 @@ export class TableTool extends BaseTool {
     if (key === 'headerRow' || key === 'accentColor') {
       PropertyRenderer.applyChange(element, key, value);
       (meta as unknown as Record<string, unknown>)[key] = value;
+      e._craftoolsMeta = meta;
+      const table = TableTool._table(element);
+      if (table) TableTool._restyle(table, meta);
+      TableTool._triggerChange(element);
+      return;
+    }
+    const fontKey = TableTool.FONT_KEYS[key];
+    if (fontKey) {
+      PropertyRenderer.applyChange(element, key, value);
+      const target = meta[fontKey.target] ?? defaultFontStyle(fontKey.target === 'headerFont', '#1a1a1a');
+      (target as unknown as Record<string, unknown>)[fontKey.prop] = value;
+      meta[fontKey.target] = target;
       e._craftoolsMeta = meta;
       const table = TableTool._table(element);
       if (table) TableTool._restyle(table, meta);
