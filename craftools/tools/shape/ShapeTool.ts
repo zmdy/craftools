@@ -414,11 +414,12 @@ export class ShapeTool extends BaseTool {
       return [
         {
           section: 'Fill & Stroke',
+          i18nKey: 'shapeTool.sectionFillStroke',
           icon: 'format_shapes',
           defaultOpen: true,
           fields: [
-            { type: 'color-picker', key: 'fillColor',   label: 'Fill' },
-            { type: 'color-picker', key: 'strokeColor', label: 'Stroke' },
+            { type: 'color-picker', key: 'fillColor',   label: 'Fill',   i18nKey: 'shapeTool.fillColor' },
+            { type: 'color-picker', key: 'strokeColor', label: 'Stroke', i18nKey: 'shapeTool.strokeColor' },
           ],
         },
         flipAlternateSection(),
@@ -431,41 +432,41 @@ export class ShapeTool extends BaseTool {
     const shapeSpecificFields = [
       // square
       {
-        type: 'slider', key: 'cornerRadius', label: 'Corner radius',
+        type: 'slider', key: 'cornerRadius', label: 'Corner radius', i18nKey: 'shapeTool.cornerRadius',
         min: 0, max: 50, step: 1,
         hidden: shapeType !== 'square',
       },
       // polygon
       {
-        type: 'slider', key: 'sides', label: 'Sides',
+        type: 'slider', key: 'sides', label: 'Sides', i18nKey: 'shapeTool.sides',
         min: 3, max: 12, step: 1,
         hidden: shapeType !== 'polygon',
       },
       // star
       {
-        type: 'slider', key: 'points', label: 'Points',
+        type: 'slider', key: 'points', label: 'Points', i18nKey: 'shapeTool.points',
         min: 3, max: 12, step: 1,
         hidden: shapeType !== 'star',
       },
       {
-        type: 'slider', key: 'innerRatio', label: 'Inner ratio',
+        type: 'slider', key: 'innerRatio', label: 'Inner ratio', i18nKey: 'shapeTool.innerRatio',
         min: 0.15, max: 0.85, step: 0.05,
         hidden: shapeType !== 'star',
       },
       // blob
       {
-        type: 'slider', key: 'blobPoints', label: 'Points',
+        type: 'slider', key: 'blobPoints', label: 'Points', i18nKey: 'shapeTool.blobPoints',
         min: 5, max: 20, step: 1,
         hidden: shapeType !== 'blob',
       },
       {
-        type: 'slider', key: 'blobRandomness', label: 'Randomness',
+        type: 'slider', key: 'blobRandomness', label: 'Randomness', i18nKey: 'shapeTool.blobRandomness',
         min: 0, max: 1, step: 0.05,
         hidden: shapeType !== 'blob',
       },
       // flower
       {
-        type: 'slider', key: 'petals', label: 'Petals',
+        type: 'slider', key: 'petals', label: 'Petals', i18nKey: 'shapeTool.petals',
         min: 4, max: 16, step: 1,
         hidden: shapeType !== 'flower',
       },
@@ -502,6 +503,7 @@ export class ShapeTool extends BaseTool {
     return [
       {
         section: 'Fill & Stroke',
+        i18nKey: 'shapeTool.sectionFillStroke',
         icon: 'format_shapes',
         defaultOpen: true,
         fields: [
@@ -513,14 +515,18 @@ export class ShapeTool extends BaseTool {
           {
             type: 'color-picker', key: 'fillColor',
             label: isLineShape ? 'Arrowhead color' : 'Fill',
-            i18nKey: isLineShape ? 'shapeTool.arrowheadColor' : undefined,
+            i18nKey: isLineShape ? 'shapeTool.arrowheadColor' : 'shapeTool.fillColor',
           },
           {
             type: 'color-picker', key: 'strokeColor',
             label: isLineShape ? 'Line color' : 'Stroke',
-            i18nKey: isLineShape ? 'shapeTool.lineColor' : undefined,
+            i18nKey: isLineShape ? 'shapeTool.lineColor' : 'shapeTool.strokeColor',
           },
-          { type: 'slider', key: 'strokeWidth',  label: isLineShape ? 'Line width' : 'Stroke width', min: isLineShape ? 1 : 0, max: 10, step: 0.5 },
+          {
+            type: 'slider', key: 'strokeWidth', label: isLineShape ? 'Line width' : 'Stroke width',
+            i18nKey: isLineShape ? 'shapeTool.lineWidth' : 'shapeTool.strokeWidth',
+            min: isLineShape ? 1 : 0, max: 10, step: 0.5,
+          },
         ],
       },
       // Circle/Triangle/Heart have no shape-specific parameters at all --
@@ -531,6 +537,7 @@ export class ShapeTool extends BaseTool {
       // something to show.
       ...(shapeSpecificFields.length ? [{
         section: 'Shape',
+        i18nKey: 'shapeTool.sectionShape',
         icon: 'category',
         defaultOpen: true,
         fields: shapeSpecificFields,

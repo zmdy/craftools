@@ -9,6 +9,7 @@ I18n.addTranslations('shapeTool', {
         pickerTitle: "Escolha uma forma",
         changeShape: "Trocar forma",
         sectionShape: "Forma",
+        sectionFillStroke: "Preenchimento e Contorno",
         sectionColor: "Cor",
 
         shapeSquare: "Quadrado",
@@ -31,6 +32,7 @@ I18n.addTranslations('shapeTool', {
         fillColor: "Cor de preenchimento",
         strokeColor: "Cor do contorno",
         strokeWidth: "Espessura do contorno",
+        lineWidth: "Espessura da linha",
         cornerRadius: "Arredondamento das bordas",
         sides: "Número de lados",
         points: "Número de pontas",
@@ -56,6 +58,7 @@ I18n.addTranslations('shapeTool', {
         pickerTitle: "Choose a shape",
         changeShape: "Change shape",
         sectionShape: "Shape",
+        sectionFillStroke: "Fill & Stroke",
         sectionColor: "Color",
 
         shapeSquare: "Square",
@@ -78,6 +81,7 @@ I18n.addTranslations('shapeTool', {
         fillColor: "Fill color",
         strokeColor: "Stroke color",
         strokeWidth: "Stroke width",
+        lineWidth: "Line width",
         cornerRadius: "Corner radius",
         sides: "Number of sides",
         points: "Number of points",
@@ -103,6 +107,7 @@ I18n.addTranslations('shapeTool', {
         pickerTitle: "Elige una forma",
         changeShape: "Cambiar forma",
         sectionShape: "Forma",
+        sectionFillStroke: "Relleno y Contorno",
         sectionColor: "Color",
 
         shapeSquare: "Cuadrado",
@@ -125,6 +130,7 @@ I18n.addTranslations('shapeTool', {
         fillColor: "Color de relleno",
         strokeColor: "Color del contorno",
         strokeWidth: "Grosor del contorno",
+        lineWidth: "Grosor de la línea",
         cornerRadius: "Redondeo de bordes",
         sides: "Número de lados",
         points: "Número de puntas",
