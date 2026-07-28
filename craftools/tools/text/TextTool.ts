@@ -234,13 +234,13 @@ export class TextTool extends BaseTool {
         icon: 'text_fields',
         defaultOpen: true,
         fields: [
-          { type: 'font-select', key: 'font',       label: 'Font' },
-          { type: 'slider',      key: 'fontSize',   label: 'Size', min: 8, max: 200, step: 1 },
-          { type: 'slider',      key: 'lineHeight',  label: 'Line height', min: 1, max: 4, step: 0.05 },
+          { type: 'font-select', key: 'font',       label: 'Font',        i18nKey: 'textTool.font' },
+          { type: 'slider',      key: 'fontSize',   label: 'Size',        i18nKey: 'textTool.size',       min: 8, max: 200, step: 1 },
+          { type: 'slider',      key: 'lineHeight', label: 'Line height', i18nKey: 'textTool.lineHeight', min: 1, max: 4,   step: 0.05 },
           { type: 'align',       key: 'textAlign' },
-          { type: 'toggle',      key: 'bold',       label: 'Bold' },
-          { type: 'toggle',      key: 'italic',     label: 'Italic' },
-          { type: 'toggle',      key: 'underline',  label: 'Underline' },
+          { type: 'toggle',      key: 'bold',       label: 'Bold',        i18nKey: 'textTool.bold' },
+          { type: 'toggle',      key: 'italic',     label: 'Italic',      i18nKey: 'textTool.italic' },
+          { type: 'toggle',      key: 'underline',  label: 'Underline',   i18nKey: 'textTool.underline' },
           {
             type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
             options: [
@@ -263,7 +263,7 @@ export class TextTool extends BaseTool {
           // field or hidden-field pair is needed here anymore. No explicit
           // defaultSolid needed: ColorPickerUI.ts's shared default is already
           // near-black (#18181b), matching createElement()'s `color: #1a1a1a`.
-          { type: 'color-picker', key: 'color', label: 'Color' },
+          { type: 'color-picker', key: 'color', label: 'Color', i18nKey: 'textTool.color' },
         ],
       },
       backgroundSection(),
