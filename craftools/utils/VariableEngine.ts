@@ -577,6 +577,7 @@ export class VariableEngine {
             case 'DAY_ONLY':         return `${d.getDate()}`;
             case 'MONTH_ONLY':         return mPt[d.getMonth()];
             case 'DAY_OF_YEAR':  return String(this._dayOfYear(d));
+            case 'WEEK_NUMBER':  return this._formatWeekNumber(d);
             case 'CUSTOM':      return this._formatCustomDate(d, b, ctx, apiCache);
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
@@ -662,12 +663,14 @@ export class VariableEngine {
      * year TWICE concatenated, e.g. "2626" instead of "26"). A run whose
      * length doesn't match a known token (e.g. "ddd") is left untouched.
      *
-     * Also recognizes five curly-brace tokens -- {season}, {moon} (moon
+     * Also recognizes six curly-brace tokens -- {season}, {moon} (moon
      * phase), {zodiac} (zodiac sign), {holiday} (holiday/commemorative
      * date), {dayofyear} (ordinal day within the year, e.g. Apr 10 -> 100,
-     * see _dayOfYear()) -- so the multi-select buttons in VariablePanel.ts's
-     * date config (Dia/Mês/Ano/Dia da semana/Estação/Fase da Lua/Signo/
-     * Feriado/Dia do ano) can all compose into the SAME custom string
+     * see _dayOfYear()), {weeknumber} (ISO-8601 week, e.g. "Semana 32 de
+     * 52", see _formatWeekNumber()) -- so the multi-select buttons in
+     * VariablePanel.ts's date config (Dia/Mês/Ano/Dia da semana/Estação/
+     * Fase da Lua/Signo/Feriado/Dia do ano/Semana do ano) can all compose
+     * into the SAME custom string
      * instead of needing separate mutually exclusive whole formats. Token
      * NAMES are English (this file's own vocabulary) even though their
      * pt-BR/en/es display labels stay translated -- see VariablePanel.ts's
@@ -724,10 +727,11 @@ export class VariableEngine {
             '{zodiac}':    () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d)),
             '{holiday}':   () => this._escHtml(this._formatSpecialDate(d, b, ctx, apiCache)),
             '{dayofyear}': () => String(this._dayOfYear(d)),
+            '{weeknumber}': () => this._escHtml(this._formatWeekNumber(d)),
         };
 
         const applyTokens = (text: string): string =>
-            this._escHtml(text).replace(/\{season\}|\{moon\}|\{zodiac\}|\{holiday\}|\{dayofyear\}|d+|m+|y+|w+/gi, run => {
+            this._escHtml(text).replace(/\{season\}|\{moon\}|\{zodiac\}|\{holiday\}|\{dayofyear\}|\{weeknumber\}|d+|m+|y+|w+/gi, run => {
                 const fn = tokens[run.toLowerCase()];
                 return fn ? fn() : run;
             });
@@ -829,6 +833,55 @@ export class VariableEngine {
         const utc  = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
         const jan1 = Date.UTC(d.getFullYear(), 0, 1);
         return Math.round((utc - jan1) / 86400000) + 1;
+    }
+
+    /**
+     * "Semana N de T" (hardcoded pt-BR, same convention as this file's
+     * literal month/weekday names -- see mPt/wPt in _formatDate() -- this
+     * whole date-formatting engine isn't locale-aware) -- format ===
+     * 'WEEK_NUMBER' / the {weeknumber} custom token. `T` is the ISO-8601
+     * week COUNT of the ISO week-year `d` falls into (52 or 53, see
+     * _isoWeeksInYear()) -- not a hardcoded 52 -- since roughly 1 year in
+     * 5-6 has a 53rd ISO week.
+     */
+    private static _formatWeekNumber(d: Date): string {
+        const { week, isoYear } = this._isoWeek(d);
+        return `Semana ${week} de ${this._isoWeeksInYear(isoYear)}`;
+    }
+
+    /**
+     * ISO-8601 week-of-year for `d`, plus the ISO week-year it belongs to
+     * (NOT always d.getFullYear() -- e.g. Jan 1st 2027 is a Friday, which
+     * ISO 8601 assigns to week 53 of 2026 rather than week 1 of 2027, and
+     * symmetrically late-December dates can fall in week 1 of the
+     * FOLLOWING year). Standard algorithm: shift `d` to the Thursday of
+     * its own Mon-Sun week (ISO weeks run Monday-Sunday, and a week
+     * "belongs" to whichever year contains its Thursday), then count
+     * whole weeks between that Thursday and the first Thursday of its
+     * year. All-UTC arithmetic for the same DST-safety reason as
+     * _dayOfYear() above.
+     */
+    private static _isoWeek(d: Date): { week: number; isoYear: number } {
+        const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        const isoWeekday = t.getUTCDay() || 7; // Date.getUTCDay(): 0(Sun)..6(Sat) -> ISO 1(Mon)..7(Sun)
+        t.setUTCDate(t.getUTCDate() + 4 - isoWeekday); // move to this ISO week's Thursday
+        const isoYear = t.getUTCFullYear();
+        const jan1    = Date.UTC(isoYear, 0, 1);
+        const week    = Math.ceil((((t.getTime() - jan1) / 86400000) + 1) / 7);
+        return { week, isoYear };
+    }
+
+    /**
+     * Number of ISO-8601 weeks (52 or 53) in `isoYear`. A year has 53 iff
+     * its Jan 1st is a Thursday, or it's a leap year and Jan 1st is a
+     * Wednesday (the standard ISO-8601 rule -- equivalent to checking
+     * whether Dec 31st falls in week 53 rather than week 1 of next year).
+     */
+    private static _isoWeeksInYear(isoYear: number): number {
+        const jan1Weekday = (y: number) => new Date(Date.UTC(y, 0, 1)).getUTCDay() || 7;
+        const isLeap      = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+        const wd = jan1Weekday(isoYear);
+        return (wd === 4 || (wd === 3 && isLeap(isoYear))) ? 53 : 52;
     }
 
     /**

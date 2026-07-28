@@ -194,6 +194,7 @@ export class VariablePanel {
             { token: 'yyyy',        i18nKey: 'dateBtnYear' },
             { token: 'wwww',        i18nKey: 'dateBtnWeekday' },
             { token: '{dayofyear}', i18nKey: 'dateBtnDayOfYear' },
+            { token: '{weeknumber}', i18nKey: 'dateBtnWeekNumber' },
             { token: '{season}',    i18nKey: 'dateBtnSeason' },
             { token: '{moon}',      i18nKey: 'dateBtnMoonPhase' },
             { token: '{zodiac}',    i18nKey: 'dateBtnZodiac' },
@@ -230,6 +231,7 @@ export class VariablePanel {
             case 'DAY_ONLY':            return 'd';
             case 'MONTH_ONLY':          return 'mmmm';
             case 'DAY_OF_YEAR':         return '{dayofyear}';
+            case 'WEEK_NUMBER':         return '{weeknumber}';
             case 'SPECIAL_DATE':        return '{holiday}';
             case 'MOON_PHASE':          return '{moon}';
             case 'SEASON':              return '{season}';
