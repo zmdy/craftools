@@ -135,6 +135,20 @@ export class PageTool {
         el.setAttribute('y', String(Math.round(dropY)));
         pageEl.appendChild(el);
         pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
+      } else if (toolType === 'table') {
+        const templateId = e.dataTransfer!.getData('TableTemplateId') || 'simple';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { TableTool } = await import('../table/TableTool.js') as any;
+        const rect = pageEl.getBoundingClientRect();
+        const scale = window.craftoolsZoomLevel || 1;
+        const el = TableTool.createElement('table', editor) as HTMLElement;
+        TableTool.applyTemplate(el, templateId);
+        const dropX = Math.max(10, Math.min((e.clientX - rect.left) / scale - 160, (rect.width / scale) - 320));
+        const dropY = Math.max(10, Math.min((e.clientY - rect.top)  / scale - 80, (rect.height / scale) - 160));
+        el.setAttribute('x', String(Math.round(dropX)));
+        el.setAttribute('y', String(Math.round(dropY)));
+        pageEl.appendChild(el);
+        pageEl.querySelector('div[style*="font-size: 14px"]')?.remove();
       } else if ([
         'title', 'paragraph', 'image', 'qrcode', 'barcode',
         'minicalendar', 'emojikitchen', 'variablecontent',

@@ -79,6 +79,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   stamp:            () => import('../tools/stamp/StampTool.js'),
   paper:            () => import('../tools/paper/PaperTool.js'),
   variablecontent: () => import('../tools/variablecontent/VariableContentTool.js'),
+  table:            () => import('../tools/table/TableTool.js'),
 };
 
 // ── Panel-only tools: key → lazy setup() import ───────────────────────────────
@@ -666,7 +667,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'title','paragraph','image','album','qrcode','barcode','minicalendar',
-      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon',
+      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon','table',
     ]);
 
     toolBtns.forEach(btn => {
@@ -712,6 +713,14 @@ export class Craftools_Editor extends HTMLElement {
           const m: any = await import('../tools/icon/IconTool.js');
           if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
           if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
+          openPanelMenu();
+          return;
+        }
+        if (tool === 'table') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const m: any = await import('../tools/table/TableTool.js');
+          if (panelTitle) panelTitle.textContent = I18n.t('tableTool.pickerTitle');
+          if (panelBody)  m.TableTool.renderPickerPanel(panelBody, this);
           openPanelMenu();
           return;
         }
@@ -783,7 +792,7 @@ export class Craftools_Editor extends HTMLElement {
       const tool = btn.dataset.tool ?? btn.id.replace('pwa-sidebar-', '');
 
       // ── Picker tools: open a panel so user picks which item to add ──────
-      if (['emoji', 'shape', 'icon'].includes(tool)) {
+      if (['emoji', 'shape', 'icon', 'table'].includes(tool)) {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -803,6 +812,10 @@ export class Craftools_Editor extends HTMLElement {
             const m: any = await import('../tools/icon/IconTool.js');
             if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
             if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
+          } else if (tool === 'table') {
+            const m: any = await import('../tools/table/TableTool.js');
+            if (panelTitle) panelTitle.textContent = I18n.t('tableTool.pickerTitle');
+            if (panelBody)  m.TableTool.renderPickerPanel(panelBody, this);
           }
           openPanelMenu();
         });

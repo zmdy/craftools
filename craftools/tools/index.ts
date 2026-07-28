@@ -43,6 +43,9 @@ export { PaperTool }           from './paper/PaperTool';
 // ── Variable content ──────────────────────────────────────────────────────────
 export { VariableContentTool } from './variablecontent/VariableContentTool';
 
+// ── Table ─────────────────────────────────────────────────────────────────────
+export { TableTool }           from './table/TableTool';
+
 // ── Panel-only tools (side-effect imports — no canvas element) ────────────────
 // These just run ToolRegistry.register(); they have no exported class.
 import './album/AlbumTool';
