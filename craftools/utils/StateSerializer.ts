@@ -133,12 +133,30 @@ export class StateSerializer {
         pageEl = document.createElement('section');
         pageEl.className = 'craftools-page';
         pageEl.dataset.ctId = pageState.id;
-        
+
         // Pages usually have a specific structure, let's ensure the default empty content div exists
         // However, most of the time pages aren't deleted, just elements are.
         const pageContent = document.createElement('div');
         pageContent.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;';
         pageEl.appendChild(pageContent);
+
+        // Connect the page to the live document RIGHT AWAY (final position
+        // gets sorted out by the reordering pass below -- moving an
+        // already-connected node within the same parent doesn't re-fire
+        // custom element lifecycle callbacks, so this is safe to do before
+        // ordering is settled). This matters a lot for what happens next:
+        // every <craftools-element> appended below via `pageEl.appendChild(el)`
+        // only gets its connectedCallback() (and therefore Element.ts's
+        // _build(), which creates _content/contentArea) fired once IT is
+        // connected to the *document* -- not merely appended to `pageEl`.
+        // If `pageEl` were left detached until the old end-of-function
+        // insertion, every element appended to it in the loop below would
+        // stay uninitialized (no _content, contentArea undefined, no
+        // ctrlbar/overlay) for the entire loop, and _build() would only
+        // finally run once everything gets connected at the very end --
+        // by which point contentHTML/bgLayerCssText restoration below has
+        // already silently no-op'd against a still-missing content area.
+        pagesWrapper.appendChild(pageEl);
       } else {
         existingPages.delete(pageState.id);
       }
