@@ -54,6 +54,8 @@ I18n.addTranslations('agendaExportTool', {
         alternateToggle: "Alternate Pages (Duplex Printing)",
         repeatCheckLabel: "Repeat this page multiple times",
         repeatCountLabel: "How many times to repeat",
+        continueSequenceToggle: "Continue sequence (date/number) from the previous page",
+        continueSequenceHint: "Unchecked (default): the 1st repetition of this page always starts from the Date/Start configured on it, regardless of how many pages come before. Check this only if this page is part of the same continuous sequence as the previous page (e.g. a weekday layout followed by a weekend layout, covering the same week).",
         variablesFoundSuffix: "element(s) with a configured variable on this page.",
         noVariablesWarning: "This page is marked to repeat, but none of its elements have a configured variable (\"Variable Text\" tab on Text/Title/QR Code/Barcode) — every repetition will look identical.",
 
@@ -91,6 +93,8 @@ I18n.addTranslations('agendaExportTool', {
         alternateToggle: "Páginas Alternas (Doble Cara)",
         repeatCheckLabel: "Repetir esta página varias veces",
         repeatCountLabel: "Cuántas veces repetir",
+        continueSequenceToggle: "Continuar secuencia (fecha/número) de la página anterior",
+        continueSequenceHint: "Desmarcado (predeterminado): la 1ª repetición de esta página siempre usa la Fecha/Inicio configurados en ella, sin importar cuántas páginas vienen antes. Márquelo solo si esta página forma parte de la misma secuencia continua que la anterior (ej: un diseño de día laborable seguido de un diseño de fin de semana, cubriendo la misma semana).",
         variablesFoundSuffix: "elemento(s) con variable configurada en esta página.",
         noVariablesWarning: "Esta página está marcada para repetirse, pero ninguno de sus elementos tiene una variable configurada (pestaña \"Texto Variable\" en Texto/Título/QR Code/Código de Barras) — todas las repeticiones serán idénticas.",
 
