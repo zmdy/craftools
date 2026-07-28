@@ -17,6 +17,10 @@ export interface CtxOption {
    * waiting for the element to be re-selected.
    */
   isActive?: (el: HTMLElement) => boolean;
+  /**
+   * If provided, renders an arbitrary DOM element instead of a standard button.
+   */
+  render?: (el: HTMLElement) => HTMLElement;
 }
 
 export interface CraftoolsCtxElement extends HTMLElement {
@@ -201,15 +205,19 @@ export class CtxBar {
       if (options && options.length > 0) {
           this.el.appendChild(this.createSeparator());
           options.forEach(opt => {
-              const btn = this.createButton(opt.icon, opt.label, () => {
-                  if (opt.command) opt.command(element);
-                  // Re-check right after the command runs so a toggle (e.g.
-                  // TextTool's "auto-fit to text") flips its icon color
-                  // immediately, without waiting for a re-select.
+              if (opt.render) {
+                  this.el.appendChild(opt.render(element));
+              } else {
+                  const btn = this.createButton(opt.icon!, opt.label!, () => {
+                      if (opt.command) opt.command(element);
+                      // Re-check right after the command runs so a toggle (e.g.
+                      // TextTool's "auto-fit to text") flips its icon color
+                      // immediately, without waiting for a re-select.
+                      if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
+                  });
                   if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-              });
-              if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-              this.el.appendChild(btn);
+                  this.el.appendChild(btn);
+              }
           });
       }
 

@@ -19,6 +19,8 @@ import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import { AppSettings } from '../../utils/AppSettings.js';
 import type { PropertySchema } from '../../types/PropertySchema';
+import '../../components/CtFontSelect.js';
+import { FONTS, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -294,6 +296,59 @@ export class TextTool extends BaseTool {
     const isUnderline = (el: HTMLElement) => PropertyRenderer._readState(el).underline === true;
     
     return [
+      {
+        render: (el: HTMLElement) => {
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'display:flex; align-items:center; gap:6px; margin:0 4px;';
+          
+          // Font selector
+          const currentFont = PropertyRenderer._readState(el).font || 'Inter';
+          const fontSelect = document.createElement('ct-font-select') as any;
+          fontSelect.className = 'craftools-select ct-fi';
+          // Make the trigger smaller for the ctx bar
+          fontSelect.style.width = '120px';
+          
+          // Build font list
+          const allFonts = [...FONTS];
+          getSavedLocalFonts().forEach(f => { if (!allFonts.includes(f)) allFonts.push(f); });
+          if (currentFont && typeof currentFont === 'string' && !allFonts.includes(currentFont)) allFonts.push(currentFont);
+          
+          allFonts.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            fontSelect.appendChild(opt);
+          });
+          loadGoogleFonts(allFonts);
+          fontSelect.value = currentFont;
+          
+          fontSelect.addEventListener('change', (e: Event) => {
+            TextTool._applyProperty(el, 'font', (e.target as HTMLSelectElement).value);
+          });
+          
+          // Size selector
+          const currentSize = PropertyRenderer._readState(el).fontSize || 24;
+          const sizeInput = document.createElement('input');
+          sizeInput.type = 'number';
+          sizeInput.className = 'craftools-input';
+          sizeInput.style.cssText = 'width: 50px; height: 30px; padding: 0 4px; text-align: center; font-size: 13px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); outline: none; margin: 0; box-sizing: border-box;';
+          sizeInput.value = String(currentSize);
+          sizeInput.min = '8';
+          sizeInput.max = '500';
+          
+          sizeInput.addEventListener('change', (e: Event) => {
+            TextTool._applyProperty(el, 'fontSize', parseFloat((e.target as HTMLInputElement).value) || 24);
+          });
+          sizeInput.addEventListener('input', (e: Event) => {
+             const val = parseFloat((e.target as HTMLInputElement).value);
+             if (val > 0) TextTool._applyProperty(el, 'fontSize', val);
+          });
+
+          wrapper.appendChild(fontSelect);
+          wrapper.appendChild(sizeInput);
+          return wrapper;
+        }
+      },
       {
         icon: 'format_bold',
         label: 'Bold',
