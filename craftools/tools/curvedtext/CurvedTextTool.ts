@@ -202,41 +202,44 @@ export class CurvedTextTool extends BaseTool {
     return [
       {
         section: 'Text',
+        i18nKey: 'curvedTextTool.sectionText',
         icon: 'text_fields',
         defaultOpen: true,
         fields: [
-          { type: 'text',       key: 'text',          label: 'Text' },
-          { type: 'font-select',key: 'fontFamily',     label: 'Font' },
-          { type: 'number',     key: 'fontSize',       label: 'Size', min: 6, max: 100, unit: 'pt' },
-          { type: 'number',     key: 'letterSpacing',  label: 'Spacing', min: -10, max: 30, step: 0.5 },
-          { type: 'toggle',     key: 'bold',           label: 'Bold' },
-          { type: 'toggle',     key: 'italic',         label: 'Italic' },
+          { type: 'text',        key: 'text',         label: 'Text',    i18nKey: 'curvedTextTool.text' },
+          { type: 'font-select', key: 'fontFamily',   label: 'Font',    i18nKey: 'curvedTextTool.fontFamily' },
+          { type: 'number',      key: 'fontSize',     label: 'Size',    i18nKey: 'curvedTextTool.fontSize',     min: 6, max: 100, unit: 'pt' },
+          { type: 'number',      key: 'letterSpacing', label: 'Spacing', i18nKey: 'curvedTextTool.letterSpacing', min: -10, max: 30, step: 0.5 },
+          { type: 'toggle',      key: 'bold',          label: 'Bold',   i18nKey: 'curvedTextTool.bold' },
+          { type: 'toggle',      key: 'italic',        label: 'Italic', i18nKey: 'curvedTextTool.italic' },
         ],
       },
       {
         section: 'Arc',
+        i18nKey: 'curvedTextTool.sectionArc',
         icon: 'architecture',
         fields: [
           {
-            type: 'select', key: 'mode', label: 'Mode',
+            type: 'select', key: 'mode', label: 'Mode', i18nKey: 'curvedTextTool.mode',
             options: [
-              { value: 'arc-top',     label: 'Arc top' },
-              { value: 'arc-bottom',  label: 'Arc bottom' },
-              { value: 'full-circle', label: 'Full circle' },
+              { value: 'arc-top',     label: 'Arc top',     i18nKey: 'curvedTextTool.modeArcTop' },
+              { value: 'arc-bottom',  label: 'Arc bottom',  i18nKey: 'curvedTextTool.modeArcBottom' },
+              { value: 'full-circle', label: 'Full circle', i18nKey: 'curvedTextTool.modeCircle' },
             ],
           },
-          { type: 'slider', key: 'radius',      label: 'Radius',      min: 20, max: 200 },
-          { type: 'slider', key: 'startOffset', label: 'Start offset', min: 0,  max: 100,
+          { type: 'slider', key: 'radius',      label: 'Radius',      i18nKey: 'curvedTextTool.radius',      min: 20, max: 200 },
+          { type: 'slider', key: 'startOffset', label: 'Start offset', i18nKey: 'curvedTextTool.startOffset', min: 0,  max: 100,
             hidden: state.mode !== 'full-circle' },
         ],
       },
       {
         section: 'Color',
+        i18nKey: 'curvedTextTool.sectionColor',
         icon: 'palette',
         fields: [
           // No explicit defaultSolid needed: ColorPickerUI.ts's shared
           // default is already near-black (#18181b).
-          { type: 'color-picker', key: 'color', label: 'Color' },
+          { type: 'color-picker', key: 'color', label: 'Color', i18nKey: 'curvedTextTool.color' },
         ],
       },
       zIndexSection(),

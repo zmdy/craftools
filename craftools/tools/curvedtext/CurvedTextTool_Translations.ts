@@ -3,6 +3,9 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('curvedTextTool', {
     "pt-br": {
         panelTitle:    "Texto em Curva",
+        sectionText:   "Texto",
+        sectionArc:    "Arco",
+        sectionColor:  "Cor",
         text:          "Texto",
         textPlaceholder: "Digite o texto...",
         mode:          "Trajetória",
@@ -26,6 +29,9 @@ I18n.addTranslations('curvedTextTool', {
     },
     "en": {
         panelTitle:    "Curved Text",
+        sectionText:   "Text",
+        sectionArc:    "Arc",
+        sectionColor:  "Color",
         text:          "Text",
         textPlaceholder: "Type the text...",
         mode:          "Path",
@@ -49,6 +55,9 @@ I18n.addTranslations('curvedTextTool', {
     },
     "es": {
         panelTitle:    "Texto Curvo",
+        sectionText:   "Texto",
+        sectionArc:    "Arco",
+        sectionColor:  "Color",
         text:          "Texto",
         textPlaceholder: "Escribe el texto...",
         mode:          "Trayectoria",
