@@ -216,13 +216,14 @@ export class MiniCalendarTool extends BaseTool {
     return [
       {
         section: 'Calendar',
+        i18nKey: 'miniCalendarTool.sectionCalendar',
         icon: 'calendar_month',
         defaultOpen: true,
         fields: [
-          { type: 'select', key: 'displayMode', label: 'Display', options: DISPLAY_MODES },
-          { type: 'number', key: 'year',  label: 'Year',  min: 2000, max: 2100, step: 1 },
-          { type: 'number', key: 'month', label: 'Month', min: 1,    max: 12,   step: 1 },
-          { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)' },
+          { type: 'select', key: 'displayMode',    label: 'Display',                              i18nKey: 'miniCalendarTool.displayModeLabel', options: DISPLAY_MODES },
+          { type: 'number', key: 'year',            label: 'Year',  min: 2000, max: 2100, step: 1, i18nKey: 'miniCalendarTool.year' },
+          { type: 'number', key: 'month',           label: 'Month', min: 1,    max: 12,   step: 1, i18nKey: 'miniCalendarTool.month' },
+          { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)',  i18nKey: 'miniCalendarTool.weekStartSunday' },
         ],
       },
       // Wired to CalendarTheme's real nested shape via THEME_KEY_PATHS below
@@ -236,34 +237,35 @@ export class MiniCalendarTool extends BaseTool {
       // renderer doesn't attempt).
       {
         section: 'Theme',
+        i18nKey: 'miniCalendarTool.sectionTheme',
         icon: 'palette',
         fields: [
-          { type: 'color-picker', key: 'themeTitleBarBg',   label: 'Header background' },
-          { type: 'color',        key: 'themeTitleBarText', label: 'Header text' },
-          { type: 'color-picker', key: 'themeCellBg',        label: 'Day background' },
-          { type: 'color',        key: 'themeDayText',       label: 'Day text' },
-          { type: 'color-picker', key: 'themeWeekendBg',     label: 'Weekend background' },
+          { type: 'color-picker', key: 'themeTitleBarBg',   label: 'Header background',  i18nKey: 'miniCalendarTool.headerBg' },
+          { type: 'color',        key: 'themeTitleBarText', label: 'Header text',         i18nKey: 'miniCalendarTool.headerText' },
+          { type: 'color-picker', key: 'themeCellBg',        label: 'Day background',     i18nKey: 'miniCalendarTool.dayBg' },
+          { type: 'color',        key: 'themeDayText',       label: 'Day text',           i18nKey: 'miniCalendarTool.dayText' },
+          { type: 'color-picker', key: 'themeWeekendBg',     label: 'Weekend background', i18nKey: 'miniCalendarTool.weekendBg' },
           // Per-day-cell border (width/style/color/radius) -- radius is
           // what produces a "rounded calendar" look, one rounded box per
           // day, same idea as TableTool.ts's "rounded cards" template.
           // Solid-only 'color' (not 'color-picker') since CalendarRenderer
           // paints this with a plain CSS `border` shorthand, no gradient.
-          { type: 'divider', key: 'themeDayBorderDivider', label: 'Day cell border' },
-          { type: 'number', key: 'themeDayBorderWidth', label: 'Border width', min: 0, max: 10, unit: 'px' },
+          { type: 'divider', key: 'themeDayBorderDivider', label: 'Day cell border', i18nKey: 'miniCalendarTool.dayCellBorder' },
+          { type: 'number', key: 'themeDayBorderWidth',  label: 'Border width',  i18nKey: 'common.borderWidth',  min: 0, max: 10,  unit: 'px' },
           {
-            type: 'select', key: 'themeDayBorderStyle', label: 'Border style',
+            type: 'select', key: 'themeDayBorderStyle', label: 'Border style', i18nKey: 'common.borderStyle',
             options: [
               { value: 'solid',  label: 'Solid' },
               { value: 'dashed', label: 'Dashed' },
               { value: 'dotted', label: 'Dotted' },
             ],
           },
-          { type: 'color', key: 'themeDayBorderColor', label: 'Border color' },
-          { type: 'number', key: 'themeDayBorderRadius', label: 'Border radius', min: 0, max: 100, unit: 'px' },
+          { type: 'color',  key: 'themeDayBorderColor',  label: 'Border color',  i18nKey: 'common.borderColor' },
+          { type: 'number', key: 'themeDayBorderRadius', label: 'Border radius', i18nKey: 'common.borderRadius', min: 0, max: 100, unit: 'px' },
           // Vertical gap between the card's stacked sections (header / week
           // header / days grid / holidays / moon phases).
-          { type: 'divider', key: 'themeSpacingDivider', label: 'Spacing' },
-          { type: 'number', key: 'themeSectionGap', label: 'Space between sections', min: 0, max: 40, unit: 'px' },
+          { type: 'divider', key: 'themeSpacingDivider', label: 'Spacing', i18nKey: 'miniCalendarTool.spacing' },
+          { type: 'number', key: 'themeSectionGap', label: 'Space between sections', i18nKey: 'miniCalendarTool.sectionGap', min: 0, max: 40, unit: 'px' },
         ],
       },
       // Highlights a single chosen day-of-month in the days grid with its
@@ -276,30 +278,31 @@ export class MiniCalendarTool extends BaseTool {
       // highlighted cell's bg/border don't currently resolve gradients.
       {
         section: 'Highlight',
+        i18nKey: 'miniCalendarTool.sectionHighlight',
         icon: 'star',
         collapsible: true,
         defaultOpen: false,
         fields: [
-          { type: 'toggle', key: 'highlightEnabled', label: 'Highlight a day' },
+          { type: 'toggle', key: 'highlightEnabled', label: 'Highlight a day', i18nKey: 'miniCalendarTool.highlightEnabled' },
           {
-            type: 'select', key: 'highlightDaySource', label: 'Day to highlight',
+            type: 'select', key: 'highlightDaySource', label: 'Day to highlight', i18nKey: 'miniCalendarTool.dayToHighlight',
             options: [
-              { value: 'today', label: 'Today (automatic)' },
-              { value: 'fixed', label: 'Fixed day' },
+              { value: 'today', label: 'Today (automatic)', i18nKey: 'miniCalendarTool.highlightToday' },
+              { value: 'fixed', label: 'Fixed day',         i18nKey: 'miniCalendarTool.highlightFixed' },
             ],
           },
           {
-            type: 'number', key: 'highlightDay', label: 'Day', min: 1, max: 31, step: 1,
+            type: 'number', key: 'highlightDay', label: 'Day', i18nKey: 'miniCalendarTool.highlightDay', min: 1, max: 31, step: 1,
             // Only meaningful (and only shown) when highlightDaySource is
             // 'fixed' -- with 'today' the day is always recomputed, so a
             // manual number here would be misleading dead UI.
             hidden: (el) => PropertyRenderer._readState(el).highlightDaySource !== 'fixed',
           },
-          { type: 'color-picker', key: 'highlightBg', label: 'Background' },
-          { type: 'color-picker', key: 'highlightTextColor', label: 'Text color' },
-          { type: 'number', key: 'highlightBorderWidth', label: 'Border width', min: 0, max: 20, unit: 'px' },
+          { type: 'color-picker', key: 'highlightBg',          label: 'Background', i18nKey: 'common.background' },
+          { type: 'color-picker', key: 'highlightTextColor',   label: 'Text color', i18nKey: 'miniCalendarTool.textColor' },
+          { type: 'number', key: 'highlightBorderWidth',  label: 'Border width',  i18nKey: 'common.borderWidth',  min: 0, max: 20, unit: 'px' },
           {
-            type: 'select', key: 'highlightBorderStyle', label: 'Border style',
+            type: 'select', key: 'highlightBorderStyle', label: 'Border style', i18nKey: 'common.borderStyle',
             options: [
               { value: 'solid',  label: 'Solid' },
               { value: 'dashed', label: 'Dashed' },
@@ -308,8 +311,8 @@ export class MiniCalendarTool extends BaseTool {
               { value: 'none',   label: 'None' },
             ],
           },
-          { type: 'color-picker', key: 'highlightBorderColor', label: 'Border color' },
-          { type: 'number', key: 'highlightBorderRadius', label: 'Border radius', min: 0, max: 100, unit: 'px' },
+          { type: 'color-picker', key: 'highlightBorderColor',  label: 'Border color',  i18nKey: 'common.borderColor' },
+          { type: 'number',       key: 'highlightBorderRadius', label: 'Border radius',  i18nKey: 'common.borderRadius', min: 0, max: 100, unit: 'px' },
         ],
       },
       zIndexSection(),
