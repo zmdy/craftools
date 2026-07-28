@@ -3,6 +3,7 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('barcodeTool', {
     "pt-br": {
         panelTitle: "Propriedades do Código de Barras",
+        sectionBarcode: "Código de Barras",
         content: "Conteúdo",
         appearance: "Aparência",
         format: "Formato",
@@ -23,6 +24,7 @@ I18n.addTranslations('barcodeTool', {
     },
     "en": {
         panelTitle: "Barcode Properties",
+        sectionBarcode: "Barcode",
         content: "Content",
         appearance: "Appearance",
         format: "Format",
@@ -43,6 +45,7 @@ I18n.addTranslations('barcodeTool', {
     },
     "es": {
         panelTitle: "Propiedades del Código de Barras",
+        sectionBarcode: "Código de Barras",
         content: "Contenido",
         appearance: "Apariencia",
         format: "Formato",

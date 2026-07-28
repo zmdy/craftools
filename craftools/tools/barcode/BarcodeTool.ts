@@ -184,20 +184,21 @@ export class BarcodeTool extends BaseTool {
     return [
       {
         section: 'Barcode',
+        i18nKey: 'barcodeTool.sectionBarcode',
         icon: 'barcode_scanner',
         defaultOpen: true,
         fields: [
           {
             type: 'select', key: 'format', label: 'Format', i18nKey: 'barcodeTool.format',
             options: [
-              { value: 'code39', label: 'Code 39 (text/numbers)',       i18nKey: 'barcodeTool.formatCode39' },
+              { value: 'code39', label: 'Code 39 (text/numbers)',        i18nKey: 'barcodeTool.formatCode39' },
               { value: 'ean13',  label: 'EAN-13 (product, 12-13 digits)', i18nKey: 'barcodeTool.formatEan13' },
             ],
           },
-          { type: 'text',   key: 'text',       label: 'Content' },
-          { type: 'color-picker', key: 'color',      label: 'Bar color' },
-          { type: 'color-picker', key: 'background', label: 'Background' },
-          { type: 'toggle', key: 'showText',    label: 'Show text' },
+          { type: 'text',         key: 'text',       label: 'Content',    i18nKey: 'barcodeTool.content' },
+          { type: 'color-picker', key: 'color',      label: 'Bar color',  i18nKey: 'barcodeTool.colorBar' },
+          { type: 'color-picker', key: 'background', label: 'Background', i18nKey: 'barcodeTool.colorBackground' },
+          { type: 'toggle',       key: 'showText',   label: 'Show text',  i18nKey: 'barcodeTool.showText' },
         ],
       },
       borderSection(),
