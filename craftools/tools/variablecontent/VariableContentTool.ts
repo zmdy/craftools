@@ -536,7 +536,13 @@ export class VariableContentTool extends BaseTool {
       case 'font':      content.style.fontFamily = withEmojiFallback(String(value)); break;
       case 'fontSize':  content.style.fontSize   = `${value}px`; break;
       case 'color':     BaseTool._paintTextColor(content, value); break;
-      case 'textAlign': content.style.textAlign   = String(value); break;
+      case 'textAlign': 
+        content.style.textAlign   = String(value); 
+        if (value === 'left') content.style.alignItems = 'flex-start';
+        else if (value === 'right') content.style.alignItems = 'flex-end';
+        else if (value === 'center') content.style.alignItems = 'center';
+        else content.style.alignItems = 'stretch';
+        break;
       case 'bold':      content.style.fontWeight  = value ? 'bold' : 'normal'; break;
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;
       case 'textTransform': content.style.textTransform = String(value); break;
