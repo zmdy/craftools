@@ -367,6 +367,27 @@ export class TextTool extends BaseTool {
         isActive: isUnderline,
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'underline', !isUnderline(el))
       },
+      {
+        icon: 'format_align_left',
+        label: 'Align Left',
+        isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'left',
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'left')
+      },
+      {
+        icon: 'format_align_center',
+        label: 'Align Center',
+        isActive: (el: HTMLElement) => {
+          const state = PropertyRenderer._readState(el);
+          return state.textAlign === 'center' || !state.textAlign;
+        },
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'center')
+      },
+      {
+        icon: 'format_align_right',
+        label: 'Align Right',
+        isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'right',
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'right')
+      },
       this._autoFitCtxOption({
         isActive: isOn,
         toggle:   (el: HTMLElement) => TextTool._applyProperty(el, 'autoFit', !isOn(el)),
