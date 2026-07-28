@@ -455,13 +455,14 @@ export class VariableContentTool extends BaseTool {
       variableBindingSection({ defaultOpen: true }),
       {
         section: 'Typography',
+        i18nKey: 'textTool.typography',
         icon: 'text_fields',
         fields: [
-          { type: 'font-select', key: 'font',      label: 'Font' },
-          { type: 'slider',      key: 'fontSize',  label: 'Size', min: 8, max: 200, step: 1 },
+          { type: 'font-select', key: 'font',     label: 'Font',   i18nKey: 'textTool.font' },
+          { type: 'slider',      key: 'fontSize', label: 'Size',   i18nKey: 'textTool.size', min: 8, max: 200, step: 1 },
           { type: 'align',       key: 'textAlign' },
-          { type: 'toggle',      key: 'bold',      label: 'Bold' },
-          { type: 'toggle',      key: 'italic',    label: 'Italic' },
+          { type: 'toggle',      key: 'bold',     label: 'Bold',   i18nKey: 'textTool.bold' },
+          { type: 'toggle',      key: 'italic',   label: 'Italic', i18nKey: 'textTool.italic' },
           // Same field as TextTool.ts's Title/Paragraph -- see its schema
           // for why (only the value is applied to `content`, not resolved
           // per-repetition, so it composes fine with variable bindings).
@@ -478,7 +479,7 @@ export class VariableContentTool extends BaseTool {
           // background-clip:text technique TextTool.ts uses). No explicit
           // defaultSolid needed: ColorPickerUI.ts's shared default is
           // already near-black (#18181b).
-          { type: 'color-picker', key: 'color',    label: 'Color' },
+          { type: 'color-picker', key: 'color', label: 'Color', i18nKey: 'textTool.color' },
         ],
       },
       backgroundSection(),
