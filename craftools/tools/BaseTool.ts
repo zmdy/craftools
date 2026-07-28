@@ -513,10 +513,6 @@ export abstract class BaseTool {
         <button type="button" class="craftools-pill" data-ct-bar="lock">
           <span class="material-symbols-outlined" style="font-size:13px;">lock_open</span>
           <span></span>
-        </button>
-        <button type="button" class="craftools-pill" data-ct-bar="autocenter">
-          <span class="material-symbols-outlined" style="font-size:13px;">drag_click</span>
-          <span></span>
         </button>`;
       container.insertBefore(bar, container.firstChild);
     }
@@ -524,17 +520,14 @@ export abstract class BaseTool {
     const rawCopy  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="copy"]')!;
     const rawPaste = bar.querySelector<HTMLButtonElement>('[data-ct-bar="paste"]')!;
     const rawLock  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="lock"]')!;
-    const rawAuto = bar.querySelector<HTMLButtonElement>('[data-ct-bar="autocenter"]')!;
 
     // Strip any listeners left over from a previous selection.
     const btnCopy  = rawCopy.cloneNode(true) as HTMLButtonElement;
     const btnPaste = rawPaste.cloneNode(true) as HTMLButtonElement;
     const btnLock  = rawLock.cloneNode(true) as HTMLButtonElement;
-    const btnAuto  = rawAuto.cloneNode(true) as HTMLButtonElement;
     rawCopy.replaceWith(btnCopy);
     rawPaste.replaceWith(btnPaste);
     rawLock.replaceWith(btnLock);
-    rawAuto.replaceWith(btnAuto);
 
     // Album grid-cell images (AlbumWizard.ts's business-card/grid layouts)
     // are deliberately created with data-locked="true" -- locking is what
@@ -550,7 +543,6 @@ export abstract class BaseTool {
     if (!isAlbumCellImage) {
       this._updateLockButton(btnLock, element.getAttribute('data-locked') === 'true');
     }
-    this._updateAutoCenterButton(btnAuto, element.getAttribute('data-autocenter') !== 'false');
 
     const target = this._getStyleTarget(element);
 
@@ -617,12 +609,6 @@ export abstract class BaseTool {
         element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
       });
     }
-
-    btnAuto.addEventListener('click', () => {
-      const nowAutoCenter = element.getAttribute('data-autocenter') === 'false';
-      element.setAttribute('data-autocenter', nowAutoCenter ? 'true' : 'false');
-      this._updateAutoCenterButton(btnAuto, nowAutoCenter);
-    });
   }
 
   /** Paints the lock button's icon/label/active-state/title for the given locked state. */
@@ -635,14 +621,6 @@ export abstract class BaseTool {
     btn.title = isLocked
       ? tr('common.unlockElement', 'Desbloquear elemento')
       : tr('common.lockElement', 'Bloquear elemento (impede mover/redimensionar)');
-  }
-
-  /** Paints the auto-center button's UI for the given state. */
-  private static _updateAutoCenterButton(btn: HTMLButtonElement, isAutoCenter: boolean): void {
-    btn.classList.toggle('active', isAutoCenter);
-    const label = btn.querySelector('span:last-child');
-    if (label) label.textContent = isAutoCenter ? tr('common.autoCenterOn', 'Centralizado') : tr('common.autoCenterOff', 'Livre');
-    btn.title = tr('common.autoCenterDesc', 'Centralizar automaticamente ao selecionar');
   }
 
   // ── ToolRegistry integration ────────────────────────────────────────────────

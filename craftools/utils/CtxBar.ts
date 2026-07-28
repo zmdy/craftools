@@ -178,6 +178,25 @@ export class CtxBar {
           }
       }));
 
+      // Auto Center Toggle
+      let isAutoCenter = element.getAttribute('data-autocenter') !== 'false';
+      if (element.dataset.ctState) {
+        try {
+          const state = JSON.parse(element.dataset.ctState);
+          if (state.autoCenter !== undefined) isAutoCenter = !!state.autoCenter;
+        } catch(e) {}
+      }
+      
+      const autoCenterBtn = this.createButton('drag_click', I18n.t('common.autoCenterDesc', 'Centralizar ao selecionar'), () => {
+          const currentlyActive = autoCenterBtn.classList.contains('active');
+          const nextState = !currentlyActive;
+          element.setAttribute('data-autocenter', nextState ? 'true' : 'false');
+          PropertyRenderer.applyChange(element, 'autoCenter', nextState);
+          this._setButtonActive(autoCenterBtn, nextState);
+      });
+      this._setButtonActive(autoCenterBtn, isAutoCenter);
+      this.el.appendChild(autoCenterBtn);
+
       // Custom tools commands
       if (options && options.length > 0) {
           this.el.appendChild(this.createSeparator());

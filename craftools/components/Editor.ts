@@ -512,7 +512,13 @@ export class Craftools_Editor extends HTMLElement {
       // getBoundingClientRect() on both sides is post-zoom-transform, so
       // this still needs no manual zoom math.
       const defaultAutoCenter = AppSettings.get('defaultAutoCenterOnSelect');
-      const elAutoCenter = el.getAttribute('data-autocenter');
+      let elAutoCenter = el.getAttribute('data-autocenter');
+      if (el.dataset.ctState) {
+        try {
+          const state = JSON.parse(el.dataset.ctState);
+          if (state.autoCenter !== undefined) elAutoCenter = state.autoCenter ? 'true' : 'false';
+        } catch (e) {}
+      }
       const shouldCenter = elAutoCenter === 'true' || (defaultAutoCenter && elAutoCenter !== 'false');
 
       if (!isMobile() && shouldCenter) {

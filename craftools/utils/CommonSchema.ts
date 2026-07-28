@@ -377,6 +377,7 @@ export const contentAlignSection = (): Section => ({
   defaultOpen: false,
   fields: [
     { type: 'content-align', key: 'contentAlign' },
+    { type: 'toggle', key: 'autoCenter', label: 'Centralizar ao selecionar', icon: 'drag_click' },
   ],
 });
 
