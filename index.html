@@ -403,9 +403,14 @@
                 justify-content: flex-start !important;
                 padding: 0 10px !important;
                 gap: 12px;
+                touch-action: pan-x;
+                -webkit-overflow-scrolling: touch;
             }
             .footer-nav ul::-webkit-scrollbar {
                 display: none;
+            }
+            .footer-nav-btn {
+                -webkit-user-drag: none;
             }
             .footer-nav ul li {
                 display: inline-flex !important;
