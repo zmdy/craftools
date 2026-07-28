@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners, loadCalendarDate } from './ApiDataLoader.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { CalendarRenderer } from './CalendarRenderer.js';
+import { CalendarRenderer, type CalendarTheme } from './CalendarRenderer.js';
 import { MoonPhases } from './MoonPhases.js';
 import { Seasons } from './Seasons.js';
 import { Zodiac } from './Zodiac.js';
@@ -22,6 +22,15 @@ import { EMOJI_FONT_STACK } from './EmojiFont.js';
 type MiniCalendarPick = {
     year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
     highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
+    /**
+     * Theme colors (header/day background+text), same concept/shape as
+     * MiniCalendarTool.ts's own Theme schema section -- both ultimately
+     * build a CalendarRenderer.ts `CalendarTheme` object. Undefined leaves
+     * CalendarRenderer.mergeTheme() to fall back to its own defaults, same
+     * as passing no theme at all (previous behavior, before Variable
+     * Content had any theme controls of its own).
+     */
+    theme?: CalendarTheme;
 };
 
 export type VariableType =
@@ -188,6 +197,25 @@ export interface VariableBinding {
     miniCalendarHighlightBorderWidth?:  number | string;
     miniCalendarHighlightBorderRadius?: number | string;
     miniCalendarHighlightBorderStyle?:  string;
+    /**
+     * Theme colors -- same concept/shape/keys as MiniCalendarTool.ts's own
+     * "Theme" schema section, both ultimately feed a CalendarRenderer.ts
+     * `CalendarTheme`. Kept as its own prefixed set of fields here (rather
+     * than reusing the tool's meta keys directly) since Variable Content's
+     * miniCalendar format has its own independent binding config, resolved
+     * fresh per repetition in `_pickMiniCalendar()`. Undefined/empty falls
+     * back to CalendarRenderer's own defaults (same as before these fields
+     * existed). `miniCalendarThemeTitleBarBg`/`CellBg`/`WeekendBg` accept
+     * anything ColorPickerUI.ts's `normalizeValue()` understands (bare hex
+     * or a JSON ColorPickerValue string), so gradients are possible for
+     * those three -- see CalendarTheme's own doc comment in
+     * CalendarRenderer.ts. The text-color fields stay plain solid hex.
+     */
+    miniCalendarThemeTitleBarBg?:   string;
+    miniCalendarThemeTitleBarText?: string;
+    miniCalendarThemeCellBg?:       string;
+    miniCalendarThemeDayText?:      string;
+    miniCalendarThemeWeekendBg?:    string;
 }
 
 export interface ResolveContext {
@@ -1338,14 +1366,24 @@ export class VariableEngine {
             borderStyle:  b.miniCalendarHighlightBorderStyle,
         } : undefined;
         const weekStart: 'sunday' | 'monday' = b.weekStartSunday === false ? 'monday' : 'sunday';
-        return { year, month, displayMode, weekStart, highlight };
+        // Only set keys the user actually touched -- CalendarRenderer.mergeTheme()
+        // falls back to its own defaults for anything left undefined, so an
+        // untouched field keeps looking exactly like it did before these
+        // theme controls existed instead of resolving to an empty string.
+        const theme: CalendarTheme = {};
+        if (b.miniCalendarThemeTitleBarBg)   theme.titleBar   = { ...theme.titleBar,   bg: b.miniCalendarThemeTitleBarBg };
+        if (b.miniCalendarThemeTitleBarText) theme.titleBar   = { ...theme.titleBar,   color: b.miniCalendarThemeTitleBarText };
+        if (b.miniCalendarThemeCellBg)       theme.cellBg     = b.miniCalendarThemeCellBg;
+        if (b.miniCalendarThemeDayText)      theme.dayNumbers = { ...theme.dayNumbers, color: b.miniCalendarThemeDayText };
+        if (b.miniCalendarThemeWeekendBg)    theme.weekendBg  = b.miniCalendarThemeWeekendBg;
+        return { year, month, displayMode, weekStart, highlight, theme: Object.keys(theme).length ? theme : undefined };
     }
 
     private static _formatMiniCalendar(pick: MiniCalendarPick): string {
         const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.complete1;
         // CalendarRenderer stays JS — any type here is acceptable
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts, highlight: pick.highlight, weekStart: pick.weekStart }) as string;
+        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts, theme: pick.theme, highlight: pick.highlight, weekStart: pick.weekStart }) as string;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

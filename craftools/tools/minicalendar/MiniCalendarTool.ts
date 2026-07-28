@@ -188,17 +188,18 @@ export class MiniCalendarTool extends BaseTool {
     if (!('month'       in existing)) patch.month       = meta.month ?? (now.getMonth() + 1);
     if (!('weekStartSunday' in existing)) patch.weekStartSunday = meta.weekStartSunday ?? (AppSettings.get('defaultWeekStart') === 'sunday');
     if (!('highlightDaySource' in existing)) patch.highlightDaySource = meta.highlightDaySource ?? 'today';
-    // NOTE: these flattened theme.* colors don't map onto CalendarTheme's
-    // real (nested titleBar/weekHeader/dayNumbers/...) shape used by
-    // CalendarRenderer -- the Theme panel below is schema-driven UI that
-    // predates this crash fix and isn't wired into the actual renderer yet.
-    // Left as-is (pre-existing gap, not part of the createElement crash).
-    const theme = (meta.theme as unknown as Record<string, unknown>) ?? {};
-    if (!('themeHeaderBg'   in existing)) patch.themeHeaderBg   = theme.headerBg   ?? '#f97316';
-    if (!('themeHeaderText' in existing)) patch.themeHeaderText = theme.headerText  ?? '#ffffff';
-    if (!('themeDayBg'      in existing)) patch.themeDayBg      = theme.dayBg       ?? '#ffffff';
-    if (!('themeDayText'    in existing)) patch.themeDayText    = theme.dayText      ?? '#1a1a1a';
-    if (!('themeWeekendBg'  in existing)) patch.themeWeekendBg  = theme.weekendBg   ?? '#fff7ed';
+    // Theme colors now read from CalendarTheme's REAL nested shape (fixed --
+    // see THEME_KEY_PATHS's doc comment below for the full story on why the
+    // previous flattened theme.headerBg/dayBg/... keys never had any visual
+    // effect). Falls back to CalendarRenderer's own defaults so a freshly
+    // primed panel shows the same colors the card actually renders with.
+    const theme = (meta.theme ?? {}) as CalendarTheme;
+    const defaults = CalendarRenderer.defaultTheme();
+    if (!('themeTitleBarBg'   in existing)) patch.themeTitleBarBg   = theme.titleBar?.bg    ?? defaults.titleBar!.bg;
+    if (!('themeTitleBarText' in existing)) patch.themeTitleBarText = theme.titleBar?.color  ?? defaults.titleBar!.color;
+    if (!('themeCellBg'       in existing)) patch.themeCellBg       = theme.cellBg           ?? defaults.cellBg;
+    if (!('themeDayText'      in existing)) patch.themeDayText      = theme.dayNumbers?.color ?? defaults.dayNumbers!.color;
+    if (!('themeWeekendBg'    in existing)) patch.themeWeekendBg    = theme.weekendBg         ?? '';
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -216,25 +217,34 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)' },
         ],
       },
+      // Wired to CalendarTheme's real nested shape via THEME_KEY_PATHS below
+      // (was previously flattened onto keys CalendarRenderer never actually
+      // read -- see that constant's doc comment). Backgrounds use the
+      // standardized gradient-capable 'color-picker' component (same one
+      // the Highlight section below already uses), since CalendarRenderer
+      // paints them with the CSS `background` shorthand, which renders a
+      // gradient just fine; text colors stay plain 'color' (solid-only --
+      // CSS has no gradient `color` without extra tricks this HTML-string
+      // renderer doesn't attempt).
       {
         section: 'Theme',
         icon: 'palette',
         fields: [
-          { type: 'color', key: 'themeHeaderBg',   label: 'Header background' },
-          { type: 'color', key: 'themeHeaderText',  label: 'Header text' },
-          { type: 'color', key: 'themeDayBg',       label: 'Day background' },
-          { type: 'color', key: 'themeDayText',      label: 'Day text' },
-          { type: 'color', key: 'themeWeekendBg',   label: 'Weekend background' },
+          { type: 'color-picker', key: 'themeTitleBarBg',   label: 'Header background' },
+          { type: 'color',        key: 'themeTitleBarText', label: 'Header text' },
+          { type: 'color-picker', key: 'themeCellBg',        label: 'Day background' },
+          { type: 'color',        key: 'themeDayText',       label: 'Day text' },
+          { type: 'color-picker', key: 'themeWeekendBg',     label: 'Weekend background' },
         ],
       },
       // Highlights a single chosen day-of-month in the days grid with its
       // own background/text/border -- e.g. "today", or any other date the
       // user wants to stand out. Same standardized color-picker/border
       // vocabulary CommonSchema.ts's borderSection() uses elsewhere in the
-      // app (solid-or-gradient color-picker + width/style/color/radius),
-      // rather than the plain flat 'color' fields the Theme section above
-      // uses (see that section's own _syncFromDOM() comment -- those are a
-      // known pre-existing gap, not the pattern to extend).
+      // app, though the resulting value is flattened to a solid hex before
+      // reaching CalendarRenderer.ts (see HIGHLIGHT_COLOR_KEYS below) --
+      // unlike the Theme section's background fields above, a single
+      // highlighted cell's bg/border don't currently resolve gradients.
       {
         section: 'Highlight',
         icon: 'star',
@@ -285,16 +295,48 @@ export class MiniCalendarTool extends BaseTool {
    * `renderColorPicker(..., { allowGradient: false })`). */
   private static readonly HIGHLIGHT_COLOR_KEYS = new Set(['highlightBg', 'highlightTextColor', 'highlightBorderColor']);
 
+  /**
+   * Flat Theme-section schema key -> real path inside CalendarTheme (see
+   * that interface in CalendarRenderer.ts). The Theme section used to write
+   * `theme.headerBg`/`theme.dayBg`/etc -- keys CalendarRenderer.ts's
+   * `CalendarTheme` never had (its real shape nests bg/color under
+   * `titleBar`/`weekHeader`/`dayNumbers`/... and keeps only `cellBg` flat) --
+   * so every edit updated `_craftoolsMeta.theme` harmlessly but had ZERO
+   * effect on the rendered card. This table is the single source of truth
+   * for the correct path each schema key actually writes to, kept in sync
+   * with `_syncFromDOM()`'s own reads above.
+   *
+   * `themeTitleBarBg`/`themeCellBg`/`themeWeekendBg` store whatever the
+   * gradient-capable 'color-picker' field reports (a JSON ColorPickerValue
+   * string) -- written through as-is, since CalendarRenderer.ts itself now
+   * resolves it via `cssFromValue(normalizeValue(...))` at render time (see
+   * CalendarTheme's doc comment). The other two (`themeTitleBarText`/
+   * `themeDayText`) come from a plain solid-only 'color' field, already a
+   * bare hex string CalendarRenderer.ts uses directly.
+   */
+  private static readonly THEME_KEY_PATHS: Record<string, readonly [string] | readonly [string, string]> = {
+    themeTitleBarBg:   ['titleBar', 'bg'],
+    themeTitleBarText: ['titleBar', 'color'],
+    themeCellBg:       ['cellBg'],
+    themeDayText:      ['dayNumbers', 'color'],
+    themeWeekendBg:    ['weekendBg'],
+  };
+
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
     PropertyRenderer.applyChange(element, key, value);
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
     if (e._craftoolsMeta) {
+      const themePath = MiniCalendarTool.THEME_KEY_PATHS[key];
       if (key === 'displayMode' || key === 'year' || key === 'month' || key === 'weekStartSunday' || key === 'highlightDaySource') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
-      } else if (key.startsWith('theme')) {
-        const theme = (e._craftoolsMeta.theme as unknown as Record<string, unknown>) ?? {};
-        const themeKey = key.replace('theme', '').replace(/^./, c => c.toLowerCase());
-        theme[themeKey] = value;
+      } else if (themePath) {
+        const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
+        if (themePath.length === 2) {
+          const [group, prop] = themePath;
+          theme[group] = { ...((theme[group] as Record<string, unknown>) ?? {}), [prop]: value };
+        } else {
+          theme[themePath[0]] = value;
+        }
         (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
       } else if (key.startsWith('highlight')) {
         const highlight = (e._craftoolsMeta.highlight as unknown as Record<string, unknown>) ?? {};

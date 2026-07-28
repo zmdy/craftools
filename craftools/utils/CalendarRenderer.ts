@@ -4,6 +4,7 @@
 
 import { BrazilianHolidays } from "./BrazilianHolidays.js";
 import { MoonPhases } from "./MoonPhases.js";
+import { normalizeValue, cssFromValue } from "./ColorPickerUI.js";
 
 const MONTH_NAMES_PT = [
   'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
@@ -19,6 +20,22 @@ const MOON_SYMBOLS: Record<string, string> = {
 };
 const MOON_LABELS_PT: Record<string, string> = { nova: 'NOVA', crescente: 'CRESC.', cheia: 'CHEIA', minguante: 'MING.' };
 
+/**
+ * `titleBar.bg`, `cellBg` and `weekendBg` are "resolvable" fields: they
+ * accept anything utils/ColorPickerUI.ts's `normalizeValue()` understands
+ * (a bare hex string, a JSON `ColorPickerValue` string, or a
+ * `ColorPickerValue` object) -- buildCardHtml() below resolves them via
+ * `cssFromValue(normalizeValue(...))` right before painting, so a gradient
+ * picked in the standardized color-picker UI (MiniCalendarTool.ts's Theme
+ * section / Variable Content's miniCalendar theme fields) renders as a real
+ * CSS gradient here, since both spots use the `background` shorthand (which,
+ * unlike `background-color`, happily accepts a `linear-gradient(...)` /
+ * `radial-gradient(...)` string). Every other color field here (text/border
+ * colors) stays solid-only -- CSS has no gradient `color`/`border-color`
+ * without extra tricks (background-clip:text, border-image) this
+ * HTML-string-based renderer doesn't attempt -- so those are always plain
+ * hex strings, used as-is.
+ */
 export interface CalendarTheme {
   titleBar?: { bg?: string; color?: string; font?: string; fontWeight?: number; fontSize?: number };
   weekHeader?: { bg?: string; color?: string; font?: string; fontSize?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string };
@@ -27,6 +44,14 @@ export interface CalendarTheme {
   moonPhases?: { color?: string; font?: string; fontSize?: number };
   cellBg?: string;
   cellBorder?: { width?: number; style?: string; color?: string };
+  /**
+   * Background painted on Saturday/Sunday day-number cells (in addition to
+   * the ambient grid border), independent of `dayNumbers.sundayColor`'s
+   * text-color-only styling. Empty/unset = no special weekend background
+   * (matches the original, pre-Theme-fix visual). A highlighted day (see
+   * CalendarOptions.highlight) always takes priority over this.
+   */
+  weekendBg?: string;
 }
 
 export interface CalendarOptions {
@@ -82,6 +107,7 @@ export class CalendarRenderer {
           moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2 },
           cellBg: '#ffffff',
           cellBorder: { width: 1, style: 'dashed', color: '#cccccc' },
+          weekendBg: '',
       };
   }
 
@@ -96,13 +122,23 @@ export class CalendarRenderer {
           moonPhases: { ...base.moonPhases, ...(theme.moonPhases || {}) },
           cellBg: theme.cellBg || base.cellBg,
           cellBorder: { ...base.cellBorder, ...(theme.cellBorder || {}) },
+          weekendBg: theme.weekendBg || base.weekendBg,
       } as Required<CalendarTheme>;
   }
 
   static buildCardHtml(year: number, month: number, options: CalendarOptions = {}): string {
       const model = options.model === 'completo' ? 'completo' : 'simples';
-      const t = this.mergeTheme(options.theme) as any; 
-      
+      const t = this.mergeTheme(options.theme) as any;
+
+      // Resolve gradient-capable fields (see CalendarTheme's own doc comment)
+      // to real CSS once, up front -- idempotent for plain hex strings
+      // (normalizeValue()/cssFromValue() just pass them through unchanged),
+      // so this is safe even for legacy themes that never went through the
+      // color-picker UI at all.
+      const titleBarBg = cssFromValue(normalizeValue(t.titleBar.bg));
+      const cellBgResolved = cssFromValue(normalizeValue(t.cellBg));
+      const weekendBgResolved = t.weekendBg ? cssFromValue(normalizeValue(t.weekendBg)) : '';
+
       const parts = Object.assign({
           header: true,
           week: true,
@@ -160,6 +196,12 @@ export class CalendarRenderer {
                   ? `border:${hlBorderWidth}px ${hlBorderStyle} ${hlBorderColor}; box-sizing:border-box;`
                   : '';
               cellExtra = `background:${hlBg}; ${hlBorderCss} ${hlRadius ? `border-radius:${hlRadius}px;` : ''}`;
+          } else if (weekendBgResolved && (weekday === 0 || weekday === 6)) {
+              // Saturday/Sunday background (CalendarTheme.weekendBg) -- layers
+              // on top of the ambient grid border rather than replacing it,
+              // unlike the highlight cell above (which is meant to stand out
+              // as its own distinct cell).
+              cellExtra = `background:${this._esc(weekendBgResolved)}; ${dayCellBorder}`;
           }
 
           cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight}; ${cellExtra}">${day}</span>`;
@@ -190,7 +232,7 @@ export class CalendarRenderer {
       }
 
       const titleBarHtml = parts.header ? `
-              <div class="cal-title-bar" style="background:${this._esc(t.titleBar.bg)}; color:${this._esc(t.titleBar.color)}; font-family:'${this._esc(t.titleBar.font)}', sans-serif; font-weight:${t.titleBar.fontWeight}; font-size:${t.titleBar.fontSize}pt; text-align:center; padding:2px 0; letter-spacing:0.3px;">
+              <div class="cal-title-bar" style="background:${this._esc(titleBarBg)}; color:${this._esc(t.titleBar.color)}; font-family:'${this._esc(t.titleBar.font)}', sans-serif; font-weight:${t.titleBar.fontWeight}; font-size:${t.titleBar.fontSize}pt; text-align:center; padding:2px 0; letter-spacing:0.3px;">
                   ${MONTH_NAMES_PT[month - 1]} ${year}
               </div>` : '';
 
@@ -213,7 +255,7 @@ export class CalendarRenderer {
               </div>` : '';
 
       return `
-          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(t.cellBg)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
+          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
               ${titleBarHtml}
               ${weekHeaderHtml}
               ${daysGridHtml}
