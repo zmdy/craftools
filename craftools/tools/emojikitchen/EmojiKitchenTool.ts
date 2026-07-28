@@ -5,6 +5,8 @@ import { zIndexSection } from '../../utils/CommonSchema';
 import { loadEmojiKitchenCombo, loadEmojiKitchenSupported } from '../../utils/ApiDataLoader';
 import { stringifyEmojiKitchenPair, parseEmojiKitchenPair } from '../../utils/fields/emoji-kitchen-pair.field';
 import type { PropertySchema } from '../../types/PropertySchema';
+// Registers 'emojiKitchenTool.*' i18n keys used in getPropertySchema() below.
+import './EmojiKitchenTool_Translations.js';
 
 interface EmojiKitchenMeta {
   leftEmoji:  string;
@@ -125,6 +127,7 @@ export class EmojiKitchenTool extends BaseTool {
     return [
       {
         section: 'Emoji Kitchen',
+        i18nKey: 'emojiKitchenTool.section',
         icon: 'sentiment_very_satisfied',
         defaultOpen: true,
         fields: [
