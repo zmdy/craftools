@@ -288,11 +288,36 @@ export class TextTool extends BaseTool {
   static getCtxOptions(element?: HTMLElement): any[] {
     if (!element) return [];
     const isOn = (el: HTMLElement) => (el as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize === true;
-    return [this._autoFitCtxOption({
-      isActive: isOn,
-      toggle:   (el: HTMLElement) => TextTool._applyProperty(el, 'autoFit', !isOn(el)),
-      label:    'Auto-fit to text',
-    })];
+    
+    const isBold = (el: HTMLElement) => PropertyRenderer._readState(el).bold === true;
+    const isItalic = (el: HTMLElement) => PropertyRenderer._readState(el).italic === true;
+    const isUnderline = (el: HTMLElement) => PropertyRenderer._readState(el).underline === true;
+    
+    return [
+      {
+        icon: 'format_bold',
+        label: 'Bold',
+        isActive: isBold,
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'bold', !isBold(el))
+      },
+      {
+        icon: 'format_italic',
+        label: 'Italic',
+        isActive: isItalic,
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'italic', !isItalic(el))
+      },
+      {
+        icon: 'format_underlined',
+        label: 'Underline',
+        isActive: isUnderline,
+        command: (el: HTMLElement) => TextTool._applyProperty(el, 'underline', !isUnderline(el))
+      },
+      this._autoFitCtxOption({
+        isActive: isOn,
+        toggle:   (el: HTMLElement) => TextTool._applyProperty(el, 'autoFit', !isOn(el)),
+        label:    'Auto-fit to text',
+      })
+    ];
   }
 
   // ── Apply ─────────────────────────────────────────────────────────────────────
