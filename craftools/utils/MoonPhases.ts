@@ -96,6 +96,20 @@ export class MoonPhases {
     };
 
     /**
+     * Per-language labels for the same 4 phases -- keyed by `lang` (the
+     * Variable Content date binding's independent `dateLanguage` field, see
+     * VariableEngine.ts's VariableBinding doc comment; NOT the app's own UI
+     * language). `_PHASE_INFO.label` above stays as the pt-BR default/
+     * fallback so any call site that doesn't pass `lang` keeps behaving
+     * exactly as before this table existed.
+     */
+    static _LABELS = {
+        'pt-br': { nova: 'Lua Nova',   crescente: 'Lua Crescente',  cheia: 'Lua Cheia',  minguante: 'Lua Minguante' },
+        en:      { nova: 'New Moon',   crescente: 'Waxing Moon',    cheia: 'Full Moon',  minguante: 'Waning Moon' },
+        es:      { nova: 'Luna Nueva', crescente: 'Luna Creciente', cheia: 'Luna Llena', minguante: 'Luna Menguante' },
+    };
+
+    /**
      * Fase principal (uma das 4: nova/crescente/cheia/minguante) numa data
      * qualquer, com label/emoji/ícone prontos -- diferente de
      * getMoonPhasesForMonth() (que só lista os DIAS DE TRANSIÇÃO de fase
@@ -104,11 +118,15 @@ export class MoonPhases {
      * (mesma aproximação de mês sinódico constante desta classe) -- sem
      * rede, sem API.
      * @param {Date} date
+     * @param {'pt-br'|'en'|'es'} [lang='pt-br'] Idioma do `label` retornado
+     *   -- ver _LABELS acima.
      * @returns {{phase:'nova'|'crescente'|'cheia'|'minguante', label:string, emoji:string, iconHtml:string}}
      */
-    static getPhaseInfo(date) {
+    static getPhaseInfo(date, lang = 'pt-br') {
         const phase = this._nameForFraction(this._phaseFraction(date));
-        return { phase, ...this._PHASE_INFO[phase] };
+        const info  = this._PHASE_INFO[phase];
+        const label = (this._LABELS[lang] ?? this._LABELS['pt-br'])[phase];
+        return { phase, label, emoji: info.emoji, iconHtml: info.iconHtml };
     }
 
     /**

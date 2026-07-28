@@ -37,6 +37,20 @@ export class Seasons {
     };
 
     /**
+     * Per-language labels for the same 4 seasons -- keyed by `lang` (the
+     * Variable Content date binding's independent `dateLanguage` field, see
+     * VariableEngine.ts's VariableBinding doc comment; NOT the app's own UI
+     * language). `_SEASON_INFO.label` above stays as the pt-BR default/
+     * fallback so any call site that doesn't pass `lang` keeps behaving
+     * exactly as before this table existed.
+     */
+    static _LABELS = {
+        'pt-br': { spring: 'Primavera', summer: 'Verão',   autumn: 'Outono', winter: 'Inverno' },
+        en:      { spring: 'Spring',    summer: 'Summer',  autumn: 'Autumn', winter: 'Winter' },
+        es:      { spring: 'Primavera', summer: 'Verano',  autumn: 'Otoño',  winter: 'Invierno' },
+    };
+
+    /**
      * Estação (uma das 4: 'spring'|'summer'|'autumn'|'winter', nomes em
      * inglês como chave interna -- só os labels exibidos são em pt-BR,
      * mesma convenção de MoonPhases.ts's 'nova'/'crescente'/etc para as
@@ -72,11 +86,14 @@ export class Seasons {
      *   padrão -- mesma convenção "Brasil primeiro" já usada em
      *   BrazilianHolidays.ts e nos nomes de mês/dia-da-semana pt-BR
      *   hardcoded em VariableEngine.ts.
+     * @param {'pt-br'|'en'|'es'} [lang='pt-br'] Idioma do `label` retornado
+     *   -- ver _LABELS acima.
      * @returns {{season:'spring'|'summer'|'autumn'|'winter', label:string, emoji:string, iconHtml:string}}
      */
-    static getSeasonInfo(date, hemisphere = 'south') {
+    static getSeasonInfo(date, hemisphere = 'south', lang = 'pt-br') {
         const season = this._seasonForMonth(date.getMonth() + 1, hemisphere);
         const info = this._SEASON_INFO[season];
-        return { season, label: info.label, emoji: info.emoji, iconHtml: info.iconHtml };
+        const label = (this._LABELS[lang] ?? this._LABELS['pt-br'])[season];
+        return { season, label, emoji: info.emoji, iconHtml: info.iconHtml };
     }
 }

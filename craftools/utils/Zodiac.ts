@@ -46,6 +46,29 @@ export class Zodiac {
     ];
 
     /**
+     * Per-language labels for the same 12 signs -- keyed by `lang` (the
+     * Variable Content date binding's independent `dateLanguage` field, see
+     * VariableEngine.ts's VariableBinding doc comment; NOT the app's own UI
+     * language). `_SIGNS[].label` above stays as the pt-BR default/fallback
+     * so any call site that doesn't pass `lang` keeps behaving exactly as
+     * before this table existed.
+     */
+    static _LABELS = {
+        'pt-br': {
+            aries: 'Áries', taurus: 'Touro', gemini: 'Gêmeos', cancer: 'Câncer', leo: 'Leão', virgo: 'Virgem',
+            libra: 'Libra', scorpio: 'Escorpião', sagittarius: 'Sagitário', capricorn: 'Capricórnio', aquarius: 'Aquário', pisces: 'Peixes',
+        },
+        en: {
+            aries: 'Aries', taurus: 'Taurus', gemini: 'Gemini', cancer: 'Cancer', leo: 'Leo', virgo: 'Virgo',
+            libra: 'Libra', scorpio: 'Scorpio', sagittarius: 'Sagittarius', capricorn: 'Capricorn', aquarius: 'Aquarius', pisces: 'Pisces',
+        },
+        es: {
+            aries: 'Aries', taurus: 'Tauro', gemini: 'Géminis', cancer: 'Cáncer', leo: 'Leo', virgo: 'Virgo',
+            libra: 'Libra', scorpio: 'Escorpio', sagittarius: 'Sagitario', capricorn: 'Capricornio', aquarius: 'Acuario', pisces: 'Piscis',
+        },
+    };
+
+    /**
      * Signo (uma das 12 entradas de _SIGNS) do mês/dia informado.
      * @param {number} month 1-12
      * @param {number} day 1-31
@@ -75,10 +98,13 @@ export class Zodiac {
      * 100% local (mesma aproximação de datas fixas desta classe) -- sem
      * rede, sem API.
      * @param {Date} date
+     * @param {'pt-br'|'en'|'es'} [lang='pt-br'] Idioma do `label` retornado
+     *   -- ver _LABELS acima.
      * @returns {{sign:string, label:string, emoji:string, iconHtml:string}}
      */
-    static getSignInfo(date) {
-        const info = this._signForMonthDay(date.getMonth() + 1, date.getDate());
-        return { sign: info.sign, label: info.label, emoji: info.emoji, iconHtml: info.iconHtml };
+    static getSignInfo(date, lang = 'pt-br') {
+        const info  = this._signForMonthDay(date.getMonth() + 1, date.getDate());
+        const label = (this._LABELS[lang] ?? this._LABELS['pt-br'])[info.sign];
+        return { sign: info.sign, label, emoji: info.emoji, iconHtml: info.iconHtml };
     }
 }

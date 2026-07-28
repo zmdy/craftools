@@ -340,6 +340,16 @@ export class VariablePanel {
                 </div>
             </div>
 
+            <div class="ct-field" style="margin-top: 10px;">
+                <span class="craftools-label">${I18n.t('variablePanel.dateLanguageLabel')}</span>
+                <select id="var-date-language" class="craftools-select" style="width:100%;">
+                    <option value="pt-br" ${(b.dateLanguage ?? 'pt-br') === 'pt-br' ? 'selected' : ''}>Português</option>
+                    <option value="en" ${b.dateLanguage === 'en' ? 'selected' : ''}>English</option>
+                    <option value="es" ${b.dateLanguage === 'es' ? 'selected' : ''}>Español</option>
+                </select>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateLanguageHelp')}</span>
+            </div>
+
             <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
@@ -837,6 +847,7 @@ export class VariablePanel {
                     const calendarModeBtns = container.querySelectorAll<HTMLButtonElement>('.var-date-calendar-mode-btn');
                     const seasonOpts      = container.querySelector<HTMLElement>('#var-date-season-options');
                     const hemisphereSel   = container.querySelector<HTMLSelectElement>('#var-date-hemisphere');
+                    const dateLanguageSel = container.querySelector<HTMLSelectElement>('#var-date-language');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
@@ -958,6 +969,15 @@ export class VariablePanel {
                         };
                     }
                     if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
+                    // Language of the resolved date TEXT (month/weekday
+                    // names, week-number phrase, season/moon/zodiac labels)
+                    // -- independent of the app's own UI language, see
+                    // VariableBinding.dateLanguage's doc comment in
+                    // VariableEngine.ts. Always visible (not gated behind
+                    // any token check) since it affects the base custom
+                    // pattern's dd/mm/yyyy-derived month/weekday tokens too,
+                    // not just {season}/{moon}/{zodiac}.
+                    if (dateLanguageSel) dateLanguageSel.onchange = () => { binding!.dateLanguage = dateLanguageSel.value as 'pt-br' | 'en' | 'es'; notify(); };
                     // Single-select: exactly one of text/icon/emoji is ever
                     // active (replaces the old independent calendarShowIcon/
                     // Emoji/Text checkboxes, which allowed combining several

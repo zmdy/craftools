@@ -95,6 +95,20 @@ export interface VariableBinding {
      * Defaults to 'text' (defaultBinding() below).
      */
     calendarDisplay?: 'text' | 'icon' | 'emoji';
+    /**
+     * Which language the resolved date TEXT renders in (month/weekday
+     * names, the "Semana N de T" week-number phrase, and the
+     * season/moon-phase/zodiac-sign labels) -- completely independent of
+     * the app's own UI language (I18n/`window.craftoolsLang`), so a
+     * pt-BR-interface user can still print an agenda with English date
+     * labels, or vice versa. Same 3-value set as the app's own supported
+     * locales (see Editor.ts's `#lang-select`). Defaults to 'pt-br'
+     * (defaultBinding() below) since this whole engine was pt-BR-only
+     * hardcoded before this field existed -- an unset value on an older
+     * saved binding must keep resolving exactly as before, see
+     * _dateLocale().
+     */
+    dateLanguage?: 'pt-br' | 'en' | 'es';
     // sequenceNumber
     start?:        number | string;
     padding?:      number | string;
@@ -287,6 +301,7 @@ export class VariableEngine {
                 specialDateRandomize: false,
                 hemisphere: 'south',
                 calendarDisplay: 'text',
+                dateLanguage: 'pt-br',
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
@@ -555,29 +570,83 @@ export class VariableEngine {
         return d;
     }
 
+    /**
+     * Per-language month/weekday vocabulary + "day de month[, year]"/"Week
+     * N of T" phrasing, keyed by the same 3-locale set as the app's own UI
+     * language (I18n) but resolved INDEPENDENTLY of it -- see
+     * VariableBinding.dateLanguage's doc comment. This whole
+     * date-formatting engine hardcoded pt-BR literals unconditionally
+     * before this table existed; `_dateLocale()` defaults to 'pt-br' so a
+     * binding saved before this feature existed keeps resolving exactly as
+     * before. Word order/connector genuinely differs per language (English
+     * doesn't say "10 of April", it's "April 10") -- that's why
+     * DAY_MONTH_LONG/DAY_MONTH_YEAR_LONG call this table's `dayMonth()`/
+     * `dayMonthYear()` functions instead of a single shared template.
+     */
+    private static readonly DATE_LOCALES: Record<'pt-br' | 'en' | 'es', {
+        months: string[]; monthsAbbrev: string[];
+        weekdays: string[]; weekdaysAbbrev: string[]; weekdaysFirst: string[];
+        dayMonth: (day: number, month: string) => string;
+        dayMonthYear: (day: number, month: string, year: number) => string;
+        week: string; of: string;
+    }> = {
+        'pt-br': {
+            months: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+            monthsAbbrev: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+            weekdays: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
+            weekdaysAbbrev: ['DOM','SEG','TER','QUA','QUI','SEX','SAB'],
+            weekdaysFirst: ['D','S','T','Q','Q','S','S'],
+            dayMonth: (day, month) => `${day} de ${month}`,
+            dayMonthYear: (day, month, year) => `${day} de ${month} de ${year}`,
+            week: 'Semana', of: 'de',
+        },
+        en: {
+            months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+            monthsAbbrev: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+            weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+            weekdaysAbbrev: ['SUN','MON','TUE','WED','THU','FRI','SAT'],
+            weekdaysFirst: ['S','M','T','W','T','F','S'],
+            dayMonth: (day, month) => `${month} ${day}`,
+            dayMonthYear: (day, month, year) => `${month} ${day}, ${year}`,
+            week: 'Week', of: 'of',
+        },
+        es: {
+            months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+            monthsAbbrev: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+            weekdays: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
+            weekdaysAbbrev: ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'],
+            weekdaysFirst: ['D','L','M','M','J','V','S'],
+            dayMonth: (day, month) => `${day} de ${month}`,
+            dayMonthYear: (day, month, year) => `${day} de ${month} de ${year}`,
+            week: 'Semana', of: 'de',
+        },
+    };
+
+    private static _dateLocale(lang?: string): typeof VariableEngine.DATE_LOCALES['pt-br'] {
+        return this.DATE_LOCALES[(lang as 'pt-br' | 'en' | 'es')] ?? this.DATE_LOCALES['pt-br'];
+    }
+
     private static _formatDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache = {}): string {
         const format = b.format ?? 'DD/MM/YYYY';
         const pad = (v: number) => String(v).padStart(2, '0');
         const dd   = pad(d.getDate()), mm = pad(d.getMonth() + 1), yyyy = d.getFullYear(), yy = String(yyyy).slice(-2);
-        const mPt  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-        const wPt  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-        const wPtAbrev = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-        
+        const loc  = this._dateLocale(b.dateLanguage);
+
         switch (format) {
             case 'DD/MM/YYYY':         return `${dd}/${mm}/${yyyy}`;
             case 'DD/MM/YY':           return `${dd}/${mm}/${yy}`;
             case 'DD/MM':              return `${dd}/${mm}`;
             case 'MM/YYYY':            return `${mm}/${yyyy}`;
             case 'YYYY-MM-DD':         return `${yyyy}-${mm}-${dd}`;
-            case 'DAY_MONTH_LONG':    return `${d.getDate()} de ${mPt[d.getMonth()]}`;
-            case 'DAY_MONTH_YEAR_LONG':return `${d.getDate()} de ${mPt[d.getMonth()]} de ${yyyy}`;
-            case 'WEEKDAY':         return wPt[d.getDay()];
-            case 'WEEKDAY_SHORT':   return wPtAbrev[d.getDay()];
-            case 'WEEKDAY_DATE':    return `${wPt[d.getDay()]}, ${dd}/${mm}`;
+            case 'DAY_MONTH_LONG':     return loc.dayMonth(d.getDate(), loc.months[d.getMonth()]);
+            case 'DAY_MONTH_YEAR_LONG':return loc.dayMonthYear(d.getDate(), loc.months[d.getMonth()], yyyy);
+            case 'WEEKDAY':         return loc.weekdays[d.getDay()];
+            case 'WEEKDAY_SHORT':   return loc.weekdaysAbbrev[d.getDay()];
+            case 'WEEKDAY_DATE':    return `${loc.weekdays[d.getDay()]}, ${dd}/${mm}`;
             case 'DAY_ONLY':         return `${d.getDate()}`;
-            case 'MONTH_ONLY':         return mPt[d.getMonth()];
+            case 'MONTH_ONLY':         return loc.months[d.getMonth()];
             case 'DAY_OF_YEAR':  return String(this._dayOfYear(d));
-            case 'WEEK_NUMBER':  return this._formatWeekNumber(d);
+            case 'WEEK_NUMBER':  return this._formatWeekNumber(d, b);
             case 'CUSTOM':      return this._formatCustomDate(d, b, ctx, apiCache);
             case 'SPECIAL_DATE': return this._formatSpecialDate(d, b, ctx, apiCache);
             case 'MOON_PHASE':  return this._formatMoonPhase(d, b);
@@ -703,31 +772,27 @@ export class VariableEngine {
     private static _formatCustomDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
         const pattern = b.customFormat ?? '';
         if (!pattern) return '';
-        const pad     = (v: number) => String(v).padStart(2, '0');
-        const mFull   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-        const mAbrev  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const wFull   = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-        const wAbrev  = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
-        const wFirst  = ['D','S','T','Q','Q','S','S'];
+        const pad = (v: number) => String(v).padStart(2, '0');
+        const loc = this._dateLocale(b.dateLanguage);
 
         const tokens: Record<string, () => string> = {
             yyyy: () => String(d.getFullYear()),
             yy:   () => String(d.getFullYear()).slice(-2),
-            mmmm: () => mFull[d.getMonth()],
-            mmm:  () => mAbrev[d.getMonth()],
+            mmmm: () => loc.months[d.getMonth()],
+            mmm:  () => loc.monthsAbbrev[d.getMonth()],
             mm:   () => pad(d.getMonth() + 1),
             m:    () => String(d.getMonth() + 1),
             dd:   () => pad(d.getDate()),
             d:    () => String(d.getDate()),
-            wwww: () => wFull[d.getDay()],
-            ww:   () => wAbrev[d.getDay()],
-            w:    () => wFirst[d.getDay()],
-            '{season}':    () => this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south')),
-            '{moon}':      () => this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d)),
-            '{zodiac}':    () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d)),
+            wwww: () => loc.weekdays[d.getDay()],
+            ww:   () => loc.weekdaysAbbrev[d.getDay()],
+            w:    () => loc.weekdaysFirst[d.getDay()],
+            '{season}':    () => this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south', b.dateLanguage)),
+            '{moon}':      () => this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d, b.dateLanguage)),
+            '{zodiac}':    () => this._renderCalendarInfo(b, Zodiac.getSignInfo(d, b.dateLanguage)),
             '{holiday}':   () => this._escHtml(this._formatSpecialDate(d, b, ctx, apiCache)),
             '{dayofyear}': () => String(this._dayOfYear(d)),
-            '{weeknumber}': () => this._escHtml(this._formatWeekNumber(d)),
+            '{weeknumber}': () => this._escHtml(this._formatWeekNumber(d, b)),
         };
 
         const applyTokens = (text: string): string =>
@@ -795,7 +860,7 @@ export class VariableEngine {
      * of needing an apiCache/prefetch step.
      */
     private static _formatMoonPhase(d: Date, b: VariableBinding): string {
-        return this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d));
+        return this._renderCalendarInfo(b, MoonPhases.getPhaseInfo(d, b.dateLanguage));
     }
 
     /**
@@ -806,7 +871,7 @@ export class VariableEngine {
      * binding saved before this field existed.
      */
     private static _formatSeason(d: Date, b: VariableBinding): string {
-        return this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south'));
+        return this._renderCalendarInfo(b, Seasons.getSeasonInfo(d, b.hemisphere ?? 'south', b.dateLanguage));
     }
 
     /**
@@ -815,7 +880,7 @@ export class VariableEngine {
      * month/day (Zodiac.ts), not curated content.
      */
     private static _formatZodiac(d: Date, b: VariableBinding): string {
-        return this._renderCalendarInfo(b, Zodiac.getSignInfo(d));
+        return this._renderCalendarInfo(b, Zodiac.getSignInfo(d, b.dateLanguage));
     }
 
     /**
@@ -836,17 +901,17 @@ export class VariableEngine {
     }
 
     /**
-     * "Semana N de T" (hardcoded pt-BR, same convention as this file's
-     * literal month/weekday names -- see mPt/wPt in _formatDate() -- this
-     * whole date-formatting engine isn't locale-aware) -- format ===
-     * 'WEEK_NUMBER' / the {weeknumber} custom token. `T` is the ISO-8601
-     * week COUNT of the ISO week-year `d` falls into (52 or 53, see
-     * _isoWeeksInYear()) -- not a hardcoded 52 -- since roughly 1 year in
-     * 5-6 has a 53rd ISO week.
+     * "Semana N de T" / "Week N of T" (per `b.dateLanguage`, see
+     * _dateLocale() -- previously hardcoded pt-BR before that field
+     * existed) -- format === 'WEEK_NUMBER' / the {weeknumber} custom
+     * token. `T` is the ISO-8601 week COUNT of the ISO week-year `d` falls
+     * into (52 or 53, see _isoWeeksInYear()) -- not a hardcoded 52 --
+     * since roughly 1 year in 5-6 has a 53rd ISO week.
      */
-    private static _formatWeekNumber(d: Date): string {
+    private static _formatWeekNumber(d: Date, b?: VariableBinding): string {
         const { week, isoYear } = this._isoWeek(d);
-        return `Semana ${week} de ${this._isoWeeksInYear(isoYear)}`;
+        const loc = this._dateLocale(b?.dateLanguage);
+        return `${loc.week} ${week} ${loc.of} ${this._isoWeeksInYear(isoYear)}`;
     }
 
     /**
