@@ -142,31 +142,8 @@ export const Translations: Record<string, TranslationDict> = {
             shadowEnabled: "Ativar sombra",
             shadowColor: "Cor da sombra",
             alignment: "Alinhamento",
-            textAlign: "Alinhar texto"
-        },
-        textTool: {
-            typography: "Tipografia",
-            color: "Cor"
-        },
-        barcodeTool: {
-            format: "Formato",
-            formatCode39: "Code 39 (texto/números)",
-            formatEan13: "EAN-13 (produto, 12-13 dígitos)"
-        },
-        miniCalendarTool: {
-            modeWeekdays: "Apenas tabela de dias (com feriados marcados)",
-            modeCalendar: "Calendário (cabeçalho + tabela de dias)",
-            modeHeader: "Apenas cabeçalho (mês e ano)",
-            modeHolidaysBox: "Apenas caixa de feriados",
-            modeMoonBox: "Apenas caixa de fases da lua",
-            modeComplete1: "Calendário com feriados",
-            modeComplete2: "Calendário completo com fases da lua"
-        },
-        qrTool: {
-            spotifyBarColor: "Cor do Código"
-        },
-        variablePanel: {
-            title: "Texto Variável"
+            textAlign: "Alinhar texto",
+            contentAlign: "Alinhamento de Conteúdo"
         },
         sessionRecovery: {
             title: "Sessão recuperada",
@@ -327,21 +304,9 @@ export const Translations: Record<string, TranslationDict> = {
             shadowEnabled: "Enable shadow",
             shadowColor: "Shadow color",
             alignment: "Alignment",
-            textAlign: "Align text"
+            textAlign: "Align text",
+            contentAlign: "Content Alignment"
         },
-        textTool: { typography: "Typography", color: "Color" },
-        barcodeTool: { format: "Format", formatCode39: "Code 39 (text/numbers)", formatEan13: "EAN-13 (product, 12-13 digits)" },
-        miniCalendarTool: {
-            modeWeekdays: "Days table only (with holidays marked)",
-            modeCalendar: "Calendar (header + days table)",
-            modeHeader: "Header only (month and year)",
-            modeHolidaysBox: "Holidays box only",
-            modeMoonBox: "Moon phases box only",
-            modeComplete1: "Calendar with holidays",
-            modeComplete2: "Full calendar with moon phases"
-        },
-        qrTool: { spotifyBarColor: "Code Color" },
-        variablePanel: { title: "Variable Text" },
         sessionRecovery: {
             title: "Session recovered",
             message: "We detected an unfinished work session.",
@@ -496,21 +461,9 @@ export const Translations: Record<string, TranslationDict> = {
             shadowEnabled: "Activar sombra",
             shadowColor: "Color de la sombra",
             alignment: "Alineación",
-            textAlign: "Alinear texto"
+            textAlign: "Alinear texto",
+            contentAlign: "Alineación de Contenido"
         },
-        textTool: { typography: "Tipografía", color: "Color" },
-        barcodeTool: { format: "Formato", formatCode39: "Code 39 (texto/números)", formatEan13: "EAN-13 (producto, 12-13 dígitos)" },
-        miniCalendarTool: {
-            modeWeekdays: "Solo tabla de días (con feriados marcados)",
-            modeCalendar: "Calendario (encabezado + tabla de días)",
-            modeHeader: "Solo encabezado (mes y año)",
-            modeHolidaysBox: "Solo caja de feriados",
-            modeMoonBox: "Solo caja de fases de la luna",
-            modeComplete1: "Calendario con feriados",
-            modeComplete2: "Calendario completo con fases de la luna"
-        },
-        qrTool: { spotifyBarColor: "Color del Código" },
-        variablePanel: { title: "Texto Variable" },
         sessionRecovery: {
             title: "Sesión recuperada",
             message: "Detectamos una sesión de trabajo sin finalizar.",
