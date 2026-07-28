@@ -360,28 +360,30 @@ export class ImageTool extends BaseTool {
     return [
       {
         section: 'Photo',
+        i18nKey: 'imageTool.sectionPhoto',
         icon: 'photo_camera',
         fields: [
-          { type: 'image-upload', key: 'src', label: 'Switch photo' },
+          { type: 'image-upload', key: 'src', label: 'Switch photo', i18nKey: 'imageTool.switchPhoto' },
         ],
       },
       {
         section: 'Transform',
+        i18nKey: 'imageTool.sectionTransform',
         icon: 'tune',
         defaultOpen: true,
         fields: [
           {
-            type: 'select', key: 'objectFit', label: 'Fit mode',
+            type: 'select', key: 'objectFit', label: 'Fit mode', i18nKey: 'imageTool.fit',
             options: [
               { value: 'cover',   label: 'Cover' },
               { value: 'contain', label: 'Contain' },
               { value: 'fill',    label: 'Fill' },
             ],
           },
-          { type: 'slider', key: 'zoom',     label: 'Zoom',     min: 0.1, max: 5,    step: 0.05 },
-          { type: 'slider', key: 'rotation', label: 'Rotation', min: -180, max: 180, step: 1 },
-          { type: 'number', key: 'posX',     label: 'X',        unit: 'px' },
-          { type: 'number', key: 'posY',     label: 'Y',        unit: 'px' },
+          { type: 'slider', key: 'zoom',     label: 'Zoom',     i18nKey: 'imageTool.zoom',     min: 0.1, max: 5,    step: 0.05 },
+          { type: 'slider', key: 'rotation', label: 'Rotation', i18nKey: 'imageTool.rotation', min: -180, max: 180, step: 1 },
+          { type: 'number', key: 'posX',     label: 'X',        i18nKey: 'imageTool.posX',     unit: 'px' },
+          { type: 'number', key: 'posY',     label: 'Y',        i18nKey: 'imageTool.posY',     unit: 'px' },
           { type: 'toggle', key: 'flipH',    label: 'Flip horizontal', i18nKey: 'imageTool.flipHorizontal' },
           { type: 'toggle', key: 'flipV',    label: 'Flip vertical',   i18nKey: 'imageTool.flipVertical' },
           // Distinct from flipH/flipV above (which flip the photo right
@@ -401,26 +403,28 @@ export class ImageTool extends BaseTool {
       contentAlignSection(),
       {
         section: 'Filters',
+        i18nKey: 'imageTool.cssFilters',
         icon: 'photo_filter',
         fields: [
-          { type: 'slider', key: 'filter_brightness', label: 'Brightness', min: 0,   max: 2,   step: 0.01 },
-          { type: 'slider', key: 'filter_contrast',   label: 'Contrast',   min: 0,   max: 3,   step: 0.01 },
-          { type: 'slider', key: 'filter_saturate',   label: 'Saturate',   min: 0,   max: 3,   step: 0.01 },
-          { type: 'slider', key: 'filter_hue_rotate', label: 'Hue',        min: 0,   max: 360, step: 1    },
-          { type: 'slider', key: 'filter_blur',       label: 'Blur',       min: 0,   max: 20,  step: 0.1  },
-          { type: 'slider', key: 'filter_grayscale',  label: 'Grayscale',  min: 0,   max: 1,   step: 0.01 },
-          { type: 'slider', key: 'filter_sepia',      label: 'Sepia',      min: 0,   max: 1,   step: 0.01 },
-          { type: 'slider', key: 'filter_invert',     label: 'Invert',     min: 0,   max: 1,   step: 0.01 },
-          { type: 'slider', key: 'filter_opacity',    label: 'Opacity',    min: 0,   max: 1,   step: 0.01 },
+          { type: 'slider', key: 'filter_brightness', label: 'Brightness', i18nKey: 'imageTool.brightness', min: 0,   max: 2,   step: 0.01 },
+          { type: 'slider', key: 'filter_contrast',   label: 'Contrast',   i18nKey: 'imageTool.contrast',   min: 0,   max: 3,   step: 0.01 },
+          { type: 'slider', key: 'filter_saturate',   label: 'Saturate',   i18nKey: 'imageTool.saturate',   min: 0,   max: 3,   step: 0.01 },
+          { type: 'slider', key: 'filter_hue_rotate', label: 'Hue',        i18nKey: 'imageTool.hueRotate',  min: 0,   max: 360, step: 1    },
+          { type: 'slider', key: 'filter_blur',       label: 'Blur',       i18nKey: 'imageTool.blur',       min: 0,   max: 20,  step: 0.1  },
+          { type: 'slider', key: 'filter_grayscale',  label: 'Grayscale',  i18nKey: 'imageTool.grayscale',  min: 0,   max: 1,   step: 0.01 },
+          { type: 'slider', key: 'filter_sepia',      label: 'Sepia',      i18nKey: 'imageTool.sepia',      min: 0,   max: 1,   step: 0.01 },
+          { type: 'slider', key: 'filter_invert',     label: 'Invert',     i18nKey: 'imageTool.invert',     min: 0,   max: 1,   step: 0.01 },
+          { type: 'slider', key: 'filter_opacity',    label: 'Opacity',    i18nKey: 'imageTool.opacity',    min: 0,   max: 1,   step: 0.01 },
         ],
       },
       {
         section: 'Background',
+        i18nKey: 'common.background',
         icon: 'gradient',
         fields: [
-          { type: 'slider', key: 'bgBlur', label: 'Background blur', min: 0, max: 100, step: 1 },
+          { type: 'slider', key: 'bgBlur',    label: 'Background blur', i18nKey: 'imageTool.bgBlur',    min: 0, max: 100, step: 1 },
           {
-            type: 'select', key: 'blendMode', label: 'Blend mode',
+            type: 'select', key: 'blendMode', label: 'Blend mode', i18nKey: 'imageTool.blendMode',
             options: BLEND_MODES.map(m => ({ value: m, label: m })),
           },
           // backgroundSection()'s fields (Fill + Opacity), merged into this
