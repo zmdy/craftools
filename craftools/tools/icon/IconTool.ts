@@ -293,12 +293,13 @@ export class IconTool extends BaseTool {
     return [
       {
         section: 'Icon Style',
+        i18nKey: 'iconTool.sectionIconStyle',
         icon: 'interests',
         defaultOpen: true,
         fields: [
-          { type: 'color-picker', key: 'fillColor',   label: 'Fill color' },
-          { type: 'color-picker', key: 'strokeColor', label: 'Stroke color' },
-          { type: 'slider', key: 'strokeWidth', label: 'Stroke width', min: 0, max: 10, step: 0.5 },
+          { type: 'color-picker', key: 'fillColor',   label: 'Fill color',   i18nKey: 'iconTool.fillColor' },
+          { type: 'color-picker', key: 'strokeColor', label: 'Stroke color', i18nKey: 'iconTool.strokeColor' },
+          { type: 'slider', key: 'strokeWidth', label: 'Stroke width', i18nKey: 'iconTool.strokeWidth', min: 0, max: 10, step: 0.5 },
         ],
       },
       zIndexSection(),
