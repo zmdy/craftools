@@ -248,6 +248,11 @@ export class CalendarTool {
             (theme.cellBorder as Record<string, unknown>)[field] = value;
           } else if (part === 'cell') {
             state.theme.cellBg = value as string;
+          } else if (part === 'sectionGap') {
+            // Top-level CalendarTheme field (not nested under a part like
+            // titleBar/dayNumbers/...), so it needs its own case rather
+            // than the generic `theme[part][field]` path below.
+            state.theme.sectionGap = value as number;
           } else if (theme[part]) {
             (theme[part] as Record<string, unknown>)[field] = value;
           }
@@ -403,6 +408,10 @@ export class CalendarTool {
       numberFieldMax?: number;
       numberFieldStep?: number;
       innerBorder?: boolean;
+      /** Adds a border-radius field to the inner-border block -- only meaningful for
+       *  dayNumbers (a per-cell full border, unlike weekHeader's border-right-only
+       *  dividers), so opt in per-call rather than bundling it into `innerBorder`. */
+      innerBorderRadius?: boolean;
     } = {},
   ): string {
     return `
@@ -443,15 +452,18 @@ export class CalendarTool {
             <input type="number" class="craftools-input" data-part="${key}" data-field="fontSize" value="${part.fontSize}" step="0.5" min="2" max="30" style="width:100%;">
           </div>
         </div>
-        ${opts.innerBorder ? CalendarTool._renderInnerBorderFields(key, part) : ''}
+        ${opts.innerBorder ? CalendarTool._renderInnerBorderFields(key, part, opts.innerBorderRadius) : ''}
       </div>
     `;
   }
 
   // Reusable sub-block: inner (grid) borders for the week-day header and/or
   // day numbers -- opt-in via opts.innerBorder in _renderPartRow. Width 0
-  // means off (default).
-  private static _renderInnerBorderFields(key: string, part: Record<string, unknown>): string {
+  // means off (default). `withRadius` adds a border-radius field too (used
+  // for dayNumbers only -- see _renderPartRow's own innerBorderRadius doc
+  // comment): the knob that produces a "rounded calendar" look, one
+  // rounded box per day.
+  private static _renderInnerBorderFields(key: string, part: Record<string, unknown>, withRadius?: boolean): string {
     return `
       <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7);">
         <div style="font-weight:600; font-size:10px; margin-bottom:6px; color:var(--text-secondary);">${c('fieldInnerBorder')}</div>
@@ -466,11 +478,20 @@ export class CalendarTool {
             <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="innerBorderColor" value="${part.innerBorderColor || '#cccccc'}" style="width:100%;">
           </div>
         </div>
-        <div>
-          <span class="craftools-label">${c('fieldBorderStyle')}</span>
-          <select class="craftools-select" data-part="${key}" data-field="innerBorderStyle" style="width:100%;">
-            ${['solid', 'dashed', 'dotted'].map(s => `<option value="${s}" ${(part.innerBorderStyle || 'solid') === s ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
+        <div style="display:grid; grid-template-columns:${withRadius ? '1fr 1fr' : '1fr'}; gap:8px;">
+          <div>
+            <span class="craftools-label">${c('fieldBorderStyle')}</span>
+            <select class="craftools-select" data-part="${key}" data-field="innerBorderStyle" style="width:100%;">
+              ${['solid', 'dashed', 'dotted'].map(s => `<option value="${s}" ${(part.innerBorderStyle || 'solid') === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          ${withRadius ? `
+            <div>
+              <span class="craftools-label">${c('fieldBorderRadius')}</span>
+              <input type="number" class="craftools-input" data-part="${key}" data-field="innerBorderRadius"
+                value="${part.innerBorderRadius ?? 0}" min="0" max="100" step="1" style="width:100%;">
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -484,7 +505,7 @@ export class CalendarTool {
       CalendarTool._renderPartRow('dayNumbers', c('styleDayNumbers'), t.dayNumbers, {
         secondColorField: 'sundayColor', secondColorLabel: c('fieldSundayColor'),
         numberField: 'rowGap', numberFieldLabel: c('fieldRowGap'), numberFieldMin: 0, numberFieldMax: 8, numberFieldStep: 0.5,
-        innerBorder: true,
+        innerBorder: true, innerBorderRadius: true,
       }),
       CalendarTool._renderPartRow('holidays', c('styleHolidays'), t.holidays, {}),
     ];
@@ -495,6 +516,25 @@ export class CalendarTool {
     return `
       ${rows.join('')}
       ${CalendarTool._renderBorderRow(state.theme)}
+      ${CalendarTool._renderSpacingRow(state.theme)}
+    `;
+  }
+
+  // "Spacing" row -- gap between the card's stacked sections (title bar /
+  // week header / days grid / holidays / moon phases). `sectionGap` is a
+  // top-level CalendarTheme field (not nested under a part like titleBar/
+  // dayNumbers/...), so it's handled as its own `data-part="sectionGap"`
+  // case in bindEvents() rather than the generic `theme[part][field]` path.
+  private static _renderSpacingRow(t: CalendarTheme): string {
+    return `
+      <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:8px; margin-bottom:8px;">
+        <div style="font-weight:600; font-size:11px; margin-bottom:6px;">${c('styleSpacing')}</div>
+        <div>
+          <span class="craftools-label">${c('fieldSectionGap')}</span>
+          <input type="number" class="craftools-input" data-part="sectionGap" data-field="value"
+            value="${t.sectionGap ?? 0}" min="0" max="40" step="1" style="width:100%;">
+        </div>
+      </div>
     `;
   }
 

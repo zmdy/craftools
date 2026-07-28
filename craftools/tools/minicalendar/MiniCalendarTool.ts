@@ -200,6 +200,14 @@ export class MiniCalendarTool extends BaseTool {
     if (!('themeCellBg'       in existing)) patch.themeCellBg       = theme.cellBg           ?? defaults.cellBg;
     if (!('themeDayText'      in existing)) patch.themeDayText      = theme.dayNumbers?.color ?? defaults.dayNumbers!.color;
     if (!('themeWeekendBg'    in existing)) patch.themeWeekendBg    = theme.weekendBg         ?? '';
+    // Per-day-cell border (width/style/color/radius) -- the knob that
+    // produces a "rounded calendar" look -- and the gap between the card's
+    // stacked sections (title bar / week header / days grid / ...).
+    if (!('themeDayBorderWidth'  in existing)) patch.themeDayBorderWidth  = theme.dayNumbers?.innerBorderWidth  ?? defaults.dayNumbers!.innerBorderWidth;
+    if (!('themeDayBorderStyle'  in existing)) patch.themeDayBorderStyle  = theme.dayNumbers?.innerBorderStyle  ?? defaults.dayNumbers!.innerBorderStyle;
+    if (!('themeDayBorderColor'  in existing)) patch.themeDayBorderColor  = theme.dayNumbers?.innerBorderColor  ?? defaults.dayNumbers!.innerBorderColor;
+    if (!('themeDayBorderRadius' in existing)) patch.themeDayBorderRadius = theme.dayNumbers?.innerBorderRadius ?? defaults.dayNumbers!.innerBorderRadius;
+    if (!('themeSectionGap'      in existing)) patch.themeSectionGap      = theme.sectionGap ?? defaults.sectionGap;
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -235,6 +243,27 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'color-picker', key: 'themeCellBg',        label: 'Day background' },
           { type: 'color',        key: 'themeDayText',       label: 'Day text' },
           { type: 'color-picker', key: 'themeWeekendBg',     label: 'Weekend background' },
+          // Per-day-cell border (width/style/color/radius) -- radius is
+          // what produces a "rounded calendar" look, one rounded box per
+          // day, same idea as TableTool.ts's "rounded cards" template.
+          // Solid-only 'color' (not 'color-picker') since CalendarRenderer
+          // paints this with a plain CSS `border` shorthand, no gradient.
+          { type: 'divider', key: 'themeDayBorderDivider', label: 'Day cell border' },
+          { type: 'number', key: 'themeDayBorderWidth', label: 'Border width', min: 0, max: 10, unit: 'px' },
+          {
+            type: 'select', key: 'themeDayBorderStyle', label: 'Border style',
+            options: [
+              { value: 'solid',  label: 'Solid' },
+              { value: 'dashed', label: 'Dashed' },
+              { value: 'dotted', label: 'Dotted' },
+            ],
+          },
+          { type: 'color', key: 'themeDayBorderColor', label: 'Border color' },
+          { type: 'number', key: 'themeDayBorderRadius', label: 'Border radius', min: 0, max: 100, unit: 'px' },
+          // Vertical gap between the card's stacked sections (header / week
+          // header / days grid / holidays / moon phases).
+          { type: 'divider', key: 'themeSpacingDivider', label: 'Spacing' },
+          { type: 'number', key: 'themeSectionGap', label: 'Space between sections', min: 0, max: 40, unit: 'px' },
         ],
       },
       // Highlights a single chosen day-of-month in the days grid with its
@@ -320,6 +349,11 @@ export class MiniCalendarTool extends BaseTool {
     themeCellBg:       ['cellBg'],
     themeDayText:      ['dayNumbers', 'color'],
     themeWeekendBg:    ['weekendBg'],
+    themeDayBorderWidth:  ['dayNumbers', 'innerBorderWidth'],
+    themeDayBorderStyle:  ['dayNumbers', 'innerBorderStyle'],
+    themeDayBorderColor:  ['dayNumbers', 'innerBorderColor'],
+    themeDayBorderRadius: ['dayNumbers', 'innerBorderRadius'],
+    themeSectionGap:      ['sectionGap'],
   };
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {

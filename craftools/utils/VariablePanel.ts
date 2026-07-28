@@ -754,6 +754,32 @@ export class VariablePanel {
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeWeekendBg')}</span>
                     <div id="var-minical-theme-weekendbg-picker"></div>
                 </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
+                        <select id="var-minical-theme-dayborder-style" class="craftools-select" style="width:100%;">
+                            ${['solid', 'dashed', 'dotted'].map(style => `
+                                <option value="${style}" ${(b.miniCalendarThemeDayBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                        <input type="number" id="var-minical-theme-dayborder-width" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeDayBorderWidth !== undefined ? b.miniCalendarThemeDayBorderWidth : 0}" min="0" max="10">
+                    </div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
+                    <div id="var-minical-theme-dayborder-color-picker"></div>
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeDayBorderRadius')}</span>
+                    <input type="number" id="var-minical-theme-dayborder-radius" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeDayBorderRadius !== undefined ? b.miniCalendarThemeDayBorderRadius : 0}" min="0" max="100">
+                </div>
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeSectionGap')}</span>
+                    <input type="number" id="var-minical-theme-sectiongap" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeSectionGap !== undefined ? b.miniCalendarThemeSectionGap : 0}" min="0" max="40">
+                </div>
             </div>
             <div class="ct-field" style="margin-top:6px;">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
@@ -1412,6 +1438,28 @@ export class VariablePanel {
                             binding!.miniCalendarThemeWeekendBg = next.mode === 'gradient' ? JSON.stringify(next) : next.solid;
                             notify();
                         }, { allowGradient: true });
+                    }
+
+                    // Per-day-cell border (width/style/color/radius) -- radius is
+                    // the knob that produces a "rounded calendar" look -- and
+                    // the gap between the card's stacked sections. Same concept
+                    // as MiniCalendarTool.ts's own themeDayBorder*/themeSectionGap
+                    // schema fields.
+                    const themeDayBorderStyleSel = container.querySelector<HTMLSelectElement>('#var-minical-theme-dayborder-style');
+                    const themeDayBorderWidthEl  = container.querySelector<HTMLInputElement>('#var-minical-theme-dayborder-width');
+                    const themeDayBorderColorEl  = container.querySelector<HTMLElement>('#var-minical-theme-dayborder-color-picker');
+                    const themeDayBorderRadiusEl = container.querySelector<HTMLInputElement>('#var-minical-theme-dayborder-radius');
+                    const themeSectionGapEl      = container.querySelector<HTMLInputElement>('#var-minical-theme-sectiongap');
+
+                    if (themeDayBorderStyleSel) themeDayBorderStyleSel.onchange = () => { binding!.miniCalendarThemeDayBorderStyle = themeDayBorderStyleSel.value; notify(); };
+                    if (themeDayBorderWidthEl)  themeDayBorderWidthEl.oninput   = () => { binding!.miniCalendarThemeDayBorderWidth  = parseFloat(themeDayBorderWidthEl.value)  || 0; notify(); };
+                    if (themeDayBorderRadiusEl) themeDayBorderRadiusEl.oninput  = () => { binding!.miniCalendarThemeDayBorderRadius = parseFloat(themeDayBorderRadiusEl.value) || 0; notify(); };
+                    if (themeSectionGapEl)      themeSectionGapEl.oninput      = () => { binding!.miniCalendarThemeSectionGap      = parseFloat(themeSectionGapEl.value)      || 0; notify(); };
+                    if (themeDayBorderColorEl) {
+                        renderColorPicker(themeDayBorderColorEl, normalizeValue(binding!.miniCalendarThemeDayBorderColor || '#cccccc'), (next) => {
+                            binding!.miniCalendarThemeDayBorderColor = next.solid;
+                            notify();
+                        }, { allowGradient: false });
                     }
 
                     // Highlight (single day-of-month, styled independently of

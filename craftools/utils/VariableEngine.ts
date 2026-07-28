@@ -216,6 +216,18 @@ export interface VariableBinding {
     miniCalendarThemeCellBg?:       string;
     miniCalendarThemeDayText?:      string;
     miniCalendarThemeWeekendBg?:    string;
+    /**
+     * Per-day-cell border (width/style/color/radius) -- radius is the knob
+     * that produces a "rounded calendar" look, one rounded box per day.
+     * Same concept as MiniCalendarTool.ts's own themeDayBorder* schema
+     * fields (CalendarTheme.dayNumbers.innerBorder*).
+     */
+    miniCalendarThemeDayBorderWidth?:  number | string;
+    miniCalendarThemeDayBorderStyle?:  string;
+    miniCalendarThemeDayBorderColor?:  string;
+    miniCalendarThemeDayBorderRadius?: number | string;
+    /** Vertical gap (px) between the card's stacked sections (CalendarTheme.sectionGap). */
+    miniCalendarThemeSectionGap?: number | string;
 }
 
 export interface ResolveContext {
@@ -1376,6 +1388,11 @@ export class VariableEngine {
         if (b.miniCalendarThemeCellBg)       theme.cellBg     = b.miniCalendarThemeCellBg;
         if (b.miniCalendarThemeDayText)      theme.dayNumbers = { ...theme.dayNumbers, color: b.miniCalendarThemeDayText };
         if (b.miniCalendarThemeWeekendBg)    theme.weekendBg  = b.miniCalendarThemeWeekendBg;
+        if (b.miniCalendarThemeDayBorderWidth  !== undefined) theme.dayNumbers = { ...theme.dayNumbers, innerBorderWidth:  parseFloat(String(b.miniCalendarThemeDayBorderWidth))  || 0 };
+        if (b.miniCalendarThemeDayBorderStyle)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderStyle:  b.miniCalendarThemeDayBorderStyle };
+        if (b.miniCalendarThemeDayBorderColor)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderColor:  b.miniCalendarThemeDayBorderColor };
+        if (b.miniCalendarThemeDayBorderRadius !== undefined) theme.dayNumbers = { ...theme.dayNumbers, innerBorderRadius: parseFloat(String(b.miniCalendarThemeDayBorderRadius)) || 0 };
+        if (b.miniCalendarThemeSectionGap      !== undefined) theme.sectionGap = parseFloat(String(b.miniCalendarThemeSectionGap)) || 0;
         return { year, month, displayMode, weekStart, highlight, theme: Object.keys(theme).length ? theme : undefined };
     }
 

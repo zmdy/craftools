@@ -39,7 +39,14 @@ const MOON_LABELS_PT: Record<string, string> = { nova: 'NOVA', crescente: 'CRESC
 export interface CalendarTheme {
   titleBar?: { bg?: string; color?: string; font?: string; fontWeight?: number; fontSize?: number };
   weekHeader?: { bg?: string; color?: string; font?: string; fontSize?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string };
-  dayNumbers?: { color?: string; sundayColor?: string; font?: string; fontSize?: number; rowGap?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string };
+  /**
+   * `innerBorderRadius` rounds each day-number cell's corners (applies
+   * whether or not `innerBorderWidth` is set, so it also rounds off a plain
+   * weekend/card background with no visible border) -- this is the knob
+   * that produces a "rounded calendar" look, one rounded box per day, same
+   * idea as TableTool.ts's "rounded cards" template.
+   */
+  dayNumbers?: { color?: string; sundayColor?: string; font?: string; fontSize?: number; rowGap?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string; innerBorderRadius?: number };
   holidays?: { color?: string; font?: string; fontSize?: number };
   moonPhases?: { color?: string; font?: string; fontSize?: number };
   cellBg?: string;
@@ -52,6 +59,12 @@ export interface CalendarTheme {
    * CalendarOptions.highlight) always takes priority over this.
    */
   weekendBg?: string;
+  /**
+   * Vertical gap (px) between the card's direct sections (title bar, week
+   * header, days grid, holidays box, moon-phases box) -- 0 (default)
+   * matches the original stacked-with-no-gap look.
+   */
+  sectionGap?: number;
 }
 
 export interface CalendarOptions {
@@ -102,12 +115,13 @@ export class CalendarRenderer {
       return {
           titleBar: { bg: '#e11d2e', color: '#ffffff', font: 'DM Sans', fontWeight: 700, fontSize: 7 },
           weekHeader: { bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#ffffff' },
-          dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc' },
+          dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc', innerBorderRadius: 0 },
           holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2 },
           moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2 },
           cellBg: '#ffffff',
           cellBorder: { width: 1, style: 'dashed', color: '#cccccc' },
           weekendBg: '',
+          sectionGap: 0,
       };
   }
 
@@ -123,6 +137,7 @@ export class CalendarRenderer {
           cellBg: theme.cellBg || base.cellBg,
           cellBorder: { ...base.cellBorder, ...(theme.cellBorder || {}) },
           weekendBg: theme.weekendBg || base.weekendBg,
+          sectionGap: typeof theme.sectionGap === 'number' ? theme.sectionGap : base.sectionGap,
       } as Required<CalendarTheme>;
   }
 
@@ -161,9 +176,15 @@ export class CalendarRenderer {
       const holidays = BrazilianHolidays.getHolidaysForMonth(year, month);
       const holidayByDay = new Map(holidays.map((h: any) => [h.day, h.name]));
 
-      const dayCellBorder = (t.dayNumbers.innerBorderWidth > 0)
-          ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
+      // Radius applies independent of border width, so it also rounds off a
+      // plain weekend/card background with no visible border showing (see
+      // CalendarTheme.dayNumbers.innerBorderRadius's own doc comment).
+      const dayCellRadius = t.dayNumbers.innerBorderRadius > 0
+          ? `border-radius:${t.dayNumbers.innerBorderRadius}px;`
           : '';
+      const dayCellBorder = (t.dayNumbers.innerBorderWidth > 0)
+          ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box; ${dayCellRadius}`
+          : (dayCellRadius ? `box-sizing:border-box; ${dayCellRadius}` : '');
       const highlight = options.highlight;
       let cells = '';
       for (let i = 0; i < leadingEmpty; i++) {
@@ -255,7 +276,7 @@ export class CalendarRenderer {
               </div>` : '';
 
       return `
-          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)};">
+          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)}; gap:${t.sectionGap || 0}px;">
               ${titleBarHtml}
               ${weekHeaderHtml}
               ${daysGridHtml}
