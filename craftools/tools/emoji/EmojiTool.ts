@@ -12,6 +12,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
 import { renderEmojiPicker } from '../../utils/EmojiPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
+import './EmojiTool_Translations.js';
 
 /** EmojiTool stores emoji char in inner.dataset.emojiChar and size in inner.style.fontSize */
 const getInner = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-emoji-char], .ct-emoji-inner');
@@ -130,6 +131,7 @@ export class EmojiTool extends BaseTool {
     return [
       {
         section: 'Emoji',
+        i18nKey: 'emojiTool.section',
         icon: 'emoji_emotions',
         defaultOpen: true,
         fields: [
@@ -137,7 +139,7 @@ export class EmojiTool extends BaseTool {
           // "insert emoji" panel (utils/EmojiPickerUI.ts), embedded inline
           // instead of a bare text input for the raw character.
           { type: 'emoji-picker', key: 'emoji' },
-          { type: 'slider', key: 'fontSize', label: 'Size', min: 16, max: 256, step: 4 },
+          { type: 'slider', key: 'fontSize', label: 'Size', i18nKey: 'emojiTool.fontSize', min: 16, max: 256, step: 4 },
         ],
       },
       zIndexSection(),
