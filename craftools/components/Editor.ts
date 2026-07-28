@@ -511,7 +511,11 @@ export class Craftools_Editor extends HTMLElement {
       // only the canvas, never the properties panel or anything else.
       // getBoundingClientRect() on both sides is post-zoom-transform, so
       // this still needs no manual zoom math.
-      if (!isMobile() && AppSettings.get('defaultAutoCenterOnSelect')) {
+      const defaultAutoCenter = AppSettings.get('defaultAutoCenterOnSelect');
+      const elAutoCenter = el.getAttribute('data-autocenter');
+      const shouldCenter = elAutoCenter === 'true' || (defaultAutoCenter && elAutoCenter !== 'false');
+
+      if (!isMobile() && shouldCenter) {
         const canvasArea = document.getElementById('canvas-area');
         if (canvasArea) {
           const canvasRect = canvasArea.getBoundingClientRect();
