@@ -60,6 +60,26 @@ export interface VariableBinding {
      * both kinds being merged and unfilterable.
      */
     specialDateCategories?: string[];
+    /**
+     * Only meaningful when 'holiday' is included in specialDateCategories
+     * -- which scope(s) of holiday to include, matching craftools_api's
+     * calendar_entries.holiday_scope enum ('national'|'state'|'municipal').
+     * Non-holiday categories (commemoration_main/misc, saint, event) have
+     * no scope concept and are never filtered by this. Defaults to all
+     * three (defaultBinding() below) so a binding saved before this field
+     * existed keeps showing every holiday regardless of scope -- see
+     * _holidayScopeMatches().
+     */
+    specialDateHolidayScopes?: ('national' | 'state' | 'municipal')[];
+    /**
+     * Only read when specialDateHolidayScopes includes 'state' --
+     * restricts state holidays to a single UF (2-letter abbreviation,
+     * e.g. 'SP'). Empty/undefined = every state's holidays pass through
+     * (each one's own UF is still appended to its title, see
+     * _formatSpecialDateItem(), so multiple states showing at once stay
+     * distinguishable).
+     */
+    specialDateUf?: string;
     /** Joiner between multiple matched titles on the same day. Default ', '. */
     specialDateSeparator?: string;
     /** Shown when the resolved day has no matching entries. Default ''. */
@@ -294,6 +314,8 @@ export class VariableEngine {
             case 'date':           return {
                 type, startDate: isoToday, interval: 'daily', step: 1, format: 'CUSTOM', customFormat: 'dd/mm/yyyy', linkedTo: '',
                 specialDateCategories: ['holiday', 'commemoration_main', 'commemoration_misc', 'saint', 'event'],
+                specialDateHolidayScopes: ['national', 'state', 'municipal'],
+                specialDateUf: '',
                 specialDateSeparator: ', ',
                 specialDateEmptyText: '',
                 specialDateIncludeDescription: false,
@@ -970,17 +992,49 @@ export class VariableEngine {
 
     /**
      * Builds the display string for one matched calendar_entries item --
-     * bare title by default, or title + year (events) + description
-     * ("Detalhe") when `specialDateIncludeDescription` is on. The API/admin
-     * already store `description` per row (a free-text field, e.g. what
-     * happened on a historical event, or extra context for a commemorative
-     * date) but nothing on the frontend ever read it before this.
+     * bare title by default, or title + state/city (state/municipal
+     * holidays) + year (events) + description ("Detalhe") when
+     * `specialDateIncludeDescription` is on. The API/admin already store
+     * `description` per row (a free-text field, e.g. what happened on a
+     * historical event, or extra context for a commemorative date) but
+     * nothing on the frontend ever read it before this.
      */
     private static _formatSpecialDateItem(item: CalendarDateApiEntry, includeDescription: boolean): string {
         let text = item.title;
+        // Only 'holiday' category items carry scope/uf/city (see
+        // calendarEntryToApiShape() in repo.php) -- appended regardless of
+        // which scopes the binding filters to, since even a binding
+        // showing every scope at once (the default) needs a way to tell a
+        // state holiday apart from a national one in the resolved text.
+        if (item.scope === 'state' && item.uf) {
+            text += ` (${item.uf})`;
+        } else if (item.scope === 'municipal') {
+            const place = [item.city, item.uf].filter(Boolean).join('/');
+            if (place) text += ` (${place})`;
+        }
         if (item.year !== undefined) text += ` (${item.year})`;
         if (includeDescription && item.description) text += ` — ${item.description}`;
         return text;
+    }
+
+    /**
+     * Whether a 'holiday' category item passes specialDateHolidayScopes/
+     * specialDateUf -- only ever called for category === 'holiday' items
+     * (see _formatSpecialDate() below); commemoration/saint/event items
+     * have no scope concept and always pass through unfiltered.
+     * `item.scope` defaults to 'national' when absent (matches
+     * calendarEntryToApiShape()'s own DB-side default), so an older API
+     * response/offline-fallback entry with no scope field at all is still
+     * treated correctly rather than silently excluded.
+     */
+    private static _holidayScopeMatches(item: CalendarDateApiEntry, b: VariableBinding): boolean {
+        const scopes = b.specialDateHolidayScopes ?? ['national', 'state', 'municipal'];
+        const scope  = (item.scope as 'national' | 'state' | 'municipal' | undefined) ?? 'national';
+        if (!scopes.includes(scope)) return false;
+        if (scope === 'state' && b.specialDateUf) {
+            return (item.uf ?? '').toUpperCase() === b.specialDateUf.toUpperCase();
+        }
+        return true;
     }
 
     private static _formatSpecialDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache): string {
@@ -1002,7 +1056,11 @@ export class VariableEngine {
             const groupKey = this.SPECIAL_DATE_GROUP_KEYS[cat];
             if (!groupKey) return;
             const items = entry[groupKey] as CalendarDateApiEntry[] | undefined;
-            (items ?? []).forEach(item => { if (item?.title) titles.push(this._formatSpecialDateItem(item, includeDescription)); });
+            (items ?? []).forEach(item => {
+                if (!item?.title) return;
+                if (cat === 'holiday' && !this._holidayScopeMatches(item, b)) return;
+                titles.push(this._formatSpecialDateItem(item, includeDescription));
+            });
         });
 
         if (b.specialDateRandomize) {

@@ -68,6 +68,13 @@ I18n.addTranslations('variablePanel', {
         dateSpecialIncludeDescriptionLabel: "Incluir detalhe",
         dateSpecialIncludeDescriptionHelp: "Quando disponível, acrescenta a descrição (e o ano, em eventos históricos) depois do título.",
 
+        dateHolidayScopeLabel: "Tipo de feriado",
+        dateHolidayScopeNational: "Nacional",
+        dateHolidayScopeState: "Estadual",
+        dateHolidayScopeMunicipal: "Municipal",
+        dateUfLabel: "Estado (UF)",
+        dateUfAny: "qualquer estado",
+
         dateCalendarModeLabel: "Exibir como",
         dateCalendarModeText: "Texto",
         dateCalendarModeIcon: "Ícone",
@@ -242,6 +249,13 @@ I18n.addTranslations('variablePanel', {
         dateSpecialIncludeDescriptionLabel: "Include detail",
         dateSpecialIncludeDescriptionHelp: "When available, appends the description (and the year, for historical events) after the title.",
 
+        dateHolidayScopeLabel: "Holiday type",
+        dateHolidayScopeNational: "National",
+        dateHolidayScopeState: "State",
+        dateHolidayScopeMunicipal: "Municipal",
+        dateUfLabel: "State (UF)",
+        dateUfAny: "any state",
+
         dateCalendarModeLabel: "Display as",
         dateCalendarModeText: "Text",
         dateCalendarModeIcon: "Icon",
@@ -415,6 +429,13 @@ I18n.addTranslations('variablePanel', {
         dateSpecialEmptyTextPlaceholder: "deje en blanco para no mostrar nada",
         dateSpecialIncludeDescriptionLabel: "Incluir detalle",
         dateSpecialIncludeDescriptionHelp: "Cuando esté disponible, agrega la descripción (y el año, en eventos históricos) después del título.",
+
+        dateHolidayScopeLabel: "Tipo de feriado",
+        dateHolidayScopeNational: "Nacional",
+        dateHolidayScopeState: "Estatal",
+        dateHolidayScopeMunicipal: "Municipal",
+        dateUfLabel: "Estado (UF)",
+        dateUfAny: "cualquier estado",
 
         dateCalendarModeLabel: "Mostrar como",
         dateCalendarModeText: "Texto",

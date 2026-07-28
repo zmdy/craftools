@@ -352,6 +352,7 @@ export class VariablePanel {
 
             <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
+                ${this._holidayScopeFields(b)}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
                     <div class="ct-field">
                         <span class="craftools-label">${I18n.t('variablePanel.dateSpecialLimitLabel')}</span>
@@ -445,6 +446,44 @@ export class VariablePanel {
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.' + key)}</span>
                 </label>
             `).join('')}
+        `;
+    }
+
+    /** 'holiday'-only sub-filter -- matches craftools_api's calendar_entries.holiday_scope enum. */
+    private static _holidayScopes(): [string, string][] {
+        return [
+            ['national',  'dateHolidayScopeNational'],
+            ['state',     'dateHolidayScopeState'],
+            ['municipal', 'dateHolidayScopeMunicipal'],
+        ];
+    }
+
+    /** 26 states + Distrito Federal, in the conventional north-to-south/alphabetical admin listing order. */
+    private static readonly BRAZIL_UFS: string[] = [
+        'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI',
+        'RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+    ];
+
+    private static _holidayScopeFields(b: VariableBinding): string {
+        const active   = b.specialDateHolidayScopes?.length ? b.specialDateHolidayScopes : ['national', 'state', 'municipal'];
+        const catsActive = b.specialDateCategories?.length ? b.specialDateCategories : ['holiday', 'commemoration_main', 'commemoration_misc', 'saint', 'event'];
+        return `
+            <div id="var-date-holiday-scope-options" style="display: ${catsActive.includes('holiday') ? 'block' : 'none'}; margin-top:10px; padding-top:10px; border-top: 1px solid var(--border);">
+                <span class="craftools-label">${I18n.t('variablePanel.dateHolidayScopeLabel')}</span>
+                ${this._holidayScopes().map(([scope, key]) => `
+                    <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:4px;">
+                        <input type="checkbox" class="var-date-holiday-scope" value="${scope}" ${active.includes(scope) ? 'checked' : ''}>
+                        <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.' + key)}</span>
+                    </label>
+                `).join('')}
+                <div class="ct-field" id="var-date-uf-wrapper" style="margin-top:8px; display: ${active.includes('state') ? 'block' : 'none'};">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateUfLabel')}</span>
+                    <select id="var-date-uf" class="craftools-select" style="width:100%;">
+                        <option value="">${I18n.t('variablePanel.dateUfAny')}</option>
+                        ${this.BRAZIL_UFS.map(uf => `<option value="${uf}" ${(b.specialDateUf ?? '').toUpperCase() === uf ? 'selected' : ''}>${uf}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
         `;
     }
 
@@ -837,6 +876,10 @@ export class VariablePanel {
                     const daysBoxSun      = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
                     const customFormat    = container.querySelector<HTMLInputElement>('#var-date-custom-format');
                     const specialOpts     = container.querySelector<HTMLElement>('#var-date-special-options');
+                    const holidayScopeOpts = container.querySelector<HTMLElement>('#var-date-holiday-scope-options');
+                    const holidayScopeBoxes = container.querySelectorAll<HTMLInputElement>('.var-date-holiday-scope');
+                    const ufWrapper       = container.querySelector<HTMLElement>('#var-date-uf-wrapper');
+                    const ufSel           = container.querySelector<HTMLSelectElement>('#var-date-uf');
                     const specialCatBoxes = container.querySelectorAll<HTMLInputElement>('.var-date-special-cat');
                     const specialLimit    = container.querySelector<HTMLInputElement>('#var-date-special-limit');
                     const specialRandom   = container.querySelector<HTMLInputElement>('#var-date-special-randomize');
@@ -1002,9 +1045,28 @@ export class VariablePanel {
                             // every box visibly unchecked while the
                             // formatter quietly showed everything anyway).
                             binding!.specialDateCategories = [...specialCatBoxes].filter(c => c.checked).map(c => c.value);
+                            // The scope/UF sub-filter only means anything
+                            // when 'holiday' is actually one of the active
+                            // categories -- toggling it off just hides the
+                            // sub-block without touching its stored value,
+                            // so re-checking 'holiday' later restores
+                            // whatever scope selection the user had.
+                            if (holidayScopeOpts) holidayScopeOpts.style.display = binding!.specialDateCategories.includes('holiday') ? 'block' : 'none';
                             notify();
                         };
                     });
+                    holidayScopeBoxes.forEach(box => {
+                        box.onchange = () => {
+                            // Same "empty array is deliberate" reasoning as
+                            // specialCatBoxes above -- _holidayScopeMatches()
+                            // only falls back to "all three" when this is
+                            // `undefined`, never for a real empty array.
+                            binding!.specialDateHolidayScopes = [...holidayScopeBoxes].filter(c => c.checked).map(c => c.value as 'national' | 'state' | 'municipal');
+                            if (ufWrapper) ufWrapper.style.display = binding!.specialDateHolidayScopes.includes('state') ? 'block' : 'none';
+                            notify();
+                        };
+                    });
+                    if (ufSel) ufSel.onchange = () => { binding!.specialDateUf = ufSel.value; notify(); };
                     if (specialLimit) specialLimit.oninput = () => {
                         // Empty field = "show all" (undefined, not 0/NaN --
                         // _formatSpecialDate() only slices when the parsed
