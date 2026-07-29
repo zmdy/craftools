@@ -52,7 +52,20 @@ export class CtxBar {
       // z-index bumped from 500 to clear the mobile footer (.footer-nav-area
       // is 1050) and mini-panel (#mobile-mini-panel is 1065) -- the ctx-bar
       // used to render fully behind both on mobile.
-      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; flex-direction:column; align-items:center; gap:3px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(92vw, 260px);';
+      //
+      // max-width of 340 (not a tighter value) is sized around the heaviest
+      // real ctx-bar in the app -- TextTool's font-select+size, Bold/
+      // Italic/Underline, and 3 alignment buttons on top of the shared
+      // layer/duplicate/auto-center controls. _renderBalanced() always
+      // produces exactly 1 or 2 lines and never splits an atomic group, but
+      // it can only guarantee the FIRST line fits under this cap -- a
+      // narrower cap left the second line (or, before nowrap was
+      // reinstated, a CSS-level flex-wrap safety net) with nowhere to put
+      // the overflow except silently wrapping a 3rd/4th line, which visibly
+      // tore groups like Bold/Italic/Underline apart. This value keeps both
+      // lines fitting cleanly for that worst case while still being far
+      // narrower than the original, completely unconstrained bar.
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; flex-direction:column; align-items:center; gap:3px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(92vw, 340px);';
       this.container.appendChild(this.el);
       
       this.activeElement = null;
@@ -109,24 +122,30 @@ export class CtxBar {
 
   /**
    * One "line" of the ctx-bar. The bar itself is a flex column (see
-   * constructor) of one or two of these, built by _renderBalanced() below.
+   * constructor) of exactly one or two of these, built by
+   * _renderBalanced() below.
    *
-   * max-width:100% + box-sizing:border-box pins the row to the bar's own
-   * content width -- without it, a row is a flex item along the column
-   * container's CROSS axis, and since the bar uses align-items:center
-   * (not the flex default of stretch) that item is free to size itself
-   * from its own nowrap content instead of respecting the bar's max-width,
-   * silently overflowing past the rounded card's edge (the "overflow
-   * esquisito" bug: content spilling out from under the border-radius
-   * instead of wrapping). flex-wrap:wrap is a fallback safety net for the
-   * same case -- with the cap in place it should never actually trigger
-   * given an accurate _renderBalanced() split, but wrapping beats
-   * overflowing if a measurement is ever off by a few pixels.
+   * flex-wrap is deliberately `nowrap`, not `wrap`. A `wrap` fallback was
+   * tried as an overflow safety net, but it backfired: CSS wrapping has no
+   * concept of this row's "cells" (see _renderBalanced()'s doc comment),
+   * so the moment a row's real rendered width came out even a little wider
+   * than expected, the browser would silently wrap mid-group -- e.g.
+   * TextTool's Bold/Italic/Underline trio splitting across two lines, and
+   * the bar growing 3-4 lines tall instead of the hard 2-line cap. `nowrap`
+   * guarantees _renderBalanced()'s row/cell decisions are what actually
+   * renders; any residual sizing slack shows up as a few pixels of
+   * horizontal overflow on a rare, very control-heavy row instead.
+   *
+   * max-width:100% + box-sizing:border-box still matters independently of
+   * that: a row is a flex item along the column container's CROSS axis,
+   * and since the bar uses align-items:center (not the flex default of
+   * stretch) it would otherwise size itself from its own content instead
+   * of respecting the bar's own max-width.
    */
   private createRow(): HTMLDivElement {
       const row = document.createElement('div');
       row.className = 'craftools-ctxbar-row';
-      row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px; max-width:100%; box-sizing:border-box;';
+      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:2px; max-width:100%; box-sizing:border-box;';
       return row;
   }
 
@@ -203,19 +222,24 @@ export class CtxBar {
           return;
       }
 
-      // Doesn't fit -- split into exactly two lines at whichever CELL
-      // boundary keeps both lines' pixel widths closest to half the
-      // total. Splitting by cell (not by individual element) is what
-      // keeps a group like Bold/Italic/Underline from being torn apart.
-      const target = totalWidth / 2;
+      // Doesn't fit -- split into exactly two lines by greedily filling
+      // line 1 with as many whole cells as fit under maxContentWidth, then
+      // putting everything else on line 2. This guarantees line 1 always
+      // fits (short of a single cell alone being wider than the cap, an
+      // edge case with no valid split anyway); a target-the-midpoint
+      // approach was tried instead, but "closest to half" doesn't imply
+      // "fits" -- it could still assign line 1 more width than the cap
+      // allows, which is exactly what forced the old flex-wrap safety net
+      // to kick in and tear a group apart (see createRow()'s doc comment).
+      // Splitting by cell (not by individual element) is what keeps a
+      // group like Bold/Italic/Underline from being torn apart in the
+      // first place.
       let running = 0;
-      let splitIndex = nonEmptyCells.length - 1;
+      let splitIndex = nonEmptyCells.length;
       for (let i = 0; i < nonEmptyCells.length; i++) {
           const withThisCell = running + cellWidths[i] + (i > 0 ? GAP : 0);
-          if (withThisCell >= target) {
-              const diffInclude = Math.abs(withThisCell - target);
-              const diffExclude = Math.abs(running - target);
-              splitIndex = diffInclude <= diffExclude ? i + 1 : i;
+          if (i > 0 && withThisCell > maxContentWidth) {
+              splitIndex = i;
               break;
           }
           running = withThisCell;
