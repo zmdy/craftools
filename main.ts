@@ -38,8 +38,15 @@
 // normally here.
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-// ── Tool registrations (side-effects only) ────────────────────────────────────
-import './craftools/tools/index';
+// ── Tool registrations ────────────────────────────────────────────────────────
+// Tools self-register lazily via LAZY_TOOL_LOADERS and PANEL_SETUP_MAP inside
+// Editor.ts (triggered on first element selection / first sidebar panel open).
+// The eager barrel import that used to live here forced all 136 tool files --
+// and their transitive deps (@fortawesome 999 KB, MaterialSymbolsPack 68 KB,
+// etc.) -- to be transformed and fetched at startup, creating a large request
+// waterfall in dev mode and bloating the initial chunk in production.
+// Removing it cuts startup request count by ~300 with zero behaviour change:
+// every tool still loads the first time the user needs it.
 
 // ── Core ──────────────────────────────────────────────────────────────────────
 import { Craftools } from './craftools';

@@ -40,6 +40,49 @@ export default defineConfig({
     extensions: ['.mjs', '.mts', '.ts', '.js', '.jsx', '.tsx', '.json'],
   },
 
+  // ── Dependency pre-bundling ───────────────────────────────────────────────
+  // Explicitly declaring all npm deps here prevents Vite from discovering
+  // them lazily during page load and triggering a full-page re-optimisation
+  // (which causes the browser to reload mid-load). All five entries were
+  // already being auto-discovered and cached in node_modules/.vite/deps/,
+  // so this just makes that deterministic and avoids the first-load penalty
+  // on a cold cache or after `vite --force`.
+  optimizeDeps: {
+    include: [
+      'bootstrap/dist/js/bootstrap.bundle.min.js',
+      'html2canvas',
+      'sortablejs',
+      '@tooooools/html-to-svg',
+      '@fortawesome/free-solid-svg-icons',
+    ],
+  },
+
+  // ── Dev server ────────────────────────────────────────────────────────────
+  server: {
+    // Pre-transforms the critical-path source files before the first browser
+    // request. Without warmup Vite transforms each file on-demand as the
+    // browser walks the import graph -- for a deep graph like this app's
+    // (Editor.ts → CtxBar, PropertyRenderer, HistoryManager, …) that
+    // creates a sequential waterfall. Warming these files up front collapses
+    // that waterfall into a single paint.
+    warmup: {
+      clientFiles: [
+        './main.ts',
+        './craftools.ts',
+        './craftools/components/Editor.ts',
+        './craftools/components/Setup.ts',
+        './craftools/components/Element.ts',
+        './craftools/utils/CtxBar.ts',
+        './craftools/utils/PropertyRenderer.ts',
+        './craftools/utils/ToolRegistry.ts',
+        './craftools/utils/HistoryManager.ts',
+        './craftools/utils/SessionManager.ts',
+        './craftools/utils/AppSettings.ts',
+        './craftools/settings/Translations.ts',
+      ],
+    },
+  },
+
   build: {
     outDir: 'dist',
     emptyOutDir: true,

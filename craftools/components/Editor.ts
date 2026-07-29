@@ -26,16 +26,19 @@
 import { PageTool } from '../tools/page/PageTool.js';
 import { CtxBar } from '../utils/CtxBar.js';
 import { I18n } from '../settings/Translations.js';
-import { PdfExport } from '../utils/PdfExport.js';
-import { ImageExport } from '../utils/ImageExport.js';
 import { HistoryManager } from '../utils/HistoryManager.js';
 import { SessionManager } from '../utils/SessionManager.js';
 import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
-import { ProjectSerializer } from '../utils/ProjectSerializer.js';
 import { Notify } from '../utils/Notify.js';
+// PdfExport, ImageExport and ProjectSerializer are intentionally NOT imported
+// statically here. All three are only ever used inside button-click callbacks
+// (export actions) -- loading them eagerly would pull html2canvas (332 KB)
+// and html-to-svg (385 KB) into the startup bundle for no benefit. The
+// dynamic imports below load each module the first time the user clicks the
+// corresponding button.
 
 // ── Keyboard shortcuts: element clipboard ──────────────────────────────────────
 // Holds the source element for Ctrl+C/Ctrl+V (see _initHistoryAndSession()'s
@@ -982,12 +985,20 @@ export class Craftools_Editor extends HTMLElement {
 
     // ── PDF Export ──────────────────────────────────────────────────────────
     document.querySelectorAll('#pdf-btn, #pwa-sidebar-export').forEach(btn => {
-      btn.addEventListener('click', (e) => { e.preventDefault(); closeSidebar(); PdfExport.print(this); });
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); closeSidebar();
+        const { PdfExport } = await import('../utils/PdfExport.js');
+        PdfExport.print(this);
+      });
     });
 
     // ── PNG / JPG Export ────────────────────────────────────────────────────
     document.querySelectorAll('#pwa-sidebar-png').forEach(btn => {
-      btn.addEventListener('click', (e) => { e.preventDefault(); closeSidebar(); ImageExport.export(this); });
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); closeSidebar();
+        const { ImageExport } = await import('../utils/ImageExport.js');
+        ImageExport.export(this);
+      });
     });
 
     // ── JSON Project Export / Import ─────────────────────────────────────────
@@ -1006,6 +1017,7 @@ export class Craftools_Editor extends HTMLElement {
         
         const dismissLoading = Notify.toast(I18n.t('editor.generating') || 'Gerando projeto...', 'info', 60_000);
         try {
+          const { ProjectSerializer } = await import('../utils/ProjectSerializer.js');
           const blob = await ProjectSerializer.exportProject(projPagesWrapper, finalTitle);
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -1039,6 +1051,7 @@ export class Craftools_Editor extends HTMLElement {
 
       const dismissLoading = Notify.toast(I18n.t('editor.generating') || 'Carregando projeto...', 'info', 60_000);
       try {
+        const { ProjectSerializer } = await import('../utils/ProjectSerializer.js');
         const importedTitle = await ProjectSerializer.importProject(projPagesWrapper, file);
         
         // Re-attach page events to all new pages in projPagesWrapper
