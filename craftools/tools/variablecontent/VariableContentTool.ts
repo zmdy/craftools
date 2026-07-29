@@ -10,6 +10,7 @@ import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fiel
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback, EMOJI_FONT_STACK } from '../../utils/EmojiFont.js';
 import { I18n } from '../../settings/Translations.js';
+import { AppSettings } from '../../utils/AppSettings.js';
 import type { VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
@@ -417,6 +418,17 @@ export class VariableContentTool extends BaseTool {
     // sizePositionSection({ autoFit: true })) -- only `true` turns it on.
     el._craftoolsAutoResize = false;
 
+    // Follows the Settings panel's global default text alignment the same
+    // way TextTool.ts's createElement() does -- this used to be missing
+    // entirely (no `text-align` in the baseline style below), so a fresh
+    // Variable Content element always rendered browser-default left-aligned
+    // no matter what "Alinhamento padrão do texto" was set to in
+    // Configurações, while Text (title/paragraph) elements correctly picked
+    // it up. _syncFromDOM()'s own textAlign backfill reads
+    // `content.style.textAlign` too, so setting it here fixes both the
+    // initial render and that backfill in one place.
+    const defaultAlign = AppSettings.get('defaultTextAlign');
+
     const content = document.createElement('div');
     content.setAttribute('contenteditable', 'false');
     content.setAttribute('spellcheck', 'false');
@@ -425,6 +437,7 @@ export class VariableContentTool extends BaseTool {
       font-weight: 400;
       color: #1a1a1a;
       font-family: ${withEmojiFallback('DM Sans')};
+      text-align: ${defaultAlign};
       display: flex;
       flex-direction: column;
       justify-content: center;
