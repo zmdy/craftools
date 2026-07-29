@@ -42,7 +42,7 @@ export class CtxBar {
       // z-index bumped from 500 to clear the mobile footer (.footer-nav-area
       // is 1050) and mini-panel (#mobile-mini-panel is 1065) -- the ctx-bar
       // used to render fully behind both on mobile.
-      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; align-items:center; gap:2px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto;';
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; flex-direction:column; align-items:center; gap:3px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(92vw, 260px);';
       this.container.appendChild(this.el);
       
       this.activeElement = null;
@@ -97,10 +97,72 @@ export class CtxBar {
       return sep;
   }
 
+  /**
+   * One "line" of the ctx-bar. The bar itself is a flex column (see
+   * constructor) of up to two of these -- tool-specific controls first,
+   * general controls second (see show()'s doc comment) -- each wrapping
+   * its own buttons via flex-wrap instead of the whole bar being one long
+   * unbroken row. Keeps a wide tool (e.g. TextTool's font/size/B/I/U/align
+   * cluster) from stretching the bar past the viewport: it wraps into 2+
+   * balanced lines of its own instead.
+   */
+  private createRow(): HTMLDivElement {
+      const row = document.createElement('div');
+      row.className = 'craftools-ctxbar-row';
+      row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px;';
+      return row;
+  }
+
+  /** Thin horizontal rule between the specific-tool row and the general-controls row. */
+  private createRowDivider(): HTMLDivElement {
+      const div = document.createElement('div');
+      div.className = 'craftools-ctxbar-row-divider';
+      div.style.cssText = 'width:100%; height:1px; background:var(--border); margin:1px 0;';
+      return div;
+  }
+
+  /**
+   * Renders the floating ctx-bar for `element`, split into two rows so it
+   * never grows into one very wide strip:
+   *
+   *  1. Tool-specific row -- whatever `options` the calling tool passed in
+   *     (e.g. TextTool's font/size/Bold/Italic/Underline/align buttons).
+   *     This is the row most likely to have many buttons, so it's the one
+   *     that wraps into 2+ lines on its own when it doesn't fit.
+   *  2. General row -- controls every tool shares: layer order
+   *     (front/back/up/down), duplicate, auto-center-on-select. Usually
+   *     short enough to stay on one line.
+   *
+   * A tool with no custom options (options.length === 0) just gets the
+   * general row alone, same single-line look as before this split.
+   */
   show(element: CraftoolsCtxElement | null, options: CtxOption[] = []): void {
       if (!element) return;
       this.activeElement = element;
       this.el.innerHTML = '';
+
+      // ── Row 1: tool-specific controls ──────────────────────────────────
+      const specificRow = this.createRow();
+      if (options && options.length > 0) {
+          options.forEach(opt => {
+              if (opt.render) {
+                  specificRow.appendChild(opt.render(element));
+              } else {
+                  const btn = this.createButton(opt.icon!, opt.label!, () => {
+                      if (opt.command) opt.command(element);
+                      // Re-check right after the command runs so a toggle (e.g.
+                      // TextTool's "auto-fit to text") flips its icon color
+                      // immediately, without waiting for a re-select.
+                      if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
+                  });
+                  if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
+                  specificRow.appendChild(btn);
+              }
+          });
+      }
+
+      // ── Row 2: general controls (shared by every tool) ─────────────────
+      const generalRow = this.createRow();
 
       // Default commands (z-index)
       //
@@ -136,15 +198,15 @@ export class CtxBar {
           if (action === 'down') setZ(Math.max(1, currentZ - 1));
       };
 
-      this.el.appendChild(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
-      this.el.appendChild(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
-      this.el.appendChild(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
-      this.el.appendChild(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
+      generalRow.appendChild(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
+      generalRow.appendChild(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
+      generalRow.appendChild(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
+      generalRow.appendChild(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
 
-      this.el.appendChild(this.createSeparator());
+      generalRow.appendChild(this.createSeparator());
 
       // Duplicate Action
-      this.el.appendChild(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
+      generalRow.appendChild(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
           const clone = element.cloneNode(true) as CraftoolsCtxElement;
           
           // Offset slightly
@@ -199,27 +261,15 @@ export class CtxBar {
           this._setButtonActive(autoCenterBtn, nextState);
       });
       this._setButtonActive(autoCenterBtn, isAutoCenter);
-      this.el.appendChild(autoCenterBtn);
+      generalRow.appendChild(autoCenterBtn);
 
-      // Custom tools commands
-      if (options && options.length > 0) {
-          this.el.appendChild(this.createSeparator());
-          options.forEach(opt => {
-              if (opt.render) {
-                  this.el.appendChild(opt.render(element));
-              } else {
-                  const btn = this.createButton(opt.icon!, opt.label!, () => {
-                      if (opt.command) opt.command(element);
-                      // Re-check right after the command runs so a toggle (e.g.
-                      // TextTool's "auto-fit to text") flips its icon color
-                      // immediately, without waiting for a re-select.
-                      if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-                  });
-                  if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-                  this.el.appendChild(btn);
-              }
-          });
+      // Assemble: specific row (if any) above a thin divider, general row
+      // always below -- see show()'s doc comment for why this order.
+      if (specificRow.children.length > 0) {
+          this.el.appendChild(specificRow);
+          this.el.appendChild(this.createRowDivider());
       }
+      this.el.appendChild(generalRow);
 
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';

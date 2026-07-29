@@ -562,8 +562,13 @@ input[type="number"] { -moz-appearance:textfield; }
        being lower than .footer-nav-area's 1050, the bar rendered behind the
        footer instead of near the selected element. Removed the forced
        position (CtxBar.position() already keeps clear of the mobile footer,
-       see its bottomReserve comment); kept the width clamp since the bar's
-       own horizontal clamp doesn't know about narrow-viewport padding. */
+       see its bottomReserve comment).
+       max-width is now set inline in CtxBar.ts's constructor
+       (min(92vw, 260px), always wins over this rule since inline beats an
+       external stylesheet) -- the bar wraps into multiple rows instead of
+       stretching wide, so it no longer needs the old, wider
+       calc(100vw - 32px) allowance here. Rule kept as a no-op fallback in
+       case that inline style is ever removed. */
     .craftools-ctxbar {
         max-width: calc(100vw - 32px);
     }
