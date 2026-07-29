@@ -191,7 +191,7 @@ export class CtxBar {
         } catch(e) {}
       }
       
-      const autoCenterBtn = this.createButton('drag_click', I18n.t('common.autoCenterDesc', 'Centralizar ao selecionar'), () => {
+      const autoCenterBtn = this.createButton('drag_click', I18n.t('common.autoCenterDesc') || 'Centralizar ao selecionar', () => {
           const currentlyActive = autoCenterBtn.classList.contains('active');
           const nextState = !currentlyActive;
           element.setAttribute('data-autocenter', nextState ? 'true' : 'false');
