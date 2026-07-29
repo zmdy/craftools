@@ -352,30 +352,39 @@ export class TextTool extends BaseTool {
       {
         icon: 'format_bold',
         label: 'Bold',
+        // Grouped with Italic/Underline below -- CtxBar.ts keeps same-group
+        // options together as one atomic cluster, never split across the
+        // ctx-bar's two lines.
+        group: 'bius',
         isActive: isBold,
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'bold', !isBold(el))
       },
       {
         icon: 'format_italic',
         label: 'Italic',
+        group: 'bius',
         isActive: isItalic,
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'italic', !isItalic(el))
       },
       {
         icon: 'format_underlined',
         label: 'Underline',
+        group: 'bius',
         isActive: isUnderline,
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'underline', !isUnderline(el))
       },
       {
         icon: 'format_align_left',
         label: 'Align Left',
+        // Grouped with Center/Right below -- see the 'bius' comment above.
+        group: 'align',
         isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'left',
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'left')
       },
       {
         icon: 'format_align_center',
         label: 'Align Center',
+        group: 'align',
         isActive: (el: HTMLElement) => {
           const state = PropertyRenderer._readState(el);
           return state.textAlign === 'center' || !state.textAlign;
@@ -385,6 +394,7 @@ export class TextTool extends BaseTool {
       {
         icon: 'format_align_right',
         label: 'Align Right',
+        group: 'align',
         isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'right',
         command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'right')
       },

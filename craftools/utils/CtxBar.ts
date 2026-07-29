@@ -21,6 +21,16 @@ export interface CtxOption {
    * If provided, renders an arbitrary DOM element instead of a standard button.
    */
   render?: (el: HTMLElement) => HTMLElement;
+  /**
+   * Consecutive options sharing the same group id are kept together as one
+   * atomic cluster that never gets split across the ctx-bar's two lines
+   * (see CtxBar._renderBalanced()) -- e.g. TextTool.ts tags Bold/Italic/
+   * Underline as one group ('bius') and its 3 alignment buttons as another
+   * ('align'), so a line break can land between those clusters but never
+   * inside one. Options without a group (the default) are each their own
+   * single-item cluster, same as before this existed.
+   */
+  group?: string;
 }
 
 export interface CraftoolsCtxElement extends HTMLElement {
@@ -100,30 +110,49 @@ export class CtxBar {
   /**
    * One "line" of the ctx-bar. The bar itself is a flex column (see
    * constructor) of one or two of these, built by _renderBalanced() below.
+   *
+   * max-width:100% + box-sizing:border-box pins the row to the bar's own
+   * content width -- without it, a row is a flex item along the column
+   * container's CROSS axis, and since the bar uses align-items:center
+   * (not the flex default of stretch) that item is free to size itself
+   * from its own nowrap content instead of respecting the bar's max-width,
+   * silently overflowing past the rounded card's edge (the "overflow
+   * esquisito" bug: content spilling out from under the border-radius
+   * instead of wrapping). flex-wrap:wrap is a fallback safety net for the
+   * same case -- with the cap in place it should never actually trigger
+   * given an accurate _renderBalanced() split, but wrapping beats
+   * overflowing if a measurement is ever off by a few pixels.
    */
   private createRow(): HTMLDivElement {
       const row = document.createElement('div');
       row.className = 'craftools-ctxbar-row';
-      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:2px;';
+      row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px; max-width:100%; box-sizing:border-box;';
       return row;
   }
 
   /**
-   * Lays `items` out in the bar, defaulting to a single line and only
+   * Lays `cells` out in the bar, defaulting to a single line and only
    * splitting into a second line when they don't actually fit in one --
-   * most tools have few enough controls that this never triggers
-   * (e.g. a plain Shape or Icon selection stays one row, same as before
-   * any of this row-splitting existed).
+   * most tools have few enough controls that this never triggers (e.g. a
+   * plain Shape or Icon selection stays one row, same as before any of
+   * this row-splitting existed).
    *
-   * When a split IS needed (e.g. TextTool's font-select + size + Bold/
-   * Italic/Underline + 3 alignment buttons + auto-fit, on top of the
-   * shared layer/duplicate/auto-center controls), the break point is
-   * chosen by cumulative pixel width rather than a fixed item count, so
-   * a wide custom item (like that font/size selector) counts for as much
-   * as several icon buttons -- "cada linha com a mesma quantidade de
-   * elementos, proporcional ao tamanho". Capped at exactly two lines: the
-   * bar never grows a third row, it just lets the second line be exactly
-   * whatever didn't fit on the first.
+   * Each cell is an atomic cluster of one or more elements (see
+   * CtxOption.group's doc comment) that always stays together on the same
+   * line -- e.g. TextTool's Bold/Italic/Underline trio, or its 3 alignment
+   * buttons. A single icon button with no declared group is just a
+   * one-element cell, same granularity as before groups existed.
+   *
+   * When a split IS needed (e.g. TextTool's font-select + size + B/I/U +
+   * alignment + auto-fit, on top of the shared layer/duplicate/
+   * auto-center controls), the break point is chosen by cumulative pixel
+   * width rather than a fixed cell count, so a wide cell (like that font/
+   * size selector) counts for as much as several icon buttons -- "cada
+   * linha com a mesma quantidade de elementos, proporcional ao tamanho".
+   * Capped at exactly two lines: the bar never grows a third row, it just
+   * lets the second line be exactly whatever didn't fit on the first, and
+   * a cell boundary is always respected so a group is never torn in half
+   * across the two lines.
    *
    * Measuring requires a real layout pass, which display:none subtrees
    * can't provide (zero size everywhere) -- so this temporarily flips the
@@ -131,7 +160,9 @@ export class CtxBar {
    * than toggling display, avoiding any visible flash while still getting
    * real getBoundingClientRect() widths.
    */
-  private _renderBalanced(items: HTMLElement[]): void {
+  private _renderBalanced(cells: HTMLElement[][]): void {
+      const nonEmptyCells = cells.filter(cell => cell.length > 0);
+      const items = nonEmptyCells.flat();
       if (items.length === 0) return;
 
       const probeRow = this.createRow();
@@ -145,82 +176,92 @@ export class CtxBar {
 
       const cs = getComputedStyle(this.el);
       const maxContentWidth = this.el.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
-      const widths = items.map(item => item.getBoundingClientRect().width);
       const GAP = 2; // matches createRow()'s gap:2px
-      const totalWidth = widths.reduce((sum, w) => sum + w, 0) + GAP * (items.length - 1);
+      const cellWidths = nonEmptyCells.map(cell => {
+          let w = 0;
+          cell.forEach((el, idx) => {
+              w += el.getBoundingClientRect().width;
+              if (idx > 0) w += GAP; // gap between elements within the same cell
+          });
+          return w;
+      });
+      const totalWidth = cellWidths.reduce((sum, w) => sum + w, 0) + GAP * (nonEmptyCells.length - 1);
 
       this.el.style.display    = prevDisplay;
       this.el.style.visibility = prevVisibility;
       this.el.removeChild(probeRow);
 
-      if (totalWidth <= maxContentWidth || items.length === 1) {
-          // Fits on one line -- the default. No forced second row.
+      const renderRow = (cellGroup: HTMLElement[][]) => {
           const row = this.createRow();
-          items.forEach(item => row.appendChild(item));
+          cellGroup.flat().forEach(el => row.appendChild(el));
           this.el.appendChild(row);
+      };
+
+      if (totalWidth <= maxContentWidth || nonEmptyCells.length === 1) {
+          // Fits on one line -- the default. No forced second row.
+          renderRow(nonEmptyCells);
           return;
       }
 
-      // Doesn't fit -- split into exactly two lines at whichever item
-      // boundary keeps both lines' pixel widths closest to half the total.
+      // Doesn't fit -- split into exactly two lines at whichever CELL
+      // boundary keeps both lines' pixel widths closest to half the
+      // total. Splitting by cell (not by individual element) is what
+      // keeps a group like Bold/Italic/Underline from being torn apart.
       const target = totalWidth / 2;
       let running = 0;
-      let splitIndex = items.length - 1;
-      for (let i = 0; i < items.length; i++) {
-          const withThisItem = running + widths[i] + (i > 0 ? GAP : 0);
-          if (withThisItem >= target) {
-              const diffInclude = Math.abs(withThisItem - target);
+      let splitIndex = nonEmptyCells.length - 1;
+      for (let i = 0; i < nonEmptyCells.length; i++) {
+          const withThisCell = running + cellWidths[i] + (i > 0 ? GAP : 0);
+          if (withThisCell >= target) {
+              const diffInclude = Math.abs(withThisCell - target);
               const diffExclude = Math.abs(running - target);
               splitIndex = diffInclude <= diffExclude ? i + 1 : i;
               break;
           }
-          running = withThisItem;
+          running = withThisCell;
       }
-      splitIndex = Math.max(1, Math.min(splitIndex, items.length - 1));
+      splitIndex = Math.max(1, Math.min(splitIndex, nonEmptyCells.length - 1));
 
-      const firstItems  = items.slice(0, splitIndex);
-      const secondItems = items.slice(splitIndex);
+      let firstCells  = nonEmptyCells.slice(0, splitIndex);
+      let secondCells = nonEmptyCells.slice(splitIndex);
       // A lone separator dangling at the start/end of a line (right where
       // the split landed) looks like a stray mark rather than a divider --
       // trim it from whichever end it ended up on.
-      const trimEdgeSeparator = (arr: HTMLElement[], fromStart: boolean) => {
-          const idx = fromStart ? 0 : arr.length - 1;
-          if (arr.length > 0 && arr[idx].classList.contains('craftools-ctx-sep')) arr.splice(idx, 1);
-      };
-      trimEdgeSeparator(firstItems, false);
-      trimEdgeSeparator(secondItems, true);
+      const isSeparatorCell = (cell: HTMLElement[]) => cell.length === 1 && cell[0].classList.contains('craftools-ctx-sep');
+      if (firstCells.length > 0 && isSeparatorCell(firstCells[firstCells.length - 1])) firstCells = firstCells.slice(0, -1);
+      if (secondCells.length > 0 && isSeparatorCell(secondCells[0])) secondCells = secondCells.slice(1);
 
-      const row1 = this.createRow();
-      const row2 = this.createRow();
-      firstItems.forEach(item => row1.appendChild(item));
-      secondItems.forEach(item => row2.appendChild(item));
-      this.el.appendChild(row1);
-      this.el.appendChild(row2);
+      renderRow(firstCells);
+      renderRow(secondCells);
   }
 
   /**
-   * Renders the floating ctx-bar for `element`. Builds one flat, ordered
-   * list of controls -- the calling tool's own `options` first (e.g.
-   * TextTool's font/size/Bold/Italic/Underline/align buttons), then the
-   * controls every tool shares (layer order, duplicate, auto-center) --
-   * and hands it to _renderBalanced() to lay out as one line, or two
-   * evenly-split lines if it doesn't fit on one. See _renderBalanced()'s
-   * own doc comment for why 2 lines is the hard cap and 1 line is the
-   * default.
+   * Renders the floating ctx-bar for `element`. Builds one ordered list of
+   * cells (see _renderBalanced()'s doc comment for what a cell is) -- the
+   * calling tool's own `options` first (e.g. TextTool's font/size, then
+   * its Bold/Italic/Underline cell, then its alignment cell, then
+   * auto-fit), then the controls every tool shares grouped into their own
+   * cells (layer order as one cell, duplicate, auto-center) -- and hands
+   * them to _renderBalanced() to lay out as one line, or two evenly-split
+   * lines (never splitting a cell) if it doesn't fit on one.
    */
   show(element: CraftoolsCtxElement | null, options: CtxOption[] = []): void {
       if (!element) return;
       this.activeElement = element;
       this.el.innerHTML = '';
 
-      const items: HTMLElement[] = [];
+      const cells: HTMLElement[][] = [];
 
       // ── Tool-specific controls ──────────────────────────────────────────
+      // Consecutive options sharing the same CtxOption.group land in the
+      // same cell (never split across the two lines); anything without a
+      // group is its own single-element cell, same granularity as before
+      // groups existed.
       if (options && options.length > 0) {
+          let currentCell: HTMLElement[] | null = null;
+          let currentGroupId: string | undefined;
           options.forEach(opt => {
-              if (opt.render) {
-                  items.push(opt.render(element));
-              } else {
+              const el = opt.render ? opt.render(element) : (() => {
                   const btn = this.createButton(opt.icon!, opt.label!, () => {
                       if (opt.command) opt.command(element);
                       // Re-check right after the command runs so a toggle (e.g.
@@ -229,10 +270,18 @@ export class CtxBar {
                       if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
                   });
                   if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-                  items.push(btn);
+                  return btn;
+              })();
+
+              if (opt.group && opt.group === currentGroupId && currentCell) {
+                  currentCell.push(el);
+              } else {
+                  currentCell = [el];
+                  cells.push(currentCell);
+                  currentGroupId = opt.group;
               }
           });
-          items.push(this.createSeparator());
+          cells.push([this.createSeparator()]);
       }
 
       // ── General controls (shared by every tool) ─────────────────────────
@@ -271,15 +320,19 @@ export class CtxBar {
           if (action === 'down') setZ(Math.max(1, currentZ - 1));
       };
 
-      items.push(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
-      items.push(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
-      items.push(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
-      items.push(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
+      // Layer order is one atomic cell -- front/back/up/down always stay
+      // together on the same line rather than splitting mid-cluster.
+      cells.push([
+          this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')),
+          this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')),
+          this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')),
+          this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')),
+      ]);
 
-      items.push(this.createSeparator());
+      cells.push([this.createSeparator()]);
 
       // Duplicate Action
-      items.push(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
+      const duplicateBtn = this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
           const clone = element.cloneNode(true) as CraftoolsCtxElement;
           
           // Offset slightly
@@ -315,7 +368,8 @@ export class CtxBar {
                   clone.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
               }, 100);
           }
-      }));
+      });
+      cells.push([duplicateBtn]);
 
       // Auto Center Toggle
       let isAutoCenter = element.getAttribute('data-autocenter') !== 'false';
@@ -334,9 +388,9 @@ export class CtxBar {
           this._setButtonActive(autoCenterBtn, nextState);
       });
       this._setButtonActive(autoCenterBtn, isAutoCenter);
-      items.push(autoCenterBtn);
+      cells.push([autoCenterBtn]);
 
-      this._renderBalanced(items);
+      this._renderBalanced(cells);
 
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';
