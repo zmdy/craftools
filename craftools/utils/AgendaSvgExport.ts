@@ -230,6 +230,10 @@ export class AgendaSvgExport {
         stage.innerHTML = '';
         stage.appendChild(el);
 
+        // Fix rendering issues for emoji, icon, image, album and emoji-kitchen
+        // tools before handing the DOM to html-to-svg (see _preprocessForSvgExport).
+        await this._preprocessForSvgExport(el);
+
         try {
           const svg = await renderer.render(
             el,
@@ -368,6 +372,134 @@ export class AgendaSvgExport {
           if (newId) el.setAttribute(attr, `#${newId}`);
         }
       }
+    });
+  }
+
+  // ── SVG pre-processing ───────────────────────────────────────────────────
+
+  /**
+   * Fixes known html-to-svg rendering failures for specific tool types,
+   * applied directly to the flattened page element while it is in the
+   * off-screen stage (so offsetWidth/offsetHeight return real computed values).
+   *
+   * Three passes:
+   *
+   * 1. **Emoji** — EmojiTool renders a `<div data-emoji-char="😀">` with
+   *    `font-family: 'Noto Color Emoji'`. That family is not in the
+   *    html-to-svg Opentype catalog, so the text renderer silently drops
+   *    every glyph and the element comes out blank. The browser's canvas API
+   *    DOES have the system emoji font, so we rasterise each emoji at the
+   *    container's pixel size and swap it for an `<img src="data:image/png">`.
+   *
+   * 2. **Icons** — IconTool builds `<svg viewBox="…">` with no `width` or
+   *    `height` attribute and no CSS dimensions. An SVG without explicit
+   *    dimensions is a replaced element that defaults to 300 × 150 px in the
+   *    browser, which makes html-to-svg embed it at those wrong dimensions
+   *    instead of the actual container size. Setting `width/height:100%` via
+   *    CSS makes the computed size match the parent `.ct-el-inner`, so the
+   *    embedded SVG image is sized correctly.
+   *
+   * 3. **External images** — EmojiKitchen stores a Google CDN URL in the
+   *    `<img src>`. html-to-svg's ImageRenderer copies the src directly into
+   *    the SVG `<image href>`, producing an SVG that depends on network
+   *    access and may be blocked by SVG viewers (Inkscape, Illustrator).
+   *    We pre-fetch every non-data-URL image via a temporary `<img>` +
+   *    canvas and replace its src with a base64 data URL. Upload images
+   *    (ImageTool, AlbumTool) are already data URLs from FileReader, so they
+   *    skip this path entirely.
+   */
+  private static async _preprocessForSvgExport(pageEl: HTMLElement): Promise<void> {
+
+    // ── Pass 1: emoji ────────────────────────────────────────────────────
+    pageEl.querySelectorAll<HTMLElement>('[data-emoji-char]').forEach(emojiDiv => {
+      const char = emojiDiv.dataset.emojiChar || emojiDiv.textContent?.trim() || '';
+      if (!char) return;
+
+      const parent = emojiDiv.parentElement;
+      const pw = parent ? parent.offsetWidth  : 0;
+      const ph = parent ? parent.offsetHeight : 0;
+      // Use the larger dimension to keep the emoji square; fall back to 80.
+      const boxSize = Math.max(pw, ph, 80);
+      const dpr = 2; // render at 2× for sharper output in high-DPI contexts
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = boxSize * dpr;
+      canvas.height = boxSize * dpr;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+
+      // Scale emoji font to ~85% of the box, capped at the declared fontSize.
+      const declaredPx = parseFloat(emojiDiv.style.fontSize) || 64;
+      const fontPx = Math.min(declaredPx, boxSize * 0.85);
+      ctx.font = `${fontPx}px 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char, boxSize / 2, boxSize / 2);
+
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/png');
+      img.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;user-select:none;pointer-events:none;';
+      emojiDiv.replaceWith(img);
+    });
+
+    // ── Pass 2: icon SVGs ────────────────────────────────────────────────
+    pageEl.querySelectorAll<SVGSVGElement>('svg').forEach(svg => {
+      // Only patch SVGs without any explicit size already set.
+      if (svg.style.width || svg.getAttribute('width') || svg.style.height || svg.getAttribute('height')) return;
+      // Fill the parent container (.ct-el-inner or .craftools-grid-cell).
+      svg.style.width   = '100%';
+      svg.style.height  = '100%';
+      svg.style.display = 'block';
+    });
+
+    // ── Pass 3: external image URLs ──────────────────────────────────────
+    const imgEls = [...pageEl.querySelectorAll<HTMLImageElement>('img')];
+    await Promise.all(imgEls.map(async img => {
+      const src = img.getAttribute('src') || img.src || '';
+      if (!src || src.startsWith('data:')) return; // already embedded
+      try {
+        img.src = await this._toDataUrl(src);
+      } catch {
+        // Non-fatal: keep original src (SVG will have an external reference).
+        console.warn('[AgendaSvgExport] Could not inline img src:', src.slice(0, 100));
+      }
+    }));
+  }
+
+  /**
+   * Loads `url` into a temporary `<img>` element (with `crossOrigin =
+   * 'anonymous'` for CORS-enabled CDN images), then draws it onto a canvas
+   * and returns `canvas.toDataURL('image/png')`.
+   *
+   * Throws if the image fails to load, the URL times out (8 s), or the
+   * canvas is tainted (cross-origin image without CORS headers) -- the
+   * caller should catch and fall back to the original URL.
+   */
+  private static _toDataUrl(url: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const timer = setTimeout(() => {
+        img.src = '';
+        reject(new Error('timeout'));
+      }, 8000);
+      img.onload = () => {
+        clearTimeout(timer);
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width  = img.naturalWidth  || 64;
+          canvas.height = img.naturalHeight || 64;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('canvas ctx unavailable')); return; }
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch (e) {
+          reject(e); // canvas taint or other drawing error
+        }
+      };
+      img.onerror = () => { clearTimeout(timer); reject(new Error('load error')); };
+      img.src = url;
     });
   }
 
