@@ -53,6 +53,12 @@ export class CtxBar {
   // half (re-rendering the panel when the CTX-BAR is what changed).
   private _stateChangeHandler?: (e: Event) => void;
   private _lastOptions: CtxOption[] = [];
+  // Whether the collapsed 2nd line (see show()'s MAX_GROUPS/MAX_ITEMS
+  // split) is currently expanded. Reset to false on a genuinely NEW
+  // element selection, but preserved across a same-element rebuild
+  // (_stateChangeHandler's live-sync refresh) so toggling it open doesn't
+  // immediately collapse again the next time a property changes.
+  private _expanded: boolean = false;
 
   constructor(container: HTMLElement) {
       this.container = container; // Should be document.body or the app wrapper
@@ -62,13 +68,15 @@ export class CtxBar {
       // is 1050) and mini-panel (#mobile-mini-panel is 1065) -- the ctx-bar
       // used to render fully behind both on mobile.
       //
-      // The bar IS the flex-wrap container now (no more manually-built row
-      // divs) -- see createGroup()'s doc comment for why this is the fix
-      // for groups splitting across lines: wrapping is entirely native CSS
-      // flex-wrap, which can only ever break BETWEEN flex items, never
-      // inside one. max-width caps how wide any one line can get before
-      // wrapping to the next.
-      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(92vw, 300px);';
+      // `el` itself is just a column wrapper around up to 2 row divs (see
+      // show()) -- align-items:stretch (the flex default, kept explicit
+      // here) is what makes each row stretch to `el`'s own resolved width
+      // instead of sizing from its own content, which is what caused an
+      // earlier "overflow past the card's edge" bug when this container
+      // used align-items:center. max-width is just a generous safety net
+      // now -- the real line-count control is the discrete group/item cap
+      // in show(), not pixel-width math.
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:none; flex-direction:column; align-items:stretch; gap:4px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(94vw, 520px);';
       this.container.appendChild(this.el);
 
       this.activeElement = null;
@@ -133,15 +141,15 @@ export class CtxBar {
    * was enough to either overflow past the card's edge or, once a CSS
    * flex-wrap fallback was added, silently wrap mid-group anyway).
    *
-   * The fix here is structural instead of computed: `this.el` itself is
-   * the single flex-wrap container (see the constructor), and every
-   * multi-element cluster gets wrapped in its own `nowrap` sub-div. CSS
-   * flex-wrap can only ever insert a line break BETWEEN flex items --
-   * never inside one -- so a group-div is guaranteed atomic by the layout
-   * engine itself, not by a JS prediction of where the engine will wrap.
-   * A single-element cluster doesn't need a wrapper at all: one element is
-   * already indivisible, so it's returned as-is and becomes its own flex
-   * item directly in `this.el`.
+   * The fix here is structural instead of computed: each row div built by
+   * show() (row 1 and, when expanded, row 2) is itself a flex-wrap
+   * container, and every multi-element cluster gets wrapped in its own
+   * `nowrap` sub-div. CSS flex-wrap can only ever insert a line break
+   * BETWEEN flex items -- never inside one -- so a group-div is
+   * guaranteed atomic by the layout engine itself, not by a JS prediction
+   * of where the engine will wrap. A single-element cluster doesn't need
+   * a wrapper at all: one element is already indivisible, so it's
+   * returned as-is and becomes its own flex item directly in its row.
    */
   private createGroup(elements: HTMLElement[]): HTMLElement {
       if (elements.length === 1) return elements[0];
@@ -154,15 +162,31 @@ export class CtxBar {
 
   /**
    * Renders the floating ctx-bar for `element`. Builds an ordered list of
-   * flex items -- the calling tool's own `options` first (e.g. TextTool's
-   * font/size group, its Bold/Italic/Underline group, its alignment
-   * group, then auto-fit), then one combined group for the controls every
-   * tool shares (layer order, duplicate, auto-center) -- and appends them
-   * straight into `this.el`. See createGroup()'s doc comment for how this
-   * guarantees no group ever splits across the bar's wrapped lines.
+   * atomic clusters -- the calling tool's own `options` first (e.g.
+   * TextTool's font/size group, its Bold/Italic/Underline group, its
+   * alignment group, then auto-fit), then one combined group for the
+   * controls every tool shares (layer order, duplicate, auto-center).
+   *
+   * Rather than letting CSS flex-wrap decide where those clusters break
+   * across lines (which, per user feedback, tended to leave one line
+   * doing most of the work and the other nearly empty -- a "greedy
+   * first-fit" wrap always front-loads line 1 until the next cluster
+   * literally doesn't fit, with no notion of balance), the split point is
+   * now a deliberate rule: line 1 shows clusters up to MAX_GROUPS atomic
+   * groups OR MAX_ITEMS individual controls, whichever limit is hit
+   * first. Anything beyond that is NOT wrapped onto an always-visible 2nd
+   * line -- it's collapsed behind a toggle button appended to the end of
+   * line 1, and only appears (left-aligned, not centered, to read as
+   * "additional" rather than a peer of line 1) once the user clicks it.
+   * See createGroup()'s doc comment for how each cluster stays unsplittable.
    */
   show(element: CraftoolsCtxElement | null, options: CtxOption[] = []): void {
       if (!element) return;
+      // A genuinely new selection starts collapsed; a same-element rebuild
+      // (_stateChangeHandler's live-sync refresh, see below) keeps whatever
+      // the user last chose so toggling the 2nd line open doesn't
+      // immediately collapse again the moment a property changes.
+      if (this.activeElement !== element) this._expanded = false;
       // Detach whatever the PREVIOUS show() call (if any) attached, before
       // attaching fresh listeners below -- makes show() safe to call
       // repeatedly for a live refresh (see _stateChangeHandler) instead of
@@ -175,13 +199,16 @@ export class CtxBar {
 
       // ── Tool-specific controls ──────────────────────────────────────────
       // Consecutive options sharing the same CtxOption.group become one
-      // group-div (see createGroup()); anything without a group is its own
-      // single-element flex item, same granularity as before groups
-      // existed.
+      // atomic cluster (see createGroup()); anything without a group is
+      // its own single-element cluster, same granularity as before groups
+      // existed. `isGeneral` tags the one cluster built further below so
+      // the split/border logic can special-case it without a second pass.
+      type Cluster = { elements: HTMLElement[]; isGeneral: boolean };
+      const clusters: Cluster[] = [];
+
       if (options && options.length > 0) {
           let currentCluster: HTMLElement[] | null = null;
           let currentGroupId: string | undefined;
-          const clusters: HTMLElement[][] = [];
           options.forEach(opt => {
               const el = opt.render ? opt.render(element) : (() => {
                   const btn = this.createButton(opt.icon!, opt.label!, () => {
@@ -199,11 +226,10 @@ export class CtxBar {
                   currentCluster.push(el);
               } else {
                   currentCluster = [el];
-                  clusters.push(currentCluster);
+                  clusters.push({ elements: currentCluster, isGeneral: false });
                   currentGroupId = opt.group;
               }
           });
-          clusters.forEach(cluster => this.el.appendChild(this.createGroup(cluster)));
       }
 
       // ── General controls (shared by every tool) ─────────────────────────
@@ -312,22 +338,79 @@ export class CtxBar {
       this._setButtonActive(autoCenterBtn, isAutoCenter);
       generalElements.push(autoCenterBtn);
 
-      const generalGroup = this.createGroup(generalElements);
-      // Visually separates the general cluster from the tool-specific
-      // groups above it, WITHOUT a floating separator element that could
-      // end up stranded at a wrapped line's edge -- this border lives on
-      // the general group's own box, so it always travels with it as one
-      // atomic unit regardless of where the bar wraps.
-      if (options && options.length > 0) {
-          generalGroup.style.borderLeft  = '1px solid var(--border, #ccc)';
-          generalGroup.style.paddingLeft = '6px';
+      clusters.push({ elements: generalElements, isGeneral: true });
+
+      // ── Split into a visible line 1 and a collapsible line 2 ────────────
+      // "no máximo 4 grupos atômicos OU 8 itens" -- walk the clusters in
+      // order, keeping a running group-count and item-count, and stop
+      // adding to line 1 the moment the NEXT cluster would push either
+      // count over its cap. Everything from there on is line 2.
+      const MAX_GROUPS = 4;
+      const MAX_ITEMS  = 8;
+      let splitIndex = clusters.length;
+      let groupCount = 0;
+      let itemCount  = 0;
+      for (let i = 0; i < clusters.length; i++) {
+          const nextItemCount = itemCount + clusters[i].elements.length;
+          if (groupCount + 1 > MAX_GROUPS || nextItemCount > MAX_ITEMS) {
+              splitIndex = i;
+              break;
+          }
+          groupCount += 1;
+          itemCount   = nextItemCount;
       }
-      this.el.appendChild(generalGroup);
+      const line1 = clusters.slice(0, splitIndex);
+      const line2 = clusters.slice(splitIndex);
+
+      // Appends each cluster's group-div into `row`, giving the general
+      // cluster its separating left border -- but only when it's not the
+      // first thing in ITS row, since a border-left on the very first
+      // item of a row just looks like stray padding.
+      const appendClusters = (row: HTMLElement, list: Cluster[]): void => {
+          list.forEach((cluster, idx) => {
+              const groupEl = this.createGroup(cluster.elements);
+              if (cluster.isGeneral && idx > 0) {
+                  groupEl.style.borderLeft  = '1px solid var(--border, #ccc)';
+                  groupEl.style.paddingLeft = '6px';
+              }
+              row.appendChild(groupEl);
+          });
+      };
+
+      const row1 = document.createElement('div');
+      row1.className = 'craftools-ctxbar-row';
+      row1.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
+      appendClusters(row1, line1);
+
+      if (line2.length > 0) {
+          // Toggle button lives at the end of line 1 -- clicking it reveals
+          // line 2 (left-aligned, per the request, so it visually reads as
+          // "more options" rather than a second peer row) without rebuilding
+          // anything else.
+          const row2 = document.createElement('div');
+          row2.className = 'craftools-ctxbar-row craftools-ctxbar-row-overflow';
+          row2.style.cssText = `display:${this._expanded ? 'flex' : 'none'}; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px; width:100%; box-sizing:border-box;`;
+          appendClusters(row2, line2);
+
+          const toggleBtn = this.createButton('more_vert', I18n.t('common.moreOptions') || 'Mais opções', () => {
+              this._expanded = !this._expanded;
+              row2.style.display = this._expanded ? 'flex' : 'none';
+              this._setButtonActive(toggleBtn, this._expanded);
+              // The bar's height just changed -- reposition so it doesn't
+              // drift off-screen or overlap the element once expanded.
+              this.position(element);
+          });
+          this._setButtonActive(toggleBtn, this._expanded);
+          row1.appendChild(toggleBtn);
+
+          this.el.appendChild(row1);
+          this.el.appendChild(row2);
+      } else {
+          this.el.appendChild(row1);
+      }
 
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';
-
-      this._fitToTwoLines();
 
       this.position(element);
 
@@ -354,47 +437,6 @@ export class CtxBar {
       // state always reflects the latest value.
       this._stateChangeHandler = () => this.show(element, this._lastOptions);
       element.addEventListener('craftools-state-change', this._stateChangeHandler);
-  }
-
-  /**
-   * Hard-caps the bar at 2 lines, period ("apenas 2 linhas no máximo").
-   * The constructor's max-width is only a starting guess -- a tool with
-   * several atomic groups (see createGroup()) can legitimately need more
-   * horizontal room than that guess before native flex-wrap stops
-   * spilling onto a 3rd line. This grows max-width from roughly half the
-   * content's natural (unconstrained) width up to a viewport-relative
-   * ceiling, re-measuring the ACTUAL rendered row count after each step
-   * (by each child's real Y position, not by predicting where the browser
-   * will wrap) until it settles at 2 lines or the ceiling is reached.
-   */
-  private _fitToTwoLines(): void {
-      const countLines = (): number => {
-          const rows = new Set<number>();
-          Array.from(this.el.children).forEach(child => {
-              rows.add(Math.round((child as HTMLElement).getBoundingClientRect().top));
-          });
-          return rows.size;
-      };
-
-      // Natural width: everything on one line, unconstrained.
-      this.el.style.maxWidth = 'none';
-      const naturalWidth = this.el.scrollWidth;
-      const ceiling = Math.min(window.innerWidth * 0.92, 480);
-
-      if (naturalWidth <= ceiling) {
-          // Already fits on a single line within the viewport ceiling --
-          // keep it a single line rather than force-wrapping to 2.
-          this.el.style.maxWidth = `${naturalWidth}px`;
-          return;
-      }
-
-      let width = Math.min(ceiling, Math.ceil(naturalWidth / 2) + 40);
-      this.el.style.maxWidth = `${width}px`;
-
-      while (countLines() > 2 && width < ceiling) {
-          width = Math.min(ceiling, width + 24);
-          this.el.style.maxWidth = `${width}px`;
-      }
   }
 
   /** Shared cleanup for hide() and the top of show() -- see _stateChangeHandler's doc comment. */
