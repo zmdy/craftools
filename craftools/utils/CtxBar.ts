@@ -326,6 +326,9 @@ export class CtxBar {
 
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';
+
+      this._fitToTwoLines();
+
       this.position(element);
 
       // Auto-update position on move
@@ -351,6 +354,47 @@ export class CtxBar {
       // state always reflects the latest value.
       this._stateChangeHandler = () => this.show(element, this._lastOptions);
       element.addEventListener('craftools-state-change', this._stateChangeHandler);
+  }
+
+  /**
+   * Hard-caps the bar at 2 lines, period ("apenas 2 linhas no máximo").
+   * The constructor's max-width is only a starting guess -- a tool with
+   * several atomic groups (see createGroup()) can legitimately need more
+   * horizontal room than that guess before native flex-wrap stops
+   * spilling onto a 3rd line. This grows max-width from roughly half the
+   * content's natural (unconstrained) width up to a viewport-relative
+   * ceiling, re-measuring the ACTUAL rendered row count after each step
+   * (by each child's real Y position, not by predicting where the browser
+   * will wrap) until it settles at 2 lines or the ceiling is reached.
+   */
+  private _fitToTwoLines(): void {
+      const countLines = (): number => {
+          const rows = new Set<number>();
+          Array.from(this.el.children).forEach(child => {
+              rows.add(Math.round((child as HTMLElement).getBoundingClientRect().top));
+          });
+          return rows.size;
+      };
+
+      // Natural width: everything on one line, unconstrained.
+      this.el.style.maxWidth = 'none';
+      const naturalWidth = this.el.scrollWidth;
+      const ceiling = Math.min(window.innerWidth * 0.92, 480);
+
+      if (naturalWidth <= ceiling) {
+          // Already fits on a single line within the viewport ceiling --
+          // keep it a single line rather than force-wrapping to 2.
+          this.el.style.maxWidth = `${naturalWidth}px`;
+          return;
+      }
+
+      let width = Math.min(ceiling, Math.ceil(naturalWidth / 2) + 40);
+      this.el.style.maxWidth = `${width}px`;
+
+      while (countLines() > 2 && width < ceiling) {
+          width = Math.min(ceiling, width + 24);
+          this.el.style.maxWidth = `${width}px`;
+      }
   }
 
   /** Shared cleanup for hide() and the top of show() -- see _stateChangeHandler's doc comment. */
