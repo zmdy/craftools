@@ -135,6 +135,13 @@ export class Craftools_Editor extends HTMLElement {
   private _onKeydown?: (e: KeyboardEvent) => void;
   private _onPageAdd?: (e: Event) => void;
   private _onPointerdown?: (e: PointerEvent) => void;
+  // Keeps the ctx-bar and the properties panel in sync with each other --
+  // see the 'craftools-element-select' handler below for how this is wired
+  // and why it lives on the instance (so the deselect handler and the next
+  // selection can both remove the previous element's listener instead of
+  // leaking one every time the same element is reselected).
+  private _panelSyncHandler?: (e: Event) => void;
+  private _panelSyncTarget?: HTMLElement;
 
   constructor() { super(); }
 
@@ -559,11 +566,26 @@ export class Craftools_Editor extends HTMLElement {
       const dispatch = (): void => {
         const toolDef = ToolRegistry.get(toolType);
         if (toolDef?.tool) {
-          this.ctxBar.show(el, toolDef.tool.getCtxOptions(el));
+          const tool = toolDef.tool;
+          this.ctxBar.show(el, tool.getCtxOptions(el));
           if (panelTitle) panelTitle.textContent = I18n.t(toolDef.label) || toolDef.label;
-          if (panelBody)  toolDef.tool.renderPropertiesPanel(panelBody, el);
+          if (panelBody)  tool.renderPropertiesPanel(panelBody, el);
           openPanelMenu();
           this.activePage = null;
+
+          // Keep the properties panel in sync when the ctx-bar changes the
+          // element's state (CtxBar mirrors this the other way -- it
+          // re-shows itself on the same event, see CtxBar.show()'s
+          // 'craftools-state-change' listener). Detach the previous
+          // element's listener first so reselecting never leaks one.
+          if (this._panelSyncHandler && this._panelSyncTarget) {
+            this._panelSyncTarget.removeEventListener('craftools-state-change', this._panelSyncHandler);
+          }
+          this._panelSyncHandler = () => {
+            if (panelBody) tool.renderPropertiesPanel(panelBody, el);
+          };
+          this._panelSyncTarget = el;
+          el.addEventListener('craftools-state-change', this._panelSyncHandler);
         } else {
           this.ctxBar.show(el, []);
         }
@@ -585,6 +607,11 @@ export class Craftools_Editor extends HTMLElement {
       const el = ce.detail.element;
       if (el && el.getAttribute('data-craftool') === 'paper') el.style.zIndex = '1';
       this.ctxBar.hide();
+      if (this._panelSyncHandler && this._panelSyncTarget) {
+        this._panelSyncTarget.removeEventListener('craftools-state-change', this._panelSyncHandler);
+        this._panelSyncHandler = undefined;
+        this._panelSyncTarget  = undefined;
+      }
       if (isMobile()) {
         MobileToolbar.showToolMode();
         return;

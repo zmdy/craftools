@@ -44,6 +44,15 @@ export class CtxBar {
   private _moveHandler?: () => void;
   private _trackHandler?: () => void;
   private _trackTarget?: HTMLElement | null;
+  // Couples the ctx-bar to the properties panel: whichever one changes a
+  // value dispatches 'craftools-state-change' (PropertyRenderer.applyChange())
+  // on the element -- this listener rebuilds the ctx-bar in response, so a
+  // change made in the PANEL (e.g. toggling Bold there) is reflected here
+  // immediately too, not just changes made through the ctx-bar itself.
+  // Editor.ts's own listener on the same event does the matching panel-side
+  // half (re-rendering the panel when the CTX-BAR is what changed).
+  private _stateChangeHandler?: (e: Event) => void;
+  private _lastOptions: CtxOption[] = [];
 
   constructor(container: HTMLElement) {
       this.container = container; // Should be document.body or the app wrapper
@@ -154,7 +163,14 @@ export class CtxBar {
    */
   show(element: CraftoolsCtxElement | null, options: CtxOption[] = []): void {
       if (!element) return;
+      // Detach whatever the PREVIOUS show() call (if any) attached, before
+      // attaching fresh listeners below -- makes show() safe to call
+      // repeatedly for a live refresh (see _stateChangeHandler) instead of
+      // only once per selection, without leaking a duplicate listener set
+      // on every refresh.
+      this._detachListeners();
       this.activeElement = element;
+      this._lastOptions  = options;
       this.el.innerHTML = '';
 
       // ── Tool-specific controls ──────────────────────────────────────────
@@ -327,6 +343,32 @@ export class CtxBar {
       this._trackHandler = () => this.position(element);
       canvasArea?.addEventListener('scroll', this._trackHandler, { passive: true });
       window.addEventListener('resize', this._trackHandler);
+
+      // Panel -> ctx-bar sync (see the field's own doc comment above): any
+      // 'craftools-state-change' on this element -- however it was
+      // triggered, including from a properties-panel field -- rebuilds this
+      // same bar with the same options, so its buttons' active/rendered
+      // state always reflects the latest value.
+      this._stateChangeHandler = () => this.show(element, this._lastOptions);
+      element.addEventListener('craftools-state-change', this._stateChangeHandler);
+  }
+
+  /** Shared cleanup for hide() and the top of show() -- see _stateChangeHandler's doc comment. */
+  private _detachListeners(): void {
+      if (this.activeElement && this._moveHandler) {
+          this.activeElement.removeEventListener('craftools-element-change', this._moveHandler);
+      }
+      if (this.activeElement && this._stateChangeHandler) {
+          this.activeElement.removeEventListener('craftools-state-change', this._stateChangeHandler);
+      }
+      if (this._trackHandler) {
+          this._trackTarget?.removeEventListener('scroll', this._trackHandler);
+          window.removeEventListener('resize', this._trackHandler);
+      }
+      this._moveHandler        = undefined;
+      this._stateChangeHandler = undefined;
+      this._trackHandler       = undefined;
+      this._trackTarget        = undefined;
   }
 
   position(element: CraftoolsCtxElement): void {
@@ -361,15 +403,8 @@ export class CtxBar {
   hide(): void {
       this.el.classList.add('hidden');
       this.el.style.display = 'none';
-      if (this.activeElement && this._moveHandler) {
-          this.activeElement.removeEventListener('craftools-element-change', this._moveHandler);
-      }
-      if (this._trackHandler) {
-          this._trackTarget?.removeEventListener('scroll', this._trackHandler);
-          window.removeEventListener('resize', this._trackHandler);
-      }
-      this._trackHandler = undefined;
-      this._trackTarget  = undefined;
+      this._detachListeners();
       this.activeElement = null;
+      this._lastOptions  = [];
   }
 }
