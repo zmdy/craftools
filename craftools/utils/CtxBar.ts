@@ -389,8 +389,9 @@ export class CtxBar {
           }
           this.el.appendChild(row);
 
-          // Apply fixed-top style
-          this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 10px; border-radius:0 0 12px 12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); border-top:none; box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); pointer-events:auto; max-width:min(94vw, 900px); top:48px; left:50%; transform:translateX(-50%);';
+          // Apply fixed-top style — top:56px leaves an 8px breathing gap
+          // below the 48px header instead of butting the bar flush against it.
+          this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 10px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
       } else {
           // ── Floating mode (default, coupled to element) ──────────────────
           // Split into a visible line 1 and a collapsible line 2.
