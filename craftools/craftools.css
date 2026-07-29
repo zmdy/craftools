@@ -245,20 +245,20 @@ html, body {
 .ct-sublabel .material-symbols-outlined { font-size: 11px; }
 
 /* ── Elementor-style rows (scoped to accordion body) ─────────────────────── */
-/* Separator between fields */
-.ct-accordion-content [data-ct-field] { border-bottom: 1px solid var(--border); }
-.ct-accordion-content [data-ct-field]:last-child { border-bottom: none; }
+/* Gap between fields — no border lines, spacing via margin */
+.ct-accordion-content [data-ct-field] { margin-bottom: 6px; }
+.ct-accordion-content [data-ct-field]:last-child { margin-bottom: 0; }
 
-/* Label: compact left column, readable but subordinate */
+/* Label: compact left column, bold + uppercase */
 .ct-accordion-content .craftools-label {
-  font-size: 11px; font-weight: 500; color: var(--text-secondary);
-  text-transform: none; letter-spacing: 0;
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .4px;
   min-width: 86px; max-width: 110px; flex-shrink: 0;
   margin-bottom: 0; display: flex; align-items: center; line-height: 1.2;
 }
 /* .ct-field: horizontal row — label left, control right */
 .ct-accordion-content .ct-field {
-  flex-direction: row; align-items: center; min-height: 34px; padding: 3px 12px; gap: 8px;
+  flex-direction: row; align-items: center; min-height: 34px; padding: 2px 12px; gap: 8px;
 }
 /* Control side fills remaining space */
 .ct-accordion-content .ct-field > .ct-field-row   { flex: 1; min-width: 0; }
