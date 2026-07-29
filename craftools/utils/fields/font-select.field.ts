@@ -45,7 +45,7 @@ FieldRegistry.register('font-select', {
 
     if (!container.querySelector('ct-font-select')) {
       container.innerHTML = `
-        <div class="ct-field">
+        <div class="ct-field ct-field--block">
           ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <ct-font-select class="craftools-select ct-fi" style="display:block; width:100%;"></ct-font-select>
           ${allowCustom ? `

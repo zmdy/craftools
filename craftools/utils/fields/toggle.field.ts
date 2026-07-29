@@ -9,10 +9,13 @@ FieldRegistry.register('toggle', {
     const label = tr(f.i18nKey, f.label ?? '');
 
     if (!container.querySelector('.ct-fi')) {
+      // Uses .ct-field so .ct-accordion-content's Elementor-style row CSS
+      // (label left, control right) applies. The toggle sits at margin-left:auto
+      // so it hugs the right edge regardless of label length.
       container.innerHTML = `
-        <div class="ct-field-row" style="justify-content:space-between; padding:2px 0;">
-          ${label ? `<span class="craftools-label" style="margin:0;">${label}</span>` : ''}
-          <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+        <div class="ct-field">
+          ${label ? `<div class="craftools-label">${label}</div>` : ''}
+          <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px; margin-left:auto;">
             <input type="checkbox" class="ct-fi" style="display:none;">
             <span class="ct-toggle-track" style="
               width:32px; height:18px; border-radius:99px;

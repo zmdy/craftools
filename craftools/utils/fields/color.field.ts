@@ -30,7 +30,7 @@ FieldRegistry.register('color', {
 
     if (!container.querySelector('.ct-color-picker-wrap')) {
       container.innerHTML = `
-        <div class="ct-field">
+        <div class="ct-field ct-field--block">
           ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <div class="ct-color-picker-wrap"></div>
         </div>`;

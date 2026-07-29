@@ -232,15 +232,60 @@ html, body {
     max-height: 500vh;
     opacity: 1;
 }
-.ct-accordion-content { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ct-accordion-content { padding: 0; display: flex; flex-direction: column; gap: 0; }
 
 /* ── Panel field rows (inside accordion) ─────────────────────────────────── */
+/* Base globals unchanged — all Elementor-style overrides are scoped to
+   .ct-accordion-content below so legacy PanelUI panels are not affected.  */
 .ct-field { display: flex; flex-direction: column; gap: 5px; }
 .ct-field-row { display: flex; align-items: center; gap: 8px; }
 .ct-field-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ct-field-grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
 .ct-sublabel { font-size: 9px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; display: flex; align-items: center; gap: 3px; }
 .ct-sublabel .material-symbols-outlined { font-size: 11px; }
+
+/* ── Elementor-style rows (scoped to accordion body) ─────────────────────── */
+/* Separator between fields */
+.ct-accordion-content [data-ct-field] { border-bottom: 1px solid var(--border); }
+.ct-accordion-content [data-ct-field]:last-child { border-bottom: none; }
+
+/* Label: compact left column, readable but subordinate */
+.ct-accordion-content .craftools-label {
+  font-size: 11px; font-weight: 500; color: var(--text-secondary);
+  text-transform: none; letter-spacing: 0;
+  min-width: 86px; max-width: 110px; flex-shrink: 0;
+  margin-bottom: 0; display: flex; align-items: center; line-height: 1.2;
+}
+/* .ct-field: horizontal row — label left, control right */
+.ct-accordion-content .ct-field {
+  flex-direction: row; align-items: center; min-height: 34px; padding: 3px 12px; gap: 8px;
+}
+/* Control side fills remaining space */
+.ct-accordion-content .ct-field > .ct-field-row   { flex: 1; min-width: 0; }
+.ct-accordion-content .ct-field > select.craftools-select { flex: 1; min-width: 0; }
+
+/* Complex / full-width fields: vertical stack (label above, control below)  */
+.ct-accordion-content .ct-field.ct-field--block {
+  flex-direction: column; align-items: stretch; min-height: unset; padding: 10px 12px; gap: 5px;
+}
+.ct-accordion-content .ct-field.ct-field--block > .craftools-label { min-width: unset; max-width: unset; }
+
+/* Sub-header dividers (icon + label) become tinted group headers */
+.ct-accordion-content .ct-sublabel {
+  padding: 5px 12px 3px; min-height: 24px;
+  background: var(--bg-sidebar);
+  /* Separation from the row above comes from the previous [data-ct-field]'s
+     border-bottom — no extra border-top needed here. */
+}
+
+/* Alignment grids that have no .ct-field wrapper — add consistent padding */
+.ct-accordion-content .ct-align-grid,
+.ct-accordion-content .ct-content-align-grid { padding: 8px 12px; }
+.ct-accordion-content .ct-align-group { padding: 5px 12px; }
+
+/* Complex non-.ct-field wrappers (emoji picker, variable panel, etc.) */
+.ct-accordion-content .ct-emoji-picker-wrap { padding: 8px 12px; }
+.ct-accordion-content .ct-var-panel-wrap    { padding: 4px 0; }
 
 /* Filter icon badges (Image tool) */
 .ct-filter-icon { width: 22px; height: 22px; border-radius: 5px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }

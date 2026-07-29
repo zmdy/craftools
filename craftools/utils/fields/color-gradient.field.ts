@@ -21,7 +21,7 @@ FieldRegistry.register('color-gradient', {
 
     if (!container.querySelector('.ct-grad-from')) {
       container.innerHTML = `
-        <div class="ct-field">
+        <div class="ct-field ct-field--block">
           ${label ? `<div class="craftools-label">${label}</div>` : ''}
           <div class="ct-field-row" style="gap:6px;">
             <div style="flex:1; display:flex; flex-direction:column; gap:3px;">
