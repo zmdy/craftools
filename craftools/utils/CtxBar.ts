@@ -3,6 +3,7 @@
  */
 
 import { I18n } from "../settings/Translations.js";
+import { AppSettings } from "./AppSettings.js";
 import { PropertyRenderer } from "./PropertyRenderer.js";
 
 export interface CtxOption {
@@ -80,6 +81,14 @@ export class CtxBar {
       this.container.appendChild(this.el);
 
       this.activeElement = null;
+
+      // When the user changes ctxBarMode in Settings, rebuild immediately so
+      // they see the effect without having to re-select the element.
+      document.addEventListener('craftools-ctxbar-mode-change', () => {
+          if (this.activeElement) {
+              this.show(this.activeElement, this._lastOptions);
+          }
+      });
   }
 
   createButton(iconName: string, label: string, onClick: () => void, extraClass: string = ''): HTMLButtonElement {
@@ -340,32 +349,10 @@ export class CtxBar {
 
       clusters.push({ elements: generalElements, isGeneral: true });
 
-      // ── Split into a visible line 1 and a collapsible line 2 ────────────
-      // "no máximo 4 grupos atômicos OU 8 itens" -- walk the clusters in
-      // order, keeping a running group-count and item-count, and stop
-      // adding to line 1 the moment the NEXT cluster would push either
-      // count over its cap. Everything from there on is line 2.
-      const MAX_GROUPS = 4;
-      const MAX_ITEMS  = 8;
-      let splitIndex = clusters.length;
-      let groupCount = 0;
-      let itemCount  = 0;
-      for (let i = 0; i < clusters.length; i++) {
-          const nextItemCount = itemCount + clusters[i].elements.length;
-          if (groupCount + 1 > MAX_GROUPS || nextItemCount > MAX_ITEMS) {
-              splitIndex = i;
-              break;
-          }
-          groupCount += 1;
-          itemCount   = nextItemCount;
-      }
-      const line1 = clusters.slice(0, splitIndex);
-      const line2 = clusters.slice(splitIndex);
-
-      // Appends each cluster's group-div into `row`, giving the general
-      // cluster its separating left border -- but only when it's not the
-      // first thing in ITS row, since a border-left on the very first
-      // item of a row just looks like stray padding.
+      // ── Appends each cluster's group-div into `row` ─────────────────────
+      // Gives the general cluster its separating left border -- but only
+      // when it's not the first thing in ITS row, since a border-left on
+      // the very first item of a row just looks like stray padding.
       const appendClusters = (row: HTMLElement, list: Cluster[]): void => {
           list.forEach((cluster, idx) => {
               const groupEl = this.createGroup(cluster.elements);
@@ -377,40 +364,96 @@ export class CtxBar {
           });
       };
 
-      const row1 = document.createElement('div');
-      row1.className = 'craftools-ctxbar-row';
-      row1.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
-      appendClusters(row1, line1);
+      const mode = AppSettings.get('ctxBarMode');
 
-      if (line2.length > 0) {
-          // Toggle button lives at the end of line 1 -- clicking it reveals
-          // line 2 (left-aligned, per the request, so it visually reads as
-          // "more options" rather than a second peer row) without rebuilding
-          // anything else.
-          const row2 = document.createElement('div');
-          row2.className = 'craftools-ctxbar-row craftools-ctxbar-row-overflow';
-          row2.style.cssText = `display:${this._expanded ? 'flex' : 'none'}; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px; width:100%; box-sizing:border-box;`;
-          appendClusters(row2, line2);
+      if (mode === 'fixed') {
+          // ── Fixed-top mode (Canva-style) ─────────────────────────────────
+          // Single row, max 16 items total, no expand button. The bar sits
+          // pinned just below the top toolbar -- position() is a no-op in
+          // this mode so the bar never moves while an element is dragged.
+          const MAX_ITEMS_FIXED = 16;
+          let itemCount = 0;
+          const row = document.createElement('div');
+          row.className = 'craftools-ctxbar-row';
+          row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
 
-          const toggleBtn = this.createButton('more_vert', I18n.t('common.moreOptions') || 'Mais opções', () => {
-              this._expanded = !this._expanded;
-              row2.style.display = this._expanded ? 'flex' : 'none';
-              this._setButtonActive(toggleBtn, this._expanded);
-              // The bar's height just changed -- reposition so it doesn't
-              // drift off-screen or overlap the element once expanded.
-              this.position(element);
-          });
-          this._setButtonActive(toggleBtn, this._expanded);
-          row1.appendChild(toggleBtn);
+          for (const cluster of clusters) {
+              if (itemCount + cluster.elements.length > MAX_ITEMS_FIXED) break;
+              const groupEl = this.createGroup(cluster.elements);
+              if (cluster.isGeneral && row.childNodes.length > 0) {
+                  groupEl.style.borderLeft  = '1px solid var(--border, #ccc)';
+                  groupEl.style.paddingLeft = '6px';
+              }
+              row.appendChild(groupEl);
+              itemCount += cluster.elements.length;
+          }
+          this.el.appendChild(row);
 
-          this.el.appendChild(row1);
-          this.el.appendChild(row2);
+          // Apply fixed-top style
+          this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 10px; border-radius:0 0 12px 12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); border-top:none; box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); pointer-events:auto; max-width:min(94vw, 900px); top:48px; left:50%; transform:translateX(-50%);';
       } else {
-          this.el.appendChild(row1);
+          // ── Floating mode (default, coupled to element) ──────────────────
+          // Split into a visible line 1 and a collapsible line 2.
+          // "no máximo 4 grupos atômicos OU 8 itens" -- walk the clusters in
+          // order, keeping a running group-count and item-count, and stop
+          // adding to line 1 the moment the NEXT cluster would push either
+          // count over its cap. Everything from there on is line 2.
+          const MAX_GROUPS = 4;
+          const MAX_ITEMS  = 8;
+          let splitIndex = clusters.length;
+          let groupCount = 0;
+          let itemCount  = 0;
+          for (let i = 0; i < clusters.length; i++) {
+              const nextItemCount = itemCount + clusters[i].elements.length;
+              if (groupCount + 1 > MAX_GROUPS || nextItemCount > MAX_ITEMS) {
+                  splitIndex = i;
+                  break;
+              }
+              groupCount += 1;
+              itemCount   = nextItemCount;
+          }
+          const line1 = clusters.slice(0, splitIndex);
+          const line2 = clusters.slice(splitIndex);
+
+          const row1 = document.createElement('div');
+          row1.className = 'craftools-ctxbar-row';
+          row1.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
+          appendClusters(row1, line1);
+
+          if (line2.length > 0) {
+              // Toggle button lives at the end of line 1 -- clicking it reveals
+              // line 2 (left-aligned, per the request, so it visually reads as
+              // "more options" rather than a second peer row) without rebuilding
+              // anything else.
+              const row2 = document.createElement('div');
+              row2.className = 'craftools-ctxbar-row craftools-ctxbar-row-overflow';
+              row2.style.cssText = `display:${this._expanded ? 'flex' : 'none'}; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px; width:100%; box-sizing:border-box;`;
+              appendClusters(row2, line2);
+
+              const toggleBtn = this.createButton('more_vert', I18n.t('common.moreOptions') || 'Mais opções', () => {
+                  this._expanded = !this._expanded;
+                  row2.style.display = this._expanded ? 'flex' : 'none';
+                  this._setButtonActive(toggleBtn, this._expanded);
+                  // The bar's height just changed -- reposition so it doesn't
+                  // drift off-screen or overlap the element once expanded.
+                  this.position(element);
+              });
+              this._setButtonActive(toggleBtn, this._expanded);
+              row1.appendChild(toggleBtn);
+
+              this.el.appendChild(row1);
+              this.el.appendChild(row2);
+          } else {
+              this.el.appendChild(row1);
+          }
+
+          // Restore floating style (in case it was previously in fixed mode).
+          // `transform:none` explicitly clears the translateX(-50%) that
+          // fixed mode sets, so switching back doesn't leave the bar drifting.
+          this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 6px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); transition:opacity 0.15s; pointer-events:auto; max-width:min(94vw, 520px); transform:none;';
       }
 
       this.el.classList.remove('hidden');
-      this.el.style.display = 'flex';
 
       this.position(element);
 
@@ -459,6 +502,10 @@ export class CtxBar {
 
   position(element: CraftoolsCtxElement): void {
       if(!this.activeElement || this.activeElement !== element) return;
+
+      // In fixed-top mode the bar is pinned via CSS (top:48px, left:50%,
+      // transform:translateX(-50%)) -- no JS repositioning needed.
+      if (AppSettings.get('ctxBarMode') === 'fixed') return;
 
       const rect = element.getBoundingClientRect();
 

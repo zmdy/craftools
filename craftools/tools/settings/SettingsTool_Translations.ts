@@ -25,6 +25,9 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Tela",
         fieldAutoCenter: "Centralizar elemento ao selecionar",
+        fieldCtxBarMode: "Comportamento da barra de contexto",
+        ctxBarModeFloating: "Acoplada ao elemento",
+        ctxBarModeFixed: "Fixo no topo",
 
         sectionIcons: "Ícones",
         fieldIconPack: "Biblioteca de ícones padrão",
@@ -52,6 +55,9 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Canvas",
         fieldAutoCenter: "Center element on select",
+        fieldCtxBarMode: "Context bar behaviour",
+        ctxBarModeFloating: "Coupled to element",
+        ctxBarModeFixed: "Fixed at top",
 
         sectionIcons: "Icons",
         fieldIconPack: "Default icon library",
@@ -79,6 +85,9 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Lienzo",
         fieldAutoCenter: "Centrar elemento al seleccionar",
+        fieldCtxBarMode: "Comportamiento de la barra de contexto",
+        ctxBarModeFloating: "Acoplada al elemento",
+        ctxBarModeFixed: "Fija en la parte superior",
 
         sectionIcons: "Íconos",
         fieldIconPack: "Biblioteca de íconos predeterminada",

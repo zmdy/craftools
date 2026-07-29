@@ -34,6 +34,10 @@ export interface AppSettingsData {
 
   // Icon tool default pack
   defaultIconPack: string;
+
+  // Ctx bar behaviour: 'floating' = coupled to element (current default),
+  // 'fixed' = pinned below the top toolbar (Canva-style, wider, up to 16 items)
+  ctxBarMode: 'floating' | 'fixed';
 }
 
 const STORAGE_KEY = 'craftools-app-settings';
@@ -47,6 +51,7 @@ const DEFAULTS: AppSettingsData = {
   defaultSnapAlign: 'bottom-center',
   defaultAutoCenterOnSelect: true,
   defaultIconPack: 'material-symbols',
+  ctxBarMode: 'floating',
 };
 
 class _AppSettings {

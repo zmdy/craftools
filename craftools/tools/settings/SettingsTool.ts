@@ -119,10 +119,30 @@ export class SettingsTool {
         <div>
           <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; border-top:1px solid var(--border); padding-top:14px;">${s('sectionCanvas')}</div>
 
-          <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
+          <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
             <input type="checkbox" id="set-autocenter" ${cur.defaultAutoCenterOnSelect ? 'checked' : ''}>
             <span class="craftools-label" style="margin:0;">${s('fieldAutoCenter')}</span>
           </label>
+
+          <div class="ct-field">
+            <span class="craftools-label">${s('fieldCtxBarMode')}</span>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:${cur.ctxBarMode === 'floating' ? 'var(--bg-input)' : 'transparent'}; transition:background 0.15s;" id="set-ctxmode-floating-label">
+                <input type="radio" name="set-ctxbarmode" id="set-ctxmode-floating" value="floating" ${cur.ctxBarMode !== 'fixed' ? 'checked' : ''} style="accent-color:var(--accent,#f97316);">
+                <span style="font-size:11px; color:var(--text-primary); line-height:1.2;">
+                  <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">push_pin</span>
+                  ${s('ctxBarModeFloating')}
+                </span>
+              </label>
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:${cur.ctxBarMode === 'fixed' ? 'var(--bg-input)' : 'transparent'}; transition:background 0.15s;" id="set-ctxmode-fixed-label">
+                <input type="radio" name="set-ctxbarmode" id="set-ctxmode-fixed" value="fixed" ${cur.ctxBarMode === 'fixed' ? 'checked' : ''} style="accent-color:var(--accent,#f97316);">
+                <span style="font-size:11px; color:var(--text-primary); line-height:1.2;">
+                  <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">dock_to_bottom</span>
+                  ${s('ctxBarModeFixed')}
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -149,9 +169,12 @@ export class SettingsTool {
     const snapEnabledChk = root.querySelector<HTMLInputElement>('#set-snap-enabled');
     const snapAlignWrap  = root.querySelector<HTMLElement>('#set-snap-align-wrap');
     const snapAlignSel   = root.querySelector<HTMLSelectElement>('#set-snap-align');
-    const autoCenterChk  = root.querySelector<HTMLInputElement>('#set-autocenter');
-    const iconPackSel    = root.querySelector<HTMLSelectElement>('#set-iconpack');
-    const resetBtn       = root.querySelector<HTMLButtonElement>('#set-reset');
+    const autoCenterChk      = root.querySelector<HTMLInputElement>('#set-autocenter');
+    const ctxModeRadios      = root.querySelectorAll<HTMLInputElement>('input[name="set-ctxbarmode"]');
+    const ctxModeFloatingLbl = root.querySelector<HTMLElement>('#set-ctxmode-floating-label');
+    const ctxModeFixedLbl    = root.querySelector<HTMLElement>('#set-ctxmode-fixed-label');
+    const iconPackSel        = root.querySelector<HTMLSelectElement>('#set-iconpack');
+    const resetBtn           = root.querySelector<HTMLButtonElement>('#set-reset');
 
     fontSel?.addEventListener('change', () => AppSettings.set({ defaultFontFamily: fontSel.value }));
 
@@ -181,6 +204,19 @@ export class SettingsTool {
 
     autoCenterChk?.addEventListener('change', () => {
       AppSettings.set({ defaultAutoCenterOnSelect: autoCenterChk.checked });
+    });
+
+    ctxModeRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+        const mode = radio.value as 'floating' | 'fixed';
+        AppSettings.set({ ctxBarMode: mode });
+        // Update visual highlight on the label cards
+        if (ctxModeFloatingLbl) ctxModeFloatingLbl.style.background = mode === 'floating' ? 'var(--bg-input)' : 'transparent';
+        if (ctxModeFixedLbl)    ctxModeFixedLbl.style.background    = mode === 'fixed'    ? 'var(--bg-input)' : 'transparent';
+        // Notify the running CtxBar so it switches mode immediately without requiring a re-select
+        document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change', { detail: { mode } }));
+      });
     });
 
     iconPackSel?.addEventListener('change', () => {
