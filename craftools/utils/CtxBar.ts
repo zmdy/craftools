@@ -99,54 +99,127 @@ export class CtxBar {
 
   /**
    * One "line" of the ctx-bar. The bar itself is a flex column (see
-   * constructor) of up to two of these -- tool-specific controls first,
-   * general controls second (see show()'s doc comment) -- each wrapping
-   * its own buttons via flex-wrap instead of the whole bar being one long
-   * unbroken row. Keeps a wide tool (e.g. TextTool's font/size/B/I/U/align
-   * cluster) from stretching the bar past the viewport: it wraps into 2+
-   * balanced lines of its own instead.
+   * constructor) of one or two of these, built by _renderBalanced() below.
    */
   private createRow(): HTMLDivElement {
       const row = document.createElement('div');
       row.className = 'craftools-ctxbar-row';
-      row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px;';
+      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:2px;';
       return row;
   }
 
-  /** Thin horizontal rule between the specific-tool row and the general-controls row. */
-  private createRowDivider(): HTMLDivElement {
-      const div = document.createElement('div');
-      div.className = 'craftools-ctxbar-row-divider';
-      div.style.cssText = 'width:100%; height:1px; background:var(--border); margin:1px 0;';
-      return div;
+  /**
+   * Lays `items` out in the bar, defaulting to a single line and only
+   * splitting into a second line when they don't actually fit in one --
+   * most tools have few enough controls that this never triggers
+   * (e.g. a plain Shape or Icon selection stays one row, same as before
+   * any of this row-splitting existed).
+   *
+   * When a split IS needed (e.g. TextTool's font-select + size + Bold/
+   * Italic/Underline + 3 alignment buttons + auto-fit, on top of the
+   * shared layer/duplicate/auto-center controls), the break point is
+   * chosen by cumulative pixel width rather than a fixed item count, so
+   * a wide custom item (like that font/size selector) counts for as much
+   * as several icon buttons -- "cada linha com a mesma quantidade de
+   * elementos, proporcional ao tamanho". Capped at exactly two lines: the
+   * bar never grows a third row, it just lets the second line be exactly
+   * whatever didn't fit on the first.
+   *
+   * Measuring requires a real layout pass, which display:none subtrees
+   * can't provide (zero size everywhere) -- so this temporarily flips the
+   * bar to visibility:hidden (still laid out, just not painted) rather
+   * than toggling display, avoiding any visible flash while still getting
+   * real getBoundingClientRect() widths.
+   */
+  private _renderBalanced(items: HTMLElement[]): void {
+      if (items.length === 0) return;
+
+      const probeRow = this.createRow();
+      items.forEach(item => probeRow.appendChild(item));
+      this.el.appendChild(probeRow);
+
+      const prevDisplay    = this.el.style.display;
+      const prevVisibility = this.el.style.visibility;
+      this.el.style.display    = 'flex';
+      this.el.style.visibility = 'hidden';
+
+      const cs = getComputedStyle(this.el);
+      const maxContentWidth = this.el.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
+      const widths = items.map(item => item.getBoundingClientRect().width);
+      const GAP = 2; // matches createRow()'s gap:2px
+      const totalWidth = widths.reduce((sum, w) => sum + w, 0) + GAP * (items.length - 1);
+
+      this.el.style.display    = prevDisplay;
+      this.el.style.visibility = prevVisibility;
+      this.el.removeChild(probeRow);
+
+      if (totalWidth <= maxContentWidth || items.length === 1) {
+          // Fits on one line -- the default. No forced second row.
+          const row = this.createRow();
+          items.forEach(item => row.appendChild(item));
+          this.el.appendChild(row);
+          return;
+      }
+
+      // Doesn't fit -- split into exactly two lines at whichever item
+      // boundary keeps both lines' pixel widths closest to half the total.
+      const target = totalWidth / 2;
+      let running = 0;
+      let splitIndex = items.length - 1;
+      for (let i = 0; i < items.length; i++) {
+          const withThisItem = running + widths[i] + (i > 0 ? GAP : 0);
+          if (withThisItem >= target) {
+              const diffInclude = Math.abs(withThisItem - target);
+              const diffExclude = Math.abs(running - target);
+              splitIndex = diffInclude <= diffExclude ? i + 1 : i;
+              break;
+          }
+          running = withThisItem;
+      }
+      splitIndex = Math.max(1, Math.min(splitIndex, items.length - 1));
+
+      const firstItems  = items.slice(0, splitIndex);
+      const secondItems = items.slice(splitIndex);
+      // A lone separator dangling at the start/end of a line (right where
+      // the split landed) looks like a stray mark rather than a divider --
+      // trim it from whichever end it ended up on.
+      const trimEdgeSeparator = (arr: HTMLElement[], fromStart: boolean) => {
+          const idx = fromStart ? 0 : arr.length - 1;
+          if (arr.length > 0 && arr[idx].classList.contains('craftools-ctx-sep')) arr.splice(idx, 1);
+      };
+      trimEdgeSeparator(firstItems, false);
+      trimEdgeSeparator(secondItems, true);
+
+      const row1 = this.createRow();
+      const row2 = this.createRow();
+      firstItems.forEach(item => row1.appendChild(item));
+      secondItems.forEach(item => row2.appendChild(item));
+      this.el.appendChild(row1);
+      this.el.appendChild(row2);
   }
 
   /**
-   * Renders the floating ctx-bar for `element`, split into two rows so it
-   * never grows into one very wide strip:
-   *
-   *  1. Tool-specific row -- whatever `options` the calling tool passed in
-   *     (e.g. TextTool's font/size/Bold/Italic/Underline/align buttons).
-   *     This is the row most likely to have many buttons, so it's the one
-   *     that wraps into 2+ lines on its own when it doesn't fit.
-   *  2. General row -- controls every tool shares: layer order
-   *     (front/back/up/down), duplicate, auto-center-on-select. Usually
-   *     short enough to stay on one line.
-   *
-   * A tool with no custom options (options.length === 0) just gets the
-   * general row alone, same single-line look as before this split.
+   * Renders the floating ctx-bar for `element`. Builds one flat, ordered
+   * list of controls -- the calling tool's own `options` first (e.g.
+   * TextTool's font/size/Bold/Italic/Underline/align buttons), then the
+   * controls every tool shares (layer order, duplicate, auto-center) --
+   * and hands it to _renderBalanced() to lay out as one line, or two
+   * evenly-split lines if it doesn't fit on one. See _renderBalanced()'s
+   * own doc comment for why 2 lines is the hard cap and 1 line is the
+   * default.
    */
   show(element: CraftoolsCtxElement | null, options: CtxOption[] = []): void {
       if (!element) return;
       this.activeElement = element;
       this.el.innerHTML = '';
 
-      // ── Row 1: tool-specific controls ──────────────────────────────────
-      const specificRow = this.createRow();
+      const items: HTMLElement[] = [];
+
+      // ── Tool-specific controls ──────────────────────────────────────────
       if (options && options.length > 0) {
           options.forEach(opt => {
               if (opt.render) {
-                  specificRow.appendChild(opt.render(element));
+                  items.push(opt.render(element));
               } else {
                   const btn = this.createButton(opt.icon!, opt.label!, () => {
                       if (opt.command) opt.command(element);
@@ -156,13 +229,13 @@ export class CtxBar {
                       if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
                   });
                   if (opt.isActive) this._setButtonActive(btn, opt.isActive(element));
-                  specificRow.appendChild(btn);
+                  items.push(btn);
               }
           });
+          items.push(this.createSeparator());
       }
 
-      // ── Row 2: general controls (shared by every tool) ─────────────────
-      const generalRow = this.createRow();
+      // ── General controls (shared by every tool) ─────────────────────────
 
       // Default commands (z-index)
       //
@@ -198,15 +271,15 @@ export class CtxBar {
           if (action === 'down') setZ(Math.max(1, currentZ - 1));
       };
 
-      generalRow.appendChild(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
-      generalRow.appendChild(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
-      generalRow.appendChild(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
-      generalRow.appendChild(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
+      items.push(this.createButton('flip_to_front', I18n.t('common.bringForward'), () => zAdjust('front')));
+      items.push(this.createButton('flip_to_back', I18n.t('common.sendBackward'), () => zAdjust('back')));
+      items.push(this.createButton('arrow_upward', I18n.t('common.moveUp'), () => zAdjust('up')));
+      items.push(this.createButton('arrow_downward', I18n.t('common.moveDown'), () => zAdjust('down')));
 
-      generalRow.appendChild(this.createSeparator());
+      items.push(this.createSeparator());
 
       // Duplicate Action
-      generalRow.appendChild(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
+      items.push(this.createButton('content_copy', I18n.t('common.duplicate'), async () => {
           const clone = element.cloneNode(true) as CraftoolsCtxElement;
           
           // Offset slightly
@@ -261,15 +334,9 @@ export class CtxBar {
           this._setButtonActive(autoCenterBtn, nextState);
       });
       this._setButtonActive(autoCenterBtn, isAutoCenter);
-      generalRow.appendChild(autoCenterBtn);
+      items.push(autoCenterBtn);
 
-      // Assemble: specific row (if any) above a thin divider, general row
-      // always below -- see show()'s doc comment for why this order.
-      if (specificRow.children.length > 0) {
-          this.el.appendChild(specificRow);
-          this.el.appendChild(this.createRowDivider());
-      }
-      this.el.appendChild(generalRow);
+      this._renderBalanced(items);
 
       this.el.classList.remove('hidden');
       this.el.style.display = 'flex';
