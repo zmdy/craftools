@@ -232,7 +232,7 @@ html, body {
     max-height: 500vh;
     opacity: 1;
 }
-.ct-accordion-content { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.ct-accordion-content { padding: 0 0 10px; display: flex; flex-direction: column; gap: 0; }
 
 /* ── Panel field rows (inside accordion) ─────────────────────────────────── */
 /* Base globals unchanged — all Elementor-style overrides are scoped to

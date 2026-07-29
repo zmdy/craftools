@@ -351,13 +351,13 @@ export class PageTool {
 
         if (panelBody) {
           const htmlSize = `
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
               <span class="craftools-label">${I18n.t('pageTool.presets')}</span>
               <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="presets-container">
                 ${presetsHtml}
               </div>
             </div>
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
               <span class="craftools-label">${I18n.t('pageTool.dimensions')}</span>
               <div style="display: flex; gap: 4px; margin-bottom: 6px;" id="unit-group">
                 ${['px', 'mm', 'cm', 'in', '%'].map(u =>
@@ -379,7 +379,7 @@ export class PageTool {
           // renderColorPicker() below), so this outer group only needs to
           // choose between "a flat color or gradient fill" and "an image".
           const htmlBackground = `
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
               <span class="craftools-label">${I18n.t('pageTool.background')}</span>
               <div style="display: flex; gap: 4px; margin-bottom: 10px;" id="bg-type-group">
                 <button class="craftools-pill bg-type-btn active" data-type="fill">${I18n.t('pageTool.color')}</button>
@@ -394,7 +394,7 @@ export class PageTool {
           `;
 
           const htmlActions = `
-            <div class="ct-field" style="margin-bottom:8px;">
+            <div class="ct-field ct-field--block" style="margin-bottom:8px;">
               <button class="craftools-topbtn" id="clone-page-btn" style="width:100%; justify-content:center; gap:6px; margin-bottom:8px;">
                 <span class="material-symbols-outlined" style="font-size:16px;">content_copy</span> ${I18n.t('pageTool.clonePage')}
               </button>
@@ -647,7 +647,7 @@ export class PageTool {
           <select class="craftools-select" id="paper-theme">${PageTool._paperOptionsHtml(THEMES, m.theme)}</select>
         </div>
 
-        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+        <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
           <span class="craftools-label">${I18n.t('pageTool.paperLines')}</span>
           <div id="paper-line-color-section" style="margin-bottom:8px;"></div>
           <div class="ct-field" id="paper-line-gradient-mode-wrap" style="margin-bottom:8px; ${normalizeValue(m.lineColor).mode === 'gradient' ? '' : 'display:none;'}">
@@ -679,7 +679,7 @@ export class PageTool {
           </div>
         </div>
 
-        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+        <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
           <span class="craftools-label">${I18n.t('pageTool.paperMargins')}</span>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
             <div>
@@ -701,7 +701,7 @@ export class PageTool {
           </div>
         </div>
 
-        <div class="ct-field" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+        <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
           <span class="craftools-label" style="margin-bottom:8px; display:block;">${I18n.t('pageTool.paperExtras')}</span>
           ${PageTool._toggleRowHtml('paper-sidebar-enabled',     I18n.t('paperTool.enableSidebar'),   m.sidebar.enabled)}
           ${PageTool._toggleRowHtml('paper-watermark-enabled',   I18n.t('paperTool.enableWatermark'), m.watermark.enabled)}
