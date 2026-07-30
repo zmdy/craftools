@@ -407,7 +407,46 @@ export abstract class BaseTool {
     const schema = this.getPropertySchema(element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
       this._applyProperty(element, key, value);
+      this._syncLinkedClones(element, key, value);
     });
+  }
+
+  /**
+   * Propagates a property-panel change to every OTHER element sharing this
+   * one's `data-linked-id` (Business Card mode's clone group -- see
+   * PageTool.ts's drop handler, "--- Business Card Cloning Logic ---").
+   *
+   * Element.ts already keeps POSITION (drag/resize) and typed TEXT content
+   * (the `contenteditable` input listener) in sync across these clones, but
+   * neither of those paths touches anything routed through the properties
+   * panel -- so changing a font, color, border, background, alignment, etc.
+   * on one card visibly drifted apart from its siblings the moment you
+   * touched it, even though the cards are supposed to stay identical
+   * copies. Runs every OTHER clone through THIS SAME TOOL's
+   * `_applyProperty()` (not a raw style/DOM copy) so tool-specific side
+   * effects -- auto-fit resize, background-layer creation, border painting
+   * on an inner node, etc. -- stay correct on every clone, not just the one
+   * the user actually edited.
+   *
+   * `_shouldSyncLinkedProperty()` lets a tool opt a specific key out of this
+   * broadcast entirely, without needing to override this whole method.
+   */
+  protected static _syncLinkedClones(element: HTMLElement, key: string, value: unknown): void {
+    const lid = element.getAttribute('data-linked-id');
+    if (!lid) return;
+    if (!this._shouldSyncLinkedProperty(element, key, value)) return;
+    document.querySelectorAll<HTMLElement>(`craftools-element[data-linked-id="${lid}"]`).forEach(clone => {
+      if (clone === element) return;
+      this._applyProperty(clone, key, value);
+    });
+  }
+
+  /**
+   * Hook for `_syncLinkedClones()` -- return `false` to skip propagating a
+   * given key to the rest of the Business Card group. Default: always sync.
+   */
+  protected static _shouldSyncLinkedProperty(_element: HTMLElement, _key: string, _value: unknown): boolean {
+    return true;
   }
 
   /**
