@@ -5,7 +5,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection, contentAlignSection } from '../../utils/CommonSchema';
+import { borderSection, radiusSection, zIndexSection, variableBindingSection, backgroundSection, contentAlignSection, fontStyleField } from '../../utils/CommonSchema';
 import { parseVariableBinding, stringifyVariableBinding } from '../../utils/fields/variable-binding.field';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback, EMOJI_FONT_STACK } from '../../utils/EmojiFont.js';
@@ -474,8 +474,10 @@ export class VariableContentTool extends BaseTool {
           { type: 'font-select', key: 'font',     label: 'Font',   i18nKey: 'textTool.font' },
           { type: 'slider',      key: 'fontSize', label: 'Size',   i18nKey: 'textTool.size', min: 8, max: 200, step: 1 },
           { type: 'align',       key: 'textAlign' },
-          { type: 'toggle',      key: 'bold',     label: 'Bold',   i18nKey: 'textTool.bold' },
-          { type: 'toggle',      key: 'italic',   label: 'Italic', i18nKey: 'textTool.italic' },
+          fontStyleField([
+            { key: 'bold',   style: 'bold',   i18nKey: 'textTool.bold' },
+            { key: 'italic', style: 'italic', i18nKey: 'textTool.italic' },
+          ]),
           // Same field as TextTool.ts's Title/Paragraph -- see its schema
           // for why (only the value is applied to `content`, not resolved
           // per-repetition, so it composes fine with variable bindings).
