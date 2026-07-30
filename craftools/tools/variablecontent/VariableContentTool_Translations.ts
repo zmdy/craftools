@@ -9,16 +9,19 @@ I18n.addTranslations('variableContentTool', {
     "pt-br": {
         panelTitle: "Conteúdo Variável",
         placeholder: "Configure uma variável...",
-        propsTitle: "Conteúdo Variável"
+        propsTitle: "Conteúdo Variável",
+        repeatAcrossCards: "Repetir conteúdo em todos os cartões"
     },
     "en": {
         panelTitle: "Variable Content",
         placeholder: "Configure a variable...",
-        propsTitle: "Variable Content"
+        propsTitle: "Variable Content",
+        repeatAcrossCards: "Repeat content on all cards"
     },
     "es": {
         panelTitle: "Contenido Variable",
         placeholder: "Configure una variable...",
-        propsTitle: "Contenido Variable"
+        propsTitle: "Contenido Variable",
+        repeatAcrossCards: "Repetir contenido en todas las tarjetas"
     }
 });

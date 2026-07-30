@@ -92,6 +92,11 @@ export class VariableContentTool extends BaseTool {
     }
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
+    // Business Card mode only (see getPropertySchema()'s `hidden` on this
+    // field) -- defaults to true so a freshly-dropped card group starts out
+    // showing identical content on every card, matching the position/text
+    // coupling Element.ts already gives every OTHER tool in the group.
+    if (!('repeatAcrossCards' in existing)) patch.repeatAcrossCards = true;
     // The binding lives on the element itself (element._craftoolsVariable),
     // not in a _craftoolsMeta object like Barcode/QRCode -- same convention
     // VariablePanel.ts's _getElementBinding() already relies on for
@@ -151,6 +156,11 @@ export class VariableContentTool extends BaseTool {
     // unlinks it in the panel (this method runs again on every binding
     // save, via _applyProperty()'s 'variableBinding' case).
     textEl.classList.toggle('ct-var-linked', !!binding?.linkedTo);
+    // Business Card mode: which "repetition" this card resolves as (see
+    // _cardRepetitionIndex()'s doc comment). 0 for every card outside a
+    // linked group, or when "repeat content on all cards" is on -- so this
+    // is a no-op for every element that isn't part of one.
+    const repetitionIndex = VariableContentTool._cardRepetitionIndex(element);
     if (binding && binding.type) {
       // A bound "emoji" value is ALWAYS a single emoji character, never
       // mixed with regular text -- putting the panel's chosen text font
@@ -214,8 +224,8 @@ export class VariableContentTool extends BaseTool {
           if (leaderBinding && leaderBinding.type === binding.type) {
             VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
               const picks = VariableEngine.newLinkRegistry();
-              VariableEngine.resolve(leaderBinding, {}, apiCache, { id: '__leader__', picks });
-              const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, {}, apiCache, { id: '__me__', picks });
+              VariableEngine.resolve(leaderBinding, { repetitionIndex }, apiCache, { id: '__leader__', picks });
+              const val = VariableEngine.resolve({ ...binding, linkedTo: '__leader__' }, { repetitionIndex }, apiCache, { id: '__me__', picks });
               applyResolved(val);
             });
             return;
@@ -242,20 +252,54 @@ export class VariableContentTool extends BaseTool {
           if (leaderBinding && leaderBinding.type === 'date') {
             VariableEngine.prefetchApiResources([leaderBinding, binding]).then(apiCache => {
               const picks = VariableEngine.newLinkRegistry();
-              VariableEngine.resolve(leaderBinding, {}, apiCache, { id: dateLeaderId, picks });
-              const val = VariableEngine.resolve(binding, {}, apiCache, { id: '__me__', picks });
+              VariableEngine.resolve(leaderBinding, { repetitionIndex }, apiCache, { id: dateLeaderId, picks });
+              const val = VariableEngine.resolve(binding, { repetitionIndex }, apiCache, { id: '__me__', picks });
               applyResolved(val);
             });
             return;
           }
         }
 
-        VariableEngine.resolvePreview(binding).then(applyResolved);
+        VariableEngine.resolvePreview(binding, { repetitionIndex }).then(applyResolved);
       });
     } else {
       textEl.style.whiteSpace = 'pre-wrap';
       textEl.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
     }
+  }
+
+  /**
+   * Business Card mode's per-card variation control (see
+   * getPropertySchema()'s `repeatAcrossCards` toggle, hidden unless the
+   * element has `data-linked-id`).
+   *
+   * VariableEngine.resolve()'s `sequenceNumber`/`sequenceText`/`emoji`/
+   * `apiPhrase`/`emojiKitchen`/date-interval picks all key off
+   * `context.repetitionIndex` (see AgendaExport.ts's per-page loop, the
+   * ONLY other caller that ever set it to anything but 0) -- reusing that
+   * same mechanism here, keyed by a card's position within its linked
+   * group instead of a page number, is what makes "sequencial ou
+   * aleatório" per-card variation possible on the live canvas, not just at
+   * Agenda export time. Every pick in the engine is a deterministic
+   * function of `(binding, repetitionIndex)` -- "random" modes are a
+   * pseudo-random hash of the index, never `Math.random()` -- so handing
+   * out a different index per card is both necessary AND sufficient for
+   * each card to land on a different value.
+   *
+   * Returns 0 (i.e. "resolve exactly like a standalone element") when the
+   * element isn't part of a Business Card group, OR when
+   * `repeatAcrossCards` is on (default) -- every card in the group then
+   * resolves at the same index 0 and shows identical content, same as
+   * position/text already do via Element.ts.
+   */
+  private static _cardRepetitionIndex(element: HTMLElement): number {
+    const lid = element.getAttribute('data-linked-id');
+    if (!lid) return 0;
+    const repeat = PropertyRenderer._readState(element).repeatAcrossCards;
+    if (repeat !== false) return 0;
+    const group = Array.from(document.querySelectorAll<HTMLElement>(`craftools-element[data-linked-id="${lid}"]`));
+    const idx = group.indexOf(element);
+    return idx >= 0 ? idx : 0;
   }
 
   /**
@@ -469,12 +513,27 @@ export class VariableContentTool extends BaseTool {
   }
 
   static getPropertySchema(_element: HTMLElement): PropertySchema {
+    // First and open by default: unlike Barcode/QRCode (where the variable
+    // binding is a secondary option alongside their own content config),
+    // this tool's entire purpose IS the bound variable -- matches
+    // MobileToolbar.ts's _getVariableContentItems(), which also lists it first.
+    const varSection = variableBindingSection({ defaultOpen: true, hideNoneOption: true });
+    // Business Card mode only (hidden otherwise -- see _cardRepetitionIndex()'s
+    // doc comment for the resolution mechanics this drives). The binding
+    // itself (type/format/mode/etc, above) always stays identical across the
+    // whole card group via BaseTool._syncLinkedClones() -- this toggle only
+    // controls whether every card resolves it at the SAME repetition (on,
+    // default -- identical content everywhere, matching the position/text
+    // coupling every other tool already gets in this mode) or each card
+    // resolves it at ITS OWN repetition (off -- sequencial/random variation
+    // per card, same mechanism Agenda Export's multi-page loop uses).
+    varSection.fields.push({
+      type: 'toggle', key: 'repeatAcrossCards',
+      label: 'Repeat content on all cards', i18nKey: 'variableContentTool.repeatAcrossCards',
+      hidden: (el: HTMLElement) => !el.hasAttribute('data-linked-id'),
+    });
     return [
-      // First and open by default: unlike Barcode/QRCode (where the variable
-      // binding is a secondary option alongside their own content config),
-      // this tool's entire purpose IS the bound variable -- matches
-      // MobileToolbar.ts's _getVariableContentItems(), which also lists it first.
-      variableBindingSection({ defaultOpen: true, hideNoneOption: true }),
+      varSection,
       {
         section: 'Typography',
         i18nKey: 'textTool.typography',
@@ -539,6 +598,17 @@ export class VariableContentTool extends BaseTool {
       // value until someone happens to reselect them. See
       // _refreshLinkedFollowers()'s doc comment for the full picture.
       VariableContentTool._refreshLinkedFollowers(element);
+      return;
+    }
+
+    // "Repeat content on all cards" flip -- doesn't change the binding
+    // itself, only which repetition THIS card resolves it at (see
+    // _cardRepetitionIndex()), so re-run the preview to pick that up
+    // immediately instead of waiting for the next unrelated binding edit.
+    if (key === 'repeatAcrossCards') {
+      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+      const content = getContent(element);
+      if (content) VariableContentTool._applyVariablePreview(element, content, binding);
       return;
     }
 
