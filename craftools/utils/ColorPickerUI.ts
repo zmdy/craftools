@@ -308,8 +308,8 @@ function gradientEditorHtml(g: GradientValue): string {
     </div>`).join('');
 
   return `
-    <div class="ct-field" style="margin-top:8px;">
-      <div class="ct-field-row" style="gap:4px;">
+    <div class="ct-field ct-field--block" style="margin-top:8px;">
+      <div class="ct-field-row" style="gap:4px; flex-wrap:wrap;">
         <button type="button" class="craftools-pill${g.type === 'linear' ? ' active' : ''}" data-action="grad-type" data-type="linear">${tr('colorPicker.linear', 'Linear')}</button>
         <button type="button" class="craftools-pill${g.type === 'radial' ? ' active' : ''}" data-action="grad-type" data-type="radial">${tr('colorPicker.radial', 'Radial')}</button>
         ${g.type === 'linear' ? `
