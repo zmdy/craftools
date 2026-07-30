@@ -233,16 +233,35 @@ export class ImageTool extends BaseTool {
       if (img.getAttribute('src') !== meta.src) img.src = meta.src;
       ImageTool._applyBlendMode(sibling, sMeta.blendMode);
       this._paintBorder(img, sMeta.borderWidth, sMeta.borderStyle, sMeta.borderColor);
-      img.style.borderRadius  = `${sMeta.borderRadius || 0}px`;
+      img.style.borderRadius   = `${sMeta.borderRadius || 0}px`;
+      // Was missing -- object-position (the panel's "Alinhamento" grid,
+      // only visible under Fit mode 'contain') got copied into sMeta by
+      // the Object.assign() above but never actually painted here, so a
+      // sibling's photo silently ignored it until something ELSE touched
+      // that sibling directly.
+      img.style.objectPosition = sMeta.contentAlign.replace('-', ' ');
     }
     ImageTransform.applyTransform(sibling as unknown as Parameters<typeof ImageTransform.applyTransform>[0]);
     ImageFilters.applyFilters(sibling as unknown as Parameters<typeof ImageFilters.applyFilters>[0]);
     ImageTool._applyBgBlur(sibling);
   }
 
-  /** Propagates the current meta to all linked sibling elements (Business Card mode). */
+  /**
+   * Propagates the current meta -- AND anything else about `element` that
+   * isn't part of `ImageMeta` but should still stay identical across a
+   * Business Card group, i.e. z-index -- to every linked sibling.
+   *
+   * Called unconditionally at the end of `_applyProperty()` (see its own
+   * comment) so this covers EVERY property this tool has today, and any
+   * new one added to `ImageMeta`/the schema later, without each needing
+   * its own opt-in call site the way this used to only fire for `src` and
+   * pan/zoom/rotate/flip.
+   */
   private static _propagateToSiblings(element: HTMLElement, meta: ImageMeta): void {
-    ImageTool._getLinkedSiblings(element).forEach(sibling => ImageTool._pushMetaToSibling(sibling, meta));
+    ImageTool._getLinkedSiblings(element).forEach(sibling => {
+      ImageTool._pushMetaToSibling(sibling, meta);
+      sibling.style.zIndex = element.style.zIndex;
+    });
   }
 
   static getCtxOptions(): any[] {
@@ -450,8 +469,19 @@ export class ImageTool extends BaseTool {
     PropertyRenderer.applyChange(element, key, value);
 
     const el = element as HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement };
+    // A Business Card clone (PageTool.ts's `cloneNode(true)`) never
+    // inherits this JS-only expando -- it used to just bail out here
+    // ("if (!meta) return"), which silently no-op'd EVERY property below
+    // on a sibling that had never been individually selected yet. That's
+    // also exactly what BaseTool._syncLinkedClones() hits: it re-runs this
+    // same method directly on every linked sibling after any panel change,
+    // so a never-selected sibling's Fit mode/filters/border/etc. change
+    // was being swallowed right here instead of applying. Lazily
+    // defaulting it instead means this method always has something valid
+    // to read and write, on the edited element AND on every sibling this
+    // fires on.
+    if (!el._craftoolsMeta) el._craftoolsMeta = ImageTool.getDefaultMeta();
     const meta = el._craftoolsMeta;
-    if (!meta) return;
 
     // Map schema key → meta key
     if (key === 'src') {
@@ -460,7 +490,6 @@ export class ImageTool extends BaseTool {
       if (img) img.src = meta.src;
       const blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
       if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
-      ImageTool._propagateToSiblings(element, meta);
     } else if (key.startsWith('filter_')) {
       const filterKey = key.replace('filter_', '').replace('_', '-') as FilterKey;
       if (meta.filters) meta.filters[filterKey] = value as number;
@@ -468,12 +497,6 @@ export class ImageTool extends BaseTool {
     } else if (['zoom', 'posX', 'posY', 'rotation', 'flipH', 'flipV'].includes(key)) {
       (meta as unknown as Record<string, unknown>)[key] = value;
       element.dispatchEvent(new CustomEvent('craftools-image-transform-apply', { bubbles: false }));
-      // Was missing entirely: only a photo *swap* (the 'src' branch above)
-      // propagated to linked siblings (Business Card mode) -- adjusting
-      // pan/zoom/rotation through the panel's own sliders left every other
-      // cell in the set exactly where it was, same gap as the direct wheel/
-      // drag interactions ImageTransform.ts owns (now fixed there too).
-      ImageTool._propagateToSiblings(element, meta);
     } else if (key === 'objectFit') {
       // Was lumped in with zoom/posX/posY/rotation above, dispatching
       // 'craftools-image-transform-apply' -- but ImageTransform.applyTransform()
@@ -515,6 +538,20 @@ export class ImageTool extends BaseTool {
     } else if (key === 'zIndex') {
       element.style.zIndex = String(value);
     }
+
+    // Business Card mode: re-broadcast the FULL current state -- not just
+    // whichever key changed above -- to every linked sibling, unconditionally,
+    // on every single property change (including background fill/opacity,
+    // which never touches `meta` at all -- see the `_applyBackground()` early
+    // return above; siblings still pick that one up via
+    // BaseTool._syncLinkedClones()'s own generic per-key sync). Previously
+    // only `src` and the pan/zoom/rotate/flip keys called this, so Fit mode,
+    // filters, background blur/blend mode, border and radius silently never
+    // propagated -- and the same gap would have reopened for literally any
+    // NEW key ever added here unless someone remembered to also wire a call
+    // into its own branch above. One unconditional call at the end instead
+    // means every key -- current and future -- is covered by construction.
+    ImageTool._propagateToSiblings(element, meta);
   }
 }
 
