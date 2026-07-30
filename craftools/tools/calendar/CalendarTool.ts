@@ -721,8 +721,21 @@ export class CalendarTool {
 
     // Save the page's original content only the first time (same logic as
     // GeneratorTool.ts) -- restored when switching to a different tool.
+    //
+    // Must save BOTH innerHTML and style.cssText here: Editor.ts's
+    // restoreOriginalCanvas() unconditionally does
+    // `mainPage.style.cssText = this._savedPageCssText ?? ''` on close, so
+    // leaving _savedPageCssText unset made it reset to an EMPTY string --
+    // wiping out the page's own width/min-height/position inline styles
+    // (normally set by PageTool) the moment the calendar preview closed.
+    // With no dimensions left, the page collapsed to 0x0 and visually
+    // vanished from the canvas -- indistinguishable from the page actually
+    // having been deleted, even though the DOM node (and its content) were
+    // still there untouched. AgendaExportTool.ts's equivalent save call
+    // already does this correctly; this brings CalendarTool in line with it.
     if (editor._savedPageHtml === undefined) {
-      editor._savedPageHtml = mainPage.innerHTML;
+      editor._savedPageHtml    = mainPage.innerHTML;
+      editor._savedPageCssText = mainPage.style.cssText;
     }
 
     let badge = document.getElementById('generator-canvas-badge');
