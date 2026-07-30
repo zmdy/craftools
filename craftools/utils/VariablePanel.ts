@@ -281,7 +281,7 @@ export class VariablePanel {
                     <input type="number" id="var-date-step" class="craftools-input" style="width:100%;" value="${parseInt(String(b.step), 10) || 1}" min="1">
                 </div>
             </div>
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.dateFormatLabel')}</span>
                 <div id="var-date-format-buttons" class="ct-field-row" style="gap:4px; flex-wrap:wrap;">
                     ${this._dateFormatButtons().map(({ token, i18nKey }) => `
@@ -349,7 +349,7 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div class="ct-field" style="margin-top: 10px;">
+            <div class="ct-field ct-field--block" style="margin-top: 10px;">
                 <span class="craftools-label">${I18n.t('variablePanel.dateLanguageLabel')}</span>
                 <select id="var-date-language" class="craftools-select" style="width:100%;">
                     <option value="pt-br" ${(b.dateLanguage ?? 'pt-br') === 'pt-br' ? 'selected' : ''}>Português</option>
