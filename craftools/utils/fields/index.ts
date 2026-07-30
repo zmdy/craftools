@@ -17,6 +17,7 @@ export * from './color-picker.field';
 export * from './toggle.field';
 export * from './select.field';
 export * from './align.field';
+export * from './font-style.field';
 export * from './font-select.field';
 export * from './slider.field';
 export * from './divider.field';

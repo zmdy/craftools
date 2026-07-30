@@ -28,8 +28,15 @@ export interface FieldHandler {
    * Attaches event listeners to the container.
    * Called ONCE at field creation time — not on re-render.
    * Calls onChange(newValue) whenever the user interacts.
+   *
+   * The optional 2nd argument lets a MULTI-KEY field (one whose schema sets
+   * `watchKeys`, e.g. font-style.field.ts) route a change to a state key
+   * OTHER than the field's own nominal `key` — PropertyRenderer.ts passes
+   * that key straight through to the panel's onChange(key, value) instead
+   * of substituting field.key. Every other (single-key) field handler can
+   * simply ignore this parameter and keep calling onChange(value) as before.
    */
-  bind(container: HTMLElement, field: Field, onChange: (value: unknown) => void, element?: HTMLElement): void;
+  bind(container: HTMLElement, field: Field, onChange: (value: unknown, keyOverride?: string) => void, element?: HTMLElement): void;
 }
 
 // ── Registry ──────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@
  *   }
  */
 
-import type { Section } from '../types/PropertySchema';
+import type { Section, Field } from '../types/PropertySchema';
 
 // ── Shape ─────────────────────────────────────────────────────────────────────
 
@@ -316,6 +316,45 @@ export const shadowSection = (): Section => ({
     { type: 'color',  key: 'shadowColor',   label: 'Color', i18nKey: 'common.shadowColor' },
   ],
 });
+
+// ── Font style (Bold/Italic/Underline) ─────────────────────────────────────────
+
+/**
+ * Standardized font-style button group (see utils/fields/font-style.field.ts
+ * for the shared component this returns a schema entry for). Every
+ * font-using tool used to declare Bold/Italic/Underline as separate
+ * `{ type: 'toggle', ... }` fields, each rendering as its own iOS-style
+ * switch on its own row -- inconsistent with the identically-purposed
+ * ctx-bar buttons (TextTool.ts's getCtxOptions() 'bius' group) right above
+ * the panel. This renders them as ONE row of pill buttons instead, matching
+ * AlignField's look exactly.
+ *
+ * Returns a single Field (not a Section) so it drops straight into a tool's
+ * own hand-authored Typography section fields array, alongside font/size/
+ * color/etc. Pass only the styles a tool actually persists -- e.g.
+ * StampTool.ts only has a `bold`-shaped key per text scope (no italic/
+ * underline), so it calls this with one entry and still gets the same
+ * pill-button look as TextTool's full B/I/U trio instead of a lone switch.
+ */
+const FONT_STYLE_ICONS: Record<'bold' | 'italic' | 'underline', string> = {
+  bold:      'format_bold',
+  italic:    'format_italic',
+  underline: 'format_underlined',
+};
+
+export const fontStyleField = (
+  buttons: Array<{ key: string; style: keyof typeof FONT_STYLE_ICONS; i18nKey?: string; label?: string }>,
+): Field => ({
+  type: 'font-style',
+  key: buttons[0].key,
+  watchKeys: buttons.map(b => b.key),
+  buttons: buttons.map(b => ({
+    key: b.key,
+    icon: FONT_STYLE_ICONS[b.style],
+    i18nKey: b.i18nKey,
+    label: b.label ?? b.style,
+  })),
+} as Field);
 
 // ── Text alignment ────────────────────────────────────────────────────────────
 

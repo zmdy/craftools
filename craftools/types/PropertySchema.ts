@@ -28,6 +28,7 @@ export type FieldType =
   | 'variable-binding'
   | 'emoji-picker'
   | 'emoji-kitchen-pair'
+  | 'font-style'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -42,6 +43,16 @@ export interface BaseField {
   i18nKey?: string;
   hidden?: boolean | ((el: HTMLElement) => boolean);
   disabled?: boolean | ((el: HTMLElement) => boolean);
+  /**
+   * Opts a field into watching MORE than one state key at once (e.g.
+   * FontStyleField below, which drives an independent boolean per button
+   * from a single schema entry). When set, PropertyRenderer.ts passes
+   * `render()` an ARRAY of values (one per watchKeys entry, same order)
+   * instead of the single `state[key]` value, and re-renders whenever ANY
+   * of them changes -- not just `key`. Omit for the default single-key
+   * behavior every other field type relies on.
+   */
+  watchKeys?: string[];
 }
 
 // ── Concrete field types ──────────────────────────────────────────────────────
@@ -221,6 +232,28 @@ export interface EmojiKitchenPairField extends BaseField {
   type: 'emoji-kitchen-pair';
 }
 
+/**
+ * A row of independent icon-toggle buttons (Bold/Italic/Underline, or any
+ * subset) styled like AlignField's pill group instead of separate
+ * iOS-style toggle switches -- see utils/fields/font-style.field.ts and
+ * CommonSchema.ts's fontStyleField() helper, which every font-using tool
+ * (TextTool, CurvedTextTool, StampTool, VariableContentTool, TableTool)
+ * should go through so this control looks and behaves identically
+ * everywhere instead of being reimplemented per tool.
+ *
+ * Unlike every other field type, ONE FontStyleField entry drives several
+ * independent boolean state keys at once (one per button) -- BaseField's
+ * `watchKeys` (set to the same keys as `buttons`) is what makes
+ * PropertyRenderer.ts diff/re-render correctly for that, and each button's
+ * click reports through FieldRegistry's `onChange(value, keyOverride)`
+ * rather than the field's own nominal `key` (which is just `buttons[0].key`,
+ * used only to keep the DOM wrapper's id unique).
+ */
+export interface FontStyleField extends BaseField {
+  type: 'font-style';
+  buttons: Array<{ key: string; icon: string; label?: string; i18nKey?: string }>;
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -252,6 +285,7 @@ export type Field =
   | VariableBindingField
   | EmojiPickerField
   | EmojiKitchenPairField
+  | FontStyleField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

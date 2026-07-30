@@ -173,23 +173,34 @@ export class PropertyRenderer {
     const fieldId = `ct-field-${field.key}`;
     let wrapper = bodyEl.querySelector<HTMLElement>(`[data-ct-field="${fieldId}"]`);
 
+    // Most fields watch a single state key (field.key). A field can opt
+    // into watching several at once via `watchKeys` (see
+    // fields/font-style.field.ts) -- its rendered value becomes an ARRAY
+    // in the same order as watchKeys, and the diff below re-renders if ANY
+    // watched key changed, not just field.key.
+    const watchKeys   = field.watchKeys ?? [field.key];
+    const readValue   = (): unknown => watchKeys.length > 1 ? watchKeys.map(k => state[k]) : state[field.key];
+    const serialize   = (v: unknown): string => Array.isArray(v) ? JSON.stringify(v) : String(v ?? '');
+
     if (!wrapper) {
       // First creation: render structure, then bind events
       wrapper = document.createElement('div');
       wrapper.dataset.ctField = fieldId;
       bodyEl.appendChild(wrapper);
 
-      const currentValue = state[field.key];
+      const currentValue = readValue();
       handler.render(wrapper, field, currentValue, element);
-      handler.bind(wrapper, field, value => onChange(field.key, value), element);
-      wrapper.dataset.renderedValue = String(currentValue ?? '');
+      // keyOverride lets a multi-key field route a change to a state key
+      // OTHER than field.key -- see FieldRegistry.ts's bind() doc comment.
+      handler.bind(wrapper, field, (value, keyOverride) => onChange(keyOverride ?? field.key, value), element);
+      wrapper.dataset.renderedValue = serialize(currentValue);
     } else {
       // Update: only re-render if value changed (preserves focus)
-      const currentValue = state[field.key];
+      const currentValue = readValue();
       const rendered     = wrapper.dataset.renderedValue;
-      if (rendered !== String(currentValue ?? '')) {
+      if (rendered !== serialize(currentValue)) {
         handler.render(wrapper, field, currentValue, element);
-        wrapper.dataset.renderedValue = String(currentValue ?? '');
+        wrapper.dataset.renderedValue = serialize(currentValue);
       }
     }
 
