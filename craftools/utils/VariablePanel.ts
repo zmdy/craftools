@@ -29,13 +29,22 @@ export class VariablePanel {
 
     // ── HTML ──────────────────────────────────────────────────────────────────
 
-    static renderAccordionBody(binding: VariableBinding | null, element: VarElement | null): string {
+    /**
+     * @param opts.hideNoneOption  Omits the "Nenhuma" option from the type
+     *   select -- VariableContentTool.ts sets this, since a bound variable
+     *   IS this tool's whole purpose (createElement() also seeds a fresh
+     *   'date' binding so there's never an empty/unset state to begin
+     *   with). QRCodeTool/BarcodeTool leave this false: for them the
+     *   variable binding is an optional alternative to their own static
+     *   content field, so "none" is a meaningful, valid choice. Default: false.
+     */
+    static renderAccordionBody(binding: VariableBinding | null, element: VarElement | null, opts: { hideNoneOption?: boolean } = {}): string {
         const type = binding?.type ?? '';
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.typeLabel')}</span>
                 <select id="var-type" class="craftools-select" style="width:100%;">
-                    <option value="">${I18n.t('variablePanel.typeNone')}</option>
+                    ${opts.hideNoneOption ? '' : `<option value="">${I18n.t('variablePanel.typeNone')}</option>`}
                     <option value="date"            ${type === 'date'            ? 'selected' : ''}>${I18n.t('variablePanel.typeDate')}</option>
                     <option value="sequenceNumber"  ${type === 'sequenceNumber'  ? 'selected' : ''}>${I18n.t('variablePanel.typeSequenceNumber')}</option>
                     <option value="sequenceText"    ${type === 'sequenceText'    ? 'selected' : ''}>${I18n.t('variablePanel.typeSequenceText')}</option>

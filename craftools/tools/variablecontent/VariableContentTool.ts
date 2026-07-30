@@ -11,7 +11,7 @@ import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback, EMOJI_FONT_STACK } from '../../utils/EmojiFont.js';
 import { I18n } from '../../settings/Translations.js';
 import { AppSettings } from '../../utils/AppSettings.js';
-import type { VariableBinding } from '../../utils/VariableEngine';
+import { VariableEngine, type VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
 // below (placeholder text) -- without this side-effect import the keys are
@@ -408,12 +408,21 @@ export class VariableContentTool extends BaseTool {
    * "mod.VariableContentTool.createElement is not a function").
    */
   static createElement(_type: string, _editor?: unknown): HTMLElement {
-    const el = document.createElement('craftools-element') as HTMLElement & { _craftoolsAutoResize?: boolean };
+    const el = document.createElement('craftools-element') as HTMLElement & {
+      _craftoolsAutoResize?: boolean;
+      _craftoolsVariable?:   VariableBinding | null;
+    };
     el.setAttribute('x', '50');
     el.setAttribute('y', '50');
     el.setAttribute('w', '220');
     el.setAttribute('h', '50');
     el.setAttribute('data-craftool', 'variablecontent');
+
+    // Defaults to a fresh 'date' binding instead of leaving the variable
+    // unset -- this tool's entire purpose IS the bound variable (see the
+    // Typography section's comment below and hideNoneOption above), so an
+    // empty/"Nenhuma" starting state no longer exists to fall into.
+    el._craftoolsVariable = VariableEngine.defaultBinding('date');
     // Auto-fit starts OFF (see AutoFitText.ts / CommonSchema.ts's
     // sizePositionSection({ autoFit: true })) -- only `true` turns it on.
     el._craftoolsAutoResize = false;
@@ -465,7 +474,7 @@ export class VariableContentTool extends BaseTool {
       // binding is a secondary option alongside their own content config),
       // this tool's entire purpose IS the bound variable -- matches
       // MobileToolbar.ts's _getVariableContentItems(), which also lists it first.
-      variableBindingSection({ defaultOpen: true }),
+      variableBindingSection({ defaultOpen: true, hideNoneOption: true }),
       {
         section: 'Typography',
         i18nKey: 'textTool.typography',

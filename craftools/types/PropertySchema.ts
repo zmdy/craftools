@@ -186,7 +186,13 @@ export interface ContentAlignField extends BaseField {
 
 export interface VariableBindingField extends BaseField {
   type: 'variable-binding';
-  // No extra config: wraps utils/VariablePanel.js's existing "Texto Variável"
+  /**
+   * Hides the "Nenhuma" type option -- see VariablePanel.ts's
+   * renderAccordionBody() doc comment. Only VariableContentTool.ts sets
+   * this (via CommonSchema.ts's variableBindingSection({ hideNoneOption })).
+   */
+  hideNoneOption?: boolean;
+  // wraps utils/VariablePanel.js's existing "Texto Variável"
   // accordion (type select + per-type config + live preview + cross-element
   // "Vincular a" linking), shared by QRCodeTool, BarcodeTool and
   // VariableContentTool. Unlike every other field, its stored value is a

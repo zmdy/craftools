@@ -434,15 +434,18 @@ export const contentAlignSection = (): Section => ({
  *   by default (it IS the tool's whole purpose); QRCodeTool/BarcodeTool treat
  *   it as a secondary, collapsed-by-default option alongside their content
  *   config. Default: false.
+ * @param opts.hideNoneOption  Omits the "Nenhuma" type choice -- see
+ *   VariablePanel.ts's renderAccordionBody() doc comment. Only
+ *   VariableContentTool.ts sets this. Default: false.
  */
-export const variableBindingSection = (opts: { defaultOpen?: boolean } = {}): Section => ({
+export const variableBindingSection = (opts: { defaultOpen?: boolean; hideNoneOption?: boolean } = {}): Section => ({
   section: 'Variable',
   i18nKey: 'variablePanel.title',
   icon: 'data_object',
   collapsible: true,
   defaultOpen: opts.defaultOpen ?? false,
   fields: [
-    { type: 'variable-binding', key: 'variableBinding' },
+    { type: 'variable-binding', key: 'variableBinding', hideNoneOption: opts.hideNoneOption ?? false } as Field,
   ],
 });
 

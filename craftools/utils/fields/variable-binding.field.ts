@@ -78,10 +78,10 @@ function wireUp(container: ContainerWithState, binding: Binding, element?: HTMLE
 }
 
 FieldRegistry.register('variable-binding', {
-  render(container, _field, value, element) {
+  render(container, field, value, element) {
     const c = container as ContainerWithState;
     const binding = parseVariableBinding(value);
-    c.innerHTML = VariablePanel.renderAccordionBody(binding, element);
+    c.innerHTML = VariablePanel.renderAccordionBody(binding, element, { hideNoneOption: (field as { hideNoneOption?: boolean }).hideNoneOption });
     // PropertyRenderer calls render() BEFORE bind() on first creation, so
     // onChange isn't stashed yet the very first time -- wireUp() no-ops in
     // that case and bind() (running immediately after, same tick) performs
