@@ -28,7 +28,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { zIndexSection } from '../../utils/CommonSchema';
+import { zIndexSection, fontStyleField } from '../../utils/CommonSchema';
 import { Notify } from '../../utils/Notify.js';
 import { I18n } from '../../settings/Translations.js';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -999,15 +999,19 @@ export class TableTool extends BaseTool {
           { type: 'divider', key: 'div-header-font', icon: 'view_headline', label: 'Header', i18nKey: 'tableTool.headerLabel' },
           { type: 'font-select', key: 'headerFontFamily', label: 'Font', i18nKey: 'tableTool.fontFamily' },
           { type: 'number', key: 'headerFontSize', label: 'Size', i18nKey: 'tableTool.fontSize', min: 6, max: 72, unit: 'px' },
-          { type: 'toggle', key: 'headerBold', label: 'Bold', i18nKey: 'tableTool.bold' },
-          { type: 'toggle', key: 'headerItalic', label: 'Italic', i18nKey: 'tableTool.italic' },
+          fontStyleField([
+            { key: 'headerBold',   style: 'bold',   i18nKey: 'tableTool.bold' },
+            { key: 'headerItalic', style: 'italic', i18nKey: 'tableTool.italic' },
+          ]),
           { type: 'color', key: 'headerTextColor', label: 'Text color', i18nKey: 'tableTool.textColor' },
 
           { type: 'divider', key: 'div-body-font', icon: 'table_rows', label: 'Body', i18nKey: 'tableTool.bodyLabel' },
           { type: 'font-select', key: 'bodyFontFamily', label: 'Font', i18nKey: 'tableTool.fontFamily' },
           { type: 'number', key: 'bodyFontSize', label: 'Size', i18nKey: 'tableTool.fontSize', min: 6, max: 72, unit: 'px' },
-          { type: 'toggle', key: 'bodyBold', label: 'Bold', i18nKey: 'tableTool.bold' },
-          { type: 'toggle', key: 'bodyItalic', label: 'Italic', i18nKey: 'tableTool.italic' },
+          fontStyleField([
+            { key: 'bodyBold',   style: 'bold',   i18nKey: 'tableTool.bold' },
+            { key: 'bodyItalic', style: 'italic', i18nKey: 'tableTool.italic' },
+          ]),
           { type: 'color', key: 'bodyTextColor', label: 'Text color', i18nKey: 'tableTool.textColor' },
         ],
       },
