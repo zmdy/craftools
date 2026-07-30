@@ -13,7 +13,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { formaSection, sizePositionSection, pageAlignSection, contentAlignSection, backgroundSection } from '../../utils/CommonSchema';
+import { formaSection, sizePositionSection, pageAlignSection, contentAlignSection, backgroundSection, fontStyleField } from '../../utils/CommonSchema';
 import { AutoFitText } from '../../utils/AutoFitText.js';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
@@ -240,9 +240,11 @@ export class TextTool extends BaseTool {
           { type: 'slider',      key: 'fontSize',   label: 'Size',        i18nKey: 'textTool.size',       min: 8, max: 200, step: 1 },
           { type: 'slider',      key: 'lineHeight', label: 'Line height', i18nKey: 'textTool.lineHeight', min: 1, max: 4,   step: 0.05 },
           { type: 'align',       key: 'textAlign' },
-          { type: 'toggle',      key: 'bold',       label: 'Bold',        i18nKey: 'textTool.bold' },
-          { type: 'toggle',      key: 'italic',     label: 'Italic',      i18nKey: 'textTool.italic' },
-          { type: 'toggle',      key: 'underline',  label: 'Underline',   i18nKey: 'textTool.underline' },
+          fontStyleField([
+            { key: 'bold',      style: 'bold',      i18nKey: 'textTool.bold' },
+            { key: 'italic',    style: 'italic',    i18nKey: 'textTool.italic' },
+            { key: 'underline', style: 'underline', i18nKey: 'textTool.underline' },
+          ]),
           {
             type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
             options: [
