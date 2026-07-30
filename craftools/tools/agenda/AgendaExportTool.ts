@@ -258,7 +258,7 @@ export class AgendaExportTool {
       const continuesSequence = page.dataset.agendaContinueSequence === 'true';
 
       return `
-        <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
+        <div class="ct-field ct-field--block" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
             <input type="checkbox" class="agenda-page-repeat-check" data-page-id="${page.id}" ${checked ? 'checked' : ''}>
             <span style="font-weight:600; font-size:12px;">${a('pageLabel')} ${idx + 1}</span>
@@ -307,9 +307,9 @@ export class AgendaExportTool {
     // off -- instead of appearing/disappearing.
     return `<div id="agenda-preview-body">
       <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">${a('previewIntro')}</p>
-      <div class="ct-field-row" style="justify-content:space-between; padding:4px 0; margin-bottom:10px;">
+      <div class="ct-field" style="margin-bottom:10px;">
         <span class="craftools-label" style="margin:0;">${a('previewToggleLabel')}</span>
-        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px; margin-left:auto;">
           <input type="checkbox" id="agenda-preview-toggle" class="ct-fi" style="display:none;">
           <span class="ct-toggle-track" style="
             width:32px; height:18px; border-radius:99px;
