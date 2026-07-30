@@ -224,7 +224,8 @@ export class AgendaExport {
         const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
 
         [...leaders, ...followers].forEach(j => {
-          const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
           this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
         });
 
@@ -371,7 +372,8 @@ export class AgendaExport {
         const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
         const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
         [...leaders, ...followers].forEach(j => {
-          const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
           this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
         });
 
@@ -485,7 +487,8 @@ export class AgendaExport {
         const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
 
         [...leaders, ...followers].forEach(j => {
-          const resolved = VariableEngine.resolve(j.binding, context, apiCache, { id: j.id, picks });
+          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
           this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
         });
 
@@ -677,6 +680,42 @@ export class AgendaExport {
     if (binding.linkedTo) return true;
     if (binding.type === 'miniCalendar' && binding.miniCalendarHighlightDaySource === 'linked' && binding.miniCalendarHighlightLinkedTo) return true;
     return false;
+  }
+
+  /**
+   * Business Card mode's per-card variation -- the export-time half of
+   * VariableContentTool.ts's "repeat content on all cards" toggle
+   * (`_cardRepetitionIndex()` there is the live-canvas half of the exact
+   * same feature). Every job on a page normally resolves at the SAME
+   * `context.repetitionIndex` (this page's own repetition counter, shared
+   * by every element) -- correct for everything except a Business Card
+   * group (`data-linked-id`) with the toggle off, where the whole point is
+   * for each of the N cards to land on a DIFFERENT value instead of every
+   * card on the page showing repetition K's identical value. Previously
+   * this concept didn't exist at export time at all: the canvas editor
+   * (VariableContentTool.ts) already varied each card correctly while
+   * editing, but printing/previewing the Agenda re-resolved every card
+   * through this shared, un-varied `context` and flattened them all back
+   * to the same value.
+   *
+   * Multiplies the page's own repetitionIndex by the group size before
+   * adding the card's position within it (rather than just adding the raw
+   * position) so a page that ALSO repeats via "Repetir página" keeps
+   * producing a fresh, non-overlapping batch of per-card values on every
+   * repetition instead of reusing indices 0..N-1 every time.
+   */
+  static _cardRepetitionContext(origEls: CraftoolsEl[], origEl: CraftoolsEl, context: ResolveContext): ResolveContext {
+    const lid = origEl.getAttribute('data-linked-id');
+    if (!lid) return context;
+    // Default true, same as VariableContentTool.ts's own default -- a card
+    // group with the toggle never touched (or explicitly on) always shares
+    // the page's own index, so every card shows identical content.
+    if (PropertyRenderer._readState(origEl).repeatAcrossCards !== false) return context;
+    const group = origEls.filter(e => e.getAttribute('data-linked-id') === lid);
+    const idx = group.indexOf(origEl);
+    if (idx < 0) return context;
+    const base = context.repetitionIndex ?? 0;
+    return { ...context, repetitionIndex: base * group.length + idx };
   }
 
   /**
