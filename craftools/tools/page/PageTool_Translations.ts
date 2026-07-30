@@ -19,8 +19,8 @@ I18n.addTranslations('pageTool', {
         newPageLabel: "Nova Página",
 
         customPaperTab: "Papel personalizado",
-        paperEnable: "Ativar papel personalizado",
-        paperDisable: "Desativar papel personalizado",
+        paperEnable: "Ativar",
+        paperDisable: "Desativar",
         paperLines: "Linhas",
         paperMargins: "Margens (mm)",
         paperBackground: "Fundo do papel",
@@ -47,8 +47,8 @@ I18n.addTranslations('pageTool', {
         newPageLabel: "New Page",
 
         customPaperTab: "Custom Paper",
-        paperEnable: "Enable custom paper",
-        paperDisable: "Disable custom paper",
+        paperEnable: "Enable",
+        paperDisable: "Disable",
         paperLines: "Lines",
         paperMargins: "Margins (mm)",
         paperBackground: "Paper background",
@@ -75,8 +75,8 @@ I18n.addTranslations('pageTool', {
         newPageLabel: "Nueva Página",
 
         customPaperTab: "Papel personalizado",
-        paperEnable: "Activar papel personalizado",
-        paperDisable: "Desactivar papel personalizado",
+        paperEnable: "Activar",
+        paperDisable: "Desactivar",
         paperLines: "Líneas",
         paperMargins: "Márgenes (mm)",
         paperBackground: "Fondo del papel",

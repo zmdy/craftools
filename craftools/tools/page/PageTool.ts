@@ -611,11 +611,17 @@ export class PageTool {
     return opts.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${I18n.t(`paperTool.${o.value}`) || o.label}</option>`).join('');
   }
 
+  // Wrapped in the standard `.ct-field` class (not a bare `.ct-field-row`
+  // with hand-rolled padding) so it picks up .ct-accordion-content's
+  // Elementor-style row CSS -- label left, 12px horizontal padding,
+  // 34px min-height -- exactly like every other field in this panel
+  // (see fields/toggle.field.ts, which this markup mirrors) instead of
+  // hugging the accordion's left/right edges with no horizontal padding.
   private static _toggleRowHtml(id: string, label: string, checked: boolean): string {
     return `
-      <div class="ct-field-row" style="justify-content:space-between; padding:4px 0;">
+      <div class="ct-field">
         <span class="craftools-label" style="margin:0;">${label}</span>
-        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+        <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px; margin-left:auto;">
           <input type="checkbox" id="${id}" class="ct-fi" style="display:none;" ${checked ? 'checked' : ''}>
           <span class="ct-toggle-track" style="
             width:32px; height:18px; border-radius:99px;
