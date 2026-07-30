@@ -420,19 +420,19 @@ export class AlbumTool {
         (selectedMode === 'album' ? photos.length > 0 : cardPhoto !== null);
 
       const htmlTamanhoLayout = `
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('albumTool.step1')}</span>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">${sizeHtml}</div>
                 </div>
 
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('albumTool.step2')}</span>
                     <div style="display: flex; flex-direction: column; gap: 0;">${templateHtml}</div>
                 </div>
             `;
 
       const htmlConteudo = selectedTemplate ? `
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('albumTool.step3Mode')}</span>
                     <div style="display: flex; gap: 6px;">
                         <button class="craftools-pill mode-btn ${selectedMode === 'album' ? 'active' : ''}" data-mode="album"
@@ -451,7 +451,7 @@ export class AlbumTool {
             ` : `<div style="padding:10px; font-size:11px; color:var(--text-muted); text-align:center;">Selecione um layout primeiro.</div>`;
 
       const htmlConfigs = `
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span class="craftools-label" style="margin:0;">${I18n.t('albumTool.autoAlign')}</span>
                         <button class="craftools-pill auto-snap-btn ${win.craftoolsAutoSnap !== false ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
