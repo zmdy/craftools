@@ -6,7 +6,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { zIndexSection } from '../../utils/CommonSchema';
+import { zIndexSection, fontStyleField } from '../../utils/CommonSchema';
 import { withEmojiFallback } from '../../utils/EmojiFont.js';
 import { normalizeValue as normalizeColorValue, type ColorPickerValue } from '../../utils/ColorPickerUI';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -210,8 +210,10 @@ export class CurvedTextTool extends BaseTool {
           { type: 'font-select', key: 'fontFamily',   label: 'Font',    i18nKey: 'curvedTextTool.fontFamily' },
           { type: 'number',      key: 'fontSize',     label: 'Size',    i18nKey: 'curvedTextTool.fontSize',     min: 6, max: 100, unit: 'pt' },
           { type: 'number',      key: 'letterSpacing', label: 'Spacing', i18nKey: 'curvedTextTool.letterSpacing', min: -10, max: 30, step: 0.5 },
-          { type: 'toggle',      key: 'bold',          label: 'Bold',   i18nKey: 'curvedTextTool.bold' },
-          { type: 'toggle',      key: 'italic',        label: 'Italic', i18nKey: 'curvedTextTool.italic' },
+          fontStyleField([
+            { key: 'bold',   style: 'bold',   i18nKey: 'curvedTextTool.bold' },
+            { key: 'italic', style: 'italic', i18nKey: 'curvedTextTool.italic' },
+          ]),
         ],
       },
       {
