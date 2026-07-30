@@ -5,7 +5,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { zIndexSection } from '../../utils/CommonSchema';
+import { zIndexSection, fontStyleField } from '../../utils/CommonSchema';
 import { normalizeValue, svgPaintFromValue } from '../../utils/ColorPickerUI';
 import { I18n } from '../../settings/Translations.js';
 import './StampTool_Translations.js';
@@ -241,7 +241,7 @@ export class StampTool extends BaseTool {
         fields: [
           { type: 'text',   key: 'outerText',    label: 'Text',      i18nKey: 'stamp.outerText' },
           { type: 'number', key: 'outerFontSize', label: 'Size',      i18nKey: 'stamp.fontSize',  min: 4, max: 30, step: 0.5 },
-          { type: 'toggle', key: 'outerBold',    label: 'Bold',      i18nKey: 'textTool.bold' },
+          fontStyleField([{ key: 'outerBold', style: 'bold', i18nKey: 'textTool.bold' }]),
         ],
       },
       {
@@ -268,7 +268,7 @@ export class StampTool extends BaseTool {
           },
           { type: 'text',   key: 'centerText',    label: 'Text', i18nKey: 'stamp.centerText' },
           { type: 'number', key: 'centerFontSize', label: 'Size', i18nKey: 'stamp.fontSize', min: 4, max: 40, step: 0.5 },
-          { type: 'toggle', key: 'centerBold',     label: 'Bold', i18nKey: 'textTool.bold' },
+          fontStyleField([{ key: 'centerBold', style: 'bold', i18nKey: 'textTool.bold' }]),
         ],
       },
       {
