@@ -5,6 +5,23 @@
  * hand-rolled panel in this app -- VariablePanel, AlbumWizard's snap
  * controls -- writes through on every input/change event).
  *
+ * Renders through PropertyRenderer/FieldRegistry -- the same schema-driven
+ * engine every element tool (TextTool, ShapeTool, ...) uses for its own
+ * properties panel -- instead of hand-rolled <select>/<input type="checkbox">
+ * markup, so this panel looks and behaves identically to the rest of the
+ * app (font-select's font picker, slider's range+badge, align's pill row,
+ * content-align's H/V grid, toggle's switch, collapsible icon accordions).
+ *
+ * AppSettings is a plain global store, not an element with a real DOM
+ * node/dataset.ctState -- PropertyRenderer.render() needs one of those to
+ * read/diff state from. This uses the same synthetic/"fake" detached
+ * element adapter AlbumWizard.ts's border-section binding already
+ * established (see its "Bind: Borders" block): a throwaway <div> whose
+ * dataset.ctState is kept in sync via PropertyRenderer.applyChange(), with
+ * this file's own onChange() translating each synthetic key back into the
+ * real AppSettings.set() call (and, for defaultWeekStart/defaultSnapAlign/
+ * ctxBarMode, translating value shape too -- see the mapping helpers below).
+ *
  * Registered in Editor.ts's PANEL_SETUP_MAP under the 'settings' key,
  * following the exact GeneratorTool.setup(editor)/CalendarTool.setup(editor)
  * reference pattern: reads/writes #panel-title and #panel-body directly,
@@ -13,8 +30,9 @@
 
 import { I18n } from '../../settings/Translations.js';
 import { AppSettings, type AppSettingsData } from '../../utils/AppSettings.js';
-import { FONTS } from '../../utils/FontList.js';
 import { IconLibrary } from '../../utils/IconLibrary.js';
+import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
+import type { PropertySchema } from '../../types/PropertySchema';
 import './SettingsTool_Translations.js';
 
 // Side-effect imports so IconLibrary.getPacks() has something to list --
@@ -27,6 +45,24 @@ type AnyRec = Record<string, any>;
 
 const s = (key: string): string => I18n.t('settingsTool.' + key);
 
+/**
+ * defaultSnapAlign is stored/consumed elsewhere (SnapEngine.ts,
+ * window.craftoolsAutoSnapAlign) as a "v-h" string -- 'top-left',
+ * 'center-center', 'bottom-right', etc. -- while content-align.field.ts's
+ * grid stores/reports the same 9 combinations as an "h-v" string --
+ * 'left-top', 'center-center', 'right-bottom'. Both axes use disjoint
+ * direction vocabularies (top/center/bottom vs left/center/right) except
+ * for the shared 'center', so a straight swap round-trips correctly.
+ */
+function vhToHv(align: string): string {
+  const [v, h] = align.split('-');
+  return `${h || 'center'}-${v || 'center'}`;
+}
+function hvToVh(align: string): string {
+  const [h, v] = align.split('-');
+  return `${v || 'center'}-${h || 'center'}`;
+}
+
 export class SettingsTool {
 
   public static setup(_editor: unknown): void {
@@ -36,201 +72,192 @@ export class SettingsTool {
     if (panelTitle) panelTitle.textContent = s('panelTitle');
     if (!panelBody) return;
 
-    const settings = AppSettings.getAll();
-    panelBody.innerHTML = SettingsTool._render(settings);
-    SettingsTool._bind(panelBody);
+    SettingsTool._render(panelBody);
   }
 
-  // ── HTML ──────────────────────────────────────────────────────────────
+  // ── Rendering (schema-driven, via the synthetic-element adapter) ───────
 
-  private static _render(cur: AppSettingsData): string {
-    const packs: AnyRec[] = (IconLibrary as unknown as AnyRec).getPacks();
+  private static _render(panelBody: HTMLElement): void {
+    const cur = AppSettings.getAll();
 
-    const fontOptions = FONTS.map(f =>
-      `<option value="${f}" ${cur.defaultFontFamily === f ? 'selected' : ''}>${f}</option>`
-    ).join('');
+    const fakeEl = document.createElement('div');
+    fakeEl.dataset.ctState = JSON.stringify(SettingsTool._toCtState(cur));
 
-    const iconPackOptions = packs.map(p =>
-      `<option value="${p.id}" ${cur.defaultIconPack === p.id ? 'selected' : ''}>${p.label}</option>`
-    ).join('');
+    panelBody.innerHTML = '';
 
-    const snapAlignOptions = [
-      ['top-left', I18n.t('albumTool.snapTopLeft')],
-      ['top-center', I18n.t('albumTool.snapTopCenter')],
-      ['top-right', I18n.t('albumTool.snapTopRight')],
-      ['center-left', I18n.t('albumTool.snapCenterLeft')],
-      ['center-center', I18n.t('albumTool.snapCenterCenter')],
-      ['center-right', I18n.t('albumTool.snapCenterRight')],
-      ['bottom-left', I18n.t('albumTool.snapBottomLeft')],
-      ['bottom-center', I18n.t('albumTool.snapBottomCenter')],
-      ['bottom-right', I18n.t('albumTool.snapBottomRight')],
-    ].map(([v, label]) => `<option value="${v}" ${cur.defaultSnapAlign === v ? 'selected' : ''}>${label}</option>`).join('');
-
-    return `
-      <div style="padding:14px; display:flex; flex-direction:column; gap:18px;">
-
-        <div>
-          <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">${s('sectionText')}</div>
-
-          <div class="ct-field" style="margin-bottom:10px;">
-            <span class="craftools-label">${s('fieldFont')}</span>
-            <select id="set-font" class="craftools-select" style="width:100%;">${fontOptions}</select>
-          </div>
-
-          <div class="ct-field" style="margin-bottom:10px;">
-            <span class="craftools-label">${s('fieldFontSize')}</span>
-            <input type="number" id="set-fontsize" class="craftools-input" style="width:100%;" min="8" max="200" value="${cur.defaultFontSize}">
-          </div>
-
-          <div class="ct-field">
-            <span class="craftools-label">${s('fieldTextAlign')}</span>
-            <select id="set-textalign" class="craftools-select" style="width:100%;">
-              <option value="left" ${cur.defaultTextAlign === 'left' ? 'selected' : ''}>${s('alignLeft')}</option>
-              <option value="center" ${cur.defaultTextAlign === 'center' ? 'selected' : ''}>${s('alignCenter')}</option>
-              <option value="right" ${cur.defaultTextAlign === 'right' ? 'selected' : ''}>${s('alignRight')}</option>
-              <option value="justify" ${cur.defaultTextAlign === 'justify' ? 'selected' : ''}>${s('alignJustify')}</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; border-top:1px solid var(--border); padding-top:14px;">${s('sectionCalendar')}</div>
-
-          <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
-            <input type="checkbox" id="set-weekstart" ${cur.defaultWeekStart === 'sunday' ? 'checked' : ''}>
-            <span class="craftools-label" style="margin:0;">${s('fieldWeekStart')}</span>
-          </label>
-        </div>
-
-        <div>
-          <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; border-top:1px solid var(--border); padding-top:14px;">${s('sectionSnap')}</div>
-
-          <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
-            <input type="checkbox" id="set-snap-enabled" ${cur.defaultSnapEnabled ? 'checked' : ''}>
-            <span class="craftools-label" style="margin:0;">${s('fieldSnapEnabled')}</span>
-          </label>
-
-          <div class="ct-field" id="set-snap-align-wrap" style="${cur.defaultSnapEnabled ? '' : 'display:none;'}">
-            <span class="craftools-label">${s('fieldSnapAlign')}</span>
-            <select id="set-snap-align" class="craftools-select" style="width:100%;">${snapAlignOptions}</select>
-          </div>
-        </div>
-
-        <div>
-          <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; border-top:1px solid var(--border); padding-top:14px;">${s('sectionCanvas')}</div>
-
-          <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
-            <input type="checkbox" id="set-autocenter" ${cur.defaultAutoCenterOnSelect ? 'checked' : ''}>
-            <span class="craftools-label" style="margin:0;">${s('fieldAutoCenter')}</span>
-          </label>
-
-          <div class="ct-field">
-            <span class="craftools-label">${s('fieldCtxBarMode')}</span>
-            <div style="display:flex; gap:6px; margin-top:4px;">
-              <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:${cur.ctxBarMode === 'floating' ? 'var(--bg-input)' : 'transparent'}; transition:background 0.15s;" id="set-ctxmode-floating-label">
-                <input type="radio" name="set-ctxbarmode" id="set-ctxmode-floating" value="floating" ${cur.ctxBarMode !== 'fixed' ? 'checked' : ''} style="accent-color:var(--accent,#f97316);">
-                <span style="font-size:11px; color:var(--text-primary); line-height:1.2;">
-                  <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">push_pin</span>
-                  ${s('ctxBarModeFloating')}
-                </span>
-              </label>
-              <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:${cur.ctxBarMode === 'fixed' ? 'var(--bg-input)' : 'transparent'}; transition:background 0.15s;" id="set-ctxmode-fixed-label">
-                <input type="radio" name="set-ctxbarmode" id="set-ctxmode-fixed" value="fixed" ${cur.ctxBarMode === 'fixed' ? 'checked' : ''} style="accent-color:var(--accent,#f97316);">
-                <span style="font-size:11px; color:var(--text-primary); line-height:1.2;">
-                  <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">dock_to_bottom</span>
-                  ${s('ctxBarModeFixed')}
-                </span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="ct-sec-label" style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; border-top:1px solid var(--border); padding-top:14px;">${s('sectionIcons')}</div>
-
-          <div class="ct-field">
-            <span class="craftools-label">${s('fieldIconPack')}</span>
-            <select id="set-iconpack" class="craftools-select" style="width:100%;">${iconPackOptions}</select>
-          </div>
-        </div>
-
-        <button type="button" id="set-reset" class="craftools-topbtn" style="margin-top:4px; width:100%; padding:9px 12px; font-size:12px; border-radius:6px; cursor:pointer; background:transparent; border:1px solid var(--border); color:var(--text-secondary);">${s('resetButton')}</button>
-      </div>
-    `;
-  }
-
-  // ── Bindings ──────────────────────────────────────────────────────────
-
-  private static _bind(root: HTMLElement): void {
-    const fontSel      = root.querySelector<HTMLSelectElement>('#set-font');
-    const fontSizeInp  = root.querySelector<HTMLInputElement>('#set-fontsize');
-    const textAlignSel = root.querySelector<HTMLSelectElement>('#set-textalign');
-    const weekStartChk = root.querySelector<HTMLInputElement>('#set-weekstart');
-    const snapEnabledChk = root.querySelector<HTMLInputElement>('#set-snap-enabled');
-    const snapAlignWrap  = root.querySelector<HTMLElement>('#set-snap-align-wrap');
-    const snapAlignSel   = root.querySelector<HTMLSelectElement>('#set-snap-align');
-    const autoCenterChk      = root.querySelector<HTMLInputElement>('#set-autocenter');
-    const ctxModeRadios      = root.querySelectorAll<HTMLInputElement>('input[name="set-ctxbarmode"]');
-    const ctxModeFloatingLbl = root.querySelector<HTMLElement>('#set-ctxmode-floating-label');
-    const ctxModeFixedLbl    = root.querySelector<HTMLElement>('#set-ctxmode-fixed-label');
-    const iconPackSel        = root.querySelector<HTMLSelectElement>('#set-iconpack');
-    const resetBtn           = root.querySelector<HTMLButtonElement>('#set-reset');
-
-    fontSel?.addEventListener('change', () => AppSettings.set({ defaultFontFamily: fontSel.value }));
-
-    fontSizeInp?.addEventListener('change', () => {
-      const v = parseFloat(fontSizeInp.value);
-      AppSettings.set({ defaultFontSize: Number.isFinite(v) && v > 0 ? v : AppSettings.defaults.defaultFontSize });
+    PropertyRenderer.render(panelBody, SettingsTool._buildSchema(), fakeEl, (key, value) => {
+      PropertyRenderer.applyChange(fakeEl, key, value);
+      SettingsTool._applyChange(key, value);
     });
 
-    textAlignSel?.addEventListener('change', () => {
-      AppSettings.set({ defaultTextAlign: textAlignSel.value as AppSettingsData['defaultTextAlign'] });
-    });
-
-    weekStartChk?.addEventListener('change', () => {
-      AppSettings.set({ defaultWeekStart: weekStartChk.checked ? 'sunday' : 'monday' });
-    });
-
-    snapEnabledChk?.addEventListener('change', () => {
-      AppSettings.set({ defaultSnapEnabled: snapEnabledChk.checked });
-      AppSettings.applyRuntimeDefaults();
-      if (snapAlignWrap) snapAlignWrap.style.display = snapEnabledChk.checked ? '' : 'none';
-    });
-
-    snapAlignSel?.addEventListener('change', () => {
-      AppSettings.set({ defaultSnapAlign: snapAlignSel.value });
-      AppSettings.applyRuntimeDefaults();
-    });
-
-    autoCenterChk?.addEventListener('change', () => {
-      AppSettings.set({ defaultAutoCenterOnSelect: autoCenterChk.checked });
-    });
-
-    ctxModeRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (!radio.checked) return;
-        const mode = radio.value as 'floating' | 'fixed';
-        AppSettings.set({ ctxBarMode: mode });
-        // Update visual highlight on the label cards
-        if (ctxModeFloatingLbl) ctxModeFloatingLbl.style.background = mode === 'floating' ? 'var(--bg-input)' : 'transparent';
-        if (ctxModeFixedLbl)    ctxModeFixedLbl.style.background    = mode === 'fixed'    ? 'var(--bg-input)' : 'transparent';
-        // Notify the running CtxBar so it switches mode immediately without requiring a re-select
-        document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change', { detail: { mode } }));
-      });
-    });
-
-    iconPackSel?.addEventListener('change', () => {
-      AppSettings.set({ defaultIconPack: iconPackSel.value });
-    });
-
-    resetBtn?.addEventListener('click', () => {
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.id = 'set-reset';
+    resetBtn.className = 'craftools-topbtn';
+    resetBtn.style.cssText = 'margin:14px; width:calc(100% - 28px); padding:9px 12px; font-size:12px; border-radius:6px; cursor:pointer; background:transparent; border:1px solid var(--border); color:var(--text-secondary);';
+    resetBtn.textContent = s('resetButton');
+    resetBtn.addEventListener('click', () => {
       AppSettings.resetAll();
       AppSettings.applyRuntimeDefaults();
-      const panelBody = document.getElementById('panel-body');
-      if (panelBody) {
-        panelBody.innerHTML = SettingsTool._render(AppSettings.getAll());
-        SettingsTool._bind(panelBody);
-      }
+      SettingsTool._render(panelBody);
     });
+    panelBody.appendChild(resetBtn);
+  }
+
+  /** Maps real AppSettings data onto the synthetic element's field keys/shapes. */
+  private static _toCtState(cur: AppSettingsData): AnyRec {
+    return {
+      font:            cur.defaultFontFamily,
+      fontSize:        cur.defaultFontSize,
+      textAlign:       cur.defaultTextAlign,
+      weekStartSunday: cur.defaultWeekStart === 'sunday',
+      snapEnabled:     cur.defaultSnapEnabled,
+      snapAlign:       vhToHv(cur.defaultSnapAlign),
+      autoCenter:      cur.defaultAutoCenterOnSelect,
+      ctxBarMode:      cur.ctxBarMode,
+      iconPack:        cur.defaultIconPack,
+    };
+  }
+
+  /** Translates one synthetic field change back into a real AppSettings.set() call. */
+  private static _applyChange(key: string, value: unknown): void {
+    switch (key) {
+      case 'font':
+        AppSettings.set({ defaultFontFamily: String(value) });
+        break;
+      case 'fontSize': {
+        const v = Number(value);
+        AppSettings.set({ defaultFontSize: Number.isFinite(v) && v > 0 ? v : AppSettings.defaults.defaultFontSize });
+        break;
+      }
+      case 'textAlign':
+        AppSettings.set({ defaultTextAlign: value as AppSettingsData['defaultTextAlign'] });
+        break;
+      case 'weekStartSunday':
+        AppSettings.set({ defaultWeekStart: value ? 'sunday' : 'monday' });
+        break;
+      case 'snapEnabled':
+        AppSettings.set({ defaultSnapEnabled: Boolean(value) });
+        AppSettings.applyRuntimeDefaults();
+        break;
+      case 'snapAlign':
+        AppSettings.set({ defaultSnapAlign: hvToVh(String(value)) });
+        AppSettings.applyRuntimeDefaults();
+        break;
+      case 'autoCenter':
+        AppSettings.set({ defaultAutoCenterOnSelect: Boolean(value) });
+        break;
+      case 'ctxBarMode': {
+        const mode = value as 'floating' | 'fixed';
+        AppSettings.set({ ctxBarMode: mode });
+        // Notify the running CtxBar so it switches mode immediately without
+        // requiring a re-select (same event BaseTool/CtxBar already listen for).
+        document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change', { detail: { mode } }));
+        break;
+      }
+      case 'iconPack':
+        AppSettings.set({ defaultIconPack: String(value) });
+        break;
+    }
+  }
+
+  // ── Schema ───────────────────────────────────────────────────────────
+
+  private static _buildSchema(): PropertySchema {
+    const packs: AnyRec[] = (IconLibrary as unknown as AnyRec).getPacks();
+
+    return [
+      {
+        section: s('sectionText'),
+        i18nKey: 'settingsTool.sectionText',
+        icon: 'text_fields',
+        fields: [
+          { type: 'font-select', key: 'font',     label: s('fieldFont'),     i18nKey: 'settingsTool.fieldFont' },
+          { type: 'slider',      key: 'fontSize', label: s('fieldFontSize'), i18nKey: 'settingsTool.fieldFontSize', min: 8, max: 200, step: 1 },
+          { type: 'align',       key: 'textAlign' },
+        ],
+      },
+      {
+        section: s('sectionCalendar'),
+        i18nKey: 'settingsTool.sectionCalendar',
+        icon: 'calendar_month',
+        fields: [
+          { type: 'toggle', key: 'weekStartSunday', label: s('fieldWeekStart'), i18nKey: 'settingsTool.fieldWeekStart' },
+        ],
+      },
+      {
+        section: s('sectionSnap'),
+        i18nKey: 'settingsTool.sectionSnap',
+        icon: 'grid_on',
+        fields: [
+          { type: 'toggle', key: 'snapEnabled', label: s('fieldSnapEnabled'), i18nKey: 'settingsTool.fieldSnapEnabled' },
+          { type: 'divider', key: 'snap-align-divider', label: s('fieldSnapAlign'), i18nKey: 'settingsTool.fieldSnapAlign', icon: 'filter_center_focus' },
+          { type: 'content-align', key: 'snapAlign' },
+        ],
+      },
+      {
+        section: s('sectionCanvas'),
+        i18nKey: 'settingsTool.sectionCanvas',
+        icon: 'crop_free',
+        fields: [
+          { type: 'toggle', key: 'autoCenter', label: s('fieldAutoCenter'), i18nKey: 'settingsTool.fieldAutoCenter' },
+          { type: 'divider', key: 'ctxbar-mode-divider', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode', icon: 'dock_to_bottom' },
+          {
+            type: 'custom', key: 'ctxBarMode', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode',
+            render: (element, onChange) => SettingsTool._renderCtxBarModePills(element, onChange),
+          },
+        ],
+      },
+      {
+        section: s('sectionIcons'),
+        i18nKey: 'settingsTool.sectionIcons',
+        icon: 'category',
+        fields: [
+          {
+            type: 'select', key: 'iconPack', label: s('fieldIconPack'), i18nKey: 'settingsTool.fieldIconPack',
+            options: packs.map(p => ({ value: p.id, label: p.label })),
+          },
+        ],
+      },
+    ];
+  }
+
+  /**
+   * ctxBarMode's 2-state pill row -- no dedicated reusable field type exists
+   * for an arbitrary pill button group yet (PageTool.ts's preset/unit
+   * pickers and ColorPickerUI.ts's Cor/Gradiente toggle are each hand-rolled
+   * instances of the same `.craftools-pill` CSS pattern), so this reuses
+   * that pattern directly through the 'custom' field escape hatch rather
+   * than inventing a new field type for a single two-option control.
+   */
+  private static _renderCtxBarModePills(element: HTMLElement, onChange: (value: unknown) => void): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'ct-field-row';
+    wrap.style.gap = '6px';
+
+    const paint = (): void => {
+      const state = PropertyRenderer._readState(element);
+      const mode  = (state.ctxBarMode as string) ?? 'floating';
+
+      wrap.innerHTML = `
+        <button type="button" class="craftools-pill${mode === 'floating' ? ' active' : ''}" data-mode="floating" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+          <span class="material-symbols-outlined" style="font-size:14px;">push_pin</span>
+          ${s('ctxBarModeFloating')}
+        </button>
+        <button type="button" class="craftools-pill${mode === 'fixed' ? ' active' : ''}" data-mode="fixed" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+          <span class="material-symbols-outlined" style="font-size:14px;">dock_to_bottom</span>
+          ${s('ctxBarModeFixed')}
+        </button>`;
+
+      wrap.querySelectorAll<HTMLButtonElement>('button[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          onChange(btn.dataset.mode);
+          paint();
+        });
+      });
+    };
+
+    paint();
+    return wrap;
   }
 }
