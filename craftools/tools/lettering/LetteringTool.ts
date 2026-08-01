@@ -44,8 +44,18 @@ const setMeta = (element: HTMLElement, patch: Partial<LetteringMeta>): Lettering
   return el._craftoolsMeta;
 };
 
+// NOT `:scope > .ct-lettering-content` -- Element.ts's connectedCallback()
+// (Craftools_Element._build()) moves every child present at insertion time
+// into its own internal `._content` wrapper div the moment the element is
+// attached to the page, so `.ct-lettering-content` stops being a direct
+// child right after creation. The very first paint (at createElement(),
+// before the element is inserted) still finds it either way, which is why
+// this bug was invisible until the FIRST later edit -- every _applyProperty
+// afterwards silently found nothing and repainted nothing. Same reason
+// TextTool.ts's getTextEl()/ShapeTool.ts's svg lookup search all
+// descendants instead of scoping to direct children.
 const getContent = (element: HTMLElement): HTMLElement | null =>
-  element.querySelector<HTMLElement>(':scope > .ct-lettering-content');
+  element.querySelector<HTMLElement>('.ct-lettering-content');
 
 export class LetteringTool extends BaseTool {
 
