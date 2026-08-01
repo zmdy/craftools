@@ -2,6 +2,7 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
+import { calendarStyleSections } from '../../utils/CalendarStyleSchema';
 import { normalizeValue } from '../../utils/ColorPickerUI.js';
 import { CalendarRenderer, type CalendarTheme, type CalendarOptions } from '../../utils/CalendarRenderer';
 import { AppSettings } from '../../utils/AppSettings.js';
@@ -65,6 +66,30 @@ const DISPLAY_MODE_PARTS: Record<string, { header: boolean; week: boolean; days:
 };
 
 const now = new Date();
+
+/** Reads a value at an arbitrary-depth path inside a plain object tree (see
+ * MiniCalendarTool.THEME_KEY_PATHS's own doc comment for why paths can be
+ * more than 2 levels deep, e.g. `['dayNumbers', 'radius', 'tl']`). */
+function _getPath(obj: unknown, path: readonly string[]): unknown {
+  let cur: unknown = obj;
+  for (const k of path) {
+    if (cur == null || typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[k];
+  }
+  return cur;
+}
+
+/** Writes a value at an arbitrary-depth path, cloning each intermediate
+ * object along the way (never mutates a shared/default object in place). */
+function _setPath(obj: Record<string, unknown>, path: readonly string[], value: unknown): void {
+  let cur: Record<string, unknown> = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    const k = path[i];
+    cur[k] = { ...(cur[k] as Record<string, unknown> ?? {}) };
+    cur = cur[k] as Record<string, unknown>;
+  }
+  cur[path[path.length - 1]] = value;
+}
 
 export class MiniCalendarTool extends BaseTool {
 
@@ -196,26 +221,18 @@ export class MiniCalendarTool extends BaseTool {
     }
     if (!('weekStartSunday' in existing)) patch.weekStartSunday = meta.weekStartSunday ?? (AppSettings.get('defaultWeekStart') === 'sunday');
     if (!('highlightDaySource' in existing)) patch.highlightDaySource = meta.highlightDaySource ?? 'today';
-    // Theme colors now read from CalendarTheme's REAL nested shape (fixed --
-    // see THEME_KEY_PATHS's doc comment below for the full story on why the
-    // previous flattened theme.headerBg/dayBg/... keys never had any visual
-    // effect). Falls back to CalendarRenderer's own defaults so a freshly
-    // primed panel shows the same colors the card actually renders with.
+    // Theme colors/fonts/radius now read from CalendarTheme's REAL nested
+    // shape through THEME_KEY_PATHS's generic path table (see its own doc
+    // comment) -- falls back to CalendarRenderer's own defaults so a freshly
+    // primed panel shows the same values the card actually renders with.
     const theme = (meta.theme ?? {}) as CalendarTheme;
     const defaults = CalendarRenderer.defaultTheme();
-    if (!('themeTitleBarBg'   in existing)) patch.themeTitleBarBg   = theme.titleBar?.bg    ?? defaults.titleBar!.bg;
-    if (!('themeTitleBarText' in existing)) patch.themeTitleBarText = theme.titleBar?.color  ?? defaults.titleBar!.color;
-    if (!('themeCellBg'       in existing)) patch.themeCellBg       = theme.cellBg           ?? defaults.cellBg;
-    if (!('themeDayText'      in existing)) patch.themeDayText      = theme.dayNumbers?.color ?? defaults.dayNumbers!.color;
-    if (!('themeWeekendBg'    in existing)) patch.themeWeekendBg    = theme.weekendBg         ?? '';
-    // Per-day-cell border (width/style/color/radius) -- the knob that
-    // produces a "rounded calendar" look -- and the gap between the card's
-    // stacked sections (title bar / week header / days grid / ...).
-    if (!('themeDayBorderWidth'  in existing)) patch.themeDayBorderWidth  = theme.dayNumbers?.innerBorderWidth  ?? defaults.dayNumbers!.innerBorderWidth;
-    if (!('themeDayBorderStyle'  in existing)) patch.themeDayBorderStyle  = theme.dayNumbers?.innerBorderStyle  ?? defaults.dayNumbers!.innerBorderStyle;
-    if (!('themeDayBorderColor'  in existing)) patch.themeDayBorderColor  = theme.dayNumbers?.innerBorderColor  ?? defaults.dayNumbers!.innerBorderColor;
-    if (!('themeDayBorderRadius' in existing)) patch.themeDayBorderRadius = theme.dayNumbers?.radius?.tl ?? defaults.dayNumbers!.radius?.tl ?? 0;
-    if (!('themeSectionGap'      in existing)) patch.themeSectionGap      = theme.sectionGap ?? defaults.sectionGap;
+    for (const [flatKey, path] of Object.entries(MiniCalendarTool.THEME_KEY_PATHS)) {
+      if (flatKey in existing) continue;
+      const fromTheme   = _getPath(theme, path);
+      const fromDefault = _getPath(defaults, path);
+      patch[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
+    }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -233,48 +250,14 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)',  i18nKey: 'miniCalendarTool.weekStartSunday' },
         ],
       },
-      // Wired to CalendarTheme's real nested shape via THEME_KEY_PATHS below
-      // (was previously flattened onto keys CalendarRenderer never actually
-      // read -- see that constant's doc comment). Backgrounds use the
-      // standardized gradient-capable 'color-picker' component (same one
-      // the Highlight section below already uses), since CalendarRenderer
-      // paints them with the CSS `background` shorthand, which renders a
-      // gradient just fine; text colors stay plain 'color' (solid-only --
-      // CSS has no gradient `color` without extra tricks this HTML-string
-      // renderer doesn't attempt).
-      {
-        section: 'Theme',
-        i18nKey: 'miniCalendarTool.sectionTheme',
-        icon: 'palette',
-        fields: [
-          { type: 'color-picker', key: 'themeTitleBarBg',   label: 'Header background',  i18nKey: 'miniCalendarTool.headerBg' },
-          { type: 'color',        key: 'themeTitleBarText', label: 'Header text',         i18nKey: 'miniCalendarTool.headerText' },
-          { type: 'color-picker', key: 'themeCellBg',        label: 'Day background',     i18nKey: 'miniCalendarTool.dayBg' },
-          { type: 'color',        key: 'themeDayText',       label: 'Day text',           i18nKey: 'miniCalendarTool.dayText' },
-          { type: 'color-picker', key: 'themeWeekendBg',     label: 'Weekend background', i18nKey: 'miniCalendarTool.weekendBg' },
-          // Per-day-cell border (width/style/color/radius) -- radius is
-          // what produces a "rounded calendar" look, one rounded box per
-          // day, same idea as TableTool.ts's "rounded cards" template.
-          // Solid-only 'color' (not 'color-picker') since CalendarRenderer
-          // paints this with a plain CSS `border` shorthand, no gradient.
-          { type: 'divider', key: 'themeDayBorderDivider', label: 'Day cell border', i18nKey: 'miniCalendarTool.dayCellBorder' },
-          { type: 'number', key: 'themeDayBorderWidth',  label: 'Border width',  i18nKey: 'common.borderWidth',  min: 0, max: 10,  unit: 'px' },
-          {
-            type: 'select', key: 'themeDayBorderStyle', label: 'Border style', i18nKey: 'common.borderStyle',
-            options: [
-              { value: 'solid',  label: 'Solid' },
-              { value: 'dashed', label: 'Dashed' },
-              { value: 'dotted', label: 'Dotted' },
-            ],
-          },
-          { type: 'color',  key: 'themeDayBorderColor',  label: 'Border color',  i18nKey: 'common.borderColor' },
-          { type: 'number', key: 'themeDayBorderRadius', label: 'Border radius', i18nKey: 'common.borderRadius', min: 0, max: 100, unit: 'px' },
-          // Vertical gap between the card's stacked sections (header / week
-          // header / days grid / holidays / moon phases).
-          { type: 'divider', key: 'themeSpacingDivider', label: 'Spacing', i18nKey: 'miniCalendarTool.spacing' },
-          { type: 'number', key: 'themeSectionGap', label: 'Space between sections', i18nKey: 'miniCalendarTool.sectionGap', min: 0, max: 40, unit: 'px' },
-        ],
-      },
+      // Wired to CalendarTheme's real nested shape via THEME_KEY_PATHS below.
+      // These 5 sections come from utils/CalendarStyleSchema.ts -- the same
+      // canonical field definitions CalendarTool.ts and VariablePanel.ts's
+      // miniCalendar config also render, so all three surfaces expose
+      // identical style controls (font-select/slider/align typography,
+      // gradient-capable color-picker backgrounds, 4-corner radius, toggles)
+      // over the exact same CalendarTheme shape.
+      ...calendarStyleSections(),
       // Highlights a single chosen day-of-month in the days grid with its
       // own background/text/border -- e.g. "today", or any other date the
       // user wants to stand out. Same standardized color-picker/border
@@ -335,34 +318,86 @@ export class MiniCalendarTool extends BaseTool {
   private static readonly HIGHLIGHT_COLOR_KEYS = new Set(['highlightBg', 'highlightTextColor', 'highlightBorderColor']);
 
   /**
-   * Flat Theme-section schema key -> real path inside CalendarTheme (see
-   * that interface in CalendarRenderer.ts). The Theme section used to write
-   * `theme.headerBg`/`theme.dayBg`/etc -- keys CalendarRenderer.ts's
-   * `CalendarTheme` never had (its real shape nests bg/color under
-   * `titleBar`/`weekHeader`/`dayNumbers`/... and keeps only `cellBg` flat) --
-   * so every edit updated `_craftoolsMeta.theme` harmlessly but had ZERO
-   * effect on the rendered card. This table is the single source of truth
-   * for the correct path each schema key actually writes to, kept in sync
-   * with `_syncFromDOM()`'s own reads above.
+   * Canonical CalendarStyleSchema.ts key -> real path inside CalendarTheme
+   * (see that interface in CalendarRenderer.ts). This table is the single
+   * source of truth for the correct path each schema key actually writes
+   * to, kept in sync with `_syncFromDOM()`'s own reads above -- `_getPath()`/
+   * `_setPath()` below walk an arbitrary-depth path generically, so a
+   * 3-level radius corner (e.g. `dayNumbers.radius.tl`) works the same way
+   * as a 1-level flat key (e.g. `sectionGap`).
    *
-   * `themeTitleBarBg`/`themeCellBg`/`themeWeekendBg` store whatever the
+   * Background keys (`cardBg`/`monthBarBg`/`dayHeaderBg`/`dayHeaderLetterBg`/
+   * `daysTableCellBg`/`weekendBg`/`holidaysBg`/`moonBg`) store whatever the
    * gradient-capable 'color-picker' field reports (a JSON ColorPickerValue
-   * string) -- written through as-is, since CalendarRenderer.ts itself now
+   * string) -- written through as-is, since CalendarRenderer.ts itself
    * resolves it via `cssFromValue(normalizeValue(...))` at render time (see
-   * CalendarTheme's doc comment). The other two (`themeTitleBarText`/
-   * `themeDayText`) come from a plain solid-only 'color' field, already a
-   * bare hex string CalendarRenderer.ts uses directly.
+   * CalendarTheme's doc comment). Every other color key comes from a plain
+   * solid-only 'color' field, already a bare hex string CalendarRenderer.ts
+   * uses directly.
    */
-  private static readonly THEME_KEY_PATHS: Record<string, readonly [string] | readonly [string, string]> = {
-    themeTitleBarBg:   ['titleBar', 'bg'],
-    themeTitleBarText: ['titleBar', 'color'],
-    themeCellBg:       ['cellBg'],
-    themeDayText:      ['dayNumbers', 'color'],
-    themeWeekendBg:    ['weekendBg'],
-    themeDayBorderWidth:  ['dayNumbers', 'innerBorderWidth'],
-    themeDayBorderStyle:  ['dayNumbers', 'innerBorderStyle'],
-    themeDayBorderColor:  ['dayNumbers', 'innerBorderColor'],
-    themeSectionGap:      ['sectionGap'],
+  private static readonly THEME_KEY_PATHS: Record<string, readonly string[]> = {
+    cardBg: ['cellBg'],
+    cardBorderWidth: ['cellBorder', 'width'],
+    cardBorderStyle: ['cellBorder', 'style'],
+    cardBorderColor: ['cellBorder', 'color'],
+    cardRadiusTL: ['cardRadius', 'tl'], cardRadiusTR: ['cardRadius', 'tr'],
+    cardRadiusBR: ['cardRadius', 'br'], cardRadiusBL: ['cardRadius', 'bl'],
+    sectionGap: ['sectionGap'],
+
+    monthBarFont: ['titleBar', 'font'],
+    monthBarFontSize: ['titleBar', 'fontSize'],
+    monthBarAlign: ['titleBar', 'align'],
+    monthBarTextColor: ['titleBar', 'color'],
+    monthBarBg: ['titleBar', 'bg'],
+    monthBarSplitMonthYear: ['titleBar', 'splitMonthYear'],
+    monthBarRadiusTL: ['titleBar', 'radius', 'tl'], monthBarRadiusTR: ['titleBar', 'radius', 'tr'],
+    monthBarRadiusBR: ['titleBar', 'radius', 'br'], monthBarRadiusBL: ['titleBar', 'radius', 'bl'],
+
+    dayHeaderFont: ['weekHeader', 'font'],
+    dayHeaderFontSize: ['weekHeader', 'fontSize'],
+    dayHeaderAlign: ['weekHeader', 'align'],
+    dayHeaderTextColor: ['weekHeader', 'color'],
+    dayHeaderBg: ['weekHeader', 'bg'],
+    dayHeaderBorderWidth: ['weekHeader', 'innerBorderWidth'],
+    dayHeaderBorderStyle: ['weekHeader', 'innerBorderStyle'],
+    dayHeaderBorderColor: ['weekHeader', 'innerBorderColor'],
+    dayHeaderRadiusTL: ['weekHeader', 'radius', 'tl'], dayHeaderRadiusTR: ['weekHeader', 'radius', 'tr'],
+    dayHeaderRadiusBR: ['weekHeader', 'radius', 'br'], dayHeaderRadiusBL: ['weekHeader', 'radius', 'bl'],
+    dayHeaderLetterShape: ['weekHeader', 'letterShape'],
+    dayHeaderLetterBg: ['weekHeader', 'letterBg'],
+    dayHeaderLetterSize: ['weekHeader', 'letterSize'],
+    dayHeaderLetterRadiusTL: ['weekHeader', 'letterRadius', 'tl'], dayHeaderLetterRadiusTR: ['weekHeader', 'letterRadius', 'tr'],
+    dayHeaderLetterRadiusBR: ['weekHeader', 'letterRadius', 'br'], dayHeaderLetterRadiusBL: ['weekHeader', 'letterRadius', 'bl'],
+
+    daysTableFont: ['dayNumbers', 'font'],
+    daysTableFontSize: ['dayNumbers', 'fontSize'],
+    daysTableAlign: ['dayNumbers', 'align'],
+    daysTableTextColor: ['dayNumbers', 'color'],
+    daysTableSundayColor: ['dayNumbers', 'sundayColor'],
+    daysTableRowGap: ['dayNumbers', 'rowGap'],
+    daysTableCellStyleEnabled: ['dayNumbers', 'cellStyleEnabled'],
+    daysTableCellBg: ['dayNumbers', 'cellBg'],
+    daysTableBorderWidth: ['dayNumbers', 'innerBorderWidth'],
+    daysTableBorderStyle: ['dayNumbers', 'innerBorderStyle'],
+    daysTableBorderColor: ['dayNumbers', 'innerBorderColor'],
+    daysTableRadiusTL: ['dayNumbers', 'radius', 'tl'], daysTableRadiusTR: ['dayNumbers', 'radius', 'tr'],
+    daysTableRadiusBR: ['dayNumbers', 'radius', 'br'], daysTableRadiusBL: ['dayNumbers', 'radius', 'bl'],
+    weekendBg: ['weekendBg'],
+
+    holidaysFont: ['holidays', 'font'],
+    holidaysFontSize: ['holidays', 'fontSize'],
+    holidaysAlign: ['holidays', 'align'],
+    holidaysTextColor: ['holidays', 'color'],
+    holidaysBg: ['holidays', 'bg'],
+    holidaysRadiusTL: ['holidays', 'radius', 'tl'], holidaysRadiusTR: ['holidays', 'radius', 'tr'],
+    holidaysRadiusBR: ['holidays', 'radius', 'br'], holidaysRadiusBL: ['holidays', 'radius', 'bl'],
+
+    moonFont: ['moonPhases', 'font'],
+    moonFontSize: ['moonPhases', 'fontSize'],
+    moonTextColor: ['moonPhases', 'color'],
+    moonBg: ['moonPhases', 'bg'],
+    moonRadiusTL: ['moonPhases', 'radius', 'tl'], moonRadiusTR: ['moonPhases', 'radius', 'tr'],
+    moonRadiusBR: ['moonPhases', 'radius', 'br'], moonRadiusBL: ['moonPhases', 'radius', 'bl'],
   };
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
@@ -380,25 +415,9 @@ export class MiniCalendarTool extends BaseTool {
         if (!isNaN(m)) e._craftoolsMeta.month = m;
       } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
-      } else if (key === 'themeDayBorderRadius') {
-        // Temporary uniform-radius compat shim -- CalendarTheme.dayNumbers.radius
-        // is now a 4-corner RadiusCorners object (see CalendarRenderer.ts);
-        // this schema key still writes ONE value to all 4 corners until
-        // MiniCalendarTool.ts's Theme section is split into the new
-        // per-region tabs with real independent TL/TR/BL/BR fields.
-        const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, Record<string, unknown>>;
-        const dn = { ...(theme.dayNumbers ?? {}) };
-        dn.radius = { tl: value, tr: value, br: value, bl: value };
-        theme.dayNumbers = dn;
-        (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
       } else if (themePath) {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
-        if (themePath.length === 2) {
-          const [group, prop] = themePath;
-          theme[group] = { ...((theme[group] as Record<string, unknown>) ?? {}), [prop]: value };
-        } else {
-          theme[themePath[0]] = value;
-        }
+        _setPath(theme, themePath, value);
         (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
       } else if (key.startsWith('highlight')) {
         const highlight = (e._craftoolsMeta.highlight as unknown as Record<string, unknown>) ?? {};
