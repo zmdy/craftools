@@ -87,11 +87,11 @@ FieldRegistry.register('emoji-kitchen-pair', {
 
     if (!c.querySelector('.ct-ek-left-wrap')) {
       c.innerHTML = `
-        <div class="ct-field">
+        <div class="ct-field ct-field--block">
           <span class="craftools-label">${I18n.t('emojiKitchenTool.leftLabel')}</span>
           <div class="ct-ek-left-wrap"></div>
         </div>
-        <div class="ct-field" style="margin-top:10px;">
+        <div class="ct-field ct-field--block" style="margin-top:10px;">
           <span class="craftools-label">${I18n.t('emojiKitchenTool.rightLabel')}</span>
           <button type="button" class="craftools-pill ct-ek-right-self-btn" style="margin:4px 0 6px; display:block; width:100%; text-align:center;">${I18n.t('emojiKitchenTool.rightSelf')}</button>
           <div class="ct-ek-right-wrap"></div>
