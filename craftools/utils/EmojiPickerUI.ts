@@ -85,11 +85,26 @@ function ensurePickerStyles(): void {
   const s = document.createElement('style');
   s.id = PICKER_STYLE_ID;
   s.textContent = `
+    .ct-emoji-tab-row {
+      display: flex; align-items: stretch;
+      border-bottom: 1px solid var(--border);
+    }
     .ct-emoji-tab-bar {
-      display: flex; gap: 2px; overflow-x: auto; padding: 8px 10px 0;
-      border-bottom: 1px solid var(--border); scrollbar-width: none;
+      display: flex; gap: 2px; overflow-x: auto; padding: 8px 6px 0;
+      scrollbar-width: none; flex: 1; min-width: 0;
     }
     .ct-emoji-tab-bar::-webkit-scrollbar { display: none; }
+    .ct-emoji-tab-scroll {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      width: 20px; background: none; border: none; cursor: pointer; padding: 0;
+      color: var(--text-secondary, #71717a);
+    }
+    .ct-emoji-tab-scroll .material-symbols-outlined { font-size: 16px; }
+    .ct-emoji-tab-scroll:hover:not(:disabled) {
+      color: var(--text-primary, #18181b);
+      background: var(--bg-hover, rgba(0,0,0,.06));
+    }
+    .ct-emoji-tab-scroll:disabled { opacity: .25; cursor: default; }
     .ct-emoji-tab {
       background: none; border: none; cursor: pointer;
       font-size: 18px; padding: 5px 7px; border-radius: 6px;
@@ -222,6 +237,24 @@ function buildResultsHtml(opts: EmojiPickerOptions, activeCat: number, search: s
     </div>`;
 }
 
+/**
+ * Enables/disables the tab-bar's scroll arrows based on the bar's actual
+ * scroll position -- greyed out (and un-clickable, via the native `disabled`
+ * attribute) once there's nothing left to scroll toward on that side, same
+ * as a typical carousel's prev/next controls. Called right after every
+ * (re)paint and on every `scroll` event the bar fires (trackpad/shift-wheel
+ * scrolling should keep the arrows in sync too, not just arrow clicks).
+ */
+function updateTabArrows(container: BoundContainer): void {
+  const tabBar = container.querySelector<HTMLElement>('[data-part="tabs"]');
+  if (!tabBar) return;
+  const leftBtn  = container.querySelector<HTMLButtonElement>('[data-action="emoji-tab-left"]');
+  const rightBtn = container.querySelector<HTMLButtonElement>('[data-action="emoji-tab-right"]');
+  const hasOverflow = tabBar.scrollWidth > tabBar.clientWidth + 1;
+  if (leftBtn)  leftBtn.disabled  = !hasOverflow || tabBar.scrollLeft <= 0;
+  if (rightBtn) rightBtn.disabled = !hasOverflow || tabBar.scrollLeft >= tabBar.scrollWidth - tabBar.clientWidth - 1;
+}
+
 function paintResults(container: BoundContainer): void {
   const results = container.querySelector<HTMLElement>('[data-part="results"]');
   if (!results) return;
@@ -262,24 +295,55 @@ function paint(container: BoundContainer): void {
   const search = container._ctEmojiSearch ?? '';
 
   container.innerHTML = `
-    <div class="ct-emoji-tab-bar" data-part="tabs">
-      ${visibleCats.map(c => {
-        const i = EMOJI_CATEGORIES.indexOf(c);
-        return `
-        <button type="button" class="ct-emoji-tab ${!search && i === activeCat ? 'active' : ''}"
-          data-cat="${i}" title="${c.label}">${c.icon}</button>`;
-      }).join('')}
+    <div class="ct-emoji-tab-row">
+      <button type="button" class="ct-emoji-tab-scroll" data-action="emoji-tab-left" aria-label="Categorias anteriores">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <div class="ct-emoji-tab-bar" data-part="tabs">
+        ${visibleCats.map(c => {
+          const i = EMOJI_CATEGORIES.indexOf(c);
+          return `
+          <button type="button" class="ct-emoji-tab ${!search && i === activeCat ? 'active' : ''}"
+            data-cat="${i}" title="${c.label}">${c.icon}</button>`;
+        }).join('')}
+      </div>
+      <button type="button" class="ct-emoji-tab-scroll" data-action="emoji-tab-right" aria-label="Próximas categorias">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
     </div>
     <div class="ct-emoji-search">
       <input type="search" placeholder="🔍 Pesquisar emoji..." data-action="emoji-search" value="${search}">
     </div>
     <div data-part="results">${buildResultsHtml(opts, activeCat, search)}</div>
   `;
+
+  // Tab bar's own `scroll` events don't bubble, so this listener has to be
+  // (re)attached to the fresh element every repaint -- the old bar (and its
+  // listener) is discarded along with the innerHTML it lived in.
+  const tabBar = container.querySelector<HTMLElement>('[data-part="tabs"]');
+  tabBar?.addEventListener('scroll', () => updateTabArrows(container));
+  updateTabArrows(container);
 }
 
 function bindDelegatedEvents(container: BoundContainer): void {
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
+
+    // Category tab-bar horizontal-scroll arrows -- the only way to reach
+    // categories past whatever fits the picker's fixed width (previously
+    // only a hidden-scrollbar trackpad/shift-wheel gesture, no visible cue
+    // that more categories existed at all). Scrolls by ~2-3 tabs at a time;
+    // `updateTabArrows()` (called on the bar's own `scroll` event) handles
+    // disabling an arrow once there's nothing left to scroll toward.
+    const scrollDir = target.closest<HTMLElement>('[data-action="emoji-tab-left"], [data-action="emoji-tab-right"]');
+    if (scrollDir) {
+      const tabBar = container.querySelector<HTMLElement>('[data-part="tabs"]');
+      if (tabBar) {
+        const dir = scrollDir.dataset.action === 'emoji-tab-left' ? -1 : 1;
+        tabBar.scrollBy({ left: dir * Math.max(80, tabBar.clientWidth * 0.6), behavior: 'smooth' });
+      }
+      return;
+    }
 
     const tab = target.closest<HTMLElement>('[data-cat]');
     if (tab) {
