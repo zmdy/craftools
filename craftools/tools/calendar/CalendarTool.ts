@@ -23,6 +23,10 @@ import { CalendarRenderer, type CalendarTheme } from '../../utils/CalendarRender
 import { PageTool } from '../page/PageTool.js';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { AppSettings } from '../../utils/AppSettings.js';
+import { PropertyRenderer } from '../../utils/PropertyRenderer';
+import { FieldRegistry } from '../../utils/FieldRegistry';
+import { calendarStyleSections } from '../../utils/CalendarStyleSchema';
+import { CALENDAR_THEME_KEY_PATHS, getThemePath, setThemePath } from '../../utils/CalendarThemeKeyPaths';
 import './CalendarTool_Translations.js';
 import '../../components/CtFontSelect.js';
 
@@ -139,24 +143,34 @@ export class CalendarTool {
     // the floating badge) -- called whenever anything in the panel changes.
     const updatePreview = (): void => CalendarTool._renderCanvasPreview(ed, state, currentPreset());
 
+    // Padding wrapper for every hand-rolled tab's body -- .ct-accordion-content
+    // itself has zero horizontal padding (see craftools.css), relying on each
+    // schema-field wrapper (.ct-field/.ct-field--block/...) to carry its own
+    // 12px side padding. This panel's tabs predate the schema system and
+    // never got that treatment, so their controls sat flush against the
+    // panel walls. The 5 style tabs below don't need this -- they're built
+    // through PropertyRenderer, which already produces correctly-padded
+    // field wrappers, same as every other element's properties panel.
+    const pad = (html: string): string => `<div style="padding:0 12px 4px;">${html}</div>`;
+
     const renderPanel = (): void => {
       const sectionModel    = CalendarTool._renderModelSection(state);
       const sectionLayout   = CalendarTool._renderLayoutSection(state);
       const sectionFillMode = CalendarTool._renderFillModeSection(state);
-      const sectionStyle    = CalendarTool._renderStyleSection(state);
       const sectionGenerate = CalendarTool._renderGenerateSection(state, currentPreset());
 
       panelBody.innerHTML = `
         <div id="cal-root">
-          ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), sectionModel, { open: true })}
-          ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), sectionLayout)}
-          ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), sectionFillMode)}
-          ${PanelUI.accordion('cal-estilo', 'palette', c('tabStyle'), sectionStyle)}
-          ${PanelUI.accordion('cal-gerar', 'auto_awesome', c('tabGenerate'), sectionGenerate)}
+          ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), pad(sectionModel), { open: true })}
+          ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), pad(sectionLayout))}
+          ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), pad(sectionFillMode))}
+          <div id="cal-style-sections"></div>
+          ${PanelUI.accordion('cal-gerar', 'auto_awesome', c('tabGenerate'), pad(sectionGenerate))}
         </div>
       `;
 
       PanelUI.bindAccordions(panelBody);
+      CalendarTool._renderStyleSections(panelBody, state, updatePreview);
       bindEvents();
       updatePreview();
     };
@@ -173,11 +187,21 @@ export class CalendarTool {
         });
       });
 
-      const weekSundayCheckbox = root.querySelector<HTMLInputElement>('#cal-week-sunday');
-      if (weekSundayCheckbox) weekSundayCheckbox.addEventListener('change', () => {
-        state.weekStartSunday = weekSundayCheckbox.checked;
-        updatePreview();
-      });
+      // Standard toggle switch (same FieldRegistry 'toggle' handler every
+      // schema-driven panel uses) instead of a bare <input type="checkbox">
+      // -- invoked directly since this whole tab is still hand-rolled HTML,
+      // not a PropertySchema, so there's no full PropertyRenderer.render()
+      // pass to hang a real field off of.
+      const weekSundayToggleWrap = root.querySelector<HTMLElement>('#cal-week-sunday-toggle');
+      if (weekSundayToggleWrap) {
+        const toggleHandler = FieldRegistry.get('toggle')!;
+        const toggleField = { type: 'toggle' as const, key: 'weekStartSunday', label: c('weekStartSunday') };
+        toggleHandler.render(weekSundayToggleWrap, toggleField, state.weekStartSunday);
+        toggleHandler.bind(weekSundayToggleWrap, toggleField, (value) => {
+          state.weekStartSunday = value as boolean;
+          updatePreview();
+        });
+      }
 
       // ── Layout ──────────────────────────────────────────────────────
       root.querySelectorAll<HTMLElement>('.cal-grid-btn').forEach(btn => {
@@ -222,33 +246,10 @@ export class CalendarTool {
         updatePreview();
       });
 
-      // ── Estilo (delegation: every input with data-part/data-field) ───
-      // The preview is now shown live on the page (updatePreview), no
-      // longer in an isolated sidebar card.
-      root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-part][data-field]').forEach(input => {
-        const evt = (input.tagName === 'SELECT' || (input as HTMLInputElement).type === 'color' || (input as HTMLInputElement).type === 'number') ? 'input' : 'change';
-        input.addEventListener(evt, () => {
-          const part  = input.dataset.part!;
-          const field = input.dataset.field!;
-          const value: string | number = (input as HTMLInputElement).type === 'number'
-            ? (parseFloat(input.value) || 0)
-            : input.value;
-          const theme = state.theme as unknown as Record<string, unknown>;
-          if (part === 'cellBorder') {
-            (theme.cellBorder as Record<string, unknown>)[field] = value;
-          } else if (part === 'cell') {
-            state.theme.cellBg = value as string;
-          } else if (part === 'sectionGap') {
-            // Top-level CalendarTheme field (not nested under a part like
-            // titleBar/dayNumbers/...), so it needs its own case rather
-            // than the generic `theme[part][field]` path below.
-            state.theme.sectionGap = value as number;
-          } else if (theme[part]) {
-            (theme[part] as Record<string, unknown>)[field] = value;
-          }
-          updatePreview();
-        });
-      });
+      // ── Estilo: handled entirely by _renderStyleSections()'s own
+      // PropertyRenderer.render() call in renderPanel() -- its onChange
+      // writes straight into state.theme and calls updatePreview() itself,
+      // no delegation needed here.
 
       // ── Gerar ─────────────────────────────────────────────────────
       const generateBtn = root.querySelector<HTMLButtonElement>('#cal-generate-btn');
@@ -294,10 +295,7 @@ export class CalendarTool {
           </button>
         `).join('')}
       </div>
-      <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:12px;">
-        <input type="checkbox" id="cal-week-sunday" ${state.weekStartSunday !== false ? 'checked' : ''}>
-        <span class="craftools-label" style="margin:0;">${c('weekStartSunday')}</span>
-      </label>
+      <div id="cal-week-sunday-toggle" style="margin-top:12px;"></div>
     `;
   }
 
@@ -371,188 +369,45 @@ export class CalendarTool {
     return fillModes + periodHtml;
   }
 
-  // ── Tab: Estilo (granular control per part) ──────────────────────────
+  // ── Tab: Estilo (5 separate accordions, one per calendar region) ─────
+  //
+  // Renders utils/CalendarStyleSchema.ts's 5 sections (Estilo do Cartão /
+  // Barra do Mês / Tabela de Dias / Cabeçalho dos Dias / Feriados e Fases
+  // da Lua) as their OWN top-level accordions inside #cal-style-sections,
+  // alongside Modelo/Layout/Preenchimento/Gerar -- via PropertyRenderer +
+  // a synthetic detached-element adapter (same pattern SettingsTool.ts uses
+  // for AppSettings, since `state.theme` is a plain object too, not a real
+  // canvas element with its own dataset.ctState). Every field/label/i18n key
+  // comes from the same canonical schema MiniCalendarTool.ts and
+  // VariablePanel.ts's miniCalendar config also render, so this tool's
+  // style controls look and behave identically to theirs (and to every
+  // other element's Typography section: font-select/slider/align,
+  // gradient-capable color-picker, 4-corner radius, toggles).
+  private static _renderStyleSections(panelBody: HTMLElement, state: CalendarState, onThemeChange: () => void): void {
+    const wrap = panelBody.querySelector<HTMLElement>('#cal-style-sections');
+    if (!wrap) return;
 
-  private static _fontOptions(selected: string): string {
-    return CALENDAR_FONTS.map(f => `<option value="${f}" ${selected === f ? 'selected' : ''}>${f}</option>`).join('');
+    const fakeEl = document.createElement('div');
+    fakeEl.dataset.ctState = JSON.stringify(CalendarTool._themeToCtState(state.theme));
+
+    PropertyRenderer.render(wrap, calendarStyleSections(), fakeEl, (key, value) => {
+      PropertyRenderer.applyChange(fakeEl, key, value);
+      const path = CALENDAR_THEME_KEY_PATHS[key];
+      if (path) setThemePath(state.theme as unknown as Record<string, unknown>, path, value);
+      onThemeChange();
+    });
   }
 
-  private static _renderPartRow(
-    key: string,
-    label: string,
-    part: Record<string, unknown>,
-    opts: {
-      showBg?: boolean;
-      colorLabel?: string;
-      secondColorField?: string;
-      secondColorLabel?: string;
-      numberField?: string;
-      numberFieldLabel?: string;
-      numberFieldMin?: number;
-      numberFieldMax?: number;
-      numberFieldStep?: number;
-      innerBorder?: boolean;
-      /** Adds a border-radius field to the inner-border block -- only meaningful for
-       *  dayNumbers (a per-cell full border, unlike weekHeader's border-right-only
-       *  dividers), so opt in per-call rather than bundling it into `innerBorder`. */
-      innerBorderRadius?: boolean;
-    } = {},
-  ): string {
-    return `
-      <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:8px; margin-bottom:8px;">
-        <div style="font-weight:600; font-size:11px; margin-bottom:6px;">${label}</div>
-        <div style="display:grid; grid-template-columns:${opts.showBg ? '1fr 1fr' : '1fr'}; gap:8px; margin-bottom:6px;">
-          ${opts.showBg ? `
-            <div>
-              <span class="craftools-label">${c('fieldBg')}</span>
-              <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="bg" value="${part.bg}" style="width:100%;">
-            </div>
-          ` : ''}
-          <div>
-            <span class="craftools-label">${opts.colorLabel || c('fieldColor')}</span>
-            <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="color" value="${part.color}" style="width:100%;">
-          </div>
-        </div>
-        ${opts.secondColorField ? `
-          <div class="ct-field" style="margin-bottom:6px;">
-            <span class="craftools-label">${opts.secondColorLabel}</span>
-            <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="${opts.secondColorField}" value="${part[opts.secondColorField]}" style="width:100%;">
-          </div>
-        ` : ''}
-        ${opts.numberField ? `
-          <div class="ct-field" style="margin-bottom:6px;">
-            <span class="craftools-label">${opts.numberFieldLabel}</span>
-            <input type="number" class="craftools-input" data-part="${key}" data-field="${opts.numberField}"
-              value="${part[opts.numberField] ?? 0}" min="${opts.numberFieldMin ?? 0}" max="${opts.numberFieldMax ?? 10}" step="${opts.numberFieldStep ?? 0.5}" style="width:100%;">
-          </div>
-        ` : ''}
-        <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-          <div>
-            <span class="craftools-label">${c('fieldFont')}</span>
-            <ct-font-select class="craftools-select" data-part="${key}" data-field="font" style="width:100%;">${CalendarTool._fontOptions(part.font as string)}</ct-font-select>
-          </div>
-          <div>
-            <span class="craftools-label">${c('fieldFontSize')}</span>
-            <input type="number" class="craftools-input" data-part="${key}" data-field="fontSize" value="${part.fontSize}" step="0.5" min="2" max="30" style="width:100%;">
-          </div>
-        </div>
-        ${opts.innerBorder ? CalendarTool._renderInnerBorderFields(key, part, opts.innerBorderRadius) : ''}
-      </div>
-    `;
-  }
-
-  // Reusable sub-block: inner (grid) borders for the week-day header and/or
-  // day numbers -- opt-in via opts.innerBorder in _renderPartRow. Width 0
-  // means off (default). `withRadius` adds a border-radius field too (used
-  // for dayNumbers only -- see _renderPartRow's own innerBorderRadius doc
-  // comment): the knob that produces a "rounded calendar" look, one
-  // rounded box per day.
-  private static _renderInnerBorderFields(key: string, part: Record<string, unknown>, withRadius?: boolean): string {
-    return `
-      <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7);">
-        <div style="font-weight:600; font-size:10px; margin-bottom:6px; color:var(--text-secondary);">${c('fieldInnerBorder')}</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
-          <div>
-            <span class="craftools-label">${c('fieldBorderWidth')}</span>
-            <input type="number" class="craftools-input" data-part="${key}" data-field="innerBorderWidth"
-              value="${part.innerBorderWidth ?? 0}" min="0" max="5" step="0.5" style="width:100%;">
-          </div>
-          <div>
-            <span class="craftools-label">${c('fieldBorderColor')}</span>
-            <input type="color" class="craftools-color-swatch" data-part="${key}" data-field="innerBorderColor" value="${part.innerBorderColor || '#cccccc'}" style="width:100%;">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns:${withRadius ? '1fr 1fr' : '1fr'}; gap:8px;">
-          <div>
-            <span class="craftools-label">${c('fieldBorderStyle')}</span>
-            <select class="craftools-select" data-part="${key}" data-field="innerBorderStyle" style="width:100%;">
-              ${['solid', 'dashed', 'dotted'].map(s => `<option value="${s}" ${(part.innerBorderStyle || 'solid') === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-          ${withRadius ? `
-            <div>
-              <span class="craftools-label">${c('fieldBorderRadius')}</span>
-              <input type="number" class="craftools-input" data-part="${key}" data-field="innerBorderRadius"
-                value="${part.innerBorderRadius ?? 0}" min="0" max="100" step="1" style="width:100%;">
-            </div>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  private static _renderStyleSection(state: CalendarState): string {
-    const t = state.theme as unknown as Record<string, Record<string, unknown>>;
-    const rows = [
-      CalendarTool._renderPartRow('titleBar', c('styleTitleBar'), t.titleBar, { showBg: true }),
-      CalendarTool._renderPartRow('weekHeader', c('styleWeekHeader'), t.weekHeader, { showBg: true, innerBorder: true }),
-      CalendarTool._renderPartRow('dayNumbers', c('styleDayNumbers'), t.dayNumbers, {
-        secondColorField: 'sundayColor', secondColorLabel: c('fieldSundayColor'),
-        numberField: 'rowGap', numberFieldLabel: c('fieldRowGap'), numberFieldMin: 0, numberFieldMax: 8, numberFieldStep: 0.5,
-        innerBorder: true, innerBorderRadius: true,
-      }),
-      CalendarTool._renderPartRow('holidays', c('styleHolidays'), t.holidays, {}),
-    ];
-    if (state.model === 'completo') {
-      rows.push(CalendarTool._renderPartRow('moonPhases', c('styleMoonPhases'), t.moonPhases, {}));
+  /** Maps a CalendarTheme onto CalendarStyleSchema.ts's flat canonical keys, via CALENDAR_THEME_KEY_PATHS. */
+  private static _themeToCtState(theme: CalendarTheme): Record<string, unknown> {
+    const defaults = CalendarRenderer.defaultTheme();
+    const state: Record<string, unknown> = {};
+    for (const [flatKey, path] of Object.entries(CALENDAR_THEME_KEY_PATHS)) {
+      const fromTheme   = getThemePath(theme, path);
+      const fromDefault = getThemePath(defaults, path);
+      state[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
     }
-
-    return `
-      ${rows.join('')}
-      ${CalendarTool._renderBorderRow(state.theme)}
-      ${CalendarTool._renderSpacingRow(state.theme)}
-    `;
-  }
-
-  // "Spacing" row -- gap between the card's stacked sections (title bar /
-  // week header / days grid / holidays / moon phases). `sectionGap` is a
-  // top-level CalendarTheme field (not nested under a part like titleBar/
-  // dayNumbers/...), so it's handled as its own `data-part="sectionGap"`
-  // case in bindEvents() rather than the generic `theme[part][field]` path.
-  private static _renderSpacingRow(t: CalendarTheme): string {
-    return `
-      <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:8px; margin-bottom:8px;">
-        <div style="font-weight:600; font-size:11px; margin-bottom:6px;">${c('styleSpacing')}</div>
-        <div>
-          <span class="craftools-label">${c('fieldSectionGap')}</span>
-          <input type="number" class="craftools-input" data-part="sectionGap" data-field="value"
-            value="${t.sectionGap ?? 0}" min="0" max="40" step="1" style="width:100%;">
-        </div>
-      </div>
-    `;
-  }
-
-  // "Border / card background" row -- kept as its own method so it can also
-  // be reused by MiniCalendarTool.ts (same theme engine).
-  private static _renderBorderRow(t: CalendarTheme): string {
-    const cellBorder = t.cellBorder!;
-    return `
-      <div class="ct-field" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:8px; margin-bottom:8px;">
-        <div style="font-weight:600; font-size:11px; margin-bottom:6px;">${c('styleCellBorder')}</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
-          <div>
-            <span class="craftools-label">${c('fieldCellBg')}</span>
-            <input type="color" class="craftools-color-swatch" data-part="cell" data-field="cellBg" value="${t.cellBg}" style="width:100%;">
-          </div>
-          <div>
-            <span class="craftools-label">${c('fieldBorderColor')}</span>
-            <input type="color" class="craftools-color-swatch" data-part="cellBorder" data-field="color" value="${cellBorder.color}" style="width:100%;">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <div>
-            <span class="craftools-label">${c('fieldBorderWidth')}</span>
-            <input type="number" class="craftools-input" data-part="cellBorder" data-field="width" value="${cellBorder.width}" min="0" max="10" style="width:100%;">
-          </div>
-          <div>
-            <span class="craftools-label">${c('fieldBorderStyle')}</span>
-            <select class="craftools-select" data-part="cellBorder" data-field="style" style="width:100%;">
-              ${['none', 'solid', 'dashed', 'dotted'].map(s => `<option value="${s}" ${cellBorder.style === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-      </div>
-    `;
+    return state;
   }
 
   // ── Tab: Gerar ────────────────────────────────────────────────────────
