@@ -81,6 +81,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   minicalendar:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
   curvedtext:       () => import('../tools/curvedtext/CurvedTextTool.js'),
   stamp:            () => import('../tools/stamp/StampTool.js'),
+  lettering:        () => import('../tools/lettering/LetteringTool.js'),
   paper:            () => import('../tools/paper/PaperTool.js'),
   variablecontent: () => import('../tools/variablecontent/VariableContentTool.js'),
   table:            () => import('../tools/table/TableTool.js'),
@@ -741,7 +742,7 @@ export class Craftools_Editor extends HTMLElement {
     // Mobile: tap to add (places tool in center of first visible page)
     const DRAGGABLE_CANVAS_TOOLS = new Set([
       'title','paragraph','image','album','qrcode','barcode','minicalendar',
-      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon','table',
+      'emojikitchen','emoji','shape','variablecontent','curvedtext','stamp','icon','table','lettering',
     ]);
 
     toolBtns.forEach(btn => {
@@ -812,6 +813,7 @@ export class Craftools_Editor extends HTMLElement {
           variablecontent:() => import('../tools/variablecontent/VariableContentTool.js'),
           curvedtext:      () => import('../tools/curvedtext/CurvedTextTool.js'),
           stamp:           () => import('../tools/stamp/StampTool.js'),
+          lettering:       () => import('../tools/lettering/LetteringTool.js'),
           title:           () => import('../tools/text/TextTool.js'),
           paragraph:       () => import('../tools/text/TextTool.js'),
         };
@@ -820,6 +822,7 @@ export class Craftools_Editor extends HTMLElement {
           image: [-100,-100], qrcode: [-90,-90], barcode: [-110,-50],
           minicalendar: [-95,-105], emojikitchen: [-80,-80],
           variablecontent: [-110,-25], curvedtext: [-80,-80], stamp: [-80,-80],
+          lettering: [-180,-70],
           title: [-100,-30], paragraph: [-100,-30],
         };
 
@@ -902,7 +905,7 @@ export class Craftools_Editor extends HTMLElement {
       // element-creator tools place a new element either way -- centered on
       // simple click, at the drop point when dragged.
       const ELEMENT_CREATOR_TOOLS = new Set([
-        'curvedtext', 'stamp', 'title', 'paragraph', 'variablecontent',
+        'curvedtext', 'stamp', 'lettering', 'title', 'paragraph', 'variablecontent',
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
