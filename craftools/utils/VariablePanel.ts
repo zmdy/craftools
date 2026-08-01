@@ -1,7 +1,7 @@
 import { I18n }           from '../settings/Translations.js';
 import { VariableEngine, type VariableBinding } from './VariableEngine.js';
 import { loadEmojiKitchenPartners, loadEmojiKitchenSupported } from './ApiDataLoader.js';
-import { renderEmojiPicker } from './EmojiPickerUI';
+import { renderEmojiPicker, renderEmojiGrid } from './EmojiPickerUI';
 import { withEmojiFallback } from './EmojiFont.js';
 import { renderColorPicker, normalizeValue } from './ColorPickerUI.js';
 import { PropertyRenderer } from './PropertyRenderer.js';
@@ -645,11 +645,10 @@ export class VariablePanel {
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
                 <div id="var-kitchen-left-wrap"></div>
             </div>
-            <div class="ct-field" id="var-kitchen-right-wrap" style="${hasLeft ? '' : 'display:none;'}">
+            <div class="ct-field ct-field--block" id="var-kitchen-right-wrap" style="${hasLeft ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenRightLabel')}</span>
-                <select id="var-kitchen-right" class="craftools-select" style="width:100%; font-family:'Noto Color Emoji', sans-serif; font-size:20px;">
-                    <option value="">${I18n.t('variablePanel.previewLoading')}</option>
-                </select>
+                <button type="button" class="craftools-pill" id="var-kitchen-right-self-btn" style="margin:4px 0 6px; display:block; width:100%; text-align:center;">${I18n.t('variablePanel.emojiKitchenRightSelf')}</button>
+                <div id="var-kitchen-right-grid"></div>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
             </div>
             <div class="ct-field" id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
@@ -1303,30 +1302,59 @@ export class VariablePanel {
                     break;
                 }
                 case 'emojiKitchen': {
-                    const leftWrap   = container.querySelector<HTMLElement>('#var-kitchen-left-wrap');
-                    const rightSel   = container.querySelector<HTMLSelectElement>('#var-kitchen-right');
-                    const rightWrap  = container.querySelector<HTMLElement>('#var-kitchen-right-wrap');
-                    const modeWrap   = container.querySelector<HTMLElement>('#var-kitchen-mode-wrap');
-                    const modeSel    = container.querySelector<HTMLSelectElement>('#var-kitchen-mode');
+                    const leftWrap      = container.querySelector<HTMLElement>('#var-kitchen-left-wrap');
+                    const rightGrid     = container.querySelector<HTMLElement>('#var-kitchen-right-grid');
+                    const rightSelfBtn  = container.querySelector<HTMLButtonElement>('#var-kitchen-right-self-btn');
+                    const rightWrap     = container.querySelector<HTMLElement>('#var-kitchen-right-wrap');
+                    const modeWrap      = container.querySelector<HTMLElement>('#var-kitchen-mode-wrap');
+                    const modeSel       = container.querySelector<HTMLSelectElement>('#var-kitchen-mode');
 
-                    let currentPartners: string[] = [];
+                    let currentPartners: string[] | null = null; // null = still loading
                     let supportedSet: Set<string> | null = null;
 
-                    const renderRightOptions = (): void => {
-                        if (!rightSel) return;
-                        const opts = [`<option value="">${I18n.t('variablePanel.emojiKitchenRightSelf') || 'Combinar com ele mesmo'}</option>`]
-                            .concat(currentPartners.map(p => `<option value="${this._esc(p)}" ${binding!.rightEmoji === p ? 'selected' : ''}>${this._esc(p)}</option>`));
-                        rightSel.innerHTML = opts.join('');
-                        if (binding!.rightEmoji && !currentPartners.includes(binding!.rightEmoji)) binding!.rightEmoji = '';
+                    // Flat grid (utils/EmojiPickerUI.ts's renderEmojiGrid(),
+                    // no category tabs/search) of ONLY the combo partners
+                    // valid for the currently-picked left emoji -- was
+                    // previously a <select>, then briefly considered the
+                    // full tabbed picker, but a category picker over an
+                    // already-short, pre-filtered list mostly showed empty
+                    // categories. "Combinar com ele mesmo" has no natural
+                    // slot inside a grid of emoji buttons (a <select> has an
+                    // empty <option>), so it's a dedicated pill button above
+                    // the grid instead, same pattern as
+                    // emoji-kitchen-pair.field.ts's identical right-emoji UI.
+                    const paintRight = (): void => {
+                        if (!rightGrid) return;
+                        const isSelf = !binding!.rightEmoji;
+                        rightSelfBtn?.classList.toggle('active', isSelf);
+                        renderEmojiGrid(rightGrid, currentPartners ?? [], {
+                            selected:  binding!.rightEmoji ?? '',
+                            draggable: false,
+                            loading:   currentPartners === null,
+                            onSelect:  (emoji) => {
+                                binding!.rightEmoji = emoji;
+                                notify();
+                                paintRight();
+                            },
+                        });
                     };
 
                     const loadPartners = async (): Promise<void> => {
                         const left = (binding!.leftEmoji ?? '').trim();
-                        if (!left || !rightSel) return;
-                        rightSel.innerHTML = `<option value="">${I18n.t('variablePanel.previewLoading')}</option>`;
-                        const partners = (await loadEmojiKitchenPartners(left)) as string[];
-                        currentPartners = partners.filter(p => p !== left);
-                        renderRightOptions();
+                        currentPartners = null;
+                        if (rightSelfBtn) rightSelfBtn.disabled = true;
+                        if (!left) { paintRight(); return; }
+                        paintRight(); // shows the grid's own loading state
+                        const partners = ((await loadEmojiKitchenPartners(left)) as string[]).filter(p => p !== left);
+                        // The user may have picked a different left emoji
+                        // again while this request was in flight -- drop the
+                        // now-stale response instead of clobbering the grid
+                        // with partners for the wrong emoji.
+                        if ((binding!.leftEmoji ?? '').trim() !== left) return;
+                        currentPartners = partners;
+                        if (rightSelfBtn) rightSelfBtn.disabled = false;
+                        if (binding!.rightEmoji && !currentPartners.includes(binding!.rightEmoji)) binding!.rightEmoji = '';
+                        paintRight();
                     };
 
                     // Same standardized category-tab + search + grid picker as
@@ -1361,8 +1389,13 @@ export class VariablePanel {
                     loadEmojiKitchenSupported().then(list => { supportedSet = new Set(list as string[]); paintLeft(); });
                     loadPartners();
 
-                    if (rightSel) rightSel.onchange = () => { binding!.rightEmoji = rightSel.value; notify(); };
-                    if (modeSel)  modeSel.onchange  = () => { binding!.mode       = modeSel.value;  notify(); };
+                    if (rightSelfBtn) rightSelfBtn.onclick = () => {
+                        if (rightSelfBtn.disabled) return;
+                        binding!.rightEmoji = '';
+                        notify();
+                        paintRight();
+                    };
+                    if (modeSel) modeSel.onchange = () => { binding!.mode = modeSel.value; notify(); };
                     break;
                 }
                 case 'miniCalendar': {

@@ -403,3 +403,79 @@ export function renderEmojiPicker(container: HTMLElement, opts: EmojiPickerOptio
     bindDelegatedEvents(c);
   }
 }
+
+export interface EmojiGridOptions {
+  /** Called with the picked emoji whenever the user clicks (or drops) one. */
+  onSelect: (emoji: string) => void;
+  /** Highlights this emoji's button as the current selection. */
+  selected?: string;
+  /** Enables HTML5 drag-and-drop (drag-to-canvas) on each button. */
+  draggable?: boolean;
+  /** Shows a loading placeholder instead of the grid. */
+  loading?: boolean;
+  /** Text shown while `loading` is true. */
+  loadingLabel?: string;
+  /** Text shown when `emojis` is empty and not loading. */
+  emptyLabel?: string;
+}
+
+interface BoundGridContainer extends HTMLElement {
+  _ctEmojiGridOpts?: EmojiGridOptions;
+  _ctEmojiGridBound?: boolean;
+}
+
+/**
+ * Renders a FLAT grid of emoji buttons -- no category tabs, no search bar --
+ * for pickers that already have their own externally-computed, usually
+ * short, list of valid choices instead of "any emoji from any category".
+ * EmojiKitchenTool.ts's / Variable Content's "2nd emoji" field is the
+ * motivating case: only whichever combo partners are actually valid for the
+ * currently-picked 1st emoji make sense to show, and a category picker
+ * would be actively misleading there (nearly every category would appear
+ * empty except for the handful of valid partners scattered inside it).
+ *
+ * Reuses the exact same `.ct-emoji-grid`/`.ct-emoji-btn` markup and CSS as
+ * renderEmojiPicker()'s own grid for visual consistency -- this is
+ * deliberately just that picker's results pane, without the tab bar/search
+ * chrome around it. Same bind-once/repaint-many contract as
+ * renderEmojiPicker(): the click/dragstart listeners are attached to
+ * `container` only on the first call, every later call just repaints.
+ */
+export function renderEmojiGrid(container: HTMLElement, emojis: string[], opts: EmojiGridOptions): void {
+  ensurePickerStyles();
+  const c = container as BoundGridContainer;
+  c._ctEmojiGridOpts = opts;
+
+  if (opts.loading) {
+    c.innerHTML = `<div class="ct-emoji-loading">${opts.loadingLabel ?? 'Carregando...'}</div>`;
+  } else {
+    const selected = opts.selected;
+    const btnHtml = (e: string): string => `
+      <button class="ct-emoji-btn${e === selected ? ' selected' : ''}" data-emoji="${e}"
+        ${opts.draggable ? 'draggable="true"' : ''} title="${e}">${e}</button>`;
+    c.innerHTML = `
+      <div class="ct-emoji-grid">
+        ${emojis.length ? emojis.map(btnHtml).join('') : `<div class="ct-emoji-empty">${opts.emptyLabel ?? 'Nenhum emoji disponível'}</div>`}
+      </div>`;
+  }
+
+  if (!c._ctEmojiGridBound) {
+    c._ctEmojiGridBound = true;
+    c.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-emoji]');
+      if (!btn) return;
+      e.preventDefault();
+      c._ctEmojiGridOpts?.onSelect(btn.dataset.emoji!);
+    });
+    c.addEventListener('dragstart', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-emoji]');
+      if (!btn || !c._ctEmojiGridOpts?.draggable) return;
+      const dt = (e as DragEvent).dataTransfer;
+      const emoji = btn.dataset.emoji!;
+      dt?.setData('ToolType', 'emoji');
+      dt?.setData('EmojiChar', emoji);
+      if (dt) dt.effectAllowed = 'copy';
+      dt?.setDragImage(btn, 12, 12);
+    });
+  }
+}

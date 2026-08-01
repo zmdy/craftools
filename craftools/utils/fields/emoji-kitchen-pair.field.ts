@@ -2,18 +2,20 @@
  * emoji-kitchen-pair field — EmojiKitchenTool.ts's combined 1st-emoji /
  * 2nd-emoji picker control.
  *
- * Both emojis use the SAME standardized category-tab + search + grid
- * picker (utils/EmojiPickerUI.ts) for visual consistency, each filtered
- * down to whichever emojis are actually valid at that point: the 1st
- * emoji to only those with at least one Emoji Kitchen combo at all, and
- * the 2nd emoji to only the combo partners actually available for the
- * CURRENTLY picked 1st emoji (mirrors utils/VariablePanel.ts's existing
- * 'emojiKitchen' variable-binding UI, which solves this identical
- * first-drives-second-options problem for the "Conteúdo Variável" tool's
- * own Emoji Kitchen mode). A dedicated pill button above the 2nd emoji's
- * grid covers "combine with itself" -- there's no natural "none" choice
- * inside a grid of emoji buttons the way a `<select>` has an empty
- * `<option>`, which is what this used to be.
+ * The 1st emoji uses the full standardized category-tab + search + grid
+ * picker (utils/EmojiPickerUI.ts's renderEmojiPicker()), filtered to only
+ * emojis with at least one Emoji Kitchen combo at all. The 2nd emoji uses
+ * the same picker's flat-grid-only mode (renderEmojiGrid(), no category
+ * tabs/search) restricted to the combo partners actually available for the
+ * CURRENTLY picked 1st emoji -- a category picker over the 2nd emoji would
+ * be actively misleading (nearly every category would look empty except a
+ * handful of scattered valid partners), and mirrors
+ * utils/VariablePanel.ts's identical 'emojiKitchen' variable-binding UI,
+ * which solves this same first-drives-second-options problem for the
+ * "Conteúdo Variável" tool's own Emoji Kitchen mode. A dedicated pill
+ * button above the 2nd emoji's grid covers "combine with itself" -- there's
+ * no natural "none" choice inside a grid of emoji buttons the way a
+ * `<select>` has an empty `<option>`, which is what this used to be.
  *
  * Both values only ever change together (picking a new left emoji always
  * resets the right one, since the old partner may not even be valid for
@@ -32,7 +34,7 @@
  */
 
 import { FieldRegistry } from '../FieldRegistry';
-import { renderEmojiPicker } from '../EmojiPickerUI';
+import { renderEmojiPicker, renderEmojiGrid } from '../EmojiPickerUI';
 import { loadEmojiKitchenSupported, loadEmojiKitchenPartners } from '../ApiDataLoader.js';
 import { I18n } from '../../settings/Translations.js';
 
@@ -104,24 +106,23 @@ FieldRegistry.register('emoji-kitchen-pair', {
       c._ctFieldOnChange?.(stringifyEmojiKitchenPair(c._ctKitchenValue!));
     };
 
-    // Right emoji used to be a plain <select> of combo partners -- visually
-    // inconsistent with the left emoji's grid picker, and the "combine with
-    // itself" default was a lone <option> buried in the list. Rebuilt as
-    // the SAME category-tab + search + grid picker (utils/EmojiPickerUI.ts)
-    // as the left side, restricted to whichever partners are actually
-    // available for the currently-picked left emoji, plus a dedicated
-    // "combine with itself" toggle button above the grid (there's no
-    // natural "none" choice inside a grid of emoji buttons the way a
-    // <select> has an empty <option>).
-    let rightPartners: Set<string> | null = null; // null = still loading
+    // Right emoji used to be a plain <select> of combo partners, then a
+    // full category-tab + grid picker (same chrome as the left emoji) --
+    // still awkward, since a category picker over a small, already-filtered
+    // partner list mostly showed empty categories. Rebuilt as
+    // renderEmojiGrid() (utils/EmojiPickerUI.ts): a flat grid of ONLY the
+    // partners actually available for the currently-picked left emoji, no
+    // tabs/search, plus the dedicated "combine with itself" toggle button
+    // above it (there's no natural "none" choice inside a grid of emoji
+    // buttons the way a <select> has an empty <option>).
+    let rightPartners: string[] | null = null; // null = still loading
     const paintRight = (): void => {
       const isSelf = !c._ctKitchenValue!.rightEmoji;
       rightSelfBtn.classList.toggle('active', isSelf);
-      renderEmojiPicker(rightWrap, {
+      renderEmojiGrid(rightWrap, rightPartners ?? [], {
         selected:  c._ctKitchenValue!.rightEmoji,
         draggable: false,
         loading:   rightPartners === null,
-        filter:    rightPartners ? (e) => rightPartners!.has(e) : undefined,
         onSelect:  (emoji) => {
           c._ctKitchenValue = { ...c._ctKitchenValue!, rightEmoji: emoji };
           commit();
@@ -144,7 +145,7 @@ FieldRegistry.register('emoji-kitchen-pair', {
       // request was in flight -- drop the now-stale response instead of
       // clobbering the grid with partners for the wrong emoji.
       if (c._ctKitchenValue!.leftEmoji !== left) return;
-      rightPartners = new Set(partners);
+      rightPartners = partners;
       rightSelfBtn.disabled = false;
       paintRight();
     };
