@@ -5,9 +5,17 @@
  * aplicar as diretivas CSS @page corretas por tamanho de página, e disparar
  * window.print() via blob URL em uma nova janela.
  */
-import { Notify } from './Notify.js';
-import { I18n }   from '../settings/Translations.js';
+import { Notify }       from './Notify.js';
+import { I18n }         from '../settings/Translations.js';
+import { SYSTEM_FONTS } from './FontList.js';
 import './PdfExport_Translations.js';
+
+/** Always loaded regardless of what the document actually uses -- CalendarRenderer.ts,
+ *  PaperPatterns.ts and a few other generated-markup helpers hardcode 'DM Sans' inline
+ *  without going through a craftools-element's own font-family style, so there's no
+ *  reliable way to detect their usage by scanning the DOM the way _collectUsedFonts()
+ *  does for everything else. Kept as a static baseline like before this fix. */
+const BASELINE_FONTS = ['DM Sans', 'DM Serif Display', 'DM Mono'];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,9 +40,82 @@ export class PdfExport {
     const pageSizes = pages.map(p => this._parsePageSize(p));
     const css       = this._buildCSS(pageSizes);
     const pagesHtml = pages.map((page, i) => this._serializePage(page, pageSizes[i])).join('\n');
-    const fullHtml  = this._wrapDocument(css, pagesHtml);
+    const usedFonts = this._collectUsedFonts(pages);
+    const fullHtml  = this._wrapDocument(css, pagesHtml, { usedFonts });
 
     this._openPrintWindow(fullHtml);
+  }
+
+  /**
+   * Walks `roots` (and everything inside them) collecting every distinct
+   * PRIMARY font-family actually referenced -- via inline `style="font-family:
+   * ..."` (set by TextTool/VariableContentTool/LetteringGenerator/etc, always
+   * through EmojiFont.ts's withEmojiFallback(), so the raw value is a full
+   * `'Chosen Font', 'Noto Color Emoji', ..., sans-serif` fallback stack) or an
+   * SVG `font-family="..."` XML attribute (CurvedTextTool). Only the first
+   * name in each stack is kept -- that's always the user's actually-chosen
+   * font, everything after it is the shared emoji/system fallback tail.
+   *
+   * Used to build the print window's own `<link>` (see _wrapDocument()) --
+   * that window opens a brand-new blank `document`, completely separate from
+   * the live editor's `document.head`, so it never inherits whatever
+   * `<link id="craftools-dynamic-fonts">` FontList.ts injected there for
+   * whatever fonts the user actually picked. Previously _wrapDocument() only
+   * ever requested the 3 baseline app-chrome fonts (DM Sans/DM Serif Display/
+   * DM Mono) regardless of what the document's own text/title/variable
+   * content elements were set to -- any OTHER font (Pacifico, a font pulled
+   * from the API catalog, ...) had no @font-face in the print document at
+   * all, so the browser silently substituted a generic system font at print
+   * time. Visually that reads as exactly what it is: wrong glyph widths (so
+   * a letter-spacing value tuned against the real font looks off), a
+   * system font's synthetic bold/italic faking a weight/style the fallback
+   * doesn't actually have (the "smeared/doubled" look), and boxes sized for
+   * the real font's metrics clipping or blanking content sized for a
+   * differently-proportioned substitute.
+   */
+  static _collectUsedFonts(roots: HTMLElement[]): Set<string> {
+    const families = new Set<string>();
+    const addFromValue = (raw: string | null | undefined) => {
+      if (!raw) return;
+      const primary = raw.split(',')[0]?.trim().replace(/^['"]|['"]$/g, '');
+      if (primary) families.add(primary);
+    };
+    roots.forEach(root => {
+      addFromValue(root.style?.fontFamily);
+      addFromValue(root.getAttribute?.('font-family'));
+      root.querySelectorAll<HTMLElement>('[style*="font-family"]').forEach(el => addFromValue(el.style.fontFamily));
+      root.querySelectorAll('[font-family]').forEach(el => addFromValue(el.getAttribute('font-family')));
+    });
+    return families;
+  }
+
+  /**
+   * Builds the `<link>` that loads every family in `usedFonts` (minus
+   * SYSTEM_FONTS, which are assumed pre-installed and never fetched
+   * remotely -- same rule FontList.ts's loadCraftoolsFonts() uses for the
+   * live editor). Mirrors that same self-hosted-API-first, Google-Fonts-
+   * fallback strategy so the print window's fonts come from wherever the
+   * live editor's own fonts come from.
+   */
+  static _buildFontLink(usedFonts: Iterable<string>): string {
+    const families = [...new Set(usedFonts)].filter(f => !SYSTEM_FONTS.has(f));
+    if (!families.length) return '';
+
+    const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
+    if (apiBase) {
+      // No :weight specifiers -- fonts.css.php returns EVERY registered
+      // weight/style for a family when none are given, which is safer here
+      // than guessing (an arbitrary API-catalog font might not even have a
+      // 700/italic file, unlike the 3 hand-picked baseline families the old
+      // code hardcoded weights for).
+      const fontQuery = families.map(f => f.replace(/\s+/g, '+')).join('|');
+      return `<link href="${apiBase}/v1/fonts.css.php?family=${fontQuery}" rel="stylesheet">`;
+    }
+
+    const fontQuery = families
+      .map(f => `family=${f.replace(/\s+/g, '+')}:ital,wght@0,400;0,700;1,400;1,700`)
+      .join('&');
+    return `<link href="https://fonts.googleapis.com/css2?${fontQuery}&display=swap" rel="stylesheet">`;
   }
 
   // ── Detecta o tamanho real da página ────────────────────────────────────────
@@ -245,7 +326,7 @@ ${pageRules}
    *   properties panel) -- without this, that embed would silently pop the
    *   browser's print dialog for whatever iframe/window it's loaded into.
    */
-  static _wrapDocument(css: string, body: string, opts: { autoPrint?: boolean } = {}): string {
+  static _wrapDocument(css: string, body: string, opts: { autoPrint?: boolean; usedFonts?: Iterable<string> } = {}): string {
     const htmlLangMap: Record<string, string> = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
     const htmlLang = htmlLangMap[I18n.currentLang] || 'pt-BR';
     const autoPrint = opts.autoPrint !== false;
@@ -261,11 +342,12 @@ ${pageRules}
     });
 <\/script>` : '';
     const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
-    const fontCssUrl = apiBase
-      ? `${apiBase}/v1/fonts.css.php?family=DM+Sans:300,400,700|DM+Serif+Display:400|DM+Mono:400,500`
-      : 'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,700;1,9..40,400&display=swap';
-    const fontLink = `<link href="${fontCssUrl}" rel="stylesheet">`;
-    const emojiFontLink = apiBase ? '' : `<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">`;
+    // BASELINE_FONTS always included (see its own comment above) + whatever
+    // fonts the actual pages use (Text/Title/Variable Content/Lettering/...)
+    // -- see _collectUsedFonts()'s doc comment for why this print window
+    // can't just inherit the live editor's own <head> fonts.
+    const fontLink       = this._buildFontLink(new Set([...BASELINE_FONTS, ...(opts.usedFonts ?? [])]));
+    const emojiFontLink  = apiBase ? '' : `<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">`;
 
     return `<!DOCTYPE html>
 <html lang="${htmlLang}">

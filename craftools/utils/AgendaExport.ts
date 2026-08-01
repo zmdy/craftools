@@ -142,6 +142,11 @@ export class AgendaExport {
     // 2. Gera o HTML de cada instância do plano, na ordem final de saída.
     const pageSizes:       ReturnType<typeof PdfExport._parsePageSize>[] = [];
     const pagesHtmlParts:  string[] = [];
+    // Accumulated across every rendered instance -- see PdfExport._collectUsedFonts()'s
+    // doc comment for why the print window needs this (it can't inherit the live
+    // editor's own <head> fonts, and different repetitions can in principle differ
+    // in which font a variable-bound element ends up using).
+    const usedFonts = new Set<string>();
 
     renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
@@ -202,6 +207,8 @@ export class AgendaExport {
       clone.querySelectorAll<HTMLElement>('craftools-element')
         .forEach(el => PdfExport._flattenElement(el));
 
+      PdfExport._collectUsedFonts([clone]).forEach(f => usedFonts.add(f));
+
       const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
       const bgStyle   = size.background ? `background: ${size.background};` : '';
       pagesHtmlParts.push(
@@ -210,7 +217,7 @@ export class AgendaExport {
     });
 
     const css      = PdfExport._buildCSS(pageSizes);
-    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), { autoPrint: opts.autoPrint });
+    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), { autoPrint: opts.autoPrint, usedFonts });
 
     return { fullHtml, totalOutputPages };
   }
