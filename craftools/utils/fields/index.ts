@@ -10,6 +10,7 @@
  */
 
 export * from './text.field';
+export * from './textarea.field';
 export * from './number.field';
 export * from './month.field';
 export * from './color.field';
