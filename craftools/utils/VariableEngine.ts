@@ -1391,7 +1391,15 @@ export class VariableEngine {
         if (b.miniCalendarThemeDayBorderWidth  !== undefined) theme.dayNumbers = { ...theme.dayNumbers, innerBorderWidth:  parseFloat(String(b.miniCalendarThemeDayBorderWidth))  || 0 };
         if (b.miniCalendarThemeDayBorderStyle)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderStyle:  b.miniCalendarThemeDayBorderStyle };
         if (b.miniCalendarThemeDayBorderColor)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderColor:  b.miniCalendarThemeDayBorderColor };
-        if (b.miniCalendarThemeDayBorderRadius !== undefined) theme.dayNumbers = { ...theme.dayNumbers, innerBorderRadius: parseFloat(String(b.miniCalendarThemeDayBorderRadius)) || 0 };
+        // Temporary uniform-radius compat shim -- CalendarTheme.dayNumbers.radius
+        // is now a 4-corner RadiusCorners object (see CalendarRenderer.ts);
+        // this binding field still writes ONE value to all 4 corners until
+        // VariablePanel.ts's miniCalendar config is rebuilt with real
+        // independent TL/TR/BL/BR fields.
+        if (b.miniCalendarThemeDayBorderRadius !== undefined) {
+          const r = parseFloat(String(b.miniCalendarThemeDayBorderRadius)) || 0;
+          theme.dayNumbers = { ...theme.dayNumbers, radius: { tl: r, tr: r, br: r, bl: r } };
+        }
         if (b.miniCalendarThemeSectionGap      !== undefined) theme.sectionGap = parseFloat(String(b.miniCalendarThemeSectionGap)) || 0;
         return { year, month, displayMode, weekStart, highlight, theme: Object.keys(theme).length ? theme : undefined };
     }

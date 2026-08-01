@@ -21,36 +21,91 @@ const MOON_SYMBOLS: Record<string, string> = {
 const MOON_LABELS_PT: Record<string, string> = { nova: 'NOVA', crescente: 'CRESC.', cheia: 'CHEIA', minguante: 'MING.' };
 
 /**
- * `titleBar.bg`, `cellBg` and `weekendBg` are "resolvable" fields: they
- * accept anything utils/ColorPickerUI.ts's `normalizeValue()` understands
- * (a bare hex string, a JSON `ColorPickerValue` string, or a
- * `ColorPickerValue` object) -- buildCardHtml() below resolves them via
- * `cssFromValue(normalizeValue(...))` right before painting, so a gradient
- * picked in the standardized color-picker UI (MiniCalendarTool.ts's Theme
- * section / Variable Content's miniCalendar theme fields) renders as a real
- * CSS gradient here, since both spots use the `background` shorthand (which,
- * unlike `background-color`, happily accepts a `linear-gradient(...)` /
- * `radial-gradient(...)` string). Every other color field here (text/border
- * colors) stays solid-only -- CSS has no gradient `color`/`border-color`
- * without extra tricks (background-clip:text, border-image) this
- * HTML-string-based renderer doesn't attempt -- so those are always plain
- * hex strings, used as-is.
+ * Independent per-corner radius (top-left/top-right/bottom-right/
+ * bottom-left) -- CSS `border-radius` shorthand order is TL TR BR BL, NOT
+ * clockwise starting top-left (BR and BL are swapped vs. what "reading
+ * order" would suggest), so `_radiusCss()` below is the one place that
+ * ordering needs to be gotten right; every field/schema in this codebase
+ * that produces a RadiusCorners value can just use tl/tr/br/bl in any order
+ * without worrying about CSS's own quirky shorthand ordering.
+ */
+export interface RadiusCorners { tl?: number; tr?: number; br?: number; bl?: number; }
+
+/**
+ * `titleBar.bg`, `cellBg`, `weekendBg`, `weekHeader.letterBg`,
+ * `dayNumbers.cellBg`, `holidays.bg` and `moonPhases.bg` are all
+ * "resolvable" fields: they accept anything utils/ColorPickerUI.ts's
+ * `normalizeValue()` understands (a bare hex string, a JSON
+ * `ColorPickerValue` string, or a `ColorPickerValue` object) --
+ * buildCardHtml() below resolves each via `cssFromValue(normalizeValue(...))`
+ * right before painting, so a gradient picked in the standardized
+ * color-picker UI renders as a real CSS gradient here, since all of these
+ * use the `background` shorthand (which, unlike `background-color`, happily
+ * accepts a `linear-gradient(...)` / `radial-gradient(...)` string). Every
+ * other color field here (text/border colors) stays solid-only -- CSS has no
+ * gradient `color`/`border-color` without extra tricks (background-clip:text,
+ * border-image) this HTML-string-based renderer doesn't attempt -- so those
+ * are always plain hex strings, used as-is.
  */
 export interface CalendarTheme {
-  titleBar?: { bg?: string; color?: string; font?: string; fontWeight?: number; fontSize?: number };
-  weekHeader?: { bg?: string; color?: string; font?: string; fontSize?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string };
+  titleBar?: {
+    bg?: string; color?: string; font?: string; fontWeight?: number; fontSize?: number;
+    /** Horizontal alignment of the "MÊS ANO" text -- ignored (overridden by
+     * `splitMonthYear`'s own space-between layout) when that's on. */
+    align?: 'left' | 'center' | 'right';
+    /**
+     * Splits the month name and year to opposite ends of the title bar
+     * (`justify-content:space-between`) instead of one centered
+     * "JANEIRO 2027" string -- lets a template put the month on the left
+     * and the year on the right (or vice-versa via CSS `direction`, not
+     * exposed here).
+     */
+    splitMonthYear?: boolean;
+    radius?: RadiusCorners;
+  };
+  weekHeader?: {
+    bg?: string; color?: string; font?: string; fontSize?: number;
+    /** Horizontal alignment of each weekday letter inside its own cell. */
+    align?: 'left' | 'center' | 'right';
+    innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string;
+    radius?: RadiusCorners;
+    /**
+     * When true, each weekday letter (D/S/T/Q/Q/S/S) paints inside its own
+     * fixed-size inner box (`letterBg`/`letterRadius`/`letterSize`) instead
+     * of sitting bare in its flex cell -- setting `letterRadius` to a large
+     * value (defaultTheme() below defaults to 999, i.e. a full pill/circle)
+     * produces a "circle around each weekday initial" look.
+     */
+    letterShape?: boolean;
+    letterBg?: string;
+    letterRadius?: RadiusCorners;
+    /** Width/height (px) of the per-letter shape box. */
+    letterSize?: number;
+  };
   /**
-   * `innerBorderRadius` rounds each day-number cell's corners (applies
-   * whether or not `innerBorderWidth` is set, so it also rounds off a plain
-   * weekend/card background with no visible border) -- this is the knob
-   * that produces a "rounded calendar" look, one rounded box per day, same
-   * idea as TableTool.ts's "rounded cards" template.
+   * `cellStyleEnabled` gates the whole per-day-cell background/border/radius
+   * group below (`cellBg`/`innerBorder*`/`radius`) -- off by default so a
+   * freshly-created calendar keeps the original plain-grid look even though
+   * the underlying values may already be non-zero (e.g. right after toggling
+   * it on and back off without touching the individual fields). Saturday/
+   * Sunday's `weekendBg` and a single-day `CalendarOptions.highlight` are
+   * independent of this toggle and always apply on top when set.
    */
-  dayNumbers?: { color?: string; sundayColor?: string; font?: string; fontSize?: number; rowGap?: number; innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string; innerBorderRadius?: number };
-  holidays?: { color?: string; font?: string; fontSize?: number };
-  moonPhases?: { color?: string; font?: string; fontSize?: number };
+  dayNumbers?: {
+    color?: string; sundayColor?: string; font?: string; fontSize?: number; rowGap?: number;
+    /** Horizontal alignment of the day number inside its own cell. */
+    align?: 'left' | 'center' | 'right';
+    cellStyleEnabled?: boolean;
+    cellBg?: string;
+    innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string;
+    radius?: RadiusCorners;
+  };
+  holidays?: { color?: string; font?: string; fontSize?: number; align?: 'left' | 'center' | 'right'; bg?: string; radius?: RadiusCorners };
+  moonPhases?: { color?: string; font?: string; fontSize?: number; bg?: string; radius?: RadiusCorners };
   cellBg?: string;
   cellBorder?: { width?: number; style?: string; color?: string };
+  /** Radius of the outer card (the whole `.cal-month-card` container). */
+  cardRadius?: RadiusCorners;
   /**
    * Background painted on Saturday/Sunday day-number cells (in addition to
    * the ambient grid border), independent of `dayNumbers.sundayColor`'s
@@ -113,13 +168,26 @@ export class CalendarRenderer {
 
   static defaultTheme(): CalendarTheme {
       return {
-          titleBar: { bg: '#e11d2e', color: '#ffffff', font: 'DM Sans', fontWeight: 700, fontSize: 7 },
-          weekHeader: { bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#ffffff' },
-          dayNumbers: { color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc', innerBorderRadius: 0 },
-          holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2 },
-          moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2 },
+          titleBar: {
+              bg: '#e11d2e', color: '#ffffff', font: 'DM Sans', fontWeight: 700, fontSize: 7,
+              align: 'center', splitMonthYear: false, radius: {},
+          },
+          weekHeader: {
+              bg: '#1a1a1a', color: '#ffffff', font: 'DM Sans', fontSize: 5, align: 'center',
+              innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#ffffff',
+              radius: {}, letterShape: false, letterBg: '#ffffff',
+              letterRadius: { tl: 999, tr: 999, br: 999, bl: 999 }, letterSize: 18,
+          },
+          dayNumbers: {
+              color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, align: 'center',
+              cellStyleEnabled: false, cellBg: '',
+              innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc', radius: {},
+          },
+          holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2, align: 'center', bg: '', radius: {} },
+          moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2, bg: '', radius: {} },
           cellBg: '#ffffff',
           cellBorder: { width: 1, style: 'dashed', color: '#cccccc' },
+          cardRadius: {},
           weekendBg: '',
           sectionGap: 0,
       };
@@ -129,13 +197,18 @@ export class CalendarRenderer {
       const base = this.defaultTheme() as Required<CalendarTheme>;
       if (!theme) return base;
       return {
-          titleBar: { ...base.titleBar, ...(theme.titleBar || {}) },
-          weekHeader: { ...base.weekHeader, ...(theme.weekHeader || {}) },
-          dayNumbers: { ...base.dayNumbers, ...(theme.dayNumbers || {}) },
-          holidays: { ...base.holidays, ...(theme.holidays || {}) },
-          moonPhases: { ...base.moonPhases, ...(theme.moonPhases || {}) },
+          titleBar: { ...base.titleBar, ...(theme.titleBar || {}), radius: { ...base.titleBar.radius, ...(theme.titleBar?.radius || {}) } },
+          weekHeader: {
+              ...base.weekHeader, ...(theme.weekHeader || {}),
+              radius: { ...base.weekHeader.radius, ...(theme.weekHeader?.radius || {}) },
+              letterRadius: { ...base.weekHeader.letterRadius, ...(theme.weekHeader?.letterRadius || {}) },
+          },
+          dayNumbers: { ...base.dayNumbers, ...(theme.dayNumbers || {}), radius: { ...base.dayNumbers.radius, ...(theme.dayNumbers?.radius || {}) } },
+          holidays: { ...base.holidays, ...(theme.holidays || {}), radius: { ...base.holidays.radius, ...(theme.holidays?.radius || {}) } },
+          moonPhases: { ...base.moonPhases, ...(theme.moonPhases || {}), radius: { ...base.moonPhases.radius, ...(theme.moonPhases?.radius || {}) } },
           cellBg: theme.cellBg || base.cellBg,
           cellBorder: { ...base.cellBorder, ...(theme.cellBorder || {}) },
+          cardRadius: { ...base.cardRadius, ...(theme.cardRadius || {}) },
           weekendBg: theme.weekendBg || base.weekendBg,
           sectionGap: typeof theme.sectionGap === 'number' ? theme.sectionGap : base.sectionGap,
       } as Required<CalendarTheme>;
@@ -153,6 +226,12 @@ export class CalendarRenderer {
       const titleBarBg = cssFromValue(normalizeValue(t.titleBar.bg));
       const cellBgResolved = cssFromValue(normalizeValue(t.cellBg));
       const weekendBgResolved = t.weekendBg ? cssFromValue(normalizeValue(t.weekendBg)) : '';
+      const dayCellBgResolved = (t.dayNumbers.cellStyleEnabled && t.dayNumbers.cellBg)
+          ? cssFromValue(normalizeValue(t.dayNumbers.cellBg)) : '';
+      const letterBgResolved = t.weekHeader.letterShape && t.weekHeader.letterBg
+          ? cssFromValue(normalizeValue(t.weekHeader.letterBg)) : 'transparent';
+      const holidaysBgResolved = t.holidays.bg ? cssFromValue(normalizeValue(t.holidays.bg)) : '';
+      const moonBgResolved = t.moonPhases.bg ? cssFromValue(normalizeValue(t.moonPhases.bg)) : '';
 
       const parts = Object.assign({
           header: true,
@@ -176,19 +255,19 @@ export class CalendarRenderer {
       const holidays = BrazilianHolidays.getHolidaysForMonth(year, month);
       const holidayByDay = new Map(holidays.map((h: any) => [h.day, h.name]));
 
-      // Radius applies independent of border width, so it also rounds off a
-      // plain weekend/card background with no visible border showing (see
-      // CalendarTheme.dayNumbers.innerBorderRadius's own doc comment).
-      const dayCellRadius = t.dayNumbers.innerBorderRadius > 0
-          ? `border-radius:${t.dayNumbers.innerBorderRadius}px;`
+      // Per-day-cell border/radius/background -- gated behind
+      // `cellStyleEnabled` (see CalendarTheme.dayNumbers's own doc comment)
+      // so the ambient grid stays plain until the user explicitly opts in.
+      const cellStyleOn = !!t.dayNumbers.cellStyleEnabled;
+      const dayCellRadiusCss = cellStyleOn ? this._radiusCss(t.dayNumbers.radius) : '';
+      const dayCellBorderCss = (cellStyleOn && t.dayNumbers.innerBorderWidth > 0)
+          ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
           : '';
-      const dayCellBorder = (t.dayNumbers.innerBorderWidth > 0)
-          ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box; ${dayCellRadius}`
-          : (dayCellRadius ? `box-sizing:border-box; ${dayCellRadius}` : '');
+      const dayCellBase = [dayCellBorderCss, dayCellRadiusCss].filter(Boolean).join(' ');
       const highlight = options.highlight;
       let cells = '';
       for (let i = 0; i < leadingEmpty; i++) {
-          cells += `<span style="display:block; ${dayCellBorder}"></span>`;
+          cells += `<span style="display:flex; ${dayCellBase}"></span>`;
       }
       for (let day = 1; day <= daysInMonth; day++) {
           const weekday = (startWeekday + day - 1) % 7;
@@ -202,11 +281,12 @@ export class CalendarRenderer {
           const weight = (isSunday || isHoliday || isHighlighted) ? '700' : '400';
 
           // The highlighted cell's own background/border REPLACE the
-          // ambient grid's `dayCellBorder` entirely (rather than combining
+          // ambient grid's `dayCellBase` entirely (rather than combining
           // with it) -- a highlighted day is meant to stand out as its own
           // distinct cell, not inherit the plain grid-line look every other
           // cell has.
-          let cellExtra = dayCellBorder;
+          let cellExtra = dayCellBase;
+          if (dayCellBgResolved) cellExtra = `${cellExtra} background:${this._esc(dayCellBgResolved)};`;
           if (isHighlighted) {
               const hlBg          = this._esc(highlight!.bg || 'var(--accent, #f97316)');
               const hlBorderWidth = highlight!.borderWidth ?? 1;
@@ -219,13 +299,19 @@ export class CalendarRenderer {
               cellExtra = `background:${hlBg}; ${hlBorderCss} ${hlRadius ? `border-radius:${hlRadius}px;` : ''}`;
           } else if (weekendBgResolved && (weekday === 0 || weekday === 6)) {
               // Saturday/Sunday background (CalendarTheme.weekendBg) -- layers
-              // on top of the ambient grid border rather than replacing it,
-              // unlike the highlight cell above (which is meant to stand out
-              // as its own distinct cell).
-              cellExtra = `background:${this._esc(weekendBgResolved)}; ${dayCellBorder}`;
+              // on top of the ambient grid border/radius rather than
+              // replacing it, unlike the highlight cell above (which is
+              // meant to stand out as its own distinct cell).
+              cellExtra = `background:${this._esc(weekendBgResolved)}; ${dayCellBase}`;
           }
 
-          cells += `<span style="display:block; text-align:center; padding:1px 0; color:${this._esc(color)}; font-weight:${weight}; ${cellExtra}">${day}</span>`;
+          // Vertical + horizontal centering via flex (instead of the old
+          // `display:block; text-align:center; padding:1px 0`) so the day
+          // number always sits centered inside its span regardless of
+          // whatever height the cell ends up at (taller cells from a
+          // background/border/bigger font no longer leave the number glued
+          // to the top).
+          cells += `<span style="display:flex; align-items:center; justify-content:${this._justify(t.dayNumbers.align)}; box-sizing:border-box; color:${this._esc(color)}; font-weight:${weight}; ${cellExtra}">${day}</span>`;
       }
 
       const daysGridHtml = parts.days ? `
@@ -234,8 +320,9 @@ export class CalendarRenderer {
           </div>
       ` : '';
 
+      const holidaysBgCss = holidaysBgResolved ? `background:${this._esc(holidaysBgResolved)};` : '';
       const holidaysHtml = (parts.holidaysBox && holidays.length)
-          ? `<div class="cal-holidays" style="color:${this._esc(t.holidays.color)}; font-family:'${this._esc(t.holidays.font)}', sans-serif; font-size:${t.holidays.fontSize}pt; text-align:center; line-height:1.3; padding:1px 2px;">
+          ? `<div class="cal-holidays" style="color:${this._esc(t.holidays.color)}; font-family:'${this._esc(t.holidays.font)}', sans-serif; font-size:${t.holidays.fontSize}pt; text-align:${this._esc(t.holidays.align || 'center')}; line-height:1.3; padding:1px 2px; box-sizing:border-box; ${holidaysBgCss} ${this._radiusCss(t.holidays.radius)}">
               ${holidays.map((h: any) => `${String(h.day).padStart(2, '0')}. ${this._esc(h.name)}`).join(' &nbsp;&nbsp; ')}
              </div>`
           : '';
@@ -244,17 +331,22 @@ export class CalendarRenderer {
       if (parts.moonBox) {
           const phases = MoonPhases.getMoonPhasesForMonth(year, month);
           if (phases.length) {
+              const moonBgCss = moonBgResolved ? `background:${this._esc(moonBgResolved)};` : '';
               moonHtml = `
-                  <div class="cal-moons" style="display:flex; justify-content:space-around; flex-wrap:wrap; color:${this._esc(t.moonPhases.color)}; font-family:'${this._esc(t.moonPhases.font)}', sans-serif; font-size:${t.moonPhases.fontSize}pt; padding:1px 2px;">
+                  <div class="cal-moons" style="display:flex; justify-content:space-around; flex-wrap:wrap; color:${this._esc(t.moonPhases.color)}; font-family:'${this._esc(t.moonPhases.font)}', sans-serif; font-size:${t.moonPhases.fontSize}pt; padding:1px 2px; box-sizing:border-box; ${moonBgCss} ${this._radiusCss(t.moonPhases.radius)}">
                       ${phases.map((p: any) => `<span style="white-space:nowrap;">${MOON_SYMBOLS[p.phase] || ''} ${String(p.day).padStart(2, '0')} <span style="font-size:0.8em;">${MOON_LABELS_PT[p.phase] || ''}</span></span>`).join('')}
                   </div>
               `;
           }
       }
 
+      const titleBarInner = t.titleBar.splitMonthYear
+          ? `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;"><span>${MONTH_NAMES_PT[month - 1]}</span><span>${year}</span></div>`
+          : `${MONTH_NAMES_PT[month - 1]} ${year}`;
+
       const titleBarHtml = parts.header ? `
-              <div class="cal-title-bar" style="background:${this._esc(titleBarBg)}; color:${this._esc(t.titleBar.color)}; font-family:'${this._esc(t.titleBar.font)}', sans-serif; font-weight:${t.titleBar.fontWeight}; font-size:${t.titleBar.fontSize}pt; text-align:center; padding:2px 0; letter-spacing:0.3px;">
-                  ${MONTH_NAMES_PT[month - 1]} ${year}
+              <div class="cal-title-bar" style="background:${this._esc(titleBarBg)}; color:${this._esc(t.titleBar.color)}; font-family:'${this._esc(t.titleBar.font)}', sans-serif; font-weight:${t.titleBar.fontWeight}; font-size:${t.titleBar.fontSize}pt; text-align:${this._esc(t.titleBar.align || 'center')}; padding:2px 6px; letter-spacing:0.3px; box-sizing:border-box; ${this._radiusCss(t.titleBar.radius)}">
+                  ${titleBarInner}
               </div>` : '';
 
       // Rotate the Sunday-first letters array left by 1 for a Monday-first
@@ -264,19 +356,25 @@ export class CalendarRenderer {
           ? [...WEEKDAY_LETTERS_PT.slice(1), WEEKDAY_LETTERS_PT[0]]
           : WEEKDAY_LETTERS_PT;
 
+      const letterSize = t.weekHeader.letterSize || 18;
+      const letterShapeCss = t.weekHeader.letterShape
+          ? `display:inline-flex; align-items:center; justify-content:center; width:${letterSize}px; height:${letterSize}px; background:${this._esc(letterBgResolved)}; box-sizing:border-box; ${this._radiusCss(t.weekHeader.letterRadius)}`
+          : '';
+
       const weekHeaderHtml = parts.week ? `
-              <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt;">
+              <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt; box-sizing:border-box; ${this._radiusCss(t.weekHeader.radius)}">
                   ${weekHeaderLetters.map((l, i) => {
                       const isLast = i === weekHeaderLetters.length - 1;
                       const border = (t.weekHeader.innerBorderWidth > 0 && !isLast)
                           ? `border-right:${t.weekHeader.innerBorderWidth}px ${this._esc(t.weekHeader.innerBorderStyle)} ${this._esc(t.weekHeader.innerBorderColor)}; box-sizing:border-box;`
                           : '';
-                      return `<span style="flex:1; text-align:center; padding:1px 0; ${border}">${l}</span>`;
+                      const inner = t.weekHeader.letterShape ? `<span style="${letterShapeCss}">${l}</span>` : l;
+                      return `<span style="flex:1; display:flex; align-items:center; justify-content:${this._justify(t.weekHeader.align)}; padding:1px 0; box-sizing:border-box; ${border}">${inner}</span>`;
                   }).join('')}
               </div>` : '';
 
       return `
-          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)}; gap:${t.sectionGap || 0}px;">
+          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)}; gap:${t.sectionGap || 0}px; ${this._radiusCss(t.cardRadius)}">
               ${titleBarHtml}
               ${weekHeaderHtml}
               ${daysGridHtml}
@@ -290,6 +388,25 @@ export class CalendarRenderer {
       const wrapper = document.createElement('div');
       wrapper.innerHTML = this.buildCardHtml(year, month, options);
       return wrapper.firstElementChild as HTMLElement;
+  }
+
+  /**
+   * CSS `border-radius` shorthand order is TL TR BR BL -- see
+   * RadiusCorners's own doc comment for why that ordering matters here.
+   * Returns '' (no declaration) when every corner is 0/unset, so callers
+   * can splice this straight into a style string unconditionally.
+   */
+  static _radiusCss(r?: RadiusCorners): string {
+      if (!r) return '';
+      const tl = r.tl || 0, tr = r.tr || 0, br = r.br || 0, bl = r.bl || 0;
+      if (!tl && !tr && !br && !bl) return '';
+      return `border-radius:${tl}px ${tr}px ${br}px ${bl}px;`;
+  }
+
+  /** Maps a titleBar/weekHeader/dayNumbers/holidays `align` value to the
+   * flex `justify-content` keyword used inside their own centered cells. */
+  static _justify(align?: string): string {
+      return align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
   }
 
   static _esc(val: any): string {

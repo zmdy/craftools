@@ -214,7 +214,7 @@ export class MiniCalendarTool extends BaseTool {
     if (!('themeDayBorderWidth'  in existing)) patch.themeDayBorderWidth  = theme.dayNumbers?.innerBorderWidth  ?? defaults.dayNumbers!.innerBorderWidth;
     if (!('themeDayBorderStyle'  in existing)) patch.themeDayBorderStyle  = theme.dayNumbers?.innerBorderStyle  ?? defaults.dayNumbers!.innerBorderStyle;
     if (!('themeDayBorderColor'  in existing)) patch.themeDayBorderColor  = theme.dayNumbers?.innerBorderColor  ?? defaults.dayNumbers!.innerBorderColor;
-    if (!('themeDayBorderRadius' in existing)) patch.themeDayBorderRadius = theme.dayNumbers?.innerBorderRadius ?? defaults.dayNumbers!.innerBorderRadius;
+    if (!('themeDayBorderRadius' in existing)) patch.themeDayBorderRadius = theme.dayNumbers?.radius?.tl ?? defaults.dayNumbers!.radius?.tl ?? 0;
     if (!('themeSectionGap'      in existing)) patch.themeSectionGap      = theme.sectionGap ?? defaults.sectionGap;
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
@@ -362,7 +362,6 @@ export class MiniCalendarTool extends BaseTool {
     themeDayBorderWidth:  ['dayNumbers', 'innerBorderWidth'],
     themeDayBorderStyle:  ['dayNumbers', 'innerBorderStyle'],
     themeDayBorderColor:  ['dayNumbers', 'innerBorderColor'],
-    themeDayBorderRadius: ['dayNumbers', 'innerBorderRadius'],
     themeSectionGap:      ['sectionGap'],
   };
 
@@ -381,6 +380,17 @@ export class MiniCalendarTool extends BaseTool {
         if (!isNaN(m)) e._craftoolsMeta.month = m;
       } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
+      } else if (key === 'themeDayBorderRadius') {
+        // Temporary uniform-radius compat shim -- CalendarTheme.dayNumbers.radius
+        // is now a 4-corner RadiusCorners object (see CalendarRenderer.ts);
+        // this schema key still writes ONE value to all 4 corners until
+        // MiniCalendarTool.ts's Theme section is split into the new
+        // per-region tabs with real independent TL/TR/BL/BR fields.
+        const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, Record<string, unknown>>;
+        const dn = { ...(theme.dayNumbers ?? {}) };
+        dn.radius = { tl: value, tr: value, br: value, bl: value };
+        theme.dayNumbers = dn;
+        (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
       } else if (themePath) {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
         if (themePath.length === 2) {
