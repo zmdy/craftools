@@ -42,6 +42,7 @@ import { I18n }              from '../settings/Translations.js';
 import { AgendaExport }      from './AgendaExport.js';
 import { withEmojiFallback } from './EmojiFont.js';
 import HtmlToSvg              from '@tooooools/html-to-svg';
+import html2canvas            from 'html2canvas';
 import './AgendaSvgExport_Translations.js';
 
 import dmSansRegularUrl         from '../../assets/fonts/DMSans-Regular.woff?url';
@@ -382,7 +383,7 @@ export class AgendaSvgExport {
    * applied directly to the flattened page element while it is in the
    * off-screen stage (so offsetWidth/offsetHeight return real computed values).
    *
-   * Three passes:
+   * Four passes:
    *
    * 1. **Emoji** — EmojiTool renders a `<div data-emoji-char="😀">` with
    *    `font-family: 'Noto Color Emoji'`. That family is not in the
@@ -407,6 +408,21 @@ export class AgendaSvgExport {
    *    canvas and replace its src with a base64 data URL. Upload images
    *    (ImageTool, AlbumTool) are already data URLs from FileReader, so they
    *    skip this path entirely.
+   *
+   * 4. **Gradient text** — BaseTool._paintTextColor()'s gradient mode (used
+   *    by Text/Title/Variable Content whenever the shared color-gradient
+   *    picker is set to "gradient") fakes a gradient text color with
+   *    `background: <gradient>; background-clip: text;
+   *    -webkit-text-fill-color: transparent`. html-to-svg's text renderer
+   *    reads the plain (transparent) fill color for glyphs and doesn't
+   *    special-case `background-clip: text`, so every gradient-colored text
+   *    node -- including a date/number variable styled that way -- came out
+   *    fully invisible instead of gradient-filled. Since the browser itself
+   *    (unlike html-to-svg) renders this combination correctly on screen, we
+   *    rasterize just that element via html2canvas (already vendored for
+   *    ImageExport.ts/TableTool.ts) and swap it for a plain `<img>`, then
+   *    clear the gradient-text styles so html-to-svg doesn't also try to
+   *    paint the (unsupported) clipped background behind our raster.
    */
   private static async _preprocessForSvgExport(pageEl: HTMLElement): Promise<void> {
 
@@ -463,6 +479,45 @@ export class AgendaSvgExport {
       } catch {
         // Non-fatal: keep original src (SVG will have an external reference).
         console.warn('[AgendaSvgExport] Could not inline img src:', src.slice(0, 100));
+      }
+    }));
+
+    // ── Pass 4: gradient text (background-clip: text) ──────────────────
+    // Runs last so it captures anything the earlier passes already fixed
+    // (e.g. a gradient-colored heading containing an emoji rasterized by
+    // Pass 1). See this method's own doc comment, item 4, for why this is
+    // needed at all -- html-to-svg doesn't understand background-clip:text,
+    // so without this every gradient-colored text node (including a
+    // gradient-styled date/number) rendered fully blank.
+    const gradientTextEls = [...pageEl.querySelectorAll<HTMLElement>('*')]
+      .filter(el => el.style.webkitTextFillColor === 'transparent');
+    await Promise.all(gradientTextEls.map(async el => {
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      if (!w || !h) return; // nothing visible to rasterize
+      try {
+        const scale  = 3; // sharp enough for a vector-quality export
+        const canvas = await html2canvas(el, {
+          scale,
+          backgroundColor: null, // keep transparency around the glyphs
+          useCORS:         true,
+          allowTaint:       true,
+          logging:          false,
+        });
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.cssText = `display:block; width:${w}px; height:${h}px; user-select:none; pointer-events:none;`;
+
+        // Clear the gradient-text styles so html-to-svg's own background
+        // renderer doesn't ALSO try (and fail) to paint the clipped
+        // gradient as a plain rect behind our raster.
+        el.style.background           = '';
+        el.style.webkitBackgroundClip = '';
+        el.style.backgroundClip       = '';
+        el.style.webkitTextFillColor  = '';
+        el.replaceChildren(img);
+      } catch (err) {
+        console.warn('[AgendaSvgExport] Could not rasterize gradient text:', err);
       }
     }));
   }
