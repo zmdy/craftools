@@ -28,11 +28,6 @@ import '../../components/CtFontSelect.js';
 
 const c = (key: string): string => I18n.t('calendarTool.' + key);
 
-const MONTH_NAMES_PT = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
 import { FONTS, loadCraftoolsFonts } from '../../utils/FontList.ts';
 
 const CALENDAR_FONTS = FONTS;
@@ -200,29 +195,24 @@ export class CalendarTool {
         });
       });
 
-      const startMonthSel  = root.querySelector<HTMLSelectElement>('#cal-start-month');
-      const startYearInput = root.querySelector<HTMLInputElement>('#cal-start-year');
-      const endMonthSel    = root.querySelector<HTMLSelectElement>('#cal-end-month');
-      const endYearInput   = root.querySelector<HTMLInputElement>('#cal-end-year');
+      // Single native <input type="month"> per month/year field (was a
+      // month <select> + year number-input pair) -- value is "YYYY-MM",
+      // split back into the two separate numbers CalendarState still wants.
+      const startMonthYearInput = root.querySelector<HTMLInputElement>('#cal-start-month-year');
+      const endMonthYearInput   = root.querySelector<HTMLInputElement>('#cal-end-month-year');
       const sheetCountInput = root.querySelector<HTMLInputElement>('#cal-sheet-count');
 
-      if (startMonthSel) startMonthSel.addEventListener('change', () => {
-        state.startMonth = parseInt(startMonthSel.value, 10);
+      if (startMonthYearInput) startMonthYearInput.addEventListener('change', () => {
+        const [y, m] = startMonthYearInput.value.split('-').map(n => parseInt(n, 10));
+        if (!isNaN(y)) state.startYear = y;
+        if (!isNaN(m)) state.startMonth = m;
         CalendarTool._refreshGenerateSummary(root, state, currentPreset());
         updatePreview();
       });
-      if (startYearInput) startYearInput.addEventListener('input', () => {
-        state.startYear = parseInt(startYearInput.value, 10) || state.startYear;
-        CalendarTool._refreshGenerateSummary(root, state, currentPreset());
-        updatePreview();
-      });
-      if (endMonthSel) endMonthSel.addEventListener('change', () => {
-        state.endMonth = parseInt(endMonthSel.value, 10);
-        CalendarTool._refreshGenerateSummary(root, state, currentPreset());
-        updatePreview();
-      });
-      if (endYearInput) endYearInput.addEventListener('input', () => {
-        state.endYear = parseInt(endYearInput.value, 10) || state.endYear;
+      if (endMonthYearInput) endMonthYearInput.addEventListener('change', () => {
+        const [y, m] = endMonthYearInput.value.split('-').map(n => parseInt(n, 10));
+        if (!isNaN(y)) state.endYear = y;
+        if (!isNaN(m)) state.endMonth = m;
         CalendarTool._refreshGenerateSummary(root, state, currentPreset());
         updatePreview();
       });
@@ -330,10 +320,13 @@ export class CalendarTool {
   // ── Tab: Fill mode + Period ─────────────────────────────────────────
 
   private static _renderFillModeSection(state: CalendarState): string {
-    const monthSelect = (id: string, selectedMonth: number): string => `
-      <select id="${id}" class="craftools-select" style="width:100%;">
-        ${MONTH_NAMES_PT.map((name, i) => `<option value="${i + 1}" ${selectedMonth === i + 1 ? 'selected' : ''}>${name}</option>`).join('')}
-      </select>
+    // Native <input type="month"> -- one control instead of the previous
+    // month <select> + year number-input pair. Value is the input's own
+    // "YYYY-MM" string format; bindEvents() above splits it back into
+    // separate year/month numbers.
+    const monthYearInput = (id: string, year: number, month: number): string => `
+      <input type="month" id="${id}" class="craftools-input" style="width:100%;"
+        value="${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}" min="1900-01" max="2200-12">
     `;
 
     const fillModes = `
@@ -353,10 +346,7 @@ export class CalendarTool {
       periodHtml = `
         <div class="ct-field">
           <span class="craftools-label">${c('startMonthYear')}</span>
-          <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-            ${monthSelect('cal-start-month', state.startMonth)}
-            <input type="number" id="cal-start-year" class="craftools-input" value="${state.startYear}" min="1900" max="2200">
-          </div>
+          ${monthYearInput('cal-start-month-year', state.startYear, state.startMonth)}
         </div>
         <div class="ct-field">
           <span class="craftools-label">${c('sheetCount')}</span>
@@ -368,17 +358,11 @@ export class CalendarTool {
       periodHtml = `
         <div class="ct-field">
           <span class="craftools-label">${c('startMonthYear')}</span>
-          <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-            ${monthSelect('cal-start-month', state.startMonth)}
-            <input type="number" id="cal-start-year" class="craftools-input" value="${state.startYear}" min="1900" max="2200">
-          </div>
+          ${monthYearInput('cal-start-month-year', state.startYear, state.startMonth)}
         </div>
         <div class="ct-field">
           <span class="craftools-label">${c('endMonthYear')}</span>
-          <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-            ${monthSelect('cal-end-month', state.endMonth)}
-            <input type="number" id="cal-end-year" class="craftools-input" value="${state.endYear}" min="1900" max="2200">
-          </div>
+          ${monthYearInput('cal-end-month-year', state.endYear, state.endMonth)}
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${c('periodHelp')}</span>
         </div>
       `;
