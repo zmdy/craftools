@@ -20,7 +20,7 @@ import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI';
 import { Notify } from '../../utils/Notify';
 import { VariableEngine, type VariableBinding, type ApiCache } from '../../utils/VariableEngine';
-import { PdfExport } from '../../utils/PdfExport';
+import { PdfExport, type PageSize } from '../../utils/PdfExport';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { parseVariableBinding } from '../../utils/fields/variable-binding.field';
@@ -46,10 +46,11 @@ interface PageBinding {
 // ── Live canvas preview state (module-level so navigate buttons can update it) ──
 interface CanvasPreviewState {
   pages:         PageEl[];
-  outputPages:   string[]; // HTML strings for each resolved output page
+  outputPages:   { html: string; size: PageSize }[]; // resolved HTML + source page size for each output page
   currentIndex:  number;   // 0-based index of which output page is shown
   pagesWrapper:  HTMLElement | null;
   mainPage:      HTMLElement | null;
+  hiddenPages:   PageEl[]; // real .craftools-page siblings temporarily hidden while previewing (see _loadCanvasPreview())
   root:          HTMLElement;
 }
 
@@ -376,6 +377,28 @@ export class AgendaExportTool {
       editor._savedPageCssText = mainPage.style.cssText;
     }
 
+    // Hide every OTHER real .craftools-page while the preview is active.
+    // `main-page` is a fixed id hardcoded on just the FIRST physical page
+    // (see Editor.ts's bootstrap markup) -- an Agenda document commonly has
+    // a second (or more) real page (e.g. a non-repeating cover followed by
+    // a repeatable daily page). Without this, that second page stayed
+    // visible untouched below main-page the whole time the preview was
+    // open: navigating through the resolved output pages only ever
+    // rewrote main-page's own slot (so output pages that actually came
+    // from the SECOND page's design got crammed into the first page's
+    // box), while the second page's box sat there showing its own live,
+    // un-navigated content -- looking exactly like "the preview ignores
+    // pages without variables and only ever shows content on the first
+    // page". Restored in _disableCanvasPreview().
+    const hiddenPages: PageEl[] = [];
+    pages.forEach(p => {
+      if (p === mainPage) return;
+      if (p.style.display !== 'none') {
+        p.style.display = 'none';
+        hiddenPages.push(p);
+      }
+    });
+
     // Show badge -- same #generator-canvas-badge element (and exact style)
     // GeneratorTool.ts/CalendarTool.ts already use for their own canvas
     // preview badge, so all three look identical. This one previously
@@ -403,10 +426,11 @@ export class AgendaExportTool {
     try {
       const { AgendaExport } = await import('../../utils/AgendaExport.js');
 
-      // Build resolved output pages as HTML strings (one per output page)
-      // -- the toggle has no "first N pages" limit anymore (that scope
-      // choice was removed along with the pill buttons); Prev/Next now
-      // navigates the full set, so the preview should always match it.
+      // Build resolved output pages (HTML + source page size, one per
+      // output page) -- the toggle has no "first N pages" limit anymore
+      // (that scope choice was removed along with the pill buttons);
+      // Prev/Next now navigates the full set, so the preview should
+      // always match it.
       const outputPages = await AgendaExport.buildOutputPages(editor as HTMLElement, {});
 
       if (!outputPages || !outputPages.length) {
@@ -420,6 +444,7 @@ export class AgendaExportTool {
         currentIndex:  0,
         pagesWrapper,
         mainPage,
+        hiddenPages,
         root,
       };
 
@@ -441,6 +466,12 @@ export class AgendaExportTool {
    * back to their initial disabled/placeholder look.
    */
   private static _disableCanvasPreview(root: HTMLElement, editor: EditorEl): void {
+    // Undo the sibling-page hiding done in _loadCanvasPreview() BEFORE
+    // clearing _canvasState below -- restoreOriginalCanvas() only ever
+    // touches main-page itself, it has no idea about the other pages this
+    // tool hid.
+    _canvasState?.hiddenPages.forEach(p => { p.style.display = ''; });
+
     editor.restoreOriginalCanvas?.();
     _canvasState = null;
 
@@ -465,7 +496,17 @@ export class AgendaExportTool {
     if (!mainPage || index < 0 || index >= outputPages.length) return;
 
     _canvasState.currentIndex = index;
-    mainPage.innerHTML = outputPages[index];
+    const { html, size } = outputPages[index];
+
+    // Resize main-page's own box to match THIS output page's source page --
+    // main-page is permanently sized for whichever physical page was
+    // created first (see Editor.ts's bootstrap markup), so without this an
+    // output page coming from a differently-sized second/third page would
+    // render its real content inside a box still sized for the first page.
+    mainPage.style.width     = size.width;
+    mainPage.style.minHeight = size.height;
+    mainPage.style.background = size.background;
+    mainPage.innerHTML = html;
 
     const pageLabel = root.querySelector<HTMLElement>('#agenda-preview-page-label');
     const prevBtn   = root.querySelector<HTMLButtonElement>('[data-agenda-nav="prev"]');

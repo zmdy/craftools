@@ -288,7 +288,7 @@ export class AgendaExport {
   static async buildOutputPages(
     editor: HTMLElement,
     opts: { maxOutputPages?: number } = {},
-  ): Promise<string[] | null> {
+  ): Promise<{ html: string; size: import('./PdfExport.js').PageSize }[] | null> {
     const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
     if (!pages.length) return null;
 
@@ -311,7 +311,7 @@ export class AgendaExport {
       repetitionIndices: [...repetitionIndicesSet],
     });
 
-    const outputInnerHtmls: string[] = [];
+    const outputPages: { html: string; size: import('./PdfExport.js').PageSize }[] = [];
     let outputPageNumber = 0;
     // Same per-page reset (with opt-in continuation) as _buildDocument() --
     // see that method's matching comment. Kept identical here so the
@@ -323,7 +323,8 @@ export class AgendaExport {
 
     outer:
     for (const page of pages) {
-      const repeatCount = this._repeatCount(page);
+      const size        = PdfExport._parsePageSize(page);
+      const repeatCount  = this._repeatCount(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
       const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
       const pageStartIndex    = continuesSequence ? sequenceBase : 0;
@@ -386,14 +387,19 @@ export class AgendaExport {
         // craftools-element tags natively (no need to flatten for display).
         // UI-only nodes (drag handles, overlays) were already removed
         // above via PREVIEW_STRIP_SELECTORS; the ctrlbar was hidden, not
-        // removed, and stays in the markup returned here.
-        outputInnerHtmls.push(clone.innerHTML);
+        // removed, and stays in the markup returned here. `size` travels
+        // alongside the HTML so the canvas preview slot can be resized to
+        // match THIS output page's own source page -- see
+        // AgendaExportTool.ts's _showCanvasPage() for why that matters
+        // (previously every output page was crammed into whatever fixed
+        // dimensions the first physical page happened to have).
+        outputPages.push({ html: clone.innerHTML, size });
       }
 
       sequenceBase = pageStartIndex + repeatCount;
     }
 
-    return outputInnerHtmls.length ? outputInnerHtmls : null;
+    return outputPages.length ? outputPages : null;
   }
 
   /**
