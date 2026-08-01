@@ -6,6 +6,9 @@ import { withEmojiFallback } from './EmojiFont.js';
 import { renderColorPicker, normalizeValue } from './ColorPickerUI.js';
 import { PropertyRenderer } from './PropertyRenderer.js';
 import { parseVariableBinding } from './fields/variable-binding.field.js';
+import { CalendarRenderer, type CalendarTheme } from './CalendarRenderer.js';
+import { calendarStyleSections } from './CalendarStyleSchema.js';
+import { CALENDAR_THEME_KEY_PATHS, getThemePath, setThemePath } from './CalendarThemeKeyPaths.js';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -731,55 +734,7 @@ export class VariablePanel {
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarWeekStartSunday')}</span>
                 </label>
             </div>
-            <div class="ct-field" style="margin-top:10px; padding:10px; background:var(--bg-surface); border-radius:6px; border:1px solid var(--border);">
-                <span class="craftools-label" style="display:block; margin-bottom:6px;">${I18n.t('variablePanel.miniCalendarThemeSectionLabel')}</span>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeTitleBarBg')}</span>
-                    <div id="var-minical-theme-titlebar-bg-picker"></div>
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeTitleBarText')}</span>
-                    <div id="var-minical-theme-titlebar-text-picker"></div>
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeCellBg')}</span>
-                    <div id="var-minical-theme-cellbg-picker"></div>
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeDayText')}</span>
-                    <div id="var-minical-theme-daytext-picker"></div>
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeWeekendBg')}</span>
-                    <div id="var-minical-theme-weekendbg-picker"></div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
-                        <select id="var-minical-theme-dayborder-style" class="craftools-select" style="width:100%;">
-                            ${['solid', 'dashed', 'dotted'].map(style => `
-                                <option value="${style}" ${(b.miniCalendarThemeDayBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
-                        <input type="number" id="var-minical-theme-dayborder-width" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeDayBorderWidth !== undefined ? b.miniCalendarThemeDayBorderWidth : 0}" min="0" max="10">
-                    </div>
-                </div>
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
-                    <div id="var-minical-theme-dayborder-color-picker"></div>
-                </div>
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeDayBorderRadius')}</span>
-                    <input type="number" id="var-minical-theme-dayborder-radius" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeDayBorderRadius !== undefined ? b.miniCalendarThemeDayBorderRadius : 0}" min="0" max="100">
-                </div>
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('variablePanel.miniCalendarThemeSectionGap')}</span>
-                    <input type="number" id="var-minical-theme-sectiongap" class="craftools-input" style="width:100%;" value="${b.miniCalendarThemeSectionGap !== undefined ? b.miniCalendarThemeSectionGap : 0}" min="0" max="40">
-                </div>
-            </div>
+            <div id="var-minical-style-sections" style="margin-top:10px;"></div>
             <div class="ct-field" style="margin-top:6px;">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-highlight-enabled" class="ct-fi" style="display:none;" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
@@ -1437,71 +1392,35 @@ export class VariablePanel {
                         notify();
                     };
 
-                    // Theme colors (header/day background+text) -- same
-                    // concept/shape as MiniCalendarTool.ts's own Theme
-                    // schema section, using the same standardized
-                    // solid-or-gradient color-picker component the rest of
-                    // the app uses. titleBar.bg/cellBg/weekendBg allow
-                    // gradients (CalendarRenderer.ts paints them with the
-                    // CSS `background` shorthand); the two text colors stay
-                    // solid-only, matching MiniCalendarTool.ts's own choice.
-                    const themeTitleBarBgEl   = container.querySelector<HTMLElement>('#var-minical-theme-titlebar-bg-picker');
-                    const themeTitleBarTextEl = container.querySelector<HTMLElement>('#var-minical-theme-titlebar-text-picker');
-                    const themeCellBgEl       = container.querySelector<HTMLElement>('#var-minical-theme-cellbg-picker');
-                    const themeDayTextEl      = container.querySelector<HTMLElement>('#var-minical-theme-daytext-picker');
-                    const themeWeekendBgEl    = container.querySelector<HTMLElement>('#var-minical-theme-weekendbg-picker');
+                    // Full 5-tab style schema (card / month bar / days table /
+                    // day header / holidays+moon) -- same canonical
+                    // CalendarStyleSchema.ts sections CalendarTool.ts and
+                    // MiniCalendarTool.ts render, via the same synthetic
+                    // detached-element adapter (binding!.miniCalendarTheme is
+                    // a plain object, not a real DOM element).
+                    const styleSectionsWrap = container.querySelector<HTMLElement>('#var-minical-style-sections');
+                    if (styleSectionsWrap) {
+                        const theme = binding!.miniCalendarTheme ?? {};
+                        const defaults = CalendarRenderer.defaultTheme();
+                        const ctState: Record<string, unknown> = {};
+                        for (const [flatKey, path] of Object.entries(CALENDAR_THEME_KEY_PATHS)) {
+                            const fromTheme   = getThemePath(theme, path);
+                            const fromDefault = getThemePath(defaults, path);
+                            ctState[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
+                        }
+                        const fakeEl = document.createElement('div');
+                        fakeEl.dataset.ctState = JSON.stringify(ctState);
 
-                    if (themeTitleBarBgEl) {
-                        renderColorPicker(themeTitleBarBgEl, normalizeValue(binding!.miniCalendarThemeTitleBarBg || '#e11d2e'), (next) => {
-                            binding!.miniCalendarThemeTitleBarBg = next.mode === 'gradient' ? JSON.stringify(next) : next.solid;
+                        PropertyRenderer.render(styleSectionsWrap, calendarStyleSections(), fakeEl, (key, value) => {
+                            PropertyRenderer.applyChange(fakeEl, key, value);
+                            const path = CALENDAR_THEME_KEY_PATHS[key];
+                            if (path) {
+                                const nextTheme: Record<string, unknown> = { ...(binding!.miniCalendarTheme ?? {}) };
+                                setThemePath(nextTheme, path, value);
+                                binding!.miniCalendarTheme = nextTheme as CalendarTheme;
+                            }
                             notify();
-                        }, { allowGradient: true });
-                    }
-                    if (themeTitleBarTextEl) {
-                        renderColorPicker(themeTitleBarTextEl, normalizeValue(binding!.miniCalendarThemeTitleBarText || '#ffffff'), (next) => {
-                            binding!.miniCalendarThemeTitleBarText = next.solid;
-                            notify();
-                        }, { allowGradient: false });
-                    }
-                    if (themeCellBgEl) {
-                        renderColorPicker(themeCellBgEl, normalizeValue(binding!.miniCalendarThemeCellBg || '#ffffff'), (next) => {
-                            binding!.miniCalendarThemeCellBg = next.mode === 'gradient' ? JSON.stringify(next) : next.solid;
-                            notify();
-                        }, { allowGradient: true });
-                    }
-                    if (themeDayTextEl) {
-                        renderColorPicker(themeDayTextEl, normalizeValue(binding!.miniCalendarThemeDayText || '#1a1a1a'), (next) => {
-                            binding!.miniCalendarThemeDayText = next.solid;
-                            notify();
-                        }, { allowGradient: false });
-                    }
-                    if (themeWeekendBgEl) {
-                        renderColorPicker(themeWeekendBgEl, normalizeValue(binding!.miniCalendarThemeWeekendBg || '#fff7ed'), (next) => {
-                            binding!.miniCalendarThemeWeekendBg = next.mode === 'gradient' ? JSON.stringify(next) : next.solid;
-                            notify();
-                        }, { allowGradient: true });
-                    }
-
-                    // Per-day-cell border (width/style/color/radius) -- radius is
-                    // the knob that produces a "rounded calendar" look -- and
-                    // the gap between the card's stacked sections. Same concept
-                    // as MiniCalendarTool.ts's own themeDayBorder*/themeSectionGap
-                    // schema fields.
-                    const themeDayBorderStyleSel = container.querySelector<HTMLSelectElement>('#var-minical-theme-dayborder-style');
-                    const themeDayBorderWidthEl  = container.querySelector<HTMLInputElement>('#var-minical-theme-dayborder-width');
-                    const themeDayBorderColorEl  = container.querySelector<HTMLElement>('#var-minical-theme-dayborder-color-picker');
-                    const themeDayBorderRadiusEl = container.querySelector<HTMLInputElement>('#var-minical-theme-dayborder-radius');
-                    const themeSectionGapEl      = container.querySelector<HTMLInputElement>('#var-minical-theme-sectiongap');
-
-                    if (themeDayBorderStyleSel) themeDayBorderStyleSel.onchange = () => { binding!.miniCalendarThemeDayBorderStyle = themeDayBorderStyleSel.value; notify(); };
-                    if (themeDayBorderWidthEl)  themeDayBorderWidthEl.oninput   = () => { binding!.miniCalendarThemeDayBorderWidth  = parseFloat(themeDayBorderWidthEl.value)  || 0; notify(); };
-                    if (themeDayBorderRadiusEl) themeDayBorderRadiusEl.oninput  = () => { binding!.miniCalendarThemeDayBorderRadius = parseFloat(themeDayBorderRadiusEl.value) || 0; notify(); };
-                    if (themeSectionGapEl)      themeSectionGapEl.oninput      = () => { binding!.miniCalendarThemeSectionGap      = parseFloat(themeSectionGapEl.value)      || 0; notify(); };
-                    if (themeDayBorderColorEl) {
-                        renderColorPicker(themeDayBorderColorEl, normalizeValue(binding!.miniCalendarThemeDayBorderColor || '#cccccc'), (next) => {
-                            binding!.miniCalendarThemeDayBorderColor = next.solid;
-                            notify();
-                        }, { allowGradient: false });
+                        });
                     }
 
                     // Highlight (single day-of-month, styled independently of

@@ -198,36 +198,17 @@ export interface VariableBinding {
     miniCalendarHighlightBorderRadius?: number | string;
     miniCalendarHighlightBorderStyle?:  string;
     /**
-     * Theme colors -- same concept/shape/keys as MiniCalendarTool.ts's own
-     * "Theme" schema section, both ultimately feed a CalendarRenderer.ts
-     * `CalendarTheme`. Kept as its own prefixed set of fields here (rather
+     * Full calendar theme -- same shape/schema as CalendarTool.ts's and
+     * MiniCalendarTool.ts's own theme storage (see CalendarStyleSchema.ts's
+     * header comment: all three UI surfaces render the same 5 style sections
+     * against the same `CalendarTheme`). Kept as its own field here (rather
      * than reusing the tool's meta keys directly) since Variable Content's
      * miniCalendar format has its own independent binding config, resolved
-     * fresh per repetition in `_pickMiniCalendar()`. Undefined/empty falls
-     * back to CalendarRenderer's own defaults (same as before these fields
-     * existed). `miniCalendarThemeTitleBarBg`/`CellBg`/`WeekendBg` accept
-     * anything ColorPickerUI.ts's `normalizeValue()` understands (bare hex
-     * or a JSON ColorPickerValue string), so gradients are possible for
-     * those three -- see CalendarTheme's own doc comment in
-     * CalendarRenderer.ts. The text-color fields stay plain solid hex.
+     * fresh per repetition in `_pickMiniCalendar()`. Undefined leaves
+     * CalendarRenderer.mergeTheme() to fall back to its own defaults, same
+     * as before this field existed.
      */
-    miniCalendarThemeTitleBarBg?:   string;
-    miniCalendarThemeTitleBarText?: string;
-    miniCalendarThemeCellBg?:       string;
-    miniCalendarThemeDayText?:      string;
-    miniCalendarThemeWeekendBg?:    string;
-    /**
-     * Per-day-cell border (width/style/color/radius) -- radius is the knob
-     * that produces a "rounded calendar" look, one rounded box per day.
-     * Same concept as MiniCalendarTool.ts's own themeDayBorder* schema
-     * fields (CalendarTheme.dayNumbers.innerBorder*).
-     */
-    miniCalendarThemeDayBorderWidth?:  number | string;
-    miniCalendarThemeDayBorderStyle?:  string;
-    miniCalendarThemeDayBorderColor?:  string;
-    miniCalendarThemeDayBorderRadius?: number | string;
-    /** Vertical gap (px) between the card's stacked sections (CalendarTheme.sectionGap). */
-    miniCalendarThemeSectionGap?: number | string;
+    miniCalendarTheme?: CalendarTheme;
 }
 
 export interface ResolveContext {
@@ -1378,30 +1359,11 @@ export class VariableEngine {
             borderStyle:  b.miniCalendarHighlightBorderStyle,
         } : undefined;
         const weekStart: 'sunday' | 'monday' = b.weekStartSunday === false ? 'monday' : 'sunday';
-        // Only set keys the user actually touched -- CalendarRenderer.mergeTheme()
-        // falls back to its own defaults for anything left undefined, so an
-        // untouched field keeps looking exactly like it did before these
-        // theme controls existed instead of resolving to an empty string.
-        const theme: CalendarTheme = {};
-        if (b.miniCalendarThemeTitleBarBg)   theme.titleBar   = { ...theme.titleBar,   bg: b.miniCalendarThemeTitleBarBg };
-        if (b.miniCalendarThemeTitleBarText) theme.titleBar   = { ...theme.titleBar,   color: b.miniCalendarThemeTitleBarText };
-        if (b.miniCalendarThemeCellBg)       theme.cellBg     = b.miniCalendarThemeCellBg;
-        if (b.miniCalendarThemeDayText)      theme.dayNumbers = { ...theme.dayNumbers, color: b.miniCalendarThemeDayText };
-        if (b.miniCalendarThemeWeekendBg)    theme.weekendBg  = b.miniCalendarThemeWeekendBg;
-        if (b.miniCalendarThemeDayBorderWidth  !== undefined) theme.dayNumbers = { ...theme.dayNumbers, innerBorderWidth:  parseFloat(String(b.miniCalendarThemeDayBorderWidth))  || 0 };
-        if (b.miniCalendarThemeDayBorderStyle)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderStyle:  b.miniCalendarThemeDayBorderStyle };
-        if (b.miniCalendarThemeDayBorderColor)                theme.dayNumbers = { ...theme.dayNumbers, innerBorderColor:  b.miniCalendarThemeDayBorderColor };
-        // Temporary uniform-radius compat shim -- CalendarTheme.dayNumbers.radius
-        // is now a 4-corner RadiusCorners object (see CalendarRenderer.ts);
-        // this binding field still writes ONE value to all 4 corners until
-        // VariablePanel.ts's miniCalendar config is rebuilt with real
-        // independent TL/TR/BL/BR fields.
-        if (b.miniCalendarThemeDayBorderRadius !== undefined) {
-          const r = parseFloat(String(b.miniCalendarThemeDayBorderRadius)) || 0;
-          theme.dayNumbers = { ...theme.dayNumbers, radius: { tl: r, tr: r, br: r, bl: r } };
-        }
-        if (b.miniCalendarThemeSectionGap      !== undefined) theme.sectionGap = parseFloat(String(b.miniCalendarThemeSectionGap)) || 0;
-        return { year, month, displayMode, weekStart, highlight, theme: Object.keys(theme).length ? theme : undefined };
+        // Full CalendarTheme object, same shape CalendarTool.ts/MiniCalendarTool.ts
+        // persist -- CalendarRenderer.mergeTheme() falls back to its own defaults
+        // for anything left undefined.
+        const theme = b.miniCalendarTheme;
+        return { year, month, displayMode, weekStart, highlight, theme };
     }
 
     private static _formatMiniCalendar(pick: MiniCalendarPick): string {
