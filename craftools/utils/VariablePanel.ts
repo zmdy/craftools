@@ -663,14 +663,7 @@ export class VariablePanel {
         `;
     }
 
-    private static _monthNamesPt(): string[] {
-        return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    }
-
     private static _miniCalendarConfig(b: VariableBinding, element: VarElement | null): string {
-        const monthOptions = this._monthNamesPt().map((name, i) =>
-            `<option value="${i + 1}" ${b.month === i + 1 ? 'selected' : ''}>${name}</option>`
-        ).join('');
         const highlightDaySource = b.miniCalendarHighlightDaySource ?? 'today';
         const highlightLinked = highlightDaySource === 'linked';
         // Candidates for "link the highlight day to a date variable" -- any
@@ -715,10 +708,8 @@ export class VariablePanel {
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarMonthYearLabel')}</span>
-                <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-                    <select id="var-minical-month" class="craftools-select">${monthOptions}</select>
-                    <input type="number" id="var-minical-year" class="craftools-input" value="${b.year ?? new Date().getFullYear()}" min="1900" max="2200">
-                </div>
+                <input type="month" id="var-minical-monthyear" class="craftools-input"
+                    value="${String(b.year ?? new Date().getFullYear()).padStart(4, '0')}-${String(b.month ?? (new Date().getMonth() + 1)).padStart(2, '0')}">
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarDisplayModeLabel')}</span>
@@ -1376,12 +1367,21 @@ export class VariablePanel {
                 }
                 case 'miniCalendar': {
                     const modeSel        = container.querySelector<HTMLSelectElement>('#var-minical-mode');
-                    const monthSel       = container.querySelector<HTMLSelectElement>('#var-minical-month');
-                    const yearInput      = container.querySelector<HTMLInputElement>('#var-minical-year');
+                    const monthYearInput = container.querySelector<HTMLInputElement>('#var-minical-monthyear');
                     const displayModeSel = container.querySelector<HTMLSelectElement>('#var-minical-displaymode');
                     if (modeSel)        modeSel.onchange        = () => { binding!.mode        = modeSel.value;                              notify(); };
-                    if (monthSel)       monthSel.onchange       = () => { binding!.month       = parseInt(monthSel.value, 10);               notify(); };
-                    if (yearInput)      yearInput.oninput       = () => { binding!.year        = parseInt(yearInput.value, 10) || binding!.year; notify(); };
+                    if (monthYearInput) monthYearInput.onchange = () => {
+                        // Native <input type="month"> -- "YYYY-MM", split back
+                        // into the two separate year/month numbers the
+                        // 'miniCalendar' binding shape still stores (see
+                        // VariableEngine.ts's VariableBinding.year/.month).
+                        const [yStr, mStr] = monthYearInput.value.split('-');
+                        const y = parseInt(yStr, 10);
+                        const m = parseInt(mStr, 10);
+                        if (!isNaN(y)) binding!.year  = y;
+                        if (!isNaN(m)) binding!.month = m;
+                        notify();
+                    };
                     if (displayModeSel) displayModeSel.onchange = () => { binding!.displayMode = displayModeSel.value;                       notify(); };
 
                     // Standard toggle-switch visual update (track background +
