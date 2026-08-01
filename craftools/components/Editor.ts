@@ -639,6 +639,15 @@ export class Craftools_Editor extends HTMLElement {
       if (closePanel)  closePanel.classList.add('d-none');
       if (panelTitle)  panelTitle.textContent = '';
       if (rightPanel)  rightPanel.classList.remove('mobile-modal-mode');
+      // Deselecting an element (delete, click empty canvas, etc.) closes
+      // whatever properties panel was showing it -- the sidebar/footer tool
+      // button that opened it needs to lose its highlight too, same as
+      // closePanelMenu() does when the user closes the panel explicitly.
+      // `clearToolActive` is defined further down in this same bindEvents()
+      // call, but this listener only ever RUNS later (on the deselect
+      // event), by which point the whole function has already finished
+      // executing and the const is safely initialized.
+      clearToolActive();
       this.activePage = null;
     });
 
@@ -659,6 +668,18 @@ export class Craftools_Editor extends HTMLElement {
 
     // ── Sidebar tool buttons ────────────────────────────────────────────────
     const toolBtns = document.querySelectorAll<HTMLElement>('.craftools-tool-btn[data-tool], .footer-nav-btn, .sidenav-nav a');
+    // Every "clear the highlighted sidebar/footer tool button" call used to
+    // re-query its own ad hoc selector ('.craftools-tool-btn, .footer-nav-btn'
+    // -- copied from the mobile footer toolbar) that never actually matched
+    // the desktop sidebar's `.sidenav-nav a` buttons, even though `toolBtns`
+    // above (the set actually clicked/activated) always included them. Net
+    // effect: clicking a sidebar tool added 'active' to it directly (that
+    // part targets the specific clicked element, so it always worked), but
+    // every later "clear" call silently missed it, so it and every
+    // previously-clicked sidebar button stayed highlighted forever. Reusing
+    // the exact same `toolBtns` collection here guarantees the set that gets
+    // cleared always matches the set that can get 'active' added to it.
+    const clearToolActive = (): void => toolBtns.forEach(b => b.classList.remove('active'));
     const rightPanel  = document.getElementById('right-panel');
     const panelTitle  = document.getElementById('panel-title');
     const closePanel  = document.getElementById('close-panel');
@@ -686,7 +707,7 @@ export class Craftools_Editor extends HTMLElement {
       if (closePanel)  closePanel.classList.add('d-none');
       if (panelTitle)  panelTitle.textContent = '';
       if (rightPanel)  rightPanel.classList.remove('mobile-modal-mode');
-      document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+      clearToolActive();
       this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
       this.activePage = null;
       if (isMobile()) MobileToolbar.showToolMode();
@@ -836,7 +857,7 @@ export class Craftools_Editor extends HTMLElement {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+          clearToolActive();
           btn.classList.add('active');
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -878,7 +899,7 @@ export class Craftools_Editor extends HTMLElement {
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
-          document.querySelectorAll('.craftools-tool-btn, .footer-nav-btn').forEach(b => b.classList.remove('active'));
+          clearToolActive();
           btn.classList.add('active');
 
           // album: open the wizard panel on the active page

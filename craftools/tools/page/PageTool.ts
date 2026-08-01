@@ -296,7 +296,12 @@ export class PageTool {
         (e.target as HTMLElement).id === 'canvas-area';
 
       if (isPageClick) {
-        editor.querySelectorAll('.craftools-tool-btn').forEach(b => b.classList.remove('active'));
+        // Same selector Editor.ts's own clearToolActive() uses -- this used
+        // to only match '.craftools-tool-btn' (the mobile footer toolbar's
+        // class), never the desktop sidebar's '.sidenav-nav a' buttons, so
+        // clicking empty canvas never actually cleared a highlighted
+        // sidebar tool.
+        editor.querySelectorAll('.craftools-tool-btn, .footer-nav-btn, .sidenav-nav a').forEach(b => b.classList.remove('active'));
 
         // Check if page has a grid
         const gridContainer = pageEl.querySelector<HTMLElement>('.craftools-grid-container');
