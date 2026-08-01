@@ -115,6 +115,7 @@ export class SettingsTool {
       snapAlign:       vhToHv(cur.defaultSnapAlign),
       autoCenter:      cur.defaultAutoCenterOnSelect,
       ctxBarMode:      cur.ctxBarMode,
+      allowMultipleAccordions: cur.allowMultipleAccordions,
       iconPack:        cur.defaultIconPack,
     };
   }
@@ -155,6 +156,9 @@ export class SettingsTool {
         document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change', { detail: { mode } }));
         break;
       }
+      case 'allowMultipleAccordions':
+        AppSettings.set({ allowMultipleAccordions: Boolean(value) });
+        break;
       case 'iconPack':
         AppSettings.set({ defaultIconPack: String(value) });
         break;
@@ -201,6 +205,7 @@ export class SettingsTool {
         icon: 'crop_free',
         fields: [
           { type: 'toggle', key: 'autoCenter', label: s('fieldAutoCenter'), i18nKey: 'settingsTool.fieldAutoCenter' },
+          { type: 'toggle', key: 'allowMultipleAccordions', label: s('fieldAllowMultipleAccordions'), i18nKey: 'settingsTool.fieldAllowMultipleAccordions' },
           { type: 'divider', key: 'ctxbar-mode-divider', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode', icon: 'dock_to_bottom' },
           {
             type: 'custom', key: 'ctxBarMode', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode',
@@ -234,17 +239,21 @@ export class SettingsTool {
     const wrap = document.createElement('div');
     wrap.className = 'ct-field-row';
     wrap.style.gap = '6px';
+    // Stacked vertically (one option per row) rather than side-by-side --
+    // matches how every other multi-option control in this section reads
+    // top-to-bottom instead of competing for horizontal space.
+    wrap.style.flexDirection = 'column';
 
     const paint = (): void => {
       const state = PropertyRenderer._readState(element);
       const mode  = (state.ctxBarMode as string) ?? 'floating';
 
       wrap.innerHTML = `
-        <button type="button" class="craftools-pill${mode === 'floating' ? ' active' : ''}" data-mode="floating" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+        <button type="button" class="craftools-pill${mode === 'floating' ? ' active' : ''}" data-mode="floating" style="width:100%; justify-content:center; gap:5px; padding:7px 10px;">
           <span class="material-symbols-outlined" style="font-size:14px;">push_pin</span>
           ${s('ctxBarModeFloating')}
         </button>
-        <button type="button" class="craftools-pill${mode === 'fixed' ? ' active' : ''}" data-mode="fixed" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+        <button type="button" class="craftools-pill${mode === 'fixed' ? ' active' : ''}" data-mode="fixed" style="width:100%; justify-content:center; gap:5px; padding:7px 10px;">
           <span class="material-symbols-outlined" style="font-size:14px;">dock_to_bottom</span>
           ${s('ctxBarModeFixed')}
         </button>`;

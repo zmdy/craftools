@@ -1,9 +1,8 @@
 /**
  * PanelUI — Design System helper for the CrafTools side-panel.
  *
- * Provides accordion building blocks, field helpers and the one-open-at-a-time
- * toggle logic so every tool produces a consistent, organised UI with minimal
- * boilerplate.
+ * Provides accordion building blocks, field helpers and the toggle logic so
+ * every tool produces a consistent, organised UI with minimal boilerplate.
  *
  * Usage (inside renderPropertiesPanel):
  *   import { PanelUI } from '../../utils/PanelUI.js';
@@ -12,6 +11,8 @@
  *   editorPanel.innerHTML = html;
  *   PanelUI.bindAccordions(editorPanel);
  */
+
+import { AppSettings } from './AppSettings.js';
 
 /** Options for a single pill button in a pill group. */
 export interface PillOption {
@@ -69,14 +70,20 @@ export class PanelUI {
   }
 
   /**
-   * Binds the one-open-at-a-time accordion toggle logic to all accordion
-   * headers inside the given container element.
+   * Binds the accordion toggle logic to all accordion headers inside the
+   * given container element.
    *
    * Call this ONCE after setting innerHTML or appending the accordion HTML.
    *
    * Uses `data-accordion-bound` to guard against double-binding when called
    * more than once on the same container (e.g. ImageTool appends an extra
    * accordion asynchronously and re-calls bindAccordions).
+   *
+   * Whether opening one section closes every other one in the container is
+   * read LIVE from AppSettings.allowMultipleAccordions on every click (not
+   * captured once at bind time), so flipping the "Permitir múltiplas abas
+   * abertas" toggle in Configurações takes effect immediately on already
+   * -rendered panels -- default true (multiple open at once, closing none).
    *
    * @param container - The panel body (or any wrapper containing
    *   [data-toggle-accordion] buttons)
@@ -95,10 +102,12 @@ export class PanelUI {
 
           const isOpen = accordion.classList.contains('open');
 
-          // Close all other accordions in the same container
-          container.querySelectorAll('.ct-accordion.open').forEach(a => {
-            if (a !== accordion) a.classList.remove('open');
-          });
+          if (!isOpen && !AppSettings.get('allowMultipleAccordions')) {
+            // Close all other accordions in the same container
+            container.querySelectorAll('.ct-accordion.open').forEach(a => {
+              if (a !== accordion) a.classList.remove('open');
+            });
+          }
 
           // Toggle this one
           accordion.classList.toggle('open', !isOpen);

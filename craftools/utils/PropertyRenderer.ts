@@ -15,6 +15,7 @@
 import type { PropertySchema, Section, Field } from '../types/PropertySchema';
 import { FieldRegistry } from './FieldRegistry';
 import { tr } from './i18nLabel';
+import { AppSettings } from './AppSettings.js';
 
 export class PropertyRenderer {
   /**
@@ -149,7 +150,20 @@ export class PropertyRenderer {
     if (!btn) return;
 
     btn.addEventListener('click', () => {
-      sectionEl.classList.toggle('open');
+      const opening = !sectionEl.classList.contains('open');
+
+      // AppSettings.allowMultipleAccordions is read LIVE (not captured at
+      // bind time) so flipping the Configurações toggle takes effect on
+      // already-rendered panels immediately. Default true: sections stay
+      // fully independent, same as before this setting existed.
+      if (opening && !AppSettings.get('allowMultipleAccordions')) {
+        const parent = sectionEl.parentElement;
+        parent?.querySelectorAll<HTMLElement>('[data-ct-section].open').forEach(el => {
+          if (el !== sectionEl) el.classList.remove('open');
+        });
+      }
+
+      sectionEl.classList.toggle('open', opening);
     });
   }
 

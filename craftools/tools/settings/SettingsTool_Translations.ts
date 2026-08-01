@@ -25,6 +25,7 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Tela",
         fieldAutoCenter: "Centralizar elemento ao selecionar",
+        fieldAllowMultipleAccordions: "Permitir múltiplas abas abertas",
         fieldCtxBarMode: "Comportamento da barra de contexto",
         ctxBarModeFloating: "Acoplada ao elemento",
         ctxBarModeFixed: "Fixo no topo",
@@ -55,6 +56,7 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Canvas",
         fieldAutoCenter: "Center element on select",
+        fieldAllowMultipleAccordions: "Allow multiple tabs open",
         fieldCtxBarMode: "Context bar behaviour",
         ctxBarModeFloating: "Coupled to element",
         ctxBarModeFixed: "Fixed at top",
@@ -85,6 +87,7 @@ I18n.addTranslations('settingsTool', {
 
         sectionCanvas: "Lienzo",
         fieldAutoCenter: "Centrar elemento al seleccionar",
+        fieldAllowMultipleAccordions: "Permitir múltiples pestañas abiertas",
         fieldCtxBarMode: "Comportamiento de la barra de contexto",
         ctxBarModeFloating: "Acoplada al elemento",
         ctxBarModeFixed: "Fija en la parte superior",

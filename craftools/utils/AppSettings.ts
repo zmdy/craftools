@@ -38,6 +38,13 @@ export interface AppSettingsData {
   // Ctx bar behaviour: 'floating' = coupled to element (current default),
   // 'fixed' = pinned below the top toolbar (Canva-style, wider, up to 16 items)
   ctxBarMode: 'floating' | 'fixed';
+
+  // Properties-panel accordions: true (default) = any number of sections/tabs
+  // can stay open at once (PanelUI.bindAccordions()/PropertyRenderer's own
+  // accordion binding both read this live, at click time). false = opening
+  // one section closes every other one in the same panel -- the original,
+  // pre-toggle behaviour every tool (Album, Calendar, ...) used to hardcode.
+  allowMultipleAccordions: boolean;
 }
 
 const STORAGE_KEY = 'craftools-app-settings';
@@ -52,6 +59,7 @@ const DEFAULTS: AppSettingsData = {
   defaultAutoCenterOnSelect: true,
   defaultIconPack: 'material-symbols',
   ctxBarMode: 'floating',
+  allowMultipleAccordions: true,
 };
 
 class _AppSettings {
