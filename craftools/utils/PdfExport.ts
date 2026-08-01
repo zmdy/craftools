@@ -246,6 +246,23 @@ ${pageRules}
 @media print {
     body { background: white !important; padding: 0; }
     .print-page { margin: 0; box-shadow: none; }
+    /* Chrome (and other browsers) drop CSS backgrounds -- solid colors,
+       gradients, background-images -- from the printed/PDF output by
+       default UNLESS the page explicitly opts in here, regardless of
+       what actually renders on screen. Most users never touch the print
+       dialog's own "Background graphics" checkbox, so without this every
+       element painted via a background (any shape/page/element fill, and
+       critically gradient TEXT -- see BaseTool._paintTextColor(), which
+       fakes a gradient text color with background-clip:text +
+       transparent text-fill-color) silently came out BLANK in the
+       exported PDF even though it was fully visible in the editor and in
+       the (unaffected, since it vectorizes fills directly instead of
+       relying on this browser print behavior) SVG export. */
+    *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
 }
     `;
   }
