@@ -3,6 +3,50 @@
  */
 
 import { normalizeValue, svgPaintFromValue } from './ColorPickerUI.js';
+import { PaperPatterns } from '../tools/paper/PaperPatterns.js';
+
+/**
+ * The "papéis personalizados" fill option -- ShapeMeta.fillPaper, only read
+ * when ShapeMeta.fillMode === 'paper'. A deliberately trimmed-down cousin of
+ * PaperTool.ts's own PaperMeta: same paperType/lineColor/lineStyle/
+ * lineSpacing/lineWidth/checkboxShape controls (fed straight into
+ * PaperPatterns.generateContent(), the exact engine the page-level "Papel
+ * personalizado" tab uses), but no paperSize/lineGradientMode/bgPattern/
+ * sidebar/watermark/logo/pageSettings -- those are page-scoped extras that
+ * don't make sense clipped inside a small decorative shape. `margins` (mm,
+ * 4 independent sides) is likewise replaced by a single `padding` percentage
+ * of the shape's own 100x100 viewBox, since shapes aren't rectangular pages
+ * -- see _paperMetaFromFill() below.
+ */
+export interface ShapePaperFill {
+  paperType?:     string;
+  theme?:         string;
+  /** Background painted behind the pattern, inside the shape's own clip -- bare hex or JSON ColorPickerValue string (gradient-capable). */
+  bgColor?:       string;
+  /** Bare hex or JSON ColorPickerValue string (gradient-capable, same as PaperTool.ts's lineColor). */
+  lineColor?:     string;
+  lineStyle?:     string;
+  lineSpacing?:   number;
+  lineWidth?:     number;
+  /** 0-40, % of the shape's box inset on every side before the pattern starts. */
+  padding?:       number;
+  /** Only read when paperType === 'todo_list'. */
+  checkboxShape?: string;
+}
+
+export function defaultShapePaperFill(): ShapePaperFill {
+  return {
+    paperType: 'lined',
+    theme: 'default',
+    bgColor: '#ffffff',
+    lineColor: '#a1a1aa',
+    lineStyle: 'solid',
+    lineSpacing: 12,
+    lineWidth: 0.6,
+    padding: 10,
+    checkboxShape: 'square',
+  };
+}
 
 export interface ShapeMeta {
   shapeType?:      string;
@@ -22,6 +66,9 @@ export interface ShapeMeta {
   arrowStart?:     boolean;
   arrowEnd?:       boolean;
   dashed?:         boolean;
+  /** 'color' (default, omitted) = fillColor's solid/gradient picker, as always. 'paper' = fillPaper below, clipped to the shape's own outline. */
+  fillMode?:       'color' | 'paper';
+  fillPaper?:      ShapePaperFill;
   [key: string]:   any;
 }
 
@@ -42,6 +89,36 @@ export class ShapeGenerator {
 
   static randomSeed(): number {
       return Math.floor(Math.random() * 1e9);
+  }
+
+  /** Unique id suffix for every `<clipPath>` this class defines -- see buildSvgString()'s paper-fill branch. */
+  static _clipIdCounter = 0;
+
+  /**
+   * Maps a ShapePaperFill onto the meta shape PaperPatterns.generateContent()
+   * expects (same shape PaperTool.ts's own PaperMeta uses) -- margins become
+   * a uniform inset on all 4 sides (shapes aren't rectangular pages), and
+   * every page-only extra (sidebar/watermark/logo/pageSettings/bgPattern)
+   * is force-disabled since none of them make sense clipped inside a shape.
+   */
+  static _paperMetaFromFill(fill: ShapePaperFill): Record<string, unknown> {
+      const pad = Math.max(0, Math.min(45, parseFloat(String(fill.padding)) || 0));
+      return {
+          paperType: fill.paperType || 'lined',
+          theme: fill.theme || 'default',
+          lineColor: fill.lineColor,
+          lineGradientMode: 'per-line',
+          lineStyle: fill.lineStyle || 'solid',
+          lineSpacing: fill.lineSpacing || 8,
+          lineWidth: fill.lineWidth ?? 0.5,
+          margins: { top: pad, right: pad, bottom: pad, left: pad },
+          sidebar: { enabled: false },
+          bgPattern: 'none',
+          watermark: { enabled: false },
+          logo: { enabled: false },
+          pageSettings: { showPageNumber: false },
+          checkboxShape: fill.checkboxShape || 'square',
+      };
   }
 
   static defaultMeta(shapeType?: string): ShapeMeta {
@@ -71,13 +148,20 @@ export class ShapeGenerator {
   static buildSvgString(meta?: ShapeMeta): string {
       const m = { ...this.defaultMeta(meta?.shapeType), ...meta };
 
+      // "Papéis personalizados" fill -- only for shapes with an actual
+      // enclosed area (LINE_SHAPE_TYPES have none, ShapeTool.ts never offers
+      // the option for them, but this stays defensive rather than assuming).
+      const usePaperFill = m.fillMode === 'paper' && !!m.fillPaper && !LINE_SHAPE_TYPES.includes(String(m.shapeType));
+
       // fillColor/strokeColor hold whatever the standardized color-picker
       // field reports: a bare hex string (legacy value / defaultMeta()) or a
       // JSON ColorPickerValue string when the user has picked a gradient.
       // normalizeValue() accepts either; svgPaintFromValue() turns a
       // gradient into a <defs> entry + a `url(#id)` fill/stroke reference,
-      // or just passes a solid color straight through.
-      const fillPaint = svgPaintFromValue(normalizeValue(m.fillColor ?? '#6366f1'), 'shape-fill');
+      // or just passes a solid color straight through. Skipped entirely for
+      // paper fill -- the shape's "fill" comes from the clipped pattern
+      // below instead, and fillColor's own picker is hidden in that mode.
+      const fillPaint = usePaperFill ? { defs: '', paint: 'none' } : svgPaintFromValue(normalizeValue(m.fillColor ?? '#6366f1'), 'shape-fill');
 
       const hasStroke = (parseFloat(String(m.strokeWidth)) || 0) > 0;
       let strokeAttr = 'stroke="none"';
@@ -129,10 +213,37 @@ export class ShapeGenerator {
       // draws several <ellipse>s plus a <circle>, not just one element.
       inner = inner.replace(/<(rect|ellipse|polygon|path|circle)(?=[\s/])/g, '<$1 vector-effect="non-scaling-stroke"');
 
-      const defs = fillPaint.defs + strokeDefs;
+      let extraDefs = '';
+      let body: string;
+      if (usePaperFill) {
+          const clipId = `shape-paper-clip-${++this._clipIdCounter}`;
+          const bgPaint = svgPaintFromValue(normalizeValue(m.fillPaper!.bgColor ?? '#ffffff'), 'shape-paper-bg');
+          // PaperPatterns.ts is `@ts-nocheck` -- cast its return shape explicitly
+          // rather than letting the call resolve to implicit `any`.
+          const { svgContent: patternContent, defs: patternDefs } =
+              (PaperPatterns as unknown as { generateContent: (meta: unknown, w: number, h: number) => { svgContent: string; defs: string } })
+                  .generateContent(this._paperMetaFromFill(m.fillPaper!), 100, 100);
+
+          extraDefs = `<clipPath id="${clipId}">${inner}</clipPath>` + bgPaint.defs + patternDefs;
+          body =
+              `<g clip-path="url(#${clipId})">` +
+                  `<rect x="0" y="0" width="100" height="100" fill="${this._esc(bgPaint.paint)}"/>` +
+                  patternContent +
+              `</g>` +
+              // The shape's own outline stroke is drawn separately, unfilled,
+              // on top of the clipped paper content -- same strokeAttr every
+              // other fill mode uses, so switching Cor/Papel never touches
+              // the border's own look.
+              `<g fill="none" ${strokeAttr}>${inner}</g>`;
+      } else {
+          body = `<g fill="${this._esc(fillPaint.paint)}" ${strokeAttr} stroke-linejoin="round">${inner}</g>`;
+      }
+
+      const defs = fillPaint.defs + strokeDefs + extraDefs;
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;width:100%;height:100%;">` +
           (defs ? `<defs>${defs}</defs>` : '') +
-          `<g fill="${this._esc(fillPaint.paint)}" ${strokeAttr} stroke-linejoin="round">${inner}</g></svg>`;
+          body +
+          `</svg>`;
   }
 
   static buildSvgElement(meta?: ShapeMeta): SVGElement {

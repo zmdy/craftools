@@ -34,6 +34,8 @@ export type PaperMeta = {
   watermark: { enabled: boolean };
   logo: { enabled: boolean };
   pageSettings: { showPageNumber: boolean };
+  /** Checkbox glyph drawn at the start of each line -- only read when paperType === 'todo_list'. */
+  checkboxShape: string;
 };
 
 const getMeta = (el: HTMLElement): Partial<PaperMeta> =>
@@ -51,6 +53,7 @@ export const PAPER_TYPES = [
   { value: 'dot',                     label: 'Dot' },
   { value: 'pink_millimeter_grid',    label: 'Millimeter (pink)' },
   { value: 'grid_lined_split',        label: 'Grid + lined split' },
+  { value: 'todo_list',               label: 'To-do list' },
   { value: 'blank',                   label: 'Blank' },
   { value: 'music',                   label: 'Music staff' },
   { value: 'guitar_tab',              label: 'Guitar tab' },
@@ -155,6 +158,7 @@ export class PaperTool extends BaseTool {
       watermark: { enabled: false },
       logo: { enabled: false },
       pageSettings: { showPageNumber: false },
+      checkboxShape: 'square',
     };
   }
 
@@ -243,6 +247,7 @@ export class PaperTool extends BaseTool {
     if (!('lineWidth'   in existing)) patch.lineWidth   = meta.lineWidth   ?? 0.5;
     if (!('bgColor'     in existing)) patch.bgColor     = meta.bgColor     ?? '#ffffff';
     if (!('bgPattern'   in existing)) patch.bgPattern   = meta.bgPattern   ?? 'none';
+    if (!('checkboxShape' in existing)) patch.checkboxShape = meta.checkboxShape ?? 'square';
 
     const m = meta.margins ?? { top: 25, right: 20, bottom: 25, left: 20 };
     if (!('marginTop'    in existing)) patch.marginTop    = m.top;
@@ -291,6 +296,16 @@ export class PaperTool extends BaseTool {
             ] },
           { type: 'slider', key: 'lineSpacing', label: 'Spacing', i18nKey: 'paperTool.lineSpacing', min: 4,   max: 20, step: 0.5 },
           { type: 'slider', key: 'lineWidth',   label: 'Width',   i18nKey: 'paperTool.lineWidth',   min: 0.1, max: 5,  step: 0.1 },
+          {
+            type: 'select', key: 'checkboxShape', label: 'Checkbox shape', i18nKey: 'paperTool.checkboxShape',
+            options: [
+              { value: 'square', label: 'Square', i18nKey: 'paperTool.checkboxSquare' },
+              { value: 'circle', label: 'Circle',  i18nKey: 'paperTool.checkboxCircle' },
+              { value: 'star',   label: 'Star',    i18nKey: 'paperTool.checkboxStar' },
+              { value: 'heart',  label: 'Heart',   i18nKey: 'paperTool.checkboxHeart' },
+            ],
+            hidden: (el) => PropertyRenderer._readState(el).paperType !== 'todo_list',
+          },
         ],
       },
       {
@@ -354,6 +369,7 @@ export class PaperTool extends BaseTool {
         case 'lineWidth':         meta.lineWidth        = Number(value); break;
         case 'bgColor':           meta.bgColor          = String(value); break;
         case 'bgPattern':         meta.bgPattern        = String(value); break;
+        case 'checkboxShape':     meta.checkboxShape    = String(value); break;
         case 'marginTop':         meta.margins.top      = Number(value); break;
         case 'marginRight':       meta.margins.right    = Number(value); break;
         case 'marginBottom':      meta.margins.bottom   = Number(value); break;

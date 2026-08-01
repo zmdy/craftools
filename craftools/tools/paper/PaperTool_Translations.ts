@@ -47,6 +47,7 @@ I18n.addTranslations('paperTool', {
         dot: "Papel Pontilhado",
         pink_millimeter_grid: "Quadriculado Rosa em Milímetros",
         grid_lined_split: "Papel de notas em colunas",
+        todo_list: "Lista de Tarefas",
         blank: "Papel em Branco",
         music: "Papel de Música",
         guitar_tab: "Tablatura de Guitarra",
@@ -64,6 +65,13 @@ I18n.addTranslations('paperTool', {
         solid: "Sólido",
         dashed: "Tracejado",
         dotted: "Pontilhado",
+
+        // Formato do checkbox (paperType 'todo_list')
+        checkboxShape: "Formato do checkbox",
+        checkboxSquare: "Quadrado",
+        checkboxCircle: "Círculo",
+        checkboxStar: "Estrela",
+        checkboxHeart: "Coração",
 
         // Temas
         default: "Tema Padrão",
@@ -134,6 +142,7 @@ I18n.addTranslations('paperTool', {
         dot: "Dot Grid Paper",
         pink_millimeter_grid: "Pink Millimeter Grid",
         grid_lined_split: "Split Columns Paper",
+        todo_list: "To-do List",
         blank: "Blank Paper",
         music: "Music Manuscript",
         guitar_tab: "Guitar Tablature",
@@ -151,6 +160,13 @@ I18n.addTranslations('paperTool', {
         solid: "Solid",
         dashed: "Dashed",
         dotted: "Dotted",
+
+        // Checkbox shape (paperType 'todo_list')
+        checkboxShape: "Checkbox shape",
+        checkboxSquare: "Square",
+        checkboxCircle: "Circle",
+        checkboxStar: "Star",
+        checkboxHeart: "Heart",
 
         // Themes
         default: "Default",
@@ -221,6 +237,7 @@ I18n.addTranslations('paperTool', {
         dot: "Papel Punteado",
         pink_millimeter_grid: "Cuadriculado Rosa en Milímetros",
         grid_lined_split: "Papel en columnas de notas",
+        todo_list: "Lista de Tareas",
         blank: "Papel en Blanco",
         music: "Papel de Música",
         guitar_tab: "Tablatura de Guitarra",
@@ -238,6 +255,13 @@ I18n.addTranslations('paperTool', {
         solid: "Sólido",
         dashed: "Guiones",
         dotted: "Puntos",
+
+        // Formato del checkbox (paperType 'todo_list')
+        checkboxShape: "Formato del checkbox",
+        checkboxSquare: "Cuadrado",
+        checkboxCircle: "Círculo",
+        checkboxStar: "Estrella",
+        checkboxHeart: "Corazón",
 
         // Themes
         default: "Predeterminado",

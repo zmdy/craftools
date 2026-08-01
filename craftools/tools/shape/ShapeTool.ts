@@ -10,17 +10,45 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection, flipAlternateSection } from '../../utils/CommonSchema';
-import { ShapeGenerator, LINE_SHAPE_TYPES, type ShapeMeta } from '../../utils/ShapeGenerator';
+import {
+  ShapeGenerator, LINE_SHAPE_TYPES, defaultShapePaperFill,
+  type ShapeMeta, type ShapePaperFill,
+} from '../../utils/ShapeGenerator';
 import {
   SHAPE_COLLECTIONS, isAssetShapeType, assetShapeTypeFor, assetIdFromShapeType, findShapeAsset,
   loadAssetSvgText, recolorAssetSvgMarkup,
   type ShapeAsset,
 } from '../../utils/ShapeAssetLoader';
+import { PAPER_TYPES } from '../paper/PaperTool.js';
 import { I18n } from '../../settings/Translations.js';
 // Registers the 'shapeTool.*' i18n keys used by renderPickerPanel()'s
 // per-shape button titles and panelTitle lookups elsewhere (Editor.ts).
 import './ShapeTool_Translations.js';
 import type { PropertySchema } from '../../types/PropertySchema';
+
+const s = (key: string): string => I18n.t('shapeTool.' + key);
+
+/** shapeTool.* select options for the "Tipo de papel" field -- same PAPER_TYPES list PageTool.ts's page-level picker uses, translated via the SAME 'paperTool.<value>' keys (single source of truth, see PaperTool_Translations.ts). */
+const FILL_PAPER_TYPE_OPTIONS = PAPER_TYPES.map(t => ({ value: t.value, label: t.label, i18nKey: 'paperTool.' + t.value }));
+
+const FILL_PAPER_CHECKBOX_OPTIONS = [
+  { value: 'square', label: 'Square', i18nKey: 'paperTool.checkboxSquare' },
+  { value: 'circle', label: 'Circle', i18nKey: 'paperTool.checkboxCircle' },
+  { value: 'star',   label: 'Star',   i18nKey: 'paperTool.checkboxStar' },
+  { value: 'heart',  label: 'Heart',  i18nKey: 'paperTool.checkboxHeart' },
+];
+
+/** Flat ShapeTool.ts panel key -> real ShapePaperFill path, mirrors the small-scale version of CalendarThemeKeyPaths.ts's pattern (only 1 level deep here, so a plain Record is enough). */
+const FILL_PAPER_KEYS: Record<string, keyof ShapePaperFill> = {
+  fillPaperType:          'paperType',
+  fillPaperBg:            'bgColor',
+  fillPaperLineColor:     'lineColor',
+  fillPaperLineStyle:     'lineStyle',
+  fillPaperSpacing:       'lineSpacing',
+  fillPaperLineWidth:     'lineWidth',
+  fillPaperPadding:       'padding',
+  fillPaperCheckboxShape: 'checkboxShape',
+};
 
 const getMeta = (element: HTMLElement): ShapeMeta =>
   (element as HTMLElement & { _craftoolsMeta?: ShapeMeta })._craftoolsMeta ?? {
@@ -61,9 +89,9 @@ const PICKER_STYLE_ID = 'ct-shape-picker-styles';
 
 function ensurePickerStyles(): void {
   if (document.getElementById(PICKER_STYLE_ID)) return;
-  const s = document.createElement('style');
-  s.id = PICKER_STYLE_ID;
-  s.textContent = `
+  const styleEl = document.createElement('style');
+  styleEl.id = PICKER_STYLE_ID;
+  styleEl.textContent = `
     .ct-shape-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 8px; padding: 10px 12px 14px;
@@ -120,7 +148,7 @@ function ensurePickerStyles(): void {
       color: var(--text-secondary, #71717a); padding: 20px 0;
     }
   `;
-  document.head.appendChild(s);
+  document.head.appendChild(styleEl);
 }
 
 export class ShapeTool extends BaseTool {
@@ -140,6 +168,13 @@ export class ShapeTool extends BaseTool {
     keys.forEach(k => {
       if (!(k in existing) && meta[k] !== undefined) patch[k] = meta[k];
     });
+
+    if (!('fillMode' in existing)) patch.fillMode = meta.fillMode ?? 'color';
+
+    const fp = { ...defaultShapePaperFill(), ...(meta.fillPaper ?? {}) };
+    for (const [flatKey, path] of Object.entries(FILL_PAPER_KEYS)) {
+      if (!(flatKey in existing)) patch[flatKey] = fp[path];
+    }
 
     if (Object.keys(patch).length) {
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
@@ -507,6 +542,14 @@ export class ShapeTool extends BaseTool {
         icon: 'format_shapes',
         defaultOpen: true,
         fields: [
+          // Lines/connectors have no enclosed area to fill with a paper
+          // pattern (there's nothing for a clip-path to bound) -- the
+          // fill-mode pills and every "papel personalizado" control below
+          // are shape-only, never offered for these two types.
+          ...(!isLineShape ? [{
+            type: 'custom' as const, key: 'fillMode', label: s('fillMode'), i18nKey: 'shapeTool.fillMode',
+            render: (element: HTMLElement, onChange: (value: unknown) => void) => ShapeTool._renderFillModePills(element, onChange),
+          }] : []),
           // Lines/connectors have no enclosed area -- "Fill" drives the
           // (fill-less-by-default) arrowhead triangles' color instead, and
           // "Stroke" drives the segment itself, so both fields are relabeled
@@ -516,7 +559,60 @@ export class ShapeTool extends BaseTool {
             type: 'color-picker', key: 'fillColor',
             label: isLineShape ? 'Arrowhead color' : 'Fill',
             i18nKey: isLineShape ? 'shapeTool.arrowheadColor' : 'shapeTool.fillColor',
+            hidden: isLineShape ? false : (el: HTMLElement) => PropertyRenderer._readState(el).fillMode === 'paper',
           },
+          // "Papel personalizado" fill controls -- only for non-line shapes
+          // with fillMode === 'paper'. Reuses PaperPatterns.ts's exact
+          // rendering engine (same paper types the page-level "Papel
+          // personalizado" tab offers, via PAPER_TYPES) clipped to the
+          // shape's own outline -- see ShapeGenerator.ts's buildSvgString().
+          ...(!isLineShape ? [
+            {
+              type: 'select' as const, key: 'fillPaperType', label: s('fillPaperType'), i18nKey: 'shapeTool.fillPaperType',
+              options: FILL_PAPER_TYPE_OPTIONS,
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'color-picker' as const, key: 'fillPaperBg', label: s('fillPaperBg'), i18nKey: 'shapeTool.fillPaperBg',
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'color-picker' as const, key: 'fillPaperLineColor', label: s('fillPaperLineColor'), i18nKey: 'shapeTool.fillPaperLineColor',
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'select' as const, key: 'fillPaperLineStyle', label: s('fillPaperLineStyle'), i18nKey: 'shapeTool.fillPaperLineStyle',
+              options: [
+                { value: 'solid',  label: 'Solid',  i18nKey: 'common.borderSolid' },
+                { value: 'dashed', label: 'Dashed', i18nKey: 'common.borderDashed' },
+                { value: 'dotted', label: 'Dotted', i18nKey: 'common.borderDotted' },
+              ],
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'slider' as const, key: 'fillPaperSpacing', label: s('fillPaperSpacing'), i18nKey: 'shapeTool.fillPaperSpacing',
+              min: 4, max: 30, step: 0.5,
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'slider' as const, key: 'fillPaperLineWidth', label: s('fillPaperLineWidth'), i18nKey: 'shapeTool.fillPaperLineWidth',
+              min: 0.2, max: 4, step: 0.1,
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'slider' as const, key: 'fillPaperPadding', label: s('fillPaperPadding'), i18nKey: 'shapeTool.fillPaperPadding',
+              min: 0, max: 40, step: 1,
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
+            },
+            {
+              type: 'select' as const, key: 'fillPaperCheckboxShape', label: s('fillPaperCheckboxShape'), i18nKey: 'shapeTool.fillPaperCheckboxShape',
+              options: FILL_PAPER_CHECKBOX_OPTIONS,
+              hidden: (el: HTMLElement) => {
+                const st = PropertyRenderer._readState(el);
+                return st.fillMode !== 'paper' || st.fillPaperType !== 'todo_list';
+              },
+            },
+          ] : []),
           {
             type: 'color-picker', key: 'strokeColor',
             label: isLineShape ? 'Line color' : 'Stroke',
@@ -545,6 +641,47 @@ export class ShapeTool extends BaseTool {
       flipAlternateSection(),
       zIndexSection(),
     ] as PropertySchema;
+  }
+
+  /**
+   * Fill-mode 2-pill row (Cor / Papel personalizado) -- same
+   * `.craftools-pill` pattern SettingsTool.ts's ctxBarMode field already
+   * established, reused here through the 'custom' field escape hatch since
+   * no reusable pill-group field type exists yet (see that file's own
+   * comment). "Cor" keeps fillColor's own standard solid/gradient
+   * color-picker exactly as it always worked; "Papel personalizado" swaps
+   * it out for the paper controls below.
+   */
+  private static _renderFillModePills(element: HTMLElement, onChange: (value: unknown) => void): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'ct-field-row';
+    wrap.style.gap = '6px';
+    wrap.style.marginBottom = '4px';
+
+    const paint = (): void => {
+      const state = PropertyRenderer._readState(element);
+      const mode = state.fillMode === 'paper' ? 'paper' : 'color';
+
+      wrap.innerHTML = `
+        <button type="button" class="craftools-pill${mode === 'color' ? ' active' : ''}" data-mode="color" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+          <span class="material-symbols-outlined" style="font-size:14px;">palette</span>
+          ${s('fillModeColor')}
+        </button>
+        <button type="button" class="craftools-pill${mode === 'paper' ? ' active' : ''}" data-mode="paper" style="flex:1; justify-content:center; gap:5px; padding:7px 10px;">
+          <span class="material-symbols-outlined" style="font-size:14px;">description</span>
+          ${s('fillModePaper')}
+        </button>`;
+
+      wrap.querySelectorAll<HTMLButtonElement>('button[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          onChange(btn.dataset.mode);
+          paint();
+        });
+      });
+    };
+
+    paint();
+    return wrap;
   }
 
   /**
@@ -596,6 +733,19 @@ export class ShapeTool extends BaseTool {
     // visibly did nothing for this tool. Apply it directly instead, same as
     // every other tool's 'zIndex' case.
     if (key === 'zIndex') { element.style.zIndex = String(value); return; }
+
+    // The 8 flat 'fillPaper*' panel keys nest one level down into
+    // meta.fillPaper -- FILL_PAPER_KEYS is this file's own (much smaller)
+    // version of CalendarThemeKeyPaths.ts's flat-key-to-real-path table,
+    // just for this single-level ShapePaperFill shape.
+    if (key in FILL_PAPER_KEYS) {
+      const meta = getMeta(element);
+      const fillPaper: ShapePaperFill = { ...defaultShapePaperFill(), ...(meta.fillPaper ?? {}), [FILL_PAPER_KEYS[key]]: value };
+      setMeta(element, { fillPaper });
+      ShapeTool._regenerate(element);
+      return;
+    }
+
     setMeta(element, { [key]: value } as Partial<ShapeMeta>);
     ShapeTool._regenerate(element);
   }

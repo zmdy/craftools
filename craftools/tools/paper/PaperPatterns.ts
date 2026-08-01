@@ -12,10 +12,20 @@ export class PaperPatterns {
     static _gradIdCounter = 0;
 
     /**
-     * Gera o conteúdo interno do SVG (elementos gráficos e patterns)
-     * com base nas configurações da ferramenta de papel.
+     * Gera o conteúdo interno do SVG (elementos gráficos e patterns) com
+     * base nas configurações da ferramenta de papel -- SEM o wrapper
+     * `<svg>` externo. Extraído de generateSVG() (que agora só monta o
+     * wrapper em torno do que isto retorna) para que ShapeGenerator.ts
+     * também possa reaproveitar exatamente esta mesma lógica de desenho
+     * dentro de uma forma (clipada ao contorno da forma), sem duplicar
+     * nenhum dos ~15 tipos de papel/switch-case abaixo. Retorna
+     * `{ svgContent, defs }` em vez de uma string `<svg>` completa porque um
+     * consumidor externo (ShapeGenerator.ts) precisa mesclar `defs` no seu
+     * próprio bloco `<defs>` já existente, e envolver `svgContent` num `<g
+     * clip-path="...">` -- não faz sentido aninhar um `<svg>` inteiro só
+     * para isso.
      */
-    static generateSVG(meta, width, height) {
+    static generateContent(meta, width, height) {
         const theme = meta.theme || 'default';
         const themeConfig = PaperThemes[theme] || PaperThemes['default'];
 
@@ -120,6 +130,9 @@ export class PaperPatterns {
             case 'lined':
                 svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
                 break;
+            case 'todo_list':
+                svgContent += this._renderTodoList(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow, meta.checkboxShape);
+                break;
             case 'vertical_lined':
                 // Pautado com linha vertical de margem
                 svgContent += this._renderLined(mL, mT, availW, availH, spacing, lineColor, lWidth, dashStyle, lineColorForRow);
@@ -210,6 +223,12 @@ export class PaperPatterns {
         }
 
         const defs = lineGradientDefs;
+        return { svgContent, defs };
+    }
+
+    /** Wraps generateContent()'s output in the standalone `<svg>` PaperTool.ts's page-background element (and its preview) renders directly. */
+    static generateSVG(meta, width, height) {
+        const { svgContent, defs } = this.generateContent(meta, width, height);
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block; overflow:hidden; position:absolute; inset:0;">${defs ? `<defs>${defs}</defs>` : ''}${svgContent}</svg>`;
     }
 
@@ -224,6 +243,65 @@ export class PaperPatterns {
             lines += `<line x1="${x}" y1="${ly}" x2="${x + w}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
         }
         return lines;
+    }
+
+    /**
+     * "Todo List" -- mesmo modelo de linhas do _renderLined() (mesmas
+     * linhas horizontais, mesmo espaçamento/cor/estilo/gradiente por linha),
+     * porém cada linha ganha uma caixa de marcação (checkbox) no início,
+     * desenhada por _renderCheckbox() num dos 4 formatos (square/circle/
+     * star/heart). A linha em si começa depois da caixa + um pequeno
+     * respiro, em vez de correr a largura inteira -- mesma ideia da barra
+     * lateral do _renderSplitGrid()/_renderCornell(), só que por linha.
+     */
+    static _renderTodoList(x, y, w, h, spacing, color, width, dash, rowColorFn, checkboxShape) {
+        let out = '';
+        const rows = Math.floor(h / spacing);
+        // Checkbox size scaled to the row spacing (never bigger than it, so
+        // it never collides with the line above/below), capped at a sane
+        // absolute max for very generous spacing values.
+        const boxSize = Math.min(spacing * 0.55, 6);
+        const gap = boxSize * 0.6;
+        const lineStartX = x + boxSize + gap;
+        const lineW = Math.max(0, w - boxSize - gap);
+
+        for (let i = 1; i <= rows; i++) {
+            const ly = y + i * spacing;
+            const strokeColor = rowColorFn ? rowColorFn(i - 1, rows) : color;
+            const boxY = ly - boxSize * 0.85; // checkbox sits just above the line, like text would
+            out += this._renderCheckbox(x, boxY, boxSize, checkboxShape, strokeColor, width);
+            out += `<line x1="${lineStartX}" y1="${ly}" x2="${lineStartX + lineW}" y2="${ly}" stroke="${strokeColor}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+        }
+        return out;
+    }
+
+    /** A single unfilled checkbox glyph (square/circle/star/heart), `size` square, top-left at (x,y). */
+    static _renderCheckbox(x, y, size, shape, color, strokeWidth) {
+        const sw = Math.max(0.3, strokeWidth * 1.4);
+        const cx = x + size / 2, cy = y + size / 2;
+
+        switch (shape) {
+            case 'circle':
+                return `<circle cx="${cx}" cy="${cy}" r="${(size / 2).toFixed(2)}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+            case 'star': {
+                const outerR = size / 2, innerR = outerR * 0.45;
+                const pts = [];
+                for (let i = 0; i < 10; i++) {
+                    const r = i % 2 === 0 ? outerR : innerR;
+                    const angle = (Math.PI * i / 5) - Math.PI / 2;
+                    pts.push(`${(cx + r * Math.cos(angle)).toFixed(2)},${(cy + r * Math.sin(angle)).toFixed(2)}`);
+                }
+                return `<polygon points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+            }
+            case 'heart': {
+                // Heart path authored in a 24x24 box -- scale it down to `size`.
+                const s = size / 24;
+                return `<path transform="translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${s.toFixed(3)})" d="M12,21 C6,16 2,11.5 2,7.5 C2,4 4.5,2 7.5,2 C9.5,2 11,3 12,5 C13,3 14.5,2 16.5,2 C19.5,2 22,4 22,7.5 C22,11.5 18,16 12,21 Z" fill="none" stroke="${color}" stroke-width="${(sw / s).toFixed(2)}"/>`;
+            }
+            case 'square':
+            default:
+                return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${size.toFixed(2)}" height="${size.toFixed(2)}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+        }
     }
 
     static _renderGrid(x, y, w, h, spacing, color, width, dash, rowColorFn) {

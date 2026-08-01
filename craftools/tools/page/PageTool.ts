@@ -688,6 +688,16 @@ export class PageTool {
               <input type="number" class="craftools-input" id="paper-line-width" value="${m.lineWidth}" min="0.1" max="5" step="0.1">
             </div>
           </div>
+          ${m.paperType === 'todo_list' ? `
+          <div class="ct-field" style="margin-top:8px;">
+            <span class="craftools-label">${I18n.t('paperTool.checkboxShape')}</span>
+            <select class="craftools-select" id="paper-checkbox-shape">
+              <option value="square" ${m.checkboxShape === 'square' ? 'selected' : ''}>${I18n.t('paperTool.checkboxSquare')}</option>
+              <option value="circle" ${m.checkboxShape === 'circle' ? 'selected' : ''}>${I18n.t('paperTool.checkboxCircle')}</option>
+              <option value="star"   ${m.checkboxShape === 'star'   ? 'selected' : ''}>${I18n.t('paperTool.checkboxStar')}</option>
+              <option value="heart"  ${m.checkboxShape === 'heart'  ? 'selected' : ''}>${I18n.t('paperTool.checkboxHeart')}</option>
+            </select>
+          </div>` : ''}
         </div>
 
         <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
@@ -784,7 +794,13 @@ export class PageTool {
       PaperTool.updatePaperSVG(paperEl);
     };
 
-    fieldsWrap.querySelector<HTMLSelectElement>('#paper-type')?.addEventListener('change', e => applyMeta({ paperType: (e.target as HTMLSelectElement).value }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-type')?.addEventListener('change', e => {
+      applyMeta({ paperType: (e.target as HTMLSelectElement).value });
+      // The checkbox-shape select only shows up for paperType === 'todo_list'
+      // -- re-render the tab so switching in/out of it appears immediately,
+      // same as the enable/disable toggle above.
+      rerender();
+    });
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-theme')?.addEventListener('change', e => {
       const theme = (e.target as HTMLSelectElement).value;
       // Import PaperThemes to apply the theme's colors to meta immediately
@@ -797,6 +813,7 @@ export class PageTool {
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-style')?.addEventListener('change', e => applyMeta({ lineStyle: (e.target as HTMLSelectElement).value }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-line-spacing')?.addEventListener('input', e => applyMeta({ lineSpacing: parseFloat((e.target as HTMLInputElement).value) || 0 }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-line-width')?.addEventListener('input', e => applyMeta({ lineWidth: parseFloat((e.target as HTMLInputElement).value) || 0 }));
+    fieldsWrap.querySelector<HTMLSelectElement>('#paper-checkbox-shape')?.addEventListener('change', e => applyMeta({ checkboxShape: (e.target as HTMLSelectElement).value }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-top')?.addEventListener('input', e => applyMeta(m => { m.margins.top = parseFloat((e.target as HTMLInputElement).value) || 0; }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-right')?.addEventListener('input', e => applyMeta(m => { m.margins.right = parseFloat((e.target as HTMLInputElement).value) || 0; }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-margin-bottom')?.addEventListener('input', e => applyMeta(m => { m.margins.bottom = parseFloat((e.target as HTMLInputElement).value) || 0; }));
