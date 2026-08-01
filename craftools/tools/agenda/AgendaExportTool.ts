@@ -19,7 +19,7 @@
 import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI';
 import { Notify } from '../../utils/Notify';
-import { VariableEngine, type VariableBinding, type ApiCache } from '../../utils/VariableEngine';
+import { VariableEngine, type VariableBinding, type ApiCache, type DateRepeatTrigger } from '../../utils/VariableEngine';
 import { PdfExport, type PageSize } from '../../utils/PdfExport';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
@@ -127,9 +127,12 @@ export class AgendaExportTool {
                 page.removeAttribute('data-agenda-repeat');
                 // A non-repeating page can't sensibly close/extend a chain
                 // anymore -- clear whatever it was pointing to so it
-                // doesn't linger as invisible stale state.
+                // doesn't linger as invisible stale state. Same for a
+                // date-triggered repeat mode -- re-enabling the checkbox
+                // later starts fresh in manual mode.
                 delete page.dataset.agendaNext;
                 delete page.dataset.agendaCycleCount;
+                delete page.dataset.agendaRepeatTrigger;
               }
             }
             refreshPagesSection();
@@ -143,6 +146,34 @@ export class AgendaExportTool {
             const count  = Math.max(1, parseInt(inp.value, 10) || 1);
             if (page) page.setAttribute('data-agenda-repeat', String(count));
             AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+          });
+        });
+
+        // Date-triggered repeat count -- "manual" (empty value) leaves the
+        // number field above exactly as before; any other value resolves a
+        // concrete count via VariableEngine.computeDateTriggerRepeatCount()
+        // and writes it straight into the SAME `data-agenda-repeat`
+        // attribute manual entry uses, so AgendaPlan.ts/AgendaExport.ts
+        // need no changes to support this mode. Re-render (not just an
+        // in-place summary refresh) since switching modes also
+        // enables/disables the manual number input and its computed-value
+        // hint text.
+        root.querySelectorAll<HTMLSelectElement>('.agenda-page-repeat-trigger-select').forEach(sel => {
+          sel.addEventListener('change', () => {
+            const pageId = sel.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            if (!page) return;
+            if (sel.value) {
+              page.dataset.agendaRepeatTrigger = sel.value;
+              const dateBinding = AgendaExportTool._findLeadingDateBinding(page);
+              if (dateBinding) {
+                const count = VariableEngine.computeDateTriggerRepeatCount(dateBinding, sel.value as DateRepeatTrigger);
+                page.setAttribute('data-agenda-repeat', String(count));
+              }
+            } else {
+              delete page.dataset.agendaRepeatTrigger;
+            }
+            refreshPagesSection();
           });
         });
 
@@ -319,6 +350,19 @@ export class AgendaExportTool {
       const nextId = page.dataset.agendaNext ?? '';
       const cycleCount = AgendaPlan.cycleCount(page);
 
+      // Date-triggered repeat count -- only offered when the page actually
+      // has a leading 'date' variable to compute FROM (see
+      // _findLeadingDateBinding()'s doc comment). `repeatTrigger` empty
+      // string means "manual" (today's only behavior, the plain number
+      // field stays editable); any other value is one of
+      // DateRepeatTrigger's 5 fixed calendar periods, in which case the
+      // number field below shows -- but doesn't let the user directly
+      // edit -- whatever VariableEngine.computeDateTriggerRepeatCount()
+      // just resolved, kept in sync with `data-agenda-repeat` itself so
+      // AgendaPlan/AgendaExport need no awareness of this mode at all.
+      const dateBinding   = AgendaExportTool._findLeadingDateBinding(page);
+      const repeatTrigger = (page.dataset.agendaRepeatTrigger ?? '') as DateRepeatTrigger | '';
+
       // Any OTHER repeat-enabled page not already targeted by someone else
       // can be picked here -- a page AFTER this one extends the chain
       // forward ("continuar com"), a page BEFORE it closes it into a loop
@@ -340,8 +384,20 @@ export class AgendaExportTool {
           </label>
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px; margin-left:24px;">${boundCount} ${a('variablesFoundSuffix')}</span>
           <div class="agenda-page-repeat-count-wrap" data-page-id="${page.id}" style="margin-top:8px; margin-left:24px; ${checked ? '' : 'display:none;'}">
+            ${dateBinding ? `
+              <span class="craftools-label">${a('repeatModeLabel')}</span>
+              <select class="craftools-select agenda-page-repeat-trigger-select" data-page-id="${page.id}" style="width:100%; margin-bottom:8px;">
+                <option value="">${a('repeatModeManualOption')}</option>
+                <option value="month"     ${repeatTrigger === 'month'     ? 'selected' : ''}>${a('repeatModeMonthOption')}</option>
+                <option value="bimester"  ${repeatTrigger === 'bimester'  ? 'selected' : ''}>${a('repeatModeBimesterOption')}</option>
+                <option value="trimester" ${repeatTrigger === 'trimester' ? 'selected' : ''}>${a('repeatModeTrimesterOption')}</option>
+                <option value="semester"  ${repeatTrigger === 'semester'  ? 'selected' : ''}>${a('repeatModeSemesterOption')}</option>
+                <option value="year"      ${repeatTrigger === 'year'      ? 'selected' : ''}>${a('repeatModeYearOption')}</option>
+              </select>
+            ` : ''}
             <span class="craftools-label">${a('repeatCountLabel')}</span>
-            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" style="width:100%; margin-bottom:8px;">
+            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" ${repeatTrigger ? 'disabled' : ''} style="width:100%; margin-bottom:${repeatTrigger ? '2' : '8'}px; ${repeatTrigger ? 'opacity:.65; cursor:not-allowed;' : ''}">
+            ${repeatTrigger ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:8px;">${a('repeatModeComputedHint').replace('{n}', String(repeatCount))}</span>` : ''}
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
               <input type="checkbox" class="agenda-page-alternate-check" data-page-id="${page.id}" ${alternate ? 'checked' : ''}>
               <span style="font-size:11px;">${a('alternateToggle')}</span>
@@ -731,6 +787,26 @@ export class AgendaExportTool {
       if (binding && binding.type) results.push({ el, toolType, binding });
     });
     return results;
+  }
+
+  /**
+   * The page's own "leading" date binding, if it has one -- i.e. the
+   * binding a date-triggered repeat count (month/bimester/trimester/
+   * semester/year, see the repeat-mode select in _renderPagesSection())
+   * would compute FROM. Deliberately excludes followers (`binding.linkedTo`
+   * set): a page can have several elements bound to the SAME date (a
+   * "Vincular a" follower just mirrors the leader's resolved value), and
+   * the leader is the one whose own `startDate`/`interval`/`step` actually
+   * drive the date math -- a follower's binding config is mostly unused
+   * (VariableEngine.resolve() looks up the leader's picked value instead of
+   * resolving the follower's own fields). Returns null (no repeat-mode
+   * select shown at all) for a page with no 'date' binding, or only
+   * follower ones.
+   */
+  private static _findLeadingDateBinding(page: HTMLElement): VariableBinding | null {
+    const found = AgendaExportTool._collectPageBindings(page)
+      .find(({ binding }) => binding.type === 'date' && !binding.linkedTo);
+    return found ? found.binding : null;
   }
 
   private static _esc(val: unknown): string {

@@ -37,6 +37,11 @@ export type VariableType =
     | 'date' | 'sequenceNumber' | 'sequenceText' | 'pageNumber'
     | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar';
 
+/** Fixed calendar periods AgendaExportTool.ts's Pages tab can auto-compute a
+ *  repeat count from, for a page whose leading variable is a 'date' binding
+ *  -- see VariableEngine.computeDateTriggerRepeatCount()'s doc comment. */
+export type DateRepeatTrigger = 'month' | 'bimester' | 'trimester' | 'semester' | 'year';
+
 /** Flat binding structure — all fields are optional since they depend on `type`. */
 export interface VariableBinding {
     type:          VariableType | string;
@@ -611,6 +616,63 @@ export class VariableEngine {
             case 'yearly':  d.setFullYear(d.getFullYear() + amount); break;
         }
         return d;
+    }
+
+    /** How many calendar months make up one unit of each fixed period, all
+     *  grouped starting from January (standard BR academic/fiscal
+     *  convention -- bimestre 1 is Jan/Fev, trimestre 1 is Jan/Fev/Mar,
+     *  semestre 1 is Jan..Jun, etc, never a rolling N-month window from an
+     *  arbitrary start date). Every value divides 12 evenly, which is what
+     *  makes the plain `Math.floor(totalMonths / span)` grouping in
+     *  _samePeriod() below exact. */
+    private static readonly PERIOD_MONTH_SPAN: Record<DateRepeatTrigger, number> = {
+        month: 1, bimester: 2, trimester: 3, semester: 6, year: 12,
+    };
+
+    /** True when `a` and `b` fall in the same fixed calendar period for `trigger`. */
+    private static _samePeriod(a: Date, b: Date, trigger: DateRepeatTrigger): boolean {
+        const span = this.PERIOD_MONTH_SPAN[trigger];
+        const monthsA = a.getFullYear() * 12 + a.getMonth();
+        const monthsB = b.getFullYear() * 12 + b.getMonth();
+        return Math.floor(monthsA / span) === Math.floor(monthsB / span);
+    }
+
+    /**
+     * Computes how many repetitions of a 'date' binding (starting at
+     * repetitionIndex 0, stepping the same way _pickDate()/_addInterval()
+     * do) stay within the SAME fixed calendar period as the binding's own
+     * start date -- e.g. a daily binding starting August 1st with
+     * `trigger: 'month'` returns 31 (every day of August); starting August
+     * 15th returns 17 (the 15th through the 31st).
+     *
+     * This is the computation behind AgendaExportTool.ts's Pages tab "how
+     * many times to repeat" field's date-triggered mode (month/bimester/
+     * trimester/semester/year, alongside the existing plain manual-number
+     * entry) -- the panel calls this once to resolve a concrete number,
+     * then stores that plain number in `data-agenda-repeat` exactly like
+     * manual entry always has, so AgendaPlan.ts/AgendaExport.ts need no
+     * changes at all to support it.
+     *
+     * Bounded at 2000 iterations (same ceiling as the panel's own manual
+     * repeat-count input) as a safety net against a binding whose interval
+     * can never leave the starting period (e.g. `interval: 'weekly'` with
+     * `trigger: 'month'` on a locale/period-span combination that somehow
+     * never crosses -- shouldn't happen with real calendar math, but a
+     * runaway loop is worse than an under-count).
+     */
+    static computeDateTriggerRepeatCount(b: VariableBinding, trigger: DateRepeatTrigger, now: Date = new Date()): number {
+        const base = b.startDate ? new Date(`${b.startDate}T00:00:00`) : new Date(now);
+        if (isNaN(base.getTime())) return 1;
+        const step     = parseInt(String(b.step), 10) || 1;
+        const interval = b.interval ?? 'daily';
+        const MAX = 2000;
+        let count = 0;
+        for (let i = 0; i < MAX; i++) {
+            const d = this._addInterval(base, interval, step * i);
+            if (!this._samePeriod(d, base, trigger)) break;
+            count++;
+        }
+        return Math.max(count, 1);
     }
 
     /**
