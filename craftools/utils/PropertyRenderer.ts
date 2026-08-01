@@ -236,13 +236,61 @@ export class PropertyRenderer {
     }
   }
 
+  /**
+   * True while synchronously inside a properties-panel field's onChange ->
+   * _applyProperty call chain -- see runFromPanel()'s doc comment for what
+   * this drives and why it exists.
+   */
+  private static _fromPanel = false;
+
+  /**
+   * Runs `fn` (a panel field's onChange -> tool._applyProperty() call
+   * chain) with `_fromPanel` set, so every 'craftools-state-change' event
+   * dispatched during it (however many `PropertyRenderer.applyChange()`
+   * calls happen inside, directly or via helpers like _applyBackground())
+   * carries `detail.fromPanel = true`.
+   *
+   * Editor.ts's `_panelSyncHandler` uses that flag to skip re-rendering
+   * the properties panel for changes the panel ITSELF just caused --
+   * without this, every single keystroke/click in ANY panel field
+   * (color picker, date picker, text input, ...) triggered a full,
+   * synchronous `tool.renderPropertiesPanel()` re-render as a side effect
+   * of its own change, which re-diffed and re-rendered that very field
+   * again. Most field handlers are idempotent on their own re-render (they
+   * patch `.value` in place), but the color-picker field (and native
+   * `<input type="date">` rendering) always fully rebuilds its DOM via
+   * `innerHTML =`, which destroyed the native color/date picker's own
+   * input element WHILE the user still had the OS-native popup open on
+   * it -- closing that popup after the very first pick, before the user
+   * could interact further. Wrapped only around the panel's own onChange
+   * (see BaseTool.ts's renderPropertiesPanel() and MobileToolbar.ts's
+   * mini-panel) -- ctx-bar-originated changes (CtxBar.ts calls
+   * `PropertyRenderer.applyChange()` directly, and per-tool ctx-bar
+   * options usually call `_applyProperty()` too, but never through this
+   * wrapper) still dispatch `fromPanel: false/undefined`, so
+   * `_panelSyncHandler`'s ORIGINAL intended purpose -- resyncing the panel
+   * when the ctx-bar changes state -- is preserved untouched.
+   */
+  static runFromPanel(fn: () => void): void {
+    const prev = PropertyRenderer._fromPanel;
+    PropertyRenderer._fromPanel = true;
+    try {
+      fn();
+    } finally {
+      PropertyRenderer._fromPanel = prev;
+    }
+  }
+
   /** Writes a single key back to data-ct-state and dispatches a change event. */
   static applyChange(element: HTMLElement, key: string, value: unknown): void {
     const state = PropertyRenderer._readState(element);
     state[key] = value;
     element.dataset.ctState = JSON.stringify(state);
     element.dispatchEvent(
-      new CustomEvent('craftools-state-change', { bubbles: true, detail: { key, value } }),
+      new CustomEvent('craftools-state-change', {
+        bubbles: true,
+        detail: { key, value, fromPanel: PropertyRenderer._fromPanel },
+      }),
     );
   }
 

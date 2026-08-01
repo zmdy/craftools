@@ -154,7 +154,12 @@ export class MobileToolbar {
           action: () => {
             this.openMiniPanel(title, (container: HTMLElement) => {
               PropertyRenderer.renderSectionFields(container, s, element, (key, val) => {
-                ToolClass?._applyProperty(element, key, val);
+                // Same panel-origin tagging as BaseTool.ts's desktop
+                // renderPropertiesPanel() -- see PropertyRenderer.
+                // runFromPanel()'s doc comment.
+                PropertyRenderer.runFromPanel(() => {
+                  ToolClass?._applyProperty(element, key, val);
+                });
               });
             });
           },

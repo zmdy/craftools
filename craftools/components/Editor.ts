@@ -598,7 +598,17 @@ export class Craftools_Editor extends HTMLElement {
           if (this._panelSyncHandler && this._panelSyncTarget) {
             this._panelSyncTarget.removeEventListener('craftools-state-change', this._panelSyncHandler);
           }
-          this._panelSyncHandler = () => {
+          this._panelSyncHandler = (e: Event) => {
+            // Skip changes the panel itself just caused (tagged by
+            // PropertyRenderer.runFromPanel() -- see its own doc comment).
+            // This handler's only real job is the ctx-bar -> panel
+            // direction; re-running it for the panel's OWN change used to
+            // force a synchronous full re-render of the very field the
+            // user was mid-interaction with (e.g. destroying the color
+            // picker's native <input type="color"> while its OS popup was
+            // still open, closing it after the very first pick).
+            const detail = (e as CustomEvent).detail as { fromPanel?: boolean } | undefined;
+            if (detail?.fromPanel) return;
             if (panelBody) tool.renderPropertiesPanel(panelBody, el);
           };
           this._panelSyncTarget = el;

@@ -406,8 +406,17 @@ export abstract class BaseTool {
     this._syncFromDOM(element);
     const schema = this.getPropertySchema(element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
-      this._applyProperty(element, key, value);
-      this._syncLinkedClones(element, key, value);
+      // Tags every 'craftools-state-change' this triggers as panel-
+      // originated (see PropertyRenderer.runFromPanel()'s doc comment) --
+      // Editor.ts's _panelSyncHandler uses that to skip redundantly
+      // re-rendering this very panel in response to its own field's
+      // change, which used to destroy/rebuild non-idempotent field DOM
+      // (e.g. the color picker's native <input type="color">) while the
+      // user still had its native popup open.
+      PropertyRenderer.runFromPanel(() => {
+        this._applyProperty(element, key, value);
+        this._syncLinkedClones(element, key, value);
+      });
     });
   }
 
