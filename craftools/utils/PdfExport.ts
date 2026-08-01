@@ -354,8 +354,34 @@ ${pageRules}
         // Ajusta o título do documento
         document.title =  "${this.createTitle()}" +  window.location.href.split('/').reverse()[0];
 
-        // Pequeno delay para garantir renderização completa
-        setTimeout(() => window.print(), 600);
+        // window.load fires once the <link rel="stylesheet"> requests below
+        // finish (browsers block load on stylesheet fetches), but the actual
+        // WEB FONT FILES those stylesheets' @font-face rules point at are
+        // NOT guaranteed to have finished downloading/parsing by then --
+        // @font-face fetches lazily, only once something on the page
+        // actually needs to paint with that font, and with font-display:swap
+        // (used by both the self-hosted fonts.css.php endpoint and the
+        // Google Fonts fallback) the browser paints with a FALLBACK font
+        // first and swaps in the real one whenever it finishes loading. A
+        // fixed setTimeout() before calling print() was a guess at "enough
+        // time" that gets less reliable the more fonts a document actually
+        // uses (see PdfExport._collectUsedFonts()) -- explicitly waiting on
+        // the Font Loading API's document.fonts.ready (resolves once every
+        // requested face has either loaded or failed) removes that guess
+        // entirely. Still capped by a hard timeout as a safety net in case
+        // a font request hangs (offline API, blocked CDN, ...) so export
+        // never silently hangs forever.
+        const whenFontsSettled = (window.document.fonts && window.document.fonts.ready)
+            ? window.document.fonts.ready
+            : Promise.resolve();
+        const safetyTimeout = new Promise((resolve) => setTimeout(resolve, 4000));
+        Promise.race([whenFontsSettled, safetyTimeout]).then(() => {
+            // Small extra delay so the browser has a chance to actually
+            // repaint/reflow with the now-settled fonts before print() --
+            // fonts.ready resolving doesn't itself guarantee a frame has
+            // been painted with them yet.
+            setTimeout(() => window.print(), 150);
+        });
     });
 <\/script>` : '';
     const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
