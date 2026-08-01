@@ -9,6 +9,7 @@ import { CalendarRenderer } from './CalendarRenderer.js';
 import { MiniCalendarTool } from '../tools/minicalendar/MiniCalendarTool.js';
 import { PropertyRenderer } from './PropertyRenderer.js';
 import { parseVariableBinding } from './fields/variable-binding.field.js';
+import { AgendaPlan } from './AgendaPlan.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,8 +106,17 @@ export class AgendaExport {
       return null;
     }
 
-    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
-    const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+    // Resolves the Pages tab's repeat/chain/loop configuration into a flat,
+    // ordered list of output instances -- see AgendaPlan.ts's own header
+    // comment for the model (data-agenda-repeat/-next/-cycle-count) and why
+    // it replaces the old per-page "Continuar sequência" opt-in with an
+    // explicit chain: repetitionIndex now counts continuously across every
+    // instance belonging to the same chain/loop, and resets to 0 for any
+    // page that isn't chained to anything, same as before.
+    const plan              = AgendaPlan.build(pages);
+    const totalOutputPages  = plan.length;
+    const renderLimit       = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+    const renderPlan        = plan.slice(0, renderLimit);
 
     // 1. Pré-busca (uma única vez) todos os recursos de API referenciados por
     //    variáveis "Frase da API" em qualquer página que será de fato
@@ -118,145 +128,86 @@ export class AgendaExport {
     //    além do que fosse prefetched ficariam com a imagem do combo
     //    vazia/quebrada).
     const allBindings: (VariableBinding | null)[] = [];
-    const repetitionIndicesSet = new Set<number>();
-    let prefetchCounted = 0;
-    for (const page of pages) {
-      if (prefetchCounted >= renderLimit) break;
+    const seenPages = new Set<HTMLElement>();
+    renderPlan.forEach(({ page }) => {
+      if (seenPages.has(page)) return;
+      seenPages.add(page);
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
-      const repeatCount = this._repeatCount(page);
-      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
-        // `prefetchCounted` is the GLOBAL running index across every output
-        // page in the whole document (0-based) -- the same value the main
-        // render loop below now uses as `repetitionIndex` (see its own
-        // comment). Adding the local `i` here instead used to only ever
-        // queue combos for indices 0..repeatCount-1 of THIS page, so any
-        // emoji-kitchen "variable" binding without a fixed right emoji on a
-        // document with multiple distinct pages had its combo image missing
-        // for every page beyond the first one's own repeat count.
-        repetitionIndicesSet.add(prefetchCounted);
-      }
-    }
+    });
+    const repetitionIndicesSet = new Set(renderPlan.map(inst => inst.repetitionIndex));
     const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
       repetitionIndices: [...repetitionIndicesSet],
     });
 
-    // 2. Gera o HTML de cada página (ou repetição), até `renderLimit`.
+    // 2. Gera o HTML de cada instância do plano, na ordem final de saída.
     const pageSizes:       ReturnType<typeof PdfExport._parsePageSize>[] = [];
     const pagesHtmlParts:  string[] = [];
-    let outputPageNumber = 0;
-    // Running index for the NEXT page's own batch, IF that page opts in to
-    // continuing the previous one's sequence (see `continuesSequence`
-    // below) -- kept updated after every page regardless of whether that
-    // page itself continued or reset, so a later page can always resume
-    // from wherever the page immediately before it left off.
-    let sequenceBase = 0;
 
-    outer:
-    for (const page of pages) {
-      const size        = PdfExport._parsePageSize(page);
-      const repeatCount = this._repeatCount(page);
-      const origEls     = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+      const outputPageNumber = planIdx + 1;
+      const size    = PdfExport._parsePageSize(page);
+      const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
+      pageSizes.push(size);
 
-      // Every page's own date/sequence/pageNumber variables start counting
-      // from 0 on ITS OWN first repetition by default -- so e.g. a
-      // non-repeating cover page ahead of a repeatable daily page never
-      // shifts that page's configured Start Date by however many pages
-      // happen to precede it (previously a single GLOBAL running index
-      // spanned the entire document regardless of page identity, so the
-      // repeatable page's first repetition silently started at "Start Date
-      // + 1 day" whenever anything -- even an unrelated, variable-less
-      // cover -- came before it in the document). Checking "Continuar
-      // sequência da página anterior" in the Pages tab
-      // (`data-agenda-continue-sequence="true"`) opts a specific page into
-      // resuming exactly where the page immediately before it left off
-      // instead, for the deliberate case of one continuous sequence spread
-      // across several distinct page designs (e.g. a weekday layout
-      // followed by a weekend layout, both covering the same week).
-      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
-      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
+      const clone = page.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
 
-      for (let i = 0; i < repeatCount; i++) {
-        if (outputPageNumber >= renderLimit) break outer;
-        outputPageNumber++;
-        pageSizes.push(size);
+      const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
 
-        const clone = page.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
-
-        const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
-
-        // This page's own repetition index -- `i` (0-based, LOCAL to this
-        // page's batch) unless this page continues the previous one's
-        // sequence, in which case it resumes from `pageStartIndex` (see
-        // above). Deliberately NOT the raw output-page counter -- see this
-        // block's header comment for why that broke a repeatable page's
-        // Start Date whenever an earlier page (repeating or not) preceded
-        // it in the document.
-        const globalRepetitionIndex = pageStartIndex + i;
-
-        // Alternância de layout (Frente e Verso espelhados)
-        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
-          this._applyAlternateLayout(page, cloneEls);
-        }
-
-        const context: ResolveContext = {
-          repetitionIndex: globalRepetitionIndex,
-          pageNumber:      outputPageNumber,
-          totalPages:      totalOutputPages,
-          now:             new Date(),
-        };
-
-        // "picks" é recriado a cada repetição
-        const picks = VariableEngine.newLinkRegistry();
-
-        const jobs: BindingJob[] = origEls
-          .map((origEl, idx) => {
-            const cloneEl  = cloneEls[idx];
-            const toolType = origEl.getAttribute('data-craftool');
-            const binding  = this._getBinding(origEl, toolType);
-            return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
-          })
-          .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
-
-        // 1ª passada: líderes primeiro (ver _isFollowerJob() para os dois
-        // tipos de vínculo que contam como "seguidor" aqui)
-        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
-        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
-
-        [...leaders, ...followers].forEach(j => {
-          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
-          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
-          this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
-        });
-
-        // Mini Calendário "solto" — avança o mês em +1 a cada repetição
-        // (globalRepetitionIndex, not the local `i` -- see the comment
-        // above; otherwise a standalone Mini Calendar on a document with
-        // multiple distinct pages showed the same month on every page
-        // beyond the first).
-        origEls.forEach((origEl, idx) => {
-          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
-          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
-        });
-
-        // Achata todos os <craftools-element>
-        clone.querySelectorAll<HTMLElement>('craftools-element')
-          .forEach(el => PdfExport._flattenElement(el));
-
-        const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
-        const bgStyle   = size.background ? `background: ${size.background};` : '';
-        pagesHtmlParts.push(
-          `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${clone.innerHTML}</div>`
-        );
+      // Alternância de layout (Frente e Verso espelhados)
+      if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+        this._applyAlternateLayout(page, cloneEls);
       }
 
-      // Wherever the NEXT page's sequence would resume from, if it opts in
-      // via "Continuar sequência" -- always advanced by this page's own
-      // full repeatCount, regardless of whether this page itself continued
-      // or reset (so a chain of several continuing pages still adds up
-      // correctly, one immediate predecessor at a time).
-      sequenceBase = pageStartIndex + repeatCount;
-    }
+      const context: ResolveContext = {
+        repetitionIndex: globalRepetitionIndex,
+        pageNumber:      outputPageNumber,
+        totalPages:      totalOutputPages,
+        now:             new Date(),
+      };
+
+      // "picks" é recriado a cada repetição
+      const picks = VariableEngine.newLinkRegistry();
+
+      const jobs: BindingJob[] = origEls
+        .map((origEl, idx) => {
+          const cloneEl  = cloneEls[idx];
+          const toolType = origEl.getAttribute('data-craftool');
+          const binding  = this._getBinding(origEl, toolType);
+          return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+        })
+        .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
+
+      // 1ª passada: líderes primeiro (ver _isFollowerJob() para os dois
+      // tipos de vínculo que contam como "seguidor" aqui)
+      const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+      const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
+
+      [...leaders, ...followers].forEach(j => {
+        const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+        const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
+        this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+      });
+
+      // Mini Calendário "solto" — avança o mês em +1 a cada repetição
+      // (globalRepetitionIndex, not a local counter -- otherwise a
+      // standalone Mini Calendar on a document with multiple distinct
+      // pages showed the same month on every page beyond the first).
+      origEls.forEach((origEl, idx) => {
+        if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
+        this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
+      });
+
+      // Achata todos os <craftools-element>
+      clone.querySelectorAll<HTMLElement>('craftools-element')
+        .forEach(el => PdfExport._flattenElement(el));
+
+      const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
+      const bgStyle   = size.background ? `background: ${size.background};` : '';
+      pagesHtmlParts.push(
+        `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${clone.innerHTML}</div>`
+      );
+    });
 
     const css      = PdfExport._buildCSS(pageSizes);
     const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), { autoPrint: opts.autoPrint });
@@ -292,112 +243,95 @@ export class AgendaExport {
     const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
     if (!pages.length) return null;
 
-    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
+    // See AgendaPlan.ts's header comment + _buildDocument()'s matching
+    // comment above for what this resolves and why it replaces the old
+    // per-page "Continuar sequência" opt-in.
+    const plan             = AgendaPlan.build(pages);
+    const totalOutputPages = plan.length;
     const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+    const renderPlan       = plan.slice(0, renderLimit);
 
     // Prefetch API resources
     const allBindings: (VariableBinding | null)[] = [];
-    const repetitionIndicesSet = new Set<number>();
-    let prefetchCounted = 0;
-    for (const page of pages) {
-      if (prefetchCounted >= renderLimit) break;
+    const seenPages = new Set<HTMLElement>();
+    renderPlan.forEach(({ page }) => {
+      if (seenPages.has(page)) return;
+      seenPages.add(page);
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
-      const repeatCount = this._repeatCount(page);
-      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
-        repetitionIndicesSet.add(prefetchCounted);
-      }
-    }
+    });
+    const repetitionIndicesSet = new Set(renderPlan.map(inst => inst.repetitionIndex));
     const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
       repetitionIndices: [...repetitionIndicesSet],
     });
 
     const outputPages: { html: string; size: import('./PdfExport.js').PageSize }[] = [];
-    let outputPageNumber = 0;
-    // Same per-page reset (with opt-in continuation) as _buildDocument() --
-    // see that method's matching comment. Kept identical here so the
-    // canvas Preview tab always shows EXACTLY what the real PDF export
-    // will produce: a page with no "Continuar sequência" flag always shows
-    // its own configured Start Date/first value on its first repetition,
-    // regardless of which pages (bound or not) come before it.
-    let sequenceBase = 0;
 
-    outer:
-    for (const page of pages) {
-      const size        = PdfExport._parsePageSize(page);
-      const repeatCount  = this._repeatCount(page);
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+      const outputPageNumber = planIdx + 1;
+      const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
-      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
-      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
 
-      for (let i = 0; i < repeatCount; i++) {
-        if (outputPageNumber >= renderLimit) break outer;
-        outputPageNumber++;
+      const clone = page.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(PREVIEW_STRIP_SELECTORS).forEach(n => n.remove());
+      // Hide (never remove) each element's ctrlbar here -- see
+      // PREVIEW_STRIP_SELECTORS's doc comment above for why removing it
+      // breaks every element's z-index once this HTML gets reparsed.
+      // It's already `display:none` by default (Element.ts only shows it
+      // while an element is selected), so this only matters for whatever
+      // element happened to be selected at the moment the preview HTML
+      // was generated.
+      clone.querySelectorAll<HTMLElement>('.craftools-ctrlbar').forEach(n => { n.style.display = 'none'; });
 
-        const clone = page.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll(PREVIEW_STRIP_SELECTORS).forEach(n => n.remove());
-        // Hide (never remove) each element's ctrlbar here -- see
-        // PREVIEW_STRIP_SELECTORS's doc comment above for why removing it
-        // breaks every element's z-index once this HTML gets reparsed.
-        // It's already `display:none` by default (Element.ts only shows it
-        // while an element is selected), so this only matters for whatever
-        // element happened to be selected at the moment the preview HTML
-        // was generated.
-        clone.querySelectorAll<HTMLElement>('.craftools-ctrlbar').forEach(n => { n.style.display = 'none'; });
+      const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
 
-        const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
-        const globalRepetitionIndex = pageStartIndex + i;
-
-        // Alternância de layout (Frente e Verso espelhados)
-        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
-          this._applyAlternateLayout(page, cloneEls);
-        }
-
-        const context: ResolveContext = {
-          repetitionIndex: globalRepetitionIndex,
-          pageNumber:      outputPageNumber,
-          totalPages:      totalOutputPages,
-          now:             new Date(),
-        };
-
-        const picks = VariableEngine.newLinkRegistry();
-
-        const jobs: BindingJob[] = origEls
-          .map((origEl, idx) => {
-            const cloneEl  = cloneEls[idx];
-            const toolType = origEl.getAttribute('data-craftool');
-            const binding  = this._getBinding(origEl, toolType);
-            return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
-          })
-          .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
-
-        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
-        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
-        [...leaders, ...followers].forEach(j => {
-          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
-          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
-          this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
-        });
-
-        origEls.forEach((origEl, idx) => {
-          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
-          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
-        });
-
-        // Return the pre-flatten innerHTML — the canvas renders live
-        // craftools-element tags natively (no need to flatten for display).
-        // UI-only nodes (drag handles, overlays) were already removed
-        // above via PREVIEW_STRIP_SELECTORS; the ctrlbar was hidden, not
-        // removed, and stays in the markup returned here. `size` travels
-        // alongside the HTML so the canvas preview slot can be resized to
-        // match THIS output page's own source page -- see
-        // AgendaExportTool.ts's _showCanvasPage() for why that matters
-        // (previously every output page was crammed into whatever fixed
-        // dimensions the first physical page happened to have).
-        outputPages.push({ html: clone.innerHTML, size });
+      // Alternância de layout (Frente e Verso espelhados)
+      if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+        this._applyAlternateLayout(page, cloneEls);
       }
 
-      sequenceBase = pageStartIndex + repeatCount;
-    }
+      const context: ResolveContext = {
+        repetitionIndex: globalRepetitionIndex,
+        pageNumber:      outputPageNumber,
+        totalPages:      totalOutputPages,
+        now:             new Date(),
+      };
+
+      const picks = VariableEngine.newLinkRegistry();
+
+      const jobs: BindingJob[] = origEls
+        .map((origEl, idx) => {
+          const cloneEl  = cloneEls[idx];
+          const toolType = origEl.getAttribute('data-craftool');
+          const binding  = this._getBinding(origEl, toolType);
+          return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+        })
+        .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
+
+      const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+      const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
+      [...leaders, ...followers].forEach(j => {
+        const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+        const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
+        this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+      });
+
+      origEls.forEach((origEl, idx) => {
+        if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
+        this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
+      });
+
+      // Return the pre-flatten innerHTML — the canvas renders live
+      // craftools-element tags natively (no need to flatten for display).
+      // UI-only nodes (drag handles, overlays) were already removed
+      // above via PREVIEW_STRIP_SELECTORS; the ctrlbar was hidden, not
+      // removed, and stays in the markup returned here. `size` travels
+      // alongside the HTML so the canvas preview slot can be resized to
+      // match THIS output page's own source page -- see
+      // AgendaExportTool.ts's _showCanvasPage() for why that matters
+      // (previously every output page was crammed into whatever fixed
+      // dimensions the first physical page happened to have).
+      outputPages.push({ html: clone.innerHTML, size });
+    });
 
     return outputPages.length ? outputPages : null;
   }
@@ -428,98 +362,83 @@ export class AgendaExport {
     const pages = [...editor.querySelectorAll<HTMLElement>('.craftools-page')];
     if (!pages.length) return null;
 
-    const totalOutputPages = pages.reduce((sum, p) => sum + this._repeatCount(p), 0);
+    // See AgendaPlan.ts's header comment + _buildDocument()'s matching
+    // comment above for what this resolves and why it replaces the old
+    // per-page "Continuar sequência" opt-in.
+    const plan             = AgendaPlan.build(pages);
+    const totalOutputPages = plan.length;
     const renderLimit      = Math.min(opts.maxOutputPages ?? totalOutputPages, totalOutputPages);
+    const renderPlan       = plan.slice(0, renderLimit);
 
     const allBindings: (VariableBinding | null)[] = [];
-    const repetitionIndicesSet = new Set<number>();
-    let prefetchCounted = 0;
-    for (const page of pages) {
-      if (prefetchCounted >= renderLimit) break;
+    const seenPages = new Set<HTMLElement>();
+    renderPlan.forEach(({ page }) => {
+      if (seenPages.has(page)) return;
+      seenPages.add(page);
       this._collectBindings(page).forEach(({ binding }) => allBindings.push(binding));
-      const repeatCount = this._repeatCount(page);
-      for (let i = 0; i < repeatCount && prefetchCounted < renderLimit; i++, prefetchCounted++) {
-        repetitionIndicesSet.add(prefetchCounted);
-      }
-    }
+    });
+    const repetitionIndicesSet = new Set(renderPlan.map(inst => inst.repetitionIndex));
     const apiCache: ApiCache = await VariableEngine.prefetchApiResources(allBindings, {
       repetitionIndices: [...repetitionIndicesSet],
     });
 
     const result: { el: HTMLElement; size: import('./PdfExport.js').PageSize }[] = [];
-    let outputPageNumber = 0;
-    let sequenceBase = 0;
 
-    outer:
-    for (const page of pages) {
-      const size        = PdfExport._parsePageSize(page);
-      const repeatCount = this._repeatCount(page);
-      const origEls     = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
-      const continuesSequence = page.dataset['agendaContinueSequence'] === 'true';
-      const pageStartIndex    = continuesSequence ? sequenceBase : 0;
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+      const outputPageNumber = planIdx + 1;
+      const size    = PdfExport._parsePageSize(page);
+      const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
 
-      for (let i = 0; i < repeatCount; i++) {
-        if (outputPageNumber >= renderLimit) break outer;
-        outputPageNumber++;
+      const clone = page.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
+      const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
 
-        const clone = page.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
-        const cloneEls = [...clone.querySelectorAll<CraftoolsEl>('craftools-element')];
-        const globalRepetitionIndex = pageStartIndex + i;
-
-        if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
-          this._applyAlternateLayout(page, cloneEls);
-        }
-
-        const context: ResolveContext = {
-          repetitionIndex: globalRepetitionIndex,
-          pageNumber:      outputPageNumber,
-          totalPages:      totalOutputPages,
-          now:             new Date(),
-        };
-
-        const picks = VariableEngine.newLinkRegistry();
-
-        const jobs: BindingJob[] = origEls
-          .map((origEl, idx) => {
-            const cloneEl  = cloneEls[idx];
-            const toolType = origEl.getAttribute('data-craftool');
-            const binding  = this._getBinding(origEl, toolType);
-            return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
-          })
-          .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
-
-        const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
-        const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
-
-        [...leaders, ...followers].forEach(j => {
-          const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
-          const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
-          this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
-        });
-
-        origEls.forEach((origEl, idx) => {
-          if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
-          this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
-        });
-
-        clone.querySelectorAll<HTMLElement>('craftools-element')
-          .forEach(el => PdfExport._flattenElement(el));
-
-        result.push({ el: clone, size });
+      if (page.dataset['agendaAlternate'] === 'true' && globalRepetitionIndex % 2 !== 0) {
+        this._applyAlternateLayout(page, cloneEls);
       }
 
-      sequenceBase = pageStartIndex + repeatCount;
-    }
+      const context: ResolveContext = {
+        repetitionIndex: globalRepetitionIndex,
+        pageNumber:      outputPageNumber,
+        totalPages:      totalOutputPages,
+        now:             new Date(),
+      };
+
+      const picks = VariableEngine.newLinkRegistry();
+
+      const jobs: BindingJob[] = origEls
+        .map((origEl, idx) => {
+          const cloneEl  = cloneEls[idx];
+          const toolType = origEl.getAttribute('data-craftool');
+          const binding  = this._getBinding(origEl, toolType);
+          return { origEl, cloneEl, toolType, binding, id: this._getVarId(origEl) };
+        })
+        .filter((j): j is BindingJob => !!(j.cloneEl && j.binding && j.binding.type));
+
+      const leaders   = jobs.filter(j => !this._isFollowerJob(j.binding));
+      const followers = jobs.filter(j =>  this._isFollowerJob(j.binding));
+
+      [...leaders, ...followers].forEach(j => {
+        const jobContext = this._cardRepetitionContext(origEls, j.origEl, context);
+        const resolved = VariableEngine.resolve(j.binding, jobContext, apiCache, { id: j.id, picks });
+        this._applyResolvedValue(j.cloneEl, j.toolType, j.origEl, resolved, j.binding);
+      });
+
+      origEls.forEach((origEl, idx) => {
+        if (origEl.getAttribute('data-craftool') !== 'minicalendar') return;
+        this._advanceStandaloneMiniCalendar(cloneEls[idx], origEl._craftoolsMeta, globalRepetitionIndex);
+      });
+
+      clone.querySelectorAll<HTMLElement>('craftools-element')
+        .forEach(el => PdfExport._flattenElement(el));
+
+      result.push({ el: clone, size });
+    });
 
     return result.length ? result : null;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
-  static _repeatCount(page: HTMLElement): number {
-    return Math.max(1, parseInt(page.dataset['agendaRepeat'] ?? '1', 10) || 1);
-  }
 
   /**
    * Converts a page's authored CSS width (e.g. "210mm", "800px") into the

@@ -24,6 +24,7 @@ import { PdfExport, type PageSize } from '../../utils/PdfExport';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { parseVariableBinding } from '../../utils/fields/variable-binding.field';
+import { AgendaPlan } from '../../utils/AgendaPlan';
 import './AgendaExportTool_Translations.js';
 
 const a = (key: string): string => I18n.t('agendaExportTool.' + key);
@@ -92,61 +93,108 @@ export class AgendaExportTool {
       if (!root) return;
 
       // ── Tab 1: Pages ──────────────────────────────────────────────────
-      root.querySelectorAll<HTMLInputElement>('.agenda-page-repeat-check').forEach(chk => {
-        chk.addEventListener('change', () => {
-          const pageId = chk.dataset.pageId as string;
-          const page   = document.getElementById(pageId);
-          const wrap   = root.querySelector<HTMLElement>(`.agenda-page-repeat-count-wrap[data-page-id="${pageId}"]`);
-          const input  = root.querySelector<HTMLInputElement>(`.agenda-page-repeat-input[data-page-id="${pageId}"]`);
-          if (chk.checked) {
-            if (wrap) wrap.style.display = '';
-            const count = Math.max(2, parseInt(input?.value ?? '', 10) || 2);
-            if (input) input.value = String(count);
+      //
+      // Two kinds of change here:
+      //  - "Topology" changes (a page's repeat toggle, or its "Depois,
+      //    continuar com" target) can change which OTHER pages are valid
+      //    "voltar para" options and how the plan-summary breadcrumb reads,
+      //    so they re-render the whole Pages accordion body (only that
+      //    inner container -- the accordion wrapper itself, and every OTHER
+      //    accordion, is left untouched, so open/closed state and scroll
+      //    position elsewhere in the panel survive).
+      //  - Plain count changes (repeat count, block-repeat count) only
+      //    refresh the numeric summaries in place, so typing in those
+      //    number inputs never loses focus/caret position.
+      const refreshPagesSection = (): void => {
+        const container = root.querySelector<HTMLElement>('[data-accordion-id="agenda-paginas"] .ct-accordion-content');
+        if (!container) return;
+        container.innerHTML = AgendaExportTool._renderPagesSection(pagesSnapshot());
+        bindPagesTabEvents();
+        AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+      };
+
+      const bindPagesTabEvents = (): void => {
+        root.querySelectorAll<HTMLInputElement>('.agenda-page-repeat-check').forEach(chk => {
+          chk.addEventListener('change', () => {
+            const pageId = chk.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            if (page) {
+              if (chk.checked) {
+                const input = root.querySelector<HTMLInputElement>(`.agenda-page-repeat-input[data-page-id="${pageId}"]`);
+                const count = Math.max(2, parseInt(input?.value ?? '', 10) || 2);
+                page.setAttribute('data-agenda-repeat', String(count));
+              } else {
+                page.removeAttribute('data-agenda-repeat');
+                // A non-repeating page can't sensibly close/extend a chain
+                // anymore -- clear whatever it was pointing to so it
+                // doesn't linger as invisible stale state.
+                delete page.dataset.agendaNext;
+                delete page.dataset.agendaCycleCount;
+              }
+            }
+            refreshPagesSection();
+          });
+        });
+
+        root.querySelectorAll<HTMLInputElement>('.agenda-page-repeat-input').forEach(inp => {
+          inp.addEventListener('input', () => {
+            const pageId = inp.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            const count  = Math.max(1, parseInt(inp.value, 10) || 1);
             if (page) page.setAttribute('data-agenda-repeat', String(count));
-          } else {
-            if (wrap) wrap.style.display = 'none';
-            if (page) page.removeAttribute('data-agenda-repeat');
-          }
-          AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+            AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+          });
         });
-      });
 
-      root.querySelectorAll<HTMLInputElement>('.agenda-page-repeat-input').forEach(inp => {
-        inp.addEventListener('input', () => {
-          const pageId = inp.dataset.pageId as string;
-          const page   = document.getElementById(pageId);
-          const count  = Math.max(1, parseInt(inp.value, 10) || 1);
-          if (page) page.setAttribute('data-agenda-repeat', String(count));
-          AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+        root.querySelectorAll<HTMLInputElement>('.agenda-page-alternate-check').forEach(chk => {
+          chk.addEventListener('change', () => {
+            const pageId = chk.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            if (page) {
+              if (chk.checked) page.dataset.agendaAlternate = 'true';
+              else delete page.dataset.agendaAlternate;
+            }
+          });
         });
-      });
 
-      root.querySelectorAll<HTMLInputElement>('.agenda-page-alternate-check').forEach(chk => {
-        chk.addEventListener('change', () => {
-          const pageId = chk.dataset.pageId as string;
-          const page   = document.getElementById(pageId);
-          if (page) {
-            if (chk.checked) page.dataset.agendaAlternate = 'true';
-            else delete page.dataset.agendaAlternate;
-          }
+        // "Depois, continuar com" -- see AgendaPlan.ts's header comment for
+        // the chain/loop model. The dropdown only ever offers EARLIER,
+        // repeat-enabled pages (see _renderPagesSection()'s option
+        // building), so picking one always closes a block back to it;
+        // picking "Próxima página do documento" clears it back to today's
+        // only behaviour (this page's own repeats, then normal document
+        // flow).
+        root.querySelectorAll<HTMLSelectElement>('.agenda-page-next-select').forEach(sel => {
+          sel.addEventListener('change', () => {
+            const pageId = sel.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            if (!page) return;
+            if (sel.value) {
+              page.dataset.agendaNext = sel.value;
+              if (!page.dataset.agendaCycleCount) page.dataset.agendaCycleCount = '2';
+            } else {
+              delete page.dataset.agendaNext;
+              delete page.dataset.agendaCycleCount;
+            }
+            refreshPagesSection();
+          });
         });
-      });
 
-      // Opts a page into resuming the previous page's date/sequence index
-      // instead of starting fresh at 0 -- see AgendaExport.ts's
-      // `_buildDocument()`/`buildOutputPages()` header comments for what
-      // this controls and the bug it fixes when left unchecked (the
-      // default).
-      root.querySelectorAll<HTMLInputElement>('.agenda-page-continue-check').forEach(chk => {
-        chk.addEventListener('change', () => {
-          const pageId = chk.dataset.pageId as string;
-          const page   = document.getElementById(pageId);
-          if (page) {
-            if (chk.checked) page.dataset.agendaContinueSequence = 'true';
-            else delete page.dataset.agendaContinueSequence;
-          }
+        // "Repetir esse bloco quantas vezes" -- only shown once a page's
+        // own "continuar com" closes a block (see above); stored on THAT
+        // page (the one that closes the loop), per AgendaPlan.cycleCount().
+        root.querySelectorAll<HTMLInputElement>('.agenda-page-cycle-input').forEach(inp => {
+          inp.addEventListener('input', () => {
+            const pageId = inp.dataset.pageId as string;
+            const page   = document.getElementById(pageId);
+            const count  = Math.max(1, parseInt(inp.value, 10) || 1);
+            if (page) page.dataset.agendaCycleCount = String(count);
+            AgendaExportTool._refreshExportSummary(root, pagesSnapshot());
+          });
         });
-      });
+      };
+
+      bindPagesTabEvents();
 
       // ── Tab 2: Preview — single on/off toggle ──────────────────────────
       // Entirely decoupled from the accordion's own open/closed state now
@@ -249,14 +297,39 @@ export class AgendaExportTool {
       return `<p style="font-size:12px; color:var(--text-secondary);">${a('noPagesFound')}</p>`;
     }
 
+    // Pages already claimed as SOMEONE ELSE's "continuar com" target --
+    // excluded from every other page's own dropdown options so a page can
+    // only ever be reached through one chain (see AgendaPlan.ts's header
+    // comment for the model: at most one incoming edge per page).
+    const takenTargets = new Set(
+      pages.filter(p => p.dataset.agendaNext).map(p => p.dataset.agendaNext as string),
+    );
+    // Pages whose OWN "continuar com" closes a loop -- only these show the
+    // "repetir esse bloco quantas vezes" field (see closingPageIds()'s doc
+    // comment: a purely forward link that never loops back doesn't need one).
+    const closingIds = AgendaPlan.closingPageIds(pages);
+
     const cards = pages.map((page, idx) => {
       const size = PdfExport._parsePageSize(page);
-      const repeatCount = parseInt(page.dataset.agendaRepeat ?? '', 10) || 1;
-      const checked = repeatCount > 1;
+      const checked = AgendaPlan.repeatEnabled(page);
+      const repeatCount = AgendaPlan.repeatCount(page);
       const boundCount = AgendaExportTool._collectPageBindings(page).length;
 
       const alternate = page.dataset.agendaAlternate === 'true';
-      const continuesSequence = page.dataset.agendaContinueSequence === 'true';
+      const nextId = page.dataset.agendaNext ?? '';
+      const cycleCount = AgendaPlan.cycleCount(page);
+
+      // Any OTHER repeat-enabled page not already targeted by someone else
+      // can be picked here -- a page AFTER this one extends the chain
+      // forward ("continuar com"), a page BEFORE it closes it into a loop
+      // ("voltar para", revealing the block-repeat count below).
+      const targetOptions = pages
+        .filter((p, i) => i !== idx && AgendaPlan.repeatEnabled(p) && (p.id === nextId || !takenTargets.has(p.id)))
+        .map((p) => ({
+          id: p.id,
+          label: `${a('pageLabel')} ${pages.indexOf(p) + 1}`,
+          backward: pages.indexOf(p) < idx,
+        }));
 
       return `
         <div class="ct-field ct-field--block" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
@@ -266,12 +339,6 @@ export class AgendaExportTool {
             <span style="font-size:10px; color:var(--text-muted); margin-left:auto; white-space:nowrap;">${size.width} × ${size.height}</span>
           </label>
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px; margin-left:24px;">${boundCount} ${a('variablesFoundSuffix')}</span>
-          ${idx > 0 ? `
-            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:8px 0 0 24px;" title="${a('continueSequenceHint')}">
-              <input type="checkbox" class="agenda-page-continue-check" data-page-id="${page.id}" ${continuesSequence ? 'checked' : ''} style="margin-top:2px;">
-              <span style="font-size:11px;">${a('continueSequenceToggle')}</span>
-            </label>
-          ` : ''}
           <div class="agenda-page-repeat-count-wrap" data-page-id="${page.id}" style="margin-top:8px; margin-left:24px; ${checked ? '' : 'display:none;'}">
             <span class="craftools-label">${a('repeatCountLabel')}</span>
             <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" style="width:100%; margin-bottom:8px;">
@@ -279,6 +346,21 @@ export class AgendaExportTool {
               <input type="checkbox" class="agenda-page-alternate-check" data-page-id="${page.id}" ${alternate ? 'checked' : ''}>
               <span style="font-size:11px;">${a('alternateToggle')}</span>
             </label>
+            ${targetOptions.length ? `
+              <div style="margin-top:8px;">
+                <span class="craftools-label">${a('nextPageLabel')}</span>
+                <select class="craftools-select agenda-page-next-select" data-page-id="${page.id}" style="width:100%;">
+                  <option value="">${a('nextPageDocumentOption')}</option>
+                  ${targetOptions.map(t => `<option value="${t.id}" ${t.id === nextId ? 'selected' : ''}>${(t.backward ? a('nextPageBackToOption') : a('nextPageContinueOption')).replace('{page}', t.label)}</option>`).join('')}
+                </select>
+              </div>
+              ${closingIds.has(page.id) ? `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg-accent, rgba(99,102,241,0.1)); border-radius:6px; padding:8px 10px; margin-top:8px;">
+                  <span style="font-size:11px; color:var(--text-accent, #4f46e5); font-weight:500;">${a('cycleCountLabel')}</span>
+                  <input type="number" class="craftools-input agenda-page-cycle-input" data-page-id="${page.id}" min="1" max="500" value="${cycleCount}" style="width:60px;">
+                </div>
+              ` : ''}
+            ` : ''}
             ${boundCount === 0 ? `
               <div style="display:flex; gap:6px; align-items:flex-start; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:8px; font-size:11px; color:#ef4444; margin-top:8px;">
                 <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
@@ -292,8 +374,43 @@ export class AgendaExportTool {
 
     return `
       <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">${a('pagesIntro')}</p>
+      <div id="agenda-plan-summary" style="display:flex; flex-wrap:wrap; align-items:center; gap:4px; font-size:11px; color:var(--text-secondary); background:var(--bg-shell, #f5f5f5); border-radius:6px; padding:8px 10px; margin-bottom:10px;">${AgendaExportTool._buildPlanSummaryHtml(pages)}</div>
       ${cards}
     `;
+  }
+
+  /**
+   * Renders the resolved AgendaPlan as a small breadcrumb -- e.g.
+   * "Página 1 → [Página 2 (30x) → Página 3 (15x)] × 12 → 541 páginas" --
+   * so the user can see the outcome of the Pages tab's toggles/selects
+   * without mentally simulating the chain/loop themselves. Mirrors
+   * AgendaPlan.describe()'s traversal exactly (same source of truth
+   * AgendaExport.ts's real resolution uses via AgendaPlan.build()), so
+   * this never drifts from what the actual export/preview will produce.
+   */
+  private static _buildPlanSummaryHtml(pages: PageEl[]): string {
+    if (!pages.length) return '';
+    const pageIndex = new Map<HTMLElement, number>(pages.map((p, i) => [p, i]));
+    const label = (p: HTMLElement, count: number): string => {
+      const n = (pageIndex.get(p) ?? 0) + 1;
+      const base = `${a('pageLabel')} ${n}`;
+      return count > 1 ? `${base} (${count}x)` : base;
+    };
+
+    const groups = AgendaPlan.describe(pages);
+    const parts = groups.map(g => {
+      if (g.kind === 'single') return AgendaExportTool._esc(label(g.page, g.count));
+
+      const preludeHtml = g.prelude.map(pg => AgendaExportTool._esc(label(pg.page, pg.count))).join(' &rarr; ');
+      if (!g.loop.length) return preludeHtml;
+
+      const loopHtml = g.loop.map(pg => AgendaExportTool._esc(label(pg.page, pg.count))).join(' &rarr; ');
+      const chip = `<span style="background:var(--bg-accent, rgba(99,102,241,0.15)); color:var(--text-accent, #4f46e5); padding:1px 6px; border-radius:4px; font-weight:500;">${loopHtml}</span> &times;${g.cycles}`;
+      return preludeHtml ? `${preludeHtml} &rarr; ${chip}` : chip;
+    });
+
+    const total = AgendaPlan.build(pages).length;
+    return `${parts.join(' &rarr; ')} &rarr; <strong>${total}</strong> ${a('planSummaryTotalSuffix')}`;
   }
 
   // ── Tab 2: Preview ────────────────────────────────────────────────────────
@@ -555,13 +672,23 @@ export class AgendaExportTool {
     `;
   }
 
+  /**
+   * Refreshes every derived-count display after a Pages tab change: the
+   * Actions tab's total-pages chip AND the Pages tab's own plan-summary
+   * breadcrumb (see _buildPlanSummaryHtml()) -- both read straight from
+   * AgendaPlan, so they always agree with each other and with the real
+   * export.
+   */
   private static _refreshExportSummary(root: HTMLElement, pages: PageEl[]): void {
     const el = root.querySelector('#agenda-total-pages');
     if (el) el.textContent = String(AgendaExportTool._totalOutputPages(pages));
+
+    const summaryEl = root.querySelector<HTMLElement>('#agenda-plan-summary');
+    if (summaryEl) summaryEl.innerHTML = AgendaExportTool._buildPlanSummaryHtml(pages);
   }
 
   private static _totalOutputPages(pages: PageEl[]): number {
-    return pages.reduce((sum, p) => sum + Math.max(1, parseInt(p.dataset.agendaRepeat ?? '', 10) || 1), 0);
+    return AgendaPlan.build(pages).length;
   }
 
   // ── Shared helpers ────────────────────────────────────────────────────────
