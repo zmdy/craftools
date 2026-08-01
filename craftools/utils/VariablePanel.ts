@@ -527,7 +527,7 @@ export class VariablePanel {
 
     private static _seqTextConfig(b: VariableBinding): string {
         return `
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.seqTextValuesLabel')}</span>
                 <textarea id="var-seqtext-values" class="craftools-input" rows="4" placeholder="${this._esc(I18n.t('variablePanel.seqTextValuesPlaceholder'))}" style="width:100%; resize:vertical;">${this._esc(b.values)}</textarea>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.seqTextValuesHelp')}</span>
@@ -574,7 +574,7 @@ export class VariablePanel {
 
     private static _emojiConfig(b: VariableBinding): string {
         return `
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiValuesLabel')}</span>
                 <textarea id="var-emoji-values" class="craftools-input" rows="2" placeholder="${this._esc(I18n.t('variablePanel.emojiValuesPlaceholder'))}" style="width:100%; resize:vertical; font-family:'Noto Color Emoji', sans-serif; font-size:16px;">${this._esc(b.values)}</textarea>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiValuesHelp')}</span>
@@ -641,7 +641,7 @@ export class VariablePanel {
     private static _emojiKitchenConfig(b: VariableBinding): string {
         const hasLeft = !!(b.leftEmoji ?? '').trim();
         return `
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
                 <div id="var-kitchen-left-wrap"></div>
             </div>
