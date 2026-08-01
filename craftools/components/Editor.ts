@@ -59,6 +59,7 @@ interface PositionedElement extends HTMLElement {
   _craftoolsMeta?: unknown;
   _craftoolsAutoResize?: boolean;
   _craftoolsVariable?: unknown;
+  deselect?: () => void;
 }
 
 // ── Canvas-element tools: key → lazy module import ────────────────────────────
@@ -282,8 +283,20 @@ export class Craftools_Editor extends HTMLElement {
         return;
       }
 
-      // ── Element shortcuts: Delete, Ctrl+C / Ctrl+V, Arrow-key nudge ──────────
+      // ── Element shortcuts: Esc, Delete, Ctrl+C / Ctrl+V, Arrow-key nudge ─────
       const selected = document.querySelector<PositionedElement>('craftools-element.craftools-selected');
+
+      if (e.key === 'Escape') {
+        if (!selected) return;
+        e.preventDefault();
+        // Element.ts's own outside-click handler calls this exact method --
+        // reusing it (rather than duplicating the panel-close/ctxbar-hide
+        // logic here) guarantees Esc behaves identically to clicking outside
+        // the element, including the 'craftools-element-deselect' event
+        // Editor.ts listens for to close the properties panel.
+        selected.deselect?.();
+        return;
+      }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!selected || selected.getAttribute('data-locked') === 'true') return;
