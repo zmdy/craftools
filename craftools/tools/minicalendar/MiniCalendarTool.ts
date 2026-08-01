@@ -184,8 +184,16 @@ export class MiniCalendarTool extends BaseTool {
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
     if (!('displayMode' in existing)) patch.displayMode = meta.displayMode ?? 'complete1';
-    if (!('year'        in existing)) patch.year        = meta.year  ?? now.getFullYear();
-    if (!('month'       in existing)) patch.month       = meta.month ?? (now.getMonth() + 1);
+    // Single native <input type="month"> field -- see types/PropertySchema.ts's
+    // MonthField doc comment. Formatted from meta.year/meta.month (still kept
+    // as separate numbers internally -- CalendarRenderer.buildCardElement()
+    // and every other _craftoolsMeta consumer below wants two numeric args,
+    // not a "YYYY-MM" string) into the native input's own string format.
+    if (!('monthYear' in existing)) {
+      const y = meta.year ?? now.getFullYear();
+      const m = meta.month ?? (now.getMonth() + 1);
+      patch.monthYear = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`;
+    }
     if (!('weekStartSunday' in existing)) patch.weekStartSunday = meta.weekStartSunday ?? (AppSettings.get('defaultWeekStart') === 'sunday');
     if (!('highlightDaySource' in existing)) patch.highlightDaySource = meta.highlightDaySource ?? 'today';
     // Theme colors now read from CalendarTheme's REAL nested shape (fixed --
@@ -221,8 +229,7 @@ export class MiniCalendarTool extends BaseTool {
         defaultOpen: true,
         fields: [
           { type: 'select', key: 'displayMode',    label: 'Display',                              i18nKey: 'miniCalendarTool.displayModeLabel', options: DISPLAY_MODES },
-          { type: 'number', key: 'year',            label: 'Year',  min: 2000, max: 2100, step: 1, i18nKey: 'miniCalendarTool.year' },
-          { type: 'number', key: 'month',           label: 'Month', min: 1,    max: 12,   step: 1, i18nKey: 'miniCalendarTool.month' },
+          { type: 'month',  key: 'monthYear',       label: 'Month / Year',                         i18nKey: 'miniCalendarTool.monthYearLabel' },
           { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)',  i18nKey: 'miniCalendarTool.weekStartSunday' },
         ],
       },
@@ -364,7 +371,15 @@ export class MiniCalendarTool extends BaseTool {
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
     if (e._craftoolsMeta) {
       const themePath = MiniCalendarTool.THEME_KEY_PATHS[key];
-      if (key === 'displayMode' || key === 'year' || key === 'month' || key === 'weekStartSunday' || key === 'highlightDaySource') {
+      if (key === 'monthYear') {
+        // "YYYY-MM" from the native <input type="month"> -- split back into
+        // the two separate numbers _buildCard()/CalendarRenderer still want.
+        const [yStr, mStr] = String(value).split('-');
+        const y = parseInt(yStr, 10);
+        const m = parseInt(mStr, 10);
+        if (!isNaN(y)) e._craftoolsMeta.year = y;
+        if (!isNaN(m)) e._craftoolsMeta.month = m;
+      } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
       } else if (themePath) {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;

@@ -11,6 +11,7 @@
 
 export * from './text.field';
 export * from './number.field';
+export * from './month.field';
 export * from './color.field';
 export * from './color-gradient.field';
 export * from './color-picker.field';

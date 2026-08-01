@@ -11,6 +11,7 @@
 export type FieldType =
   | 'text'
   | 'number'
+  | 'month'
   | 'color'
   | 'color-gradient'
   | 'color-picker'
@@ -70,6 +71,21 @@ export interface NumberField extends BaseField {
   step?: number;
   /** Displayed after the input: 'px', 'mm', '%', etc. */
   unit?: string;
+}
+
+/**
+ * Native `<input type="month">` -- a single browser-provided month+year
+ * picker, replacing what used to be a "month select + year number input"
+ * pair wherever a tool only needs a month/year (no day), e.g. Mini
+ * Calendar's / Calendar Generator's "starting month" and the "Mini
+ * Calendário" variable-content type's fixed month/year. Stored/reported
+ * value is the input's own native string format, "YYYY-MM" (e.g.
+ * "2026-07") -- split on '-' for separate year/month numbers.
+ */
+export interface MonthField extends BaseField {
+  type: 'month';
+  min?: string; // "YYYY-MM"
+  max?: string; // "YYYY-MM"
 }
 
 export interface ColorField extends BaseField {
@@ -274,6 +290,7 @@ export interface CustomField extends BaseField {
 export type Field =
   | TextField
   | NumberField
+  | MonthField
   | ColorField
   | ColorGradientField
   | ColorPickerField
