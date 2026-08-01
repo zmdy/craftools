@@ -505,9 +505,18 @@ export class VariableContentTool extends BaseTool {
       outline: 1px dashed var(--accent, #6366f1);
       outline-offset: 2px;
     `;
-    content.textContent = I18n.t('variableContentTool.placeholder') || 'Configure uma variável...';
-
     el.appendChild(content);
+
+    // Resolves the default 'date' binding set above into its real preview
+    // text (e.g. today's date) instead of leaving the placeholder
+    // ("Configure uma variável...") showing until the user happens to open
+    // the properties panel -- that placeholder is only actually correct for
+    // a binding-less state, which this tool no longer has (createElement()
+    // always seeds a real 'date' binding, see the comment above). Same
+    // resolve path _applyProperty()'s 'variableBinding' case already uses,
+    // so a freshly dropped element looks identical to one whose date
+    // binding was just re-saved from the panel.
+    VariableContentTool._applyVariablePreview(el, content, el._craftoolsVariable ?? null);
 
     return el;
   }
