@@ -117,6 +117,10 @@ I18n.addTranslations('variablePanel', {
         seqTextValuesPlaceholder: "Um por linha, ou separados por vírgula\nex: Segunda-feira\nTerça-feira\nQuarta-feira",
         seqTextValuesHelp: "Cada repetição da página usa o próximo item da lista.",
         seqTextLoopLabel: "Repetir a lista ao chegar no fim (loop)",
+        seqTextCustomSeparatorToggle: "Usar separador personalizado",
+        seqTextCustomSeparatorHelp: "Desativado, cada item é separado por quebra de linha ou vírgula. Ativado, use o separador definido abaixo (útil quando um item precisa conter vírgulas).",
+        seqTextSeparatorLabel: "Separador",
+        seqTextSeparatorPlaceholder: "Ex.: ; ou |",
 
         pageNumberStartAtLabel: "Começar em",
         pageNumberFormatLabel: "Formato",
@@ -324,6 +328,10 @@ I18n.addTranslations('variablePanel', {
         seqTextValuesPlaceholder: "One per line, or comma separated\ne.g.: Monday\nTuesday\nWednesday",
         seqTextValuesHelp: "Each page repetition uses the next item in the list.",
         seqTextLoopLabel: "Loop back to the start when reaching the end",
+        seqTextCustomSeparatorToggle: "Use a custom separator",
+        seqTextCustomSeparatorHelp: "Off, each item is split by line break or comma. On, use the separator set below (useful when an item needs to contain commas).",
+        seqTextSeparatorLabel: "Separator",
+        seqTextSeparatorPlaceholder: "e.g. ; or |",
 
         pageNumberStartAtLabel: "Start at",
         pageNumberFormatLabel: "Format",
@@ -531,6 +539,10 @@ I18n.addTranslations('variablePanel', {
         seqTextValuesPlaceholder: "Uno por línea, o separados por coma\nej: Lunes\nMartes\nMiércoles",
         seqTextValuesHelp: "Cada repetición de la página usa el siguiente elemento de la lista.",
         seqTextLoopLabel: "Repetir la lista al llegar al final (loop)",
+        seqTextCustomSeparatorToggle: "Usar separador personalizado",
+        seqTextCustomSeparatorHelp: "Desactivado, cada elemento se separa por salto de línea o coma. Activado, use el separador definido abajo (útil cuando un elemento necesita contener comas).",
+        seqTextSeparatorLabel: "Separador",
+        seqTextSeparatorPlaceholder: "Ej.: ; o |",
 
         pageNumberStartAtLabel: "Empezar en",
         pageNumberFormatLabel: "Formato",

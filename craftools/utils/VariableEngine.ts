@@ -157,6 +157,17 @@ export interface VariableBinding {
     values?:       string;
     mode?:         string;
     loop?:         boolean;
+    /**
+     * sequenceText only. Default (false/unset) splits `values` on newlines
+     * OR commas (`_parseValuesList()`'s original behavior, unchanged for
+     * every binding saved before this field existed). When true, `values`
+     * is split on the exact literal string in `separator` instead -- lets
+     * an item legitimately contain a comma (e.g. "Rio de Janeiro, RJ")
+     * without it being read as two items.
+     */
+    useCustomSeparator?: boolean;
+    /** Only read when useCustomSeparator is true. Literal split delimiter (e.g. ";", " | ", "\t"), NOT a regex. */
+    separator?:    string;
     // apiPhrase
     field?:        string;
     collection?:   string;
@@ -379,7 +390,7 @@ export class VariableEngine {
                 dateLanguage: 'pt-br',
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
-            case 'sequenceText':   return { type, values: '', loop: true, linkedTo: '' };
+            case 'sequenceText':   return { type, values: '', loop: true, useCustomSeparator: false, separator: '', linkedTo: '' };
             case 'pageNumber':     return { type, startAt: 1, format: 'n', linkedTo: '' };
             case 'link':           return { type, url: '', appendIndex: false, startAt: 1, linkedTo: '' };
             case 'emoji':          return { type, values: '', mode: 'sequential', linkedTo: '' };
@@ -1237,12 +1248,23 @@ export class VariableEngine {
 
     // ── sequenceText ──────────────────────────────────────────────────────────
 
-    private static _parseValuesList(raw: unknown): string[] {
-        return String(raw ?? '').split(/\r?\n|,/).map(s => s.trim()).filter(s => s.length > 0);
+    /**
+     * Splits the raw `values` textarea into individual items. Default:
+     * newline OR comma (unchanged legacy behavior). When `b.useCustomSeparator`
+     * is on and a non-empty `b.separator` is set, splits on that EXACT
+     * literal string instead -- e.g. ";" lets an item contain its own
+     * commas ("Rio de Janeiro, RJ") without being split in two.
+     */
+    private static _parseValuesList(raw: unknown, b?: VariableBinding): string[] {
+        const str = String(raw ?? '');
+        if (b?.useCustomSeparator && b.separator) {
+            return str.split(b.separator).map(s => s.trim()).filter(s => s.length > 0);
+        }
+        return str.split(/\r?\n|,/).map(s => s.trim()).filter(s => s.length > 0);
     }
 
     private static _pickSequenceText(b: VariableBinding, ctx: { repetitionIndex: number }): string | null {
-        const values = this._parseValuesList(b.values);
+        const values = this._parseValuesList(b.values, b);
         if (!values.length) return null;
         const idx = ctx.repetitionIndex;
         if (b.loop === false) return values[Math.min(idx, values.length - 1)];

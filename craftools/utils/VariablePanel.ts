@@ -270,21 +270,16 @@ export class VariablePanel {
                 <span class="craftools-label">${I18n.t('variablePanel.dateStartLabel')}</span>
                 <input type="date" id="var-date-start" class="craftools-input" style="width:100%;" value="${this._esc(b.startDate)}">
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 72px; gap:10px;">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.dateIntervalLabel')}</span>
-                    <select id="var-date-interval" class="craftools-select" style="width:100%;">
-                        <option value="none"    ${b.interval === 'none'    ? 'selected' : ''}>${I18n.t('variablePanel.dateIntervalNone')}</option>
-                        <option value="daily"   ${b.interval === 'daily'   ? 'selected' : ''}>${I18n.t('variablePanel.dateIntervalDaily')}</option>
-                        <option value="weekly"  ${b.interval === 'weekly'  ? 'selected' : ''}>${I18n.t('variablePanel.dateIntervalWeekly')}</option>
-                        <option value="monthly" ${b.interval === 'monthly' ? 'selected' : ''}>${I18n.t('variablePanel.dateIntervalMonthly')}</option>
-                        <option value="yearly"  ${b.interval === 'yearly'  ? 'selected' : ''}>${I18n.t('variablePanel.dateIntervalYearly')}</option>
-                    </select>
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.dateStepLabel')}</span>
-                    <input type="number" id="var-date-step" class="craftools-input" style="width:100%;" value="${parseInt(String(b.step), 10) || 1}" min="1">
-                </div>
+            ${this._pillGroup(I18n.t('variablePanel.dateIntervalLabel'), 'var-date-interval-btn', [
+                ['none',    I18n.t('variablePanel.dateIntervalNone')],
+                ['daily',   I18n.t('variablePanel.dateIntervalDaily')],
+                ['weekly',  I18n.t('variablePanel.dateIntervalWeekly')],
+                ['monthly', I18n.t('variablePanel.dateIntervalMonthly')],
+                ['yearly',  I18n.t('variablePanel.dateIntervalYearly')],
+            ], b.interval ?? 'daily')}
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.dateStepLabel')}</span>
+                <input type="number" id="var-date-step" class="craftools-input" style="width:100%;" value="${parseInt(String(b.step), 10) || 1}" min="1">
             </div>
             <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.dateFormatLabel')}</span>
@@ -318,19 +313,13 @@ export class VariablePanel {
                         placeholder="${this._esc(I18n.t('variablePanel.dateDaysBoxHeightPlaceholder'))}">
                     <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateDaysBoxHeightHelp')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
-                        <select id="var-date-daysbox-borderstyle" class="craftools-select" style="width:100%;">
-                            ${['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style => `
-                                <option value="${style}" ${(b.daysBoxBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
-                        <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
-                    </div>
+                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-date-daysbox-borderstyle-btn',
+                    ['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style =>
+                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
+                    ), b.daysBoxBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                    <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
                 </div>
                 <div class="ct-field" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderColor')}</span>
@@ -354,15 +343,11 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div class="ct-field ct-field--block" style="margin-top: 10px;">
-                <span class="craftools-label">${I18n.t('variablePanel.dateLanguageLabel')}</span>
-                <select id="var-date-language" class="craftools-select" style="width:100%;">
-                    <option value="pt-br" ${(b.dateLanguage ?? 'pt-br') === 'pt-br' ? 'selected' : ''}>Português</option>
-                    <option value="en" ${b.dateLanguage === 'en' ? 'selected' : ''}>English</option>
-                    <option value="es" ${b.dateLanguage === 'es' ? 'selected' : ''}>Español</option>
-                </select>
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateLanguageHelp')}</span>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.dateLanguageLabel'), 'var-date-language-btn', [
+                ['pt-br', 'Português'],
+                ['en',    'English'],
+                ['es',    'Español'],
+            ], b.dateLanguage ?? 'pt-br', { help: I18n.t('variablePanel.dateLanguageHelp'), wrapStyle: 'margin-top: 10px;' })}
 
             <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 ${this._specialDateCategoriesFields(b)}
@@ -403,13 +388,10 @@ export class VariablePanel {
             </div>
 
             <div id="var-date-season-options" style="display: ${hasToken('{season}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.dateHemisphereLabel')}</span>
-                    <select id="var-date-hemisphere" class="craftools-select" style="width:100%;">
-                        <option value="south" ${(b.hemisphere ?? 'south') === 'south' ? 'selected' : ''}>${I18n.t('variablePanel.dateHemisphereSouth')}</option>
-                        <option value="north" ${b.hemisphere === 'north' ? 'selected' : ''}>${I18n.t('variablePanel.dateHemisphereNorth')}</option>
-                    </select>
-                </div>
+                ${this._pillGroup(I18n.t('variablePanel.dateHemisphereLabel'), 'var-date-hemisphere-btn', [
+                    ['south', I18n.t('variablePanel.dateHemisphereSouth')],
+                    ['north', I18n.t('variablePanel.dateHemisphereNorth')],
+                ], b.hemisphere ?? 'south')}
             </div>
 
             <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{season}') || hasToken('{moon}') || hasToken('{zodiac}')) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
@@ -541,6 +523,20 @@ export class VariablePanel {
                 <input type="checkbox" id="var-seqtext-loop" ${b.loop !== false ? 'checked' : ''}>
                 <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.seqTextLoopLabel')}</span>
             </label>
+            <div class="ct-field" style="margin-top:6px;">
+                <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                    <input type="checkbox" id="var-seqtext-customsep-toggle" class="ct-fi" style="display:none;" ${b.useCustomSeparator ? 'checked' : ''}>
+                    <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.useCustomSeparator ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                        <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${b.useCustomSeparator ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                    </span>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.seqTextCustomSeparatorToggle')}</span>
+                </label>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.seqTextCustomSeparatorHelp')}</span>
+            </div>
+            <div class="ct-field" id="var-seqtext-separator-wrap" style="display:${b.useCustomSeparator ? '' : 'none'};">
+                <span class="craftools-label">${I18n.t('variablePanel.seqTextSeparatorLabel')}</span>
+                <input type="text" id="var-seqtext-separator" class="craftools-input" style="width:100%;" placeholder="${this._esc(I18n.t('variablePanel.seqTextSeparatorPlaceholder'))}" value="${this._esc(b.separator ?? '')}">
+            </div>
         `;
     }
 
@@ -550,13 +546,10 @@ export class VariablePanel {
                 <span class="craftools-label">${I18n.t('variablePanel.pageNumberStartAtLabel')}</span>
                 <input type="number" id="var-pagenum-startat" class="craftools-input" style="width:100%;" value="${b.startAt ?? 1}" min="1">
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.pageNumberFormatLabel')}</span>
-                <select id="var-pagenum-format" class="craftools-select" style="width:100%;">
-                    <option value="n"          ${b.format === 'n'          ? 'selected' : ''}>${I18n.t('variablePanel.pageNumberFormatSimple')}</option>
-                    <option value="n_of_total" ${b.format === 'n_of_total' ? 'selected' : ''}>${I18n.t('variablePanel.pageNumberFormatOfTotal')}</option>
-                </select>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.pageNumberFormatLabel'), 'var-pagenum-format-btn', [
+                ['n',          I18n.t('variablePanel.pageNumberFormatSimple')],
+                ['n_of_total', I18n.t('variablePanel.pageNumberFormatOfTotal')],
+            ], b.format ?? 'n')}
         `;
     }
 
@@ -585,13 +578,10 @@ export class VariablePanel {
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiValuesHelp')}</span>
                 <div id="var-emoji-picker-wrap" style="margin-top:8px; border:1px solid var(--border, #e4e4e7); border-radius:8px; overflow:hidden;"></div>
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
-                <select id="var-emoji-mode" class="craftools-select" style="width:100%;">
-                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeSequential')}</option>
-                    <option value="random"     ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeRandom')}</option>
-                </select>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.apiPhraseModeLabel'), 'var-emoji-mode-btn', [
+                ['sequential', I18n.t('variablePanel.apiPhraseModeSequential')],
+                ['random',     I18n.t('variablePanel.apiPhraseModeRandom')],
+            ], b.mode === 'random' ? 'random' : 'sequential')}
         `;
     }
 
@@ -600,17 +590,15 @@ export class VariablePanel {
         const isCustom    = !!b.field && !knownFields.includes(b.field);
         const filterField = b.filterField ?? '';
         return `
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFieldLabel')}</span>
-                <select id="var-api-field-select" class="craftools-select" style="width:100%;">
-                    <option value=""         ${!isCustom && !b.field  ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldAuto')}</option>
-                    <option value="phrase"   ${b.field === 'phrase'   ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldPhrase')}</option>
-                    <option value="author"   ${b.field === 'author'   ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldAuthor')}</option>
-                    <option value="category" ${b.field === 'category' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldCategory')}</option>
-                    <option value="__custom__" ${isCustom             ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFieldCustom')}</option>
-                </select>
-                <input type="text" id="var-api-field-custom" class="craftools-input" style="width:100%; margin-top:6px; ${isCustom ? '' : 'display:none;'}" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${isCustom ? this._esc(b.field) : ''}">
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseFieldHelp')}</span>
+            ${this._pillGroup(I18n.t('variablePanel.apiPhraseFieldLabel'), 'var-api-field-btn', [
+                ['',           I18n.t('variablePanel.apiPhraseFieldAuto')],
+                ['phrase',     I18n.t('variablePanel.apiPhraseFieldPhrase')],
+                ['author',     I18n.t('variablePanel.apiPhraseFieldAuthor')],
+                ['category',   I18n.t('variablePanel.apiPhraseFieldCategory')],
+                ['__custom__', I18n.t('variablePanel.apiPhraseFieldCustom')],
+            ], isCustom ? '__custom__' : (b.field ?? ''), { help: I18n.t('variablePanel.apiPhraseFieldHelp') })}
+            <div class="ct-field" id="var-api-field-custom-wrap" style="${isCustom ? '' : 'display:none;'} margin-top:-4px;">
+                <input type="text" id="var-api-field-custom" class="craftools-input" style="width:100%;" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${isCustom ? this._esc(b.field) : ''}">
             </div>
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseCollectionLabel')}</span>
@@ -619,27 +607,21 @@ export class VariablePanel {
                 </select>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.apiPhraseCollectionHelp')}</span>
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterLabel')}</span>
-                <select id="var-api-filter-field" class="craftools-select" style="width:100%;">
-                    <option value=""       ${!filterField            ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterNone')}</option>
-                    <option value="author"   ${filterField === 'author'   ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterAuthor')}</option>
-                    <option value="category" ${filterField === 'category' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseFilterCategory')}</option>
-                </select>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.apiPhraseFilterLabel'), 'var-api-filterfield-btn', [
+                ['',         I18n.t('variablePanel.apiPhraseFilterNone')],
+                ['author',   I18n.t('variablePanel.apiPhraseFilterAuthor')],
+                ['category', I18n.t('variablePanel.apiPhraseFilterCategory')],
+            ], filterField)}
             <div class="ct-field" id="var-api-filter-value-wrap" style="${filterField ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterValueLabel')}</span>
                 <select id="var-api-filter-value" class="craftools-select" style="width:100%;">
                     <option value="">${I18n.t('variablePanel.apiPhraseFilterLoading')}</option>
                 </select>
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
-                <select id="var-api-mode" class="craftools-select" style="width:100%;">
-                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeSequential')}</option>
-                    <option value="random"     ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeRandom')}</option>
-                </select>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.apiPhraseModeLabel'), 'var-api-mode-btn', [
+                ['sequential', I18n.t('variablePanel.apiPhraseModeSequential')],
+                ['random',     I18n.t('variablePanel.apiPhraseModeRandom')],
+            ], b.mode === 'random' ? 'random' : 'sequential')}
         `;
     }
 
@@ -656,13 +638,11 @@ export class VariablePanel {
                 <div id="var-kitchen-right-grid"></div>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
             </div>
-            <div class="ct-field" id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
-                <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenModeLabel')}</span>
-                <select id="var-kitchen-mode" class="craftools-select" style="width:100%;">
-                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.emojiKitchenModeSequential')}</option>
-                    <option value="random"     ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.emojiKitchenModeRandom')}</option>
-                </select>
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenModeHelp')}</span>
+            <div id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
+                ${this._pillGroup(I18n.t('variablePanel.emojiKitchenModeLabel'), 'var-kitchen-mode-btn', [
+                    ['sequential', I18n.t('variablePanel.emojiKitchenModeSequential')],
+                    ['random',     I18n.t('variablePanel.emojiKitchenModeRandom')],
+                ], b.mode === 'random' ? 'random' : 'sequential', { help: I18n.t('variablePanel.emojiKitchenModeHelp') })}
             </div>
         `;
     }
@@ -702,31 +682,24 @@ export class VariablePanel {
         ` : '';
         return `
             ${highlightLinkRow}
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.miniCalendarModeLabel')}</span>
-                <select id="var-minical-mode" class="craftools-select" style="width:100%;">
-                    <option value="fixed"             ${b.mode !== 'sequentialMonthly' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarModeFixed')}</option>
-                    <option value="sequentialMonthly" ${b.mode === 'sequentialMonthly' ? 'selected' : ''}>${I18n.t('variablePanel.miniCalendarModeSequential')}</option>
-                </select>
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.miniCalendarModeHelp')}</span>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.miniCalendarModeLabel'), 'var-minical-mode-btn', [
+                ['fixed',             I18n.t('variablePanel.miniCalendarModeFixed')],
+                ['sequentialMonthly', I18n.t('variablePanel.miniCalendarModeSequential')],
+            ], b.mode === 'sequentialMonthly' ? 'sequentialMonthly' : 'fixed', { help: I18n.t('variablePanel.miniCalendarModeHelp') })}
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarMonthYearLabel')}</span>
                 <input type="month" id="var-minical-monthyear" class="craftools-input"
                     value="${String(b.year ?? new Date().getFullYear()).padStart(4, '0')}-${String(b.month ?? (new Date().getMonth() + 1)).padStart(2, '0')}">
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.miniCalendarDisplayModeLabel')}</span>
-                <select id="var-minical-displaymode" class="craftools-select" style="width:100%;">
-                    <option value="weekdays"    ${b.displayMode === 'weekdays'    ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeWeekdays')}</option>
-                    <option value="calendar"    ${b.displayMode === 'calendar'    ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeCalendar')}</option>
-                    <option value="header"      ${b.displayMode === 'header'      ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHeader')}</option>
-                    <option value="holidaysBox" ${b.displayMode === 'holidaysBox' ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeHolidaysBox')}</option>
-                    <option value="moonBox"     ${b.displayMode === 'moonBox'     ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeMoonBox')}</option>
-                    <option value="complete1"   ${b.displayMode === 'complete1'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete1')}</option>
-                    <option value="complete2"   ${b.displayMode === 'complete2'   ? 'selected' : ''}>${I18n.t('miniCalendarTool.modeComplete2')}</option>
-                </select>
-            </div>
+            ${this._pillGroup(I18n.t('variablePanel.miniCalendarDisplayModeLabel'), 'var-minical-displaymode-btn', [
+                ['weekdays',    I18n.t('miniCalendarTool.modeWeekdays')],
+                ['calendar',    I18n.t('miniCalendarTool.modeCalendar')],
+                ['header',      I18n.t('miniCalendarTool.modeHeader')],
+                ['holidaysBox', I18n.t('miniCalendarTool.modeHolidaysBox')],
+                ['moonBox',     I18n.t('miniCalendarTool.modeMoonBox')],
+                ['complete1',   I18n.t('miniCalendarTool.modeComplete1')],
+                ['complete2',   I18n.t('miniCalendarTool.modeComplete2')],
+            ], b.displayMode ?? 'complete1')}
             <div class="ct-field" style="margin-top:6px;">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-week-sunday" class="ct-fi" style="display:none;" ${b.weekStartSunday !== false ? 'checked' : ''}>
@@ -755,19 +728,13 @@ export class VariablePanel {
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightTextColor')}</span>
                     <div id="var-minical-highlight-text-picker"></div>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderStyle')}</span>
-                        <select id="var-minical-highlight-borderstyle" class="craftools-select" style="width:100%;">
-                            ${['solid','dashed','dotted','double','none'].map(style => `
-                                <option value="${style}" ${(b.miniCalendarHighlightBorderStyle || 'solid') === style ? 'selected' : ''}>${I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
-                        <input type="number" id="var-minical-highlight-borderwidth" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderWidth !== undefined ? b.miniCalendarHighlightBorderWidth : 1}" min="0">
-                    </div>
+                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-minical-highlight-borderstyle-btn',
+                    ['solid','dashed','dotted','double','none'].map(style =>
+                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
+                    ), b.miniCalendarHighlightBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
+                <div class="ct-field" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                    <input type="number" id="var-minical-highlight-borderwidth" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderWidth !== undefined ? b.miniCalendarHighlightBorderWidth : 1}" min="0">
                 </div>
                 <div class="ct-field" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderColor')}</span>
@@ -810,23 +777,67 @@ export class VariablePanel {
                 <div id="var-image-list"></div>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:2px;">${I18n.t('variablePanel.imageListHelp')}</span>
             </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
-                <select id="var-image-mode" class="craftools-select" style="width:100%;">
-                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeSequential')}</option>
-                    <option value="random"     ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeRandom')}</option>
-                </select>
-            </div>
-            <div class="ct-field">
-                <span class="craftools-label">${I18n.t('variablePanel.imageLayoutLabel')}</span>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                    ${this._imageLayoutOptions().map(([val, key]) => `
-                        <button type="button" class="craftools-pill ct-var-img-layout-btn ${layout === val ? 'active' : ''}" data-layout="${val}" style="justify-content:center; font-size:11px;">${I18n.t('variablePanel.' + key)}</button>
+            ${this._pillGroup(I18n.t('variablePanel.apiPhraseModeLabel'), 'var-image-mode-btn', [
+                ['sequential', I18n.t('variablePanel.apiPhraseModeSequential')],
+                ['random',     I18n.t('variablePanel.apiPhraseModeRandom')],
+            ], b.mode === 'random' ? 'random' : 'sequential')}
+            ${this._pillGroup(I18n.t('variablePanel.imageLayoutLabel'), 'ct-var-img-layout-btn',
+                this._imageLayoutOptions().map(([val, key]) => [val, I18n.t('variablePanel.' + key)] as [string, string]),
+                layout, { help: I18n.t('variablePanel.imageLayoutHelp') })}
+        `;
+    }
+
+    /**
+     * Renders a labeled, wrapping row of single-select pill buttons -- the
+     * SAME "label above, buttons below" block every 'date' sub-section
+     * already used (dateFormatButtons/var-date-calendar-mode-btn/the
+     * daysbox button), now reused for every other type's small
+     * fixed-option `<select>`s too (per explicit request: native selects
+     * replaced by this app's own pill-button convention, "igual é no
+     * variable data de datas"). Deliberately NOT wrapped in a bare
+     * `.ct-field` (row layout: label left, control right, see
+     * craftools.css's `.ct-accordion-content .ct-field` rule) -- always
+     * `.ct-field.ct-field--block` (column layout: label above, control
+     * below), which is what keeps the label from ending up beside the
+     * buttons instead of above them.
+     *
+     * Left unconverted (deliberately still plain `<select>`s, see each
+     * call site): genuinely large or server-driven option lists (the 27-UF
+     * dropdown, apiPhrase's live collection/filter-value lists) -- a pill
+     * row only reads as "a small fixed set of choices", the same way
+     * date's own format/calendar-mode buttons are; forcing a 28-way choice
+     * through the same widget would be worse, not more consistent.
+     */
+    private static _pillGroup(
+        label:   string,
+        btnClass: string,
+        options: [string, string][],
+        selected: string,
+        opts: { help?: string; wrapStyle?: string } = {},
+    ): string {
+        return `
+            <div class="ct-field ct-field--block" style="${opts.wrapStyle ?? ''}">
+                <span class="craftools-label">${label}</span>
+                <div class="ct-field-row ${btnClass}-row" style="gap:4px; flex-wrap:wrap; margin-top:4px;">
+                    ${options.map(([val, lbl]) => `
+                        <button type="button" class="craftools-pill ${btnClass} ${selected === val ? 'active' : ''}" data-value="${this._esc(val)}">${lbl}</button>
                     `).join('')}
                 </div>
-                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.imageLayoutHelp')}</span>
+                ${opts.help ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${opts.help}</span>` : ''}
             </div>
         `;
+    }
+
+    /** Binds a `_pillGroup()`'s buttons: single-select (one `active` at a time), calls `setter` + `notify()` on click. */
+    private static _bindPillGroup(container: HTMLElement | Document, btnClass: string, setter: (val: string) => void, notify: () => void): void {
+        const btns = container.querySelectorAll<HTMLButtonElement>('.' + btnClass);
+        btns.forEach(btn => {
+            btn.onclick = () => {
+                setter(btn.dataset.value ?? '');
+                btns.forEach(b => b.classList.toggle('active', b === btn));
+                notify();
+            };
+        });
     }
 
     // ── Bind ──────────────────────────────────────────────────────────────────
@@ -922,7 +933,6 @@ export class VariablePanel {
             switch (binding.type) {
                 case 'date': {
                     const startInput      = container.querySelector<HTMLInputElement>('#var-date-start');
-                    const intervalSel     = container.querySelector<HTMLSelectElement>('#var-date-interval');
                     const stepInput       = container.querySelector<HTMLInputElement>('#var-date-step');
                     const formatButtons   = container.querySelectorAll<HTMLButtonElement>('.var-date-fmt-btn');
                     const daysBoxOpts     = container.querySelector<HTMLElement>('#var-date-daysbox-options');
@@ -930,7 +940,6 @@ export class VariablePanel {
                     const daysBoxRadius   = container.querySelector<HTMLInputElement>('#var-date-daysbox-radius');
                     const daysBoxPad      = container.querySelector<HTMLInputElement>('#var-date-daysbox-padding');
                     const daysBoxHeight   = container.querySelector<HTMLInputElement>('#var-date-daysbox-height');
-                    const daysBoxBStyle   = container.querySelector<HTMLSelectElement>('#var-date-daysbox-borderstyle');
                     const daysBoxBWidth   = container.querySelector<HTMLInputElement>('#var-date-daysbox-borderwidth');
                     const daysBoxBColorEl = container.querySelector<HTMLElement>('#var-date-daysbox-bordercolor-picker');
                     const daysBoxSun      = container.querySelector<HTMLInputElement>('#var-date-daysbox-sunday');
@@ -949,11 +958,9 @@ export class VariablePanel {
                     const calendarOpts    = container.querySelector<HTMLElement>('#var-date-calendar-options');
                     const calendarModeBtns = container.querySelectorAll<HTMLButtonElement>('.var-date-calendar-mode-btn');
                     const seasonOpts      = container.querySelector<HTMLElement>('#var-date-season-options');
-                    const hemisphereSel   = container.querySelector<HTMLSelectElement>('#var-date-hemisphere');
-                    const dateLanguageSel = container.querySelector<HTMLSelectElement>('#var-date-language');
 
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
-                    if (intervalSel) intervalSel.onchange  = () => { binding!.interval  = intervalSel.value;                               notify(); };
+                    this._bindPillGroup(container, 'var-date-interval-btn', v => { binding!.interval = v; }, notify);
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
                     // Applies a new custom-format string from either a
                     // button click or free typing: writes it into the text
@@ -1071,7 +1078,7 @@ export class VariablePanel {
                             }
                         };
                     }
-                    if (hemisphereSel) hemisphereSel.onchange = () => { binding!.hemisphere = hemisphereSel.value as 'south' | 'north'; notify(); };
+                    this._bindPillGroup(container, 'var-date-hemisphere-btn', v => { binding!.hemisphere = v as 'south' | 'north'; }, notify);
                     // Language of the resolved date TEXT (month/weekday
                     // names, week-number phrase, season/moon/zodiac labels)
                     // -- independent of the app's own UI language, see
@@ -1080,7 +1087,7 @@ export class VariablePanel {
                     // any token check) since it affects the base custom
                     // pattern's dd/mm/yyyy-derived month/weekday tokens too,
                     // not just {season}/{moon}/{zodiac}.
-                    if (dateLanguageSel) dateLanguageSel.onchange = () => { binding!.dateLanguage = dateLanguageSel.value as 'pt-br' | 'en' | 'es'; notify(); };
+                    this._bindPillGroup(container, 'var-date-language-btn', v => { binding!.dateLanguage = v as 'pt-br' | 'en' | 'es'; }, notify);
                     // Single-select: exactly one of text/icon/emoji is ever
                     // active (replaces the old independent calendarShowIcon/
                     // Emoji/Text checkboxes, which allowed combining several
@@ -1155,7 +1162,7 @@ export class VariablePanel {
                         binding!.daysBoxHeight = raw === '' ? undefined : parseInt(raw, 10);
                         notify();
                     };
-                    if (daysBoxBStyle) daysBoxBStyle.onchange = () => { binding!.daysBoxBorderStyle = daysBoxBStyle.value;                  notify(); };
+                    this._bindPillGroup(container, 'var-date-daysbox-borderstyle-btn', v => { binding!.daysBoxBorderStyle = v; }, notify);
                     if (daysBoxBWidth) daysBoxBWidth.oninput  = () => { binding!.daysBoxBorderWidth = parseInt(daysBoxBWidth.value, 10);    notify(); };
                     if (daysBoxSun)    daysBoxSun.onchange   = () => { binding!.daysBoxStartSunday    = daysBoxSun.checked;                  notify(); };
 
@@ -1197,8 +1204,21 @@ export class VariablePanel {
                 case 'sequenceText': {
                     const valuesInput = container.querySelector<HTMLTextAreaElement>('#var-seqtext-values');
                     const loopInput   = container.querySelector<HTMLInputElement>('#var-seqtext-loop');
+                    const sepToggle   = container.querySelector<HTMLInputElement>('#var-seqtext-customsep-toggle');
+                    const sepWrap     = container.querySelector<HTMLElement>('#var-seqtext-separator-wrap');
+                    const sepInput    = container.querySelector<HTMLInputElement>('#var-seqtext-separator');
                     if (valuesInput) valuesInput.oninput  = () => { binding!.values = valuesInput.value;  notify(); };
                     if (loopInput)   loopInput.onchange   = () => { binding!.loop   = loopInput.checked;  notify(); };
+                    if (sepToggle) sepToggle.onchange = () => {
+                        binding!.useCustomSeparator = sepToggle.checked;
+                        if (sepWrap) sepWrap.style.display = sepToggle.checked ? '' : 'none';
+                        const track = sepToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+                        const thumb = sepToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+                        if (track) track.style.background = sepToggle.checked ? 'var(--accent)' : 'var(--border)';
+                        if (thumb) thumb.style.transform  = sepToggle.checked ? 'translateX(14px)' : 'translateX(0)';
+                        notify();
+                    };
+                    if (sepInput) sepInput.oninput = () => { binding!.separator = sepInput.value; notify(); };
                     break;
                 }
                 case 'pageNumber': {
@@ -1224,10 +1244,9 @@ export class VariablePanel {
                 }
                 case 'emoji': {
                     const valuesInput = container.querySelector<HTMLTextAreaElement>('#var-emoji-values');
-                    const modeSel     = container.querySelector<HTMLSelectElement>('#var-emoji-mode');
                     const pickerWrap  = container.querySelector<HTMLElement>('#var-emoji-picker-wrap');
                     if (valuesInput) valuesInput.oninput = () => { binding!.values = valuesInput.value; notify(); };
-                    if (modeSel)     modeSel.onchange    = () => { binding!.mode   = modeSel.value;    notify(); };
+                    this._bindPillGroup(container, 'var-emoji-mode-btn', v => { binding!.mode = v; }, notify);
                     // Same standardized grid picker as EmojiTool/EmojiKitchenTool
                     // (utils/EmojiPickerUI.ts) instead of a bare text field --
                     // appends the picked emoji to the end of the free-form list
@@ -1248,24 +1267,22 @@ export class VariablePanel {
                     break;
                 }
                 case 'apiPhrase': {
-                    const fieldSel         = container.querySelector<HTMLSelectElement>('#var-api-field-select');
+                    const fieldCustomWrap  = container.querySelector<HTMLElement>('#var-api-field-custom-wrap');
                     const fieldCustom      = container.querySelector<HTMLInputElement>('#var-api-field-custom');
                     const collectionSel    = container.querySelector<HTMLSelectElement>('#var-api-collection');
-                    const filterFieldSel   = container.querySelector<HTMLSelectElement>('#var-api-filter-field');
                     const filterValueWrap  = container.querySelector<HTMLElement>('#var-api-filter-value-wrap');
                     const filterValueSel   = container.querySelector<HTMLSelectElement>('#var-api-filter-value');
-                    const modeSel          = container.querySelector<HTMLSelectElement>('#var-api-mode');
 
-                    if (fieldSel) fieldSel.onchange = () => {
-                        if (fieldSel.value === '__custom__') {
-                            if (fieldCustom) { fieldCustom.style.display = ''; fieldCustom.focus(); }
+                    this._bindPillGroup(container, 'var-api-field-btn', v => {
+                        if (v === '__custom__') {
+                            if (fieldCustomWrap) fieldCustomWrap.style.display = '';
+                            fieldCustom?.focus();
                             binding!.field = fieldCustom?.value ?? '';
                         } else {
-                            if (fieldCustom) fieldCustom.style.display = 'none';
-                            binding!.field = fieldSel.value;
+                            if (fieldCustomWrap) fieldCustomWrap.style.display = 'none';
+                            binding!.field = v;
                         }
-                        notify();
-                    };
+                    }, notify);
                     if (fieldCustom) fieldCustom.oninput = () => { binding!.field = fieldCustom.value; notify(); };
 
                     const loadFilterValues = async (selectedValue: string): Promise<void> => {
@@ -1299,15 +1316,14 @@ export class VariablePanel {
                         if (binding!.filterField) loadFilterValues('');
                         notify();
                     };
-                    if (filterFieldSel) filterFieldSel.onchange = () => {
-                        binding!.filterField  = filterFieldSel.value;
+                    this._bindPillGroup(container, 'var-api-filterfield-btn', v => {
+                        binding!.filterField  = v;
                         binding!.filterValue  = '';
-                        if (filterValueWrap) filterValueWrap.style.display = binding!.filterField ? '' : 'none';
-                        if (binding!.filterField) loadFilterValues('');
-                        notify();
-                    };
+                        if (filterValueWrap) filterValueWrap.style.display = v ? '' : 'none';
+                        if (v) loadFilterValues('');
+                    }, notify);
                     if (filterValueSel) filterValueSel.onchange = () => { binding!.filterValue = filterValueSel.value; notify(); };
-                    if (modeSel)        modeSel.onchange        = () => { binding!.mode        = modeSel.value;        notify(); };
+                    this._bindPillGroup(container, 'var-api-mode-btn', v => { binding!.mode = v; }, notify);
 
                     loadCollections();
                     if (binding.filterField) loadFilterValues(binding.filterValue ?? '');
@@ -1319,7 +1335,6 @@ export class VariablePanel {
                     const rightSelfBtn  = container.querySelector<HTMLButtonElement>('#var-kitchen-right-self-btn');
                     const rightWrap     = container.querySelector<HTMLElement>('#var-kitchen-right-wrap');
                     const modeWrap      = container.querySelector<HTMLElement>('#var-kitchen-mode-wrap');
-                    const modeSel       = container.querySelector<HTMLSelectElement>('#var-kitchen-mode');
 
                     let currentPartners: string[] | null = null; // null = still loading
                     let supportedSet: Set<string> | null = null;
@@ -1407,7 +1422,7 @@ export class VariablePanel {
                         notify();
                         paintRight();
                     };
-                    if (modeSel) modeSel.onchange = () => { binding!.mode = modeSel.value; notify(); };
+                    this._bindPillGroup(container, 'var-kitchen-mode-btn', v => { binding!.mode = v; }, notify);
                     break;
                 }
                 case 'miniCalendar': {
@@ -1546,17 +1561,9 @@ export class VariablePanel {
                 }
                 case 'image': {
                     const listWrap    = container.querySelector<HTMLElement>('#var-image-list');
-                    const modeSel     = container.querySelector<HTMLSelectElement>('#var-image-mode');
-                    const layoutBtns  = container.querySelectorAll<HTMLButtonElement>('.ct-var-img-layout-btn');
 
-                    if (modeSel) modeSel.onchange = () => { binding!.mode = modeSel.value; notify(); };
-                    layoutBtns.forEach(btn => {
-                        btn.onclick = () => {
-                            binding!.imageLayout = btn.dataset.layout as VariableBinding['imageLayout'];
-                            layoutBtns.forEach(b => b.classList.toggle('active', b === btn));
-                            notify();
-                        };
-                    });
+                    this._bindPillGroup(container, 'var-image-mode-btn', v => { binding!.mode = v; }, notify);
+                    this._bindPillGroup(container, 'ct-var-img-layout-btn', v => { binding!.imageLayout = v as VariableBinding['imageLayout']; }, notify);
 
                     // Which input (upload button vs URL text field) each row
                     // currently shows -- purely a local editing choice, NOT
@@ -1595,7 +1602,7 @@ export class VariablePanel {
                                                 <button type="button" class="craftools-pill ct-var-img-upload-btn" data-idx="${i}" style="width:100%; justify-content:center; gap:4px;">
                                                     <span class="material-symbols-outlined" style="font-size:13px;">upload</span> ${I18n.t('variablePanel.imageChooseFile')}
                                                 </button>
-                                                <input type="file" class="ct-var-img-file" data-idx="${i}" accept="image/*" style="display:none;">
+                                                <input type="file" class="ct-var-img-file" data-idx="${i}" accept="image/*" multiple style="display:none;">
                                             ` : `
                                                 <input type="text" class="craftools-input ct-var-img-url" data-idx="${i}" placeholder="https://..." value="${this._esc(isData ? '' : url)}" style="width:100%;">
                                             `}
@@ -1626,17 +1633,39 @@ export class VariablePanel {
                         });
                         listWrap.querySelectorAll<HTMLInputElement>('.ct-var-img-file').forEach(fileInput => {
                             fileInput.onchange = () => {
-                                const idx  = parseInt(fileInput.dataset.idx ?? '-1', 10);
-                                const file = fileInput.files?.[0];
-                                const row  = binding!.images?.[idx];
-                                if (!file || !row) return;
-                                const reader = new FileReader();
-                                reader.onload = e => {
-                                    row.url = String(e.target?.result ?? '');
-                                    notify();
-                                    paintList();
-                                };
-                                reader.readAsDataURL(file);
+                                const idx   = parseInt(fileInput.dataset.idx ?? '-1', 10);
+                                const files = fileInput.files;
+                                if (!files || !files.length) return;
+                                const list = binding!.images ?? (binding!.images = []);
+
+                                // First selected file fills the row whose
+                                // "Escolher imagem" button was clicked; any
+                                // ADDITIONAL files picked in the same (OS
+                                // multi-select) file dialog each become a
+                                // brand new row appended to the list --
+                                // lets the user add several images in one
+                                // upload instead of repeating this per row.
+                                const targets: { url: string; caption: string }[] = [];
+                                const firstRow = list[idx];
+                                if (firstRow) targets.push(firstRow);
+                                for (let i = 1; i < files.length; i++) {
+                                    const row = { url: '', caption: '' };
+                                    list.push(row);
+                                    targets.push(row);
+                                }
+
+                                Array.from(files).forEach((file, i) => {
+                                    const target = targets[i];
+                                    if (!target) return;
+                                    const reader = new FileReader();
+                                    reader.onload = e => {
+                                        target.url = String(e.target?.result ?? '');
+                                        notify();
+                                        paintList();
+                                    };
+                                    reader.readAsDataURL(file);
+                                });
+                                paintList(); // show the newly-appended (still loading) rows immediately
                             };
                         });
                         listWrap.querySelectorAll<HTMLInputElement>('.ct-var-img-url').forEach(urlInput => {
