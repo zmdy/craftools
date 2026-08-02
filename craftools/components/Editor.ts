@@ -85,6 +85,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   paper:            () => import('../tools/paper/PaperTool.js'),
   variablecontent: () => import('../tools/variablecontent/VariableContentTool.js'),
   table:            () => import('../tools/table/TableTool.js'),
+  line:             () => import('../tools/line/LineTool.js'),
 };
 
 // ── Panel-only tools: key → lazy setup() import ───────────────────────────────
@@ -919,7 +920,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings', 'line',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
@@ -934,6 +935,19 @@ export class Craftools_Editor extends HTMLElement {
             const m: any = await import('../tools/album/AlbumWizard');
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
             if (targetPage) m.AlbumTool.setup(this, targetPage);
+            return;
+          }
+
+          // line: unlike every other tool here, doesn't create an element
+          // immediately -- starts an interactive click-points/freehand draw
+          // session on the canvas instead (see LineTool.startDraw()'s own
+          // doc comment). Works the same on mobile via pointer events, so
+          // this one branch covers both instead of needing a second
+          // tap-to-add case in the DRAGGABLE_CANVAS_TOOLS block above.
+          if (tool === 'line') {
+            closeSidebar();
+            const { LineTool } = await import('../tools/line/LineTool.js');
+            LineTool.startDraw(this);
             return;
           }
 
