@@ -698,6 +698,15 @@
             line-height: 1.4;
             pointer-events: none;
         }
+        /* Pins the "+" thumbnail to the far right of the strip while the
+           .footer-nav ul.ct-page-strip-active flex-start row above keeps
+           every actual page thumbnail packed tightly together on the left
+           -- the standard flex trick (last item gets margin-left:auto in a
+           flex-start row) instead of relying on justify-content-between,
+           which would space EVERY item apart, not just this one. */
+        .ct-page-thumb-add {
+            margin-left: auto !important;
+        }
         .ct-page-thumb-add-btn {
             width: 42px;
             height: 42px;

@@ -242,6 +242,18 @@ export class MobileToolbar {
     this._activeType    = 'page';
     this._activePageEl  = pageEl;
     this._footer.classList.add('ct-page-strip-active');
+    // Belt-and-suspenders over the .ct-page-strip-active CSS rule: this
+    // `<ul>` carries Bootstrap's `justify-content-between` utility class
+    // (and friends) inline in index.html, which ships with its own
+    // `!important`. An inline `!important` always wins the cascade over a
+    // stylesheet `!important` regardless of selector specificity or load
+    // order (index.html's own comment on Vite reordering the vendor
+    // stylesheet after this file's inline <style> block is exactly the
+    // kind of cascade surprise this sidesteps), so set it directly rather
+    // than trust it stays overridden.
+    this._footer.style.setProperty('justify-content', 'flex-start', 'important');
+    this._footer.style.setProperty('overflow-x', 'auto', 'important');
+    this._footer.style.setProperty('gap', '10px', 'important');
     this.closeMiniPanel();
     this._updateScrollReserve();
     this._renderPageThumbnails();
@@ -266,6 +278,9 @@ export class MobileToolbar {
     if (this._activeType !== 'page') return;
     if (this._footer) {
       this._footer.classList.remove('ct-page-strip-active');
+      this._footer.style.removeProperty('justify-content');
+      this._footer.style.removeProperty('overflow-x');
+      this._footer.style.removeProperty('gap');
       if (this._savedFooterChildren) {
         this._footer.innerHTML = '';
         this._savedFooterChildren.forEach(c => this._footer!.appendChild(c));
@@ -350,11 +365,24 @@ export class MobileToolbar {
 
       frame.addEventListener('click', () => {
         if (pageEl === this._activePageEl) return;
-        // Re-dispatches through PageTool.ts's own pageEl click handler
-        // (e.target === pageEl satisfies its isPageClick check) instead of
-        // duplicating its panel-open logic here -- keeps this the single
-        // source of truth for "select this page" on every input path.
-        pageEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        // .click() re-enters PageTool.ts's own pageEl click handler
+        // (isPageClick's `e.target === pageEl` check holds since .click()
+        // targets pageEl itself) instead of duplicating its panel-open
+        // logic here -- keeps that the single source of truth for "select
+        // this page" on every input path. Its body runs synchronously up
+        // to its first await, so the panel/activePage swap is already done
+        // by the time scrollIntoView() below runs.
+        pageEl.click();
+        // Selecting a page from the thumbnail strip needs to actually
+        // navigate the canvas there too -- unlike a direct click on the
+        // page itself (which by definition was already in view), the
+        // target page here may be scrolled well out of view, and
+        // PageTool.ts's click handler never scrolls on its own (only
+        // addNewPage()/_duplicatePage() do). Desktop's canvas stays
+        // visible behind the sidebar so this is immediately visible;
+        // mobile's panel covers the canvas full-screen, but this still
+        // keeps it in sync for when the panel closes.
+        pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
 
       li.addEventListener('dragstart', (e: DragEvent) => {
