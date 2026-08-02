@@ -83,6 +83,16 @@ type MonthSlot = { year: number; month: number } | null;
 type EditorEl = HTMLElement & {
   _savedPageHtml?: string;
   _savedPageCssText?: string;
+  /**
+   * Which page the live preview actually hijacked, when the tool was opened
+   * against a specific page (drag-drop onto a non-first page, or clicking an
+   * existing calendar page) rather than the plain sidebar-button click.
+   * Editor.ts's restoreOriginalCanvas() prefers this over #main-page when
+   * restoring, and clears it afterwards. Left unset (defaulting to
+   * #main-page) for the plain sidebar-click path, matching Generator's
+   * existing convention.
+   */
+  _previewTargetEl?: HTMLElement;
   restoreOriginalCanvas?: () => void;
 };
 
@@ -141,7 +151,11 @@ export class CalendarTool {
 
     // Live preview on the main page (same as the Album wizard, including
     // the floating badge) -- called whenever anything in the panel changes.
-    const updatePreview = (): void => CalendarTool._renderCanvasPreview(ed, state, currentPreset());
+    // Previews on `targetPage` when one was passed in (drag-drop onto a
+    // specific page, or clicking an existing calendar page) instead of
+    // always hijacking #main-page -- see _renderCanvasPreview()'s own
+    // comment and EditorEl._previewTargetEl above.
+    const updatePreview = (): void => CalendarTool._renderCanvasPreview(ed, state, currentPreset(), targetPage);
 
     // Padding wrapper for every hand-rolled tab's body -- .ct-accordion-content
     // itself has zero horizontal padding (see craftools.css), relying on each
@@ -569,16 +583,19 @@ export class CalendarTool {
     return grid;
   }
 
-  // ── Live preview on the main page ──────────────────────────────────────
+  // ── Live preview on the target page ──────────────────────────────────────
   //
-  // Just like the Album wizard, the Calendar panel takes over the main
-  // page (#main-page) as a preview area while it's open, showing the same
-  // floating badge, and restores the original content when switching tools
-  // (via Editor.ts's restoreOriginalCanvas()).
-  private static _renderCanvasPreview(editor: EditorEl, state: CalendarState, preset: GridPreset): void {
+  // Just like the Album wizard, the Calendar panel takes over a page as a
+  // preview area while it's open, showing the same floating badge, and
+  // restores the original content when switching tools (via Editor.ts's
+  // restoreOriginalCanvas()). Defaults to #main-page (the plain
+  // sidebar-button-click path, matching Generator's convention) unless a
+  // specific `targetPage` was passed in -- see setup()'s own comment and
+  // EditorEl._previewTargetEl above.
+  private static _renderCanvasPreview(editor: EditorEl, state: CalendarState, preset: GridPreset, targetPage?: HTMLElement): void {
     const canvasArea   = document.getElementById('canvas-area');
     const pagesWrapper = document.getElementById('pages-wrapper');
-    const mainPage     = document.getElementById('main-page');
+    const mainPage     = targetPage ?? document.getElementById('main-page');
     if (!canvasArea || !mainPage) return;
 
     if (pagesWrapper) pagesWrapper.style.display = '';
@@ -600,6 +617,12 @@ export class CalendarTool {
     if (editor._savedPageHtml === undefined) {
       editor._savedPageHtml    = mainPage.innerHTML;
       editor._savedPageCssText = mainPage.style.cssText;
+      // Track which page this save actually belongs to, so
+      // restoreOriginalCanvas() restores THAT page instead of always
+      // assuming #main-page -- otherwise previewing on page 2, say, would
+      // both leave page 2 stuck showing the preview AND wipe #main-page's
+      // real content with page 2's saved html/cssText on close.
+      if (targetPage) editor._previewTargetEl = targetPage;
     }
 
     let badge = document.getElementById('generator-canvas-badge');

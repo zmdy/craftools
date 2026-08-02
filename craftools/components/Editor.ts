@@ -130,6 +130,14 @@ export class Craftools_Editor extends HTMLElement {
   activePage: Element | null = null;
   _savedPageHtml?: string;
   _savedPageCssText?: string;
+  // Set by CalendarTool.ts when its live preview was hijacking a specific
+  // page (drag-drop onto a non-first page, or clicking an existing calendar
+  // page) rather than the default #main-page -- restoreOriginalCanvas()
+  // below prefers this over #main-page when present, so the RIGHT page
+  // gets its saved html/cssText back. Left unset for every other
+  // #main-page-preview tool (GeneratorTool, plain sidebar-click Calendar),
+  // which keep defaulting to #main-page exactly as before.
+  _previewTargetEl?: HTMLElement;
   // Exposed for panel-only tools (CalendarTool, GeneratorTool) that take over
   // #main-page as a live preview and need to restore it afterward -- was
   // assigned in bindEvents() below (`this.restoreOriginalCanvas = ...`) in
@@ -476,12 +484,19 @@ export class Craftools_Editor extends HTMLElement {
         cleanupFn();
         delete (this as unknown as { _toolCleanup?: () => void })._toolCleanup;
       }
-      const mainPage = document.getElementById('main-page');
+      // Prefer whichever page CalendarTool.ts's preview actually hijacked
+      // (set via _previewTargetEl when it was opened against a specific
+      // page -- drag-drop onto a non-first page, or clicking an existing
+      // calendar page) over the #main-page default every other
+      // preview-taking-over tool (Generator, plain sidebar-click Calendar)
+      // still uses.
+      const mainPage = this._previewTargetEl ?? document.getElementById('main-page');
       if (mainPage && this._savedPageHtml !== undefined) {
         mainPage.innerHTML = this._savedPageHtml;
         mainPage.style.cssText = this._savedPageCssText ?? '';
         delete this._savedPageHtml;
         delete this._savedPageCssText;
+        delete this._previewTargetEl;
         PageTool.attachPageEvents(this, mainPage);
       }
       // Calendar/Generator/ImageSlicer all show this same floating "Preview"

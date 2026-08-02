@@ -82,7 +82,12 @@ export class PageTool {
       } else if (toolType === 'calendar') {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mod: any = await import('../calendar/CalendarTool.js');
-        mod.CalendarTool.setup(editor);
+        // Was called with no page argument at all -- CalendarTool.setup()
+        // took none, and its live preview hardcoded #main-page, so dropping
+        // Calendar onto ANY page always previewed/generated relative to
+        // page 1 regardless of where it was actually dropped. Now mirrors
+        // the 'album' branch above: pass the real drop target through.
+        mod.CalendarTool.setup(editor, pageEl);
       } else if (toolType === 'generator' || toolType === 'agenda' || toolType === 'imageslicer') {
         // Delegate to the real sidebar button click instead of duplicating
         // its setup logic here: generator's click handler in Editor.ts also
