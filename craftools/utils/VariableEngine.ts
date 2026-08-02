@@ -35,7 +35,7 @@ type MiniCalendarPick = {
 
 export type VariableType =
     | 'date' | 'sequenceNumber' | 'sequenceText' | 'pageNumber'
-    | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar';
+    | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar' | 'image';
 
 /** Fixed calendar periods AgendaExportTool.ts's Pages tab can auto-compute a
  *  repeat count from, for a page whose leading variable is a 'date' binding
@@ -214,6 +214,33 @@ export interface VariableBinding {
      * as before this field existed.
      */
     miniCalendarTheme?: CalendarTheme;
+    // image
+    /**
+     * The admin-managed list this type cycles through (same "list of items,
+     * one picked per repetitionIndex" shape as sequenceText/emoji/apiPhrase
+     * -- see _pickImage()), just structured (url + caption) instead of a
+     * newline/comma-separated string, since each entry needs BOTH an image
+     * source and its own caption rather than a single scalar. `url` is
+     * either a data-URL (image-upload field) or a plain http(s) URL typed
+     * in directly -- both render identically via a plain `<img src>`, so
+     * _formatImage() never needs to distinguish them.
+     */
+    images?: { url: string; caption: string }[];
+    /**
+     * Which of image/caption to show, and how to arrange them when both are
+     * shown -- single-select (never more than one at once), same UI pattern
+     * as `calendarDisplay` above. Defaults to 'captionBottom' (image with
+     * its caption centered underneath, the most common "figure with a
+     * caption" layout). Picking 'imageOnly'/'captionOnly' lets two SEPARATE
+     * Variable Content elements -- one showing just the image, one showing
+     * just the caption -- be positioned independently on the page while
+     * still showing the SAME picked item, via the existing generic
+     * `linkedTo` leader/follower mechanism (both must be type 'image'; see
+     * VariableEngine.resolve()'s `picks` registry, unchanged for this type).
+     */
+    imageLayout?: 'captionBottom' | 'captionTop' | 'captionLeft' | 'captionRight' | 'imageOnly' | 'captionOnly';
+    // `mode` ('sequential' | 'random', declared above under emoji/sequenceText)
+    // is reused here too, same convention as apiPhrase/emojiKitchen/emoji.
 }
 
 export interface ResolveContext {
@@ -300,7 +327,7 @@ export class VariableEngine {
 
     static readonly TYPES: string[] = [
         'date','sequenceNumber','sequenceText','pageNumber',
-        'link','emoji','apiPhrase','emojiKitchen','miniCalendar',
+        'link','emoji','apiPhrase','emojiKitchen','miniCalendar','image',
     ];
 
     /**
@@ -359,6 +386,7 @@ export class VariableEngine {
             case 'apiPhrase':      return { type, field: '', collection: '', filterField: '', filterValue: '', mode: 'sequential', linkedTo: '' };
             case 'emojiKitchen':   return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
             case 'miniCalendar':   return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'complete1', linkedTo: '' };
+            case 'image':          return { type, images: [], mode: 'sequential', imageLayout: 'captionBottom', linkedTo: '' };
             default:               return null;
         }
     }
@@ -578,6 +606,7 @@ export class VariableEngine {
             case 'apiPhrase':      return this._pickApiPhrase(binding, ctx, apiCache);
             case 'emojiKitchen':   return this._pickEmojiKitchen(binding, ctx, apiCache);
             case 'miniCalendar':   return this._pickMiniCalendar(binding, ctx, picks);
+            case 'image':          return this._pickImage(binding, ctx);
             default:               return null;
         }
     }
@@ -595,6 +624,7 @@ export class VariableEngine {
             case 'apiPhrase':      return this._formatApiPhrase(pick, binding);
             case 'emojiKitchen':   return (pick && (pick as { url: string }).url) ? (pick as { url: string }).url : '';
             case 'miniCalendar':   return pick ? this._formatMiniCalendar(pick as MiniCalendarPick) : '';
+            case 'image':          return this._formatImage(pick as { url: string; caption: string } | null, binding);
             default:               return '';
         }
     }
@@ -956,6 +986,11 @@ export class VariableEngine {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    /** _escHtml() plus quote-escaping -- needed only for _formatImage()'s `<img src="...">` attribute (every other use of _escHtml() in this file is a text node, where a bare quote is harmless). */
+    private static _escAttr(s: string): string {
+        return this._escHtml(s).replace(/"/g, '&quot;');
+    }
+
     /**
      * format === 'MOON_PHASE' -- 100% client-computed (MoonPhases.ts, same
      * synodic-month approximation already used for the calendar grid's
@@ -1212,6 +1247,66 @@ export class VariableEngine {
         const idx = ctx.repetitionIndex;
         if (b.loop === false) return values[Math.min(idx, values.length - 1)];
         return values[idx % values.length];
+    }
+
+    // ── image ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Same "pick one row per repetitionIndex, sequential or seeded-random"
+     * shape as _pickApiPhrase()/_pickEmoji() -- rows with neither a url nor
+     * a caption typed yet (freshly added, still empty) are filtered out so
+     * they can't ever be picked and render as a blank box.
+     */
+    private static _pickImage(b: VariableBinding, ctx: { repetitionIndex: number }): { url: string; caption: string } | null {
+        const list = (b.images ?? []).filter(it => it && ((it.url ?? '').trim() || (it.caption ?? '').trim()));
+        if (!list.length) return null;
+        const idx = ctx.repetitionIndex;
+        return b.mode === 'random' ? list[this._pseudoRandomIndex(idx, list.length)] : list[idx % list.length];
+    }
+
+    /**
+     * Composes the picked {url, caption} pair into real markup per
+     * `imageLayout` -- always HTML (see the 3 call sites that check
+     * `binding.type === 'image'` alongside 'miniCalendar' for why: an
+     * `<img>` and a caption `<div>` can't be expressed as plain text).
+     * Falls back to whichever of image/caption is actually present when the
+     * chosen layout calls for the other (or both) but only one was ever
+     * filled in -- e.g. 'imageOnly' with no url yet shows the caption
+     * instead of rendering nothing, and a combined layout with no caption
+     * typed just shows the bare image instead of an empty caption box next
+     * to it.
+     */
+    private static _formatImage(pick: { url: string; caption: string } | null, b: VariableBinding): string {
+        if (!pick) return '';
+        const url     = (pick.url ?? '').trim();
+        const caption = (pick.caption ?? '').trim();
+
+        // Same bare-<img> markup convention as _formatEmojiKitchen's caller
+        // (VariableContentTool.ts's emojiKitchen branch) -- max-width/height
+        // 100% + object-fit:contain lets it fill whatever box (or the inner
+        // flex slot built below) it lands in without distorting.
+        const img = url
+            ? `<img src="${this._escAttr(url)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
+            : '';
+        const cap = caption
+            ? `<div style="font-size:0.8em; line-height:1.25; text-align:center; flex:0 0 auto; max-width:100%; word-break:break-word;">${this._escHtml(caption)}</div>`
+            : '';
+
+        const layout = b.imageLayout ?? 'captionBottom';
+        if (layout === 'imageOnly')   return img || cap;
+        if (layout === 'captionOnly') return cap || img;
+        if (!img) return cap;
+        if (!cap) return img;
+
+        const imgSlot = `<div style="flex:1 1 auto; min-width:0; min-height:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${img}</div>`;
+        const wrap    = 'display:flex; align-items:center; justify-content:center; gap:6px; width:100%; height:100%; box-sizing:border-box;';
+        switch (layout) {
+            case 'captionTop':   return `<div style="${wrap} flex-direction:column;">${cap}${imgSlot}</div>`;
+            case 'captionLeft':  return `<div style="${wrap} flex-direction:row;">${cap}${imgSlot}</div>`;
+            case 'captionRight': return `<div style="${wrap} flex-direction:row;">${imgSlot}${cap}</div>`;
+            case 'captionBottom':
+            default:              return `<div style="${wrap} flex-direction:column;">${imgSlot}${cap}</div>`;
+        }
     }
 
     // ── pageNumber ────────────────────────────────────────────────────────────

@@ -57,6 +57,7 @@ export class VariablePanel {
                     <option value="apiPhrase"       ${type === 'apiPhrase'       ? 'selected' : ''}>${I18n.t('variablePanel.typeApiPhrase')}</option>
                     <option value="emojiKitchen"    ${type === 'emojiKitchen'    ? 'selected' : ''}>${I18n.t('variablePanel.typeEmojiKitchen')}</option>
                     <option value="miniCalendar"    ${type === 'miniCalendar'    ? 'selected' : ''}>${I18n.t('variablePanel.typeMiniCalendar')}</option>
+                    <option value="image"           ${type === 'image'           ? 'selected' : ''}>${I18n.t('variablePanel.typeImage')}</option>
                 </select>
             </div>
             <div id="var-config">${this._renderConfig(binding, element)}</div>
@@ -80,6 +81,7 @@ export class VariablePanel {
             case 'apiPhrase':      return linkRow + this._apiPhraseConfig(binding);
             case 'emojiKitchen':   return linkRow + this._emojiKitchenConfig(binding);
             case 'miniCalendar':   return linkRow + this._miniCalendarConfig(binding, element);
+            case 'image':          return linkRow + this._imageConfig(binding);
             default:               return '';
         }
     }
@@ -779,6 +781,54 @@ export class VariablePanel {
         `;
     }
 
+    /**
+     * The 6 single-select layout options (VariableBinding.imageLayout) --
+     * same "pick exactly one, pill row" pattern as calendarModeBtns above.
+     * 'captionBottom' first/default matches the most common "figure with a
+     * caption underneath" convention. 'imageOnly'/'captionOnly' are what
+     * make cross-element linking useful (see VariableBinding.imageLayout's
+     * doc comment in VariableEngine.ts): one element shows just the image,
+     * a second element (linked to the first via the generic "Vincular a"
+     * row above) shows just its caption, positioned independently.
+     */
+    private static _imageLayoutOptions(): [string, string][] {
+        return [
+            ['captionBottom', 'imageLayoutCaptionBottom'],
+            ['captionTop',    'imageLayoutCaptionTop'],
+            ['captionLeft',   'imageLayoutCaptionLeft'],
+            ['captionRight',  'imageLayoutCaptionRight'],
+            ['imageOnly',     'imageLayoutImageOnly'],
+            ['captionOnly',   'imageLayoutCaptionOnly'],
+        ];
+    }
+
+    private static _imageConfig(b: VariableBinding): string {
+        const layout = b.imageLayout ?? 'captionBottom';
+        return `
+            <div class="ct-field ct-field--block">
+                <span class="craftools-label">${I18n.t('variablePanel.imageListLabel')}</span>
+                <div id="var-image-list"></div>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:2px;">${I18n.t('variablePanel.imageListHelp')}</span>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseModeLabel')}</span>
+                <select id="var-image-mode" class="craftools-select" style="width:100%;">
+                    <option value="sequential" ${b.mode !== 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeSequential')}</option>
+                    <option value="random"     ${b.mode === 'random' ? 'selected' : ''}>${I18n.t('variablePanel.apiPhraseModeRandom')}</option>
+                </select>
+            </div>
+            <div class="ct-field">
+                <span class="craftools-label">${I18n.t('variablePanel.imageLayoutLabel')}</span>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                    ${this._imageLayoutOptions().map(([val, key]) => `
+                        <button type="button" class="craftools-pill ct-var-img-layout-btn ${layout === val ? 'active' : ''}" data-layout="${val}" style="justify-content:center; font-size:11px;">${I18n.t('variablePanel.' + key)}</button>
+                    `).join('')}
+                </div>
+                <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.imageLayoutHelp')}</span>
+            </div>
+        `;
+    }
+
     // ── Bind ──────────────────────────────────────────────────────────────────
 
     static bind(
@@ -805,6 +855,13 @@ export class VariablePanel {
                     previewValue.innerHTML = `<img src="${this._esc(val)}" alt="" style="max-width:100%; max-height:60px; display:block; margin:0 auto; object-fit:contain;">`;
                 } else if (binding!.type === 'miniCalendar' && val) {
                     previewValue.innerHTML = `<div style="width:120px; height:135px; margin:0 auto;">${val}</div>`;
+                } else if (binding!.type === 'image' && val) {
+                    // _formatImage() already returns full HTML (an <img>
+                    // and/or a caption <div>, arranged per imageLayout) --
+                    // same reasoning as the miniCalendar branch above, just
+                    // sized to a reasonable preview box instead of a fixed
+                    // calendar-card aspect ratio.
+                    previewValue.innerHTML = `<div style="width:100%; height:90px; margin:0 auto;">${val}</div>`;
                 } else if (binding!.type === 'date' && VariableEngine.isHtmlDateFormat(binding!.format) && val) {
                     // _formatDate()'s DAYS_BOX/MOON_PHASE cases return real
                     // markup (a row of day-letter boxes / an icon+emoji+text
@@ -1485,6 +1542,133 @@ export class VariablePanel {
                             notify();
                         }, { allowGradient: false });
                     }
+                    break;
+                }
+                case 'image': {
+                    const listWrap    = container.querySelector<HTMLElement>('#var-image-list');
+                    const modeSel     = container.querySelector<HTMLSelectElement>('#var-image-mode');
+                    const layoutBtns  = container.querySelectorAll<HTMLButtonElement>('.ct-var-img-layout-btn');
+
+                    if (modeSel) modeSel.onchange = () => { binding!.mode = modeSel.value; notify(); };
+                    layoutBtns.forEach(btn => {
+                        btn.onclick = () => {
+                            binding!.imageLayout = btn.dataset.layout as VariableBinding['imageLayout'];
+                            layoutBtns.forEach(b => b.classList.toggle('active', b === btn));
+                            notify();
+                        };
+                    });
+
+                    // Which input (upload button vs URL text field) each row
+                    // currently shows -- purely a local editing choice, NOT
+                    // persisted in the binding (see VariableBinding.images's
+                    // doc comment in VariableEngine.ts: a data-URL and a
+                    // plain http(s) URL render identically as `<img src>`,
+                    // so there's nothing meaningful to save beyond the
+                    // value itself). Defaults to whichever mode the row's
+                    // current value looks like (a data-URL -> 'upload', a
+                    // real URL -> 'url', empty -> 'upload'). Lives in this
+                    // closure so it survives this widget's own repaints
+                    // (adding/removing/editing a row) without leaking into
+                    // the saved binding -- same lifetime as emojiKitchen's
+                    // currentPartners/supportedSet above.
+                    const srcMode = new Map<number, 'upload' | 'url'>();
+
+                    const paintList = (): void => {
+                        if (!listWrap) return;
+                        const list = binding!.images ?? (binding!.images = []);
+                        listWrap.innerHTML = list.map((item, i) => {
+                            const url    = item.url ?? '';
+                            const isData = url.startsWith('data:');
+                            const mode   = srcMode.get(i) ?? (isData || !url ? 'upload' : 'url');
+                            return `
+                                <div style="border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:8px;">
+                                    <div style="display:flex; gap:8px; align-items:flex-start;">
+                                        <div style="width:44px; height:44px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                                            ${url ? `<img style="width:100%; height:100%; object-fit:cover;" src="${this._esc(url)}">` : `<span class="material-symbols-outlined" style="font-size:18px; color:var(--text-muted);">image</span>`}
+                                        </div>
+                                        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;">
+                                            <div class="ct-field-row" style="gap:4px;">
+                                                <button type="button" class="craftools-pill ct-var-img-mode-btn ${mode === 'upload' ? 'active' : ''}" data-idx="${i}" data-mode="upload" style="flex:1; justify-content:center;">${I18n.t('variablePanel.imageSourceUpload')}</button>
+                                                <button type="button" class="craftools-pill ct-var-img-mode-btn ${mode === 'url' ? 'active' : ''}" data-idx="${i}" data-mode="url" style="flex:1; justify-content:center;">${I18n.t('variablePanel.imageSourceUrl')}</button>
+                                            </div>
+                                            ${mode === 'upload' ? `
+                                                <button type="button" class="craftools-pill ct-var-img-upload-btn" data-idx="${i}" style="width:100%; justify-content:center; gap:4px;">
+                                                    <span class="material-symbols-outlined" style="font-size:13px;">upload</span> ${I18n.t('variablePanel.imageChooseFile')}
+                                                </button>
+                                                <input type="file" class="ct-var-img-file" data-idx="${i}" accept="image/*" style="display:none;">
+                                            ` : `
+                                                <input type="text" class="craftools-input ct-var-img-url" data-idx="${i}" placeholder="https://..." value="${this._esc(isData ? '' : url)}" style="width:100%;">
+                                            `}
+                                            <input type="text" class="craftools-input ct-var-img-caption" data-idx="${i}" placeholder="${this._esc(I18n.t('variablePanel.imageCaptionPlaceholder'))}" value="${this._esc(item.caption ?? '')}" style="width:100%;">
+                                        </div>
+                                        <button type="button" class="ct-var-img-remove-btn" data-idx="${i}" style="flex-shrink:0; background:none; border:none; cursor:pointer; color:var(--text-muted); padding:4px; line-height:0;">
+                                            <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') + `
+                            <button type="button" class="craftools-pill" id="var-image-add-btn" style="width:100%; justify-content:center; gap:4px;">
+                                <span class="material-symbols-outlined" style="font-size:13px;">add</span> ${I18n.t('variablePanel.imageAddButton')}
+                            </button>
+                        ` + (!list.length ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-top:6px;">${I18n.t('variablePanel.imageEmptyHelp')}</span>` : '');
+
+                        listWrap.querySelectorAll<HTMLButtonElement>('.ct-var-img-mode-btn').forEach(btn => {
+                            btn.onclick = () => {
+                                srcMode.set(parseInt(btn.dataset.idx ?? '-1', 10), btn.dataset.mode as 'upload' | 'url');
+                                paintList();
+                            };
+                        });
+                        listWrap.querySelectorAll<HTMLButtonElement>('.ct-var-img-upload-btn').forEach(btn => {
+                            btn.onclick = () => {
+                                listWrap.querySelector<HTMLInputElement>(`.ct-var-img-file[data-idx="${btn.dataset.idx}"]`)?.click();
+                            };
+                        });
+                        listWrap.querySelectorAll<HTMLInputElement>('.ct-var-img-file').forEach(fileInput => {
+                            fileInput.onchange = () => {
+                                const idx  = parseInt(fileInput.dataset.idx ?? '-1', 10);
+                                const file = fileInput.files?.[0];
+                                const row  = binding!.images?.[idx];
+                                if (!file || !row) return;
+                                const reader = new FileReader();
+                                reader.onload = e => {
+                                    row.url = String(e.target?.result ?? '');
+                                    notify();
+                                    paintList();
+                                };
+                                reader.readAsDataURL(file);
+                            };
+                        });
+                        listWrap.querySelectorAll<HTMLInputElement>('.ct-var-img-url').forEach(urlInput => {
+                            urlInput.oninput = () => {
+                                const row = binding!.images?.[parseInt(urlInput.dataset.idx ?? '-1', 10)];
+                                if (row) { row.url = urlInput.value; notify(); }
+                            };
+                        });
+                        listWrap.querySelectorAll<HTMLInputElement>('.ct-var-img-caption').forEach(capInput => {
+                            capInput.oninput = () => {
+                                const row = binding!.images?.[parseInt(capInput.dataset.idx ?? '-1', 10)];
+                                if (row) { row.caption = capInput.value; notify(); }
+                            };
+                        });
+                        listWrap.querySelectorAll<HTMLButtonElement>('.ct-var-img-remove-btn').forEach(btn => {
+                            btn.onclick = () => {
+                                const idx = parseInt(btn.dataset.idx ?? '-1', 10);
+                                binding!.images?.splice(idx, 1);
+                                srcMode.delete(idx);
+                                notify();
+                                paintList();
+                            };
+                        });
+                        const addBtn = listWrap.querySelector<HTMLButtonElement>('#var-image-add-btn');
+                        if (addBtn) addBtn.onclick = () => {
+                            (binding!.images ?? (binding!.images = [])).push({ url: '', caption: '' });
+                            notify();
+                            paintList();
+                        };
+                    };
+
+                    paintList();
                     break;
                 }
             }

@@ -684,13 +684,14 @@ export class AgendaExport {
           ce.innerHTML = resolved
             ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
             : '';
-        } else if (binding.type === 'miniCalendar' || (binding.type === 'date' && VariableEngine.isHtmlDateFormat(binding.format))) {
+        } else if (binding.type === 'miniCalendar' || binding.type === 'image' || (binding.type === 'date' && VariableEngine.isHtmlDateFormat(binding.format))) {
           // VariableEngine's DAYS_BOX/MOON_PHASE date formats return real
           // markup (a row of day-letter boxes / an icon+emoji+text span),
           // not typed text -- was falling into the plain-text branch
           // below, which rendered the exported Agenda page with the
           // literal "<div style=...>S</div>..." tags visible as text
-          // instead of the actual rendered markup.
+          // instead of the actual rendered markup. 'image' (_formatImage())
+          // is the same story: an <img> and/or a caption <div>.
           ce.innerHTML = resolved || '';
         } else {
           ce.textContent = resolved;
