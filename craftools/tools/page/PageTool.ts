@@ -579,22 +579,7 @@ export class PageTool {
 
         // Delete Page
         panelBody!.querySelector<HTMLButtonElement>('#delete-page-btn')!
-          .addEventListener('click', async () => {
-            if (await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: I18n.t('pageTool.deletePage') })) {
-              const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper')!;
-              if (pagesWrapper.querySelectorAll('.craftools-page').length > 1) {
-                pageEl.remove();
-                defaultMenu?.classList.remove('d-none');
-                panelBody?.classList.add('d-none');
-                closePanel?.classList.add('d-none');
-                panelLogo?.classList.remove('d-none');
-                if (panelTitle) panelTitle.textContent = '';
-                (editor as HTMLElement & { activePage: HTMLElement | null }).activePage = null;
-              } else {
-                Notify.toast(I18n.t('pageTool.alertLastPage'), 'error');
-              }
-            }
-          });
+          .addEventListener('click', () => { PageTool.deletePage(editor, pageEl); });
 
         defaultMenu?.classList.add('d-none');
         panelBody?.classList.remove('d-none');
@@ -625,6 +610,49 @@ export class PageTool {
         // a page panel actually opens, so it's the right (and only) hook
         // needed on the "entering page mode" side.
         MobileToolbar.showPageMode(pageEl);
+  }
+
+  // ── Delete page (shared by Page Settings' own button and the
+  //    page-thumbnail footer strip's trash icon -- MobileToolbar.ts) ────────
+  //
+  // Confirms, guards against deleting the last remaining page, removes the
+  // page, and resets the properties panel + footer back to their default
+  // state -- identical to what closePanelMenu() (Editor.ts) does when a
+  // panel is closed normally, since the page it was showing settings for no
+  // longer exists. Returns whether the page was actually deleted (false if
+  // cancelled or blocked by the last-page guard), so callers that need to
+  // react (e.g. re-render something) can check.
+  public static async deletePage(editor: HTMLElement, pageEl: HTMLElement): Promise<boolean> {
+    if (!(await Notify.confirm(I18n.t('pageTool.confirmDelete'), { danger: true, confirmLabel: I18n.t('pageTool.deletePage') }))) {
+      return false;
+    }
+    const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper')!;
+    if (pagesWrapper.querySelectorAll('.craftools-page').length <= 1) {
+      Notify.toast(I18n.t('pageTool.alertLastPage'), 'error');
+      return false;
+    }
+    pageEl.remove();
+
+    const defaultMenu = document.getElementById('panel-default-menu');
+    const panelBody   = document.getElementById('panel-body');
+    const closePanel  = document.getElementById('close-panel');
+    const panelLogo   = document.getElementById('panel-logo');
+    const panelTitle  = document.getElementById('panel-title');
+    defaultMenu?.classList.remove('d-none');
+    panelBody?.classList.add('d-none');
+    closePanel?.classList.add('d-none');
+    panelLogo?.classList.remove('d-none');
+    if (panelTitle) panelTitle.textContent = '';
+    (editor as HTMLElement & { activePage: HTMLElement | null }).activePage = null;
+
+    // The deleted page's own settings panel was the thing driving the
+    // footer's page-thumbnail strip -- leave that mode too (same pairing
+    // Editor.ts's closePanelMenu() uses) instead of leaving it stuck
+    // showing a strip whose active thumbnail no longer exists.
+    MobileToolbar.exitPageMode();
+    if (window.innerWidth <= 768) MobileToolbar.showToolMode();
+
+    return true;
   }
 
   // ── "Papel personalizado" (custom paper background) ────────────────────────

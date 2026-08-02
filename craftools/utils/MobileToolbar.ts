@@ -472,6 +472,24 @@ export class MobileToolbar {
     });
     this._footer.appendChild(addLi);
 
+    // "Trash" -- deletes the currently-selected page directly from the
+    // footer, right next to "+". Proxies the REAL '#delete-page-btn'
+    // that's already sitting (bound to PageTool.deletePage()) inside the
+    // Page Settings panel this exact strip is always paired with -- page
+    // mode is only ever entered via PageTool.openPageSettings(), so that
+    // button is guaranteed to exist whenever this strip is showing. Same
+    // proxy-click trick "+" above uses, and for the same reason: this
+    // module can't import PageTool.ts directly without creating a circular
+    // dependency (PageTool.ts imports MobileToolbar.ts to call
+    // showPageMode()).
+    const deleteLi = document.createElement('li');
+    deleteLi.className = 'ct-page-thumb-item ct-page-thumb-delete';
+    deleteLi.innerHTML = `<button class="ct-page-thumb-delete-btn" type="button" title="${I18n.t('pageTool.deletePage')}"><span class="material-symbols-outlined">delete</span></button>`;
+    deleteLi.querySelector('button')!.addEventListener('click', () => {
+      document.getElementById('delete-page-btn')?.click();
+    });
+    this._footer.appendChild(deleteLi);
+
     // ── Arrow visibility/enabled state + click-to-scroll wiring ─────────
     const SCROLL_STEP = 160;
     const updateArrowState = (): void => {

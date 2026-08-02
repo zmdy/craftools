@@ -787,6 +787,30 @@
             color: var(--accent);
             border-color: var(--accent);
         }
+        /* Trash icon -- same fixed-size square as "+", sits right after it
+           (see MobileToolbar._renderPageThumbnails()'s own comment on why
+           it proxy-clicks the real #delete-page-btn instead of duplicating
+           delete logic here). Solid danger border by default (vs. "+"'s
+           dashed neutral one) so it doesn't read as another "add" action. */
+        .ct-page-thumb-delete {
+            flex: 0 0 auto !important;
+        }
+        .ct-page-thumb-delete-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 6px;
+            border: 2px solid var(--danger, #ef4444);
+            background: none;
+            color: var(--danger, #ef4444);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .ct-page-thumb-delete-btn:hover,
+        .ct-page-thumb-delete-btn:active {
+            background: rgba(239, 68, 68, 0.1);
+        }
         [data-theme="dark"] .ct-page-thumb-frame {
             background: #27272a;
             border-color: #3f3f46;
