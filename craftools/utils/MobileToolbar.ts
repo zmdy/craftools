@@ -250,13 +250,15 @@ export class MobileToolbar {
     // order (index.html's own comment on Vite reordering the vendor
     // stylesheet after this file's inline <style> block is exactly the
     // kind of cascade surprise this sidesteps), so set it directly rather
-    // than trust it stays overridden.
+    // than trust it stays overridden. Only the INNER `.ct-page-scroll-inner`
+    // div scrolls now (see _renderPageThumbnails()'s doc comment on the
+    // prev/track/next/add <li> layout), so the outer `<ul>` itself no
+    // longer needs its own overflow-x.
     this._footer.style.setProperty('justify-content', 'flex-start', 'important');
-    this._footer.style.setProperty('overflow-x', 'auto', 'important');
-    this._footer.style.setProperty('gap', '10px', 'important');
+    this._footer.style.setProperty('gap', '6px', 'important');
     this.closeMiniPanel();
     this._updateScrollReserve();
-    this._renderPageThumbnails();
+    this._renderPageThumbnails(true);
   }
 
   /**
@@ -323,8 +325,24 @@ export class MobileToolbar {
    * element can be selected while a page's panel is open -- CSS in
    * index.html force-hides `.craftools-ctrlbar`/`.craftools-selected`
    * inside `.ct-page-thumb-inner` as a defensive backstop regardless.
+   *
+   * Structure: the footer `<ul>` holds exactly 4 `<li>`s -- a prev-arrow,
+   * a flex:1 scroll-track (itself containing the actual overflow-x:auto
+   * `.ct-page-scroll-inner` div, with one plain `<div>` thumbnail per page
+   * -- NOT `<li>`s, so they never fall under `.footer-nav ul li`'s bare
+   * `flex: 1 1 0` rule the way the strip's own top-level `<li>`s do), a
+   * next-arrow, and the "+" add button. Everything lives in normal flex
+   * flow (no absolute positioning), so the arrows and "+" can never
+   * overlap or hide behind each other regardless of how many pages exist
+   * -- the scroll-track is the only thing that grows/shrinks/scrolls.
+   *
+   * @param scrollActiveIntoView  Only meaningful right after entering page
+   *   mode (showPageMode() passes true) -- brings the active page's
+   *   thumbnail into view without fighting the user's own manual scroll
+   *   position on every later debounced refresh (which always passes
+   *   false, its default).
    */
-  private static _renderPageThumbnails(): void {
+  private static _renderPageThumbnails(scrollActiveIntoView: boolean = false): void {
     if (!this._footer || !this._activePageEl) return;
     const wrapper = this._editor?.querySelector<HTMLElement>('#pages-wrapper');
     if (!wrapper) return;
@@ -333,15 +351,42 @@ export class MobileToolbar {
 
     this._footer.innerHTML = '';
 
+    // ── Prev arrow ──────────────────────────────────────────────────────
+    const prevLi  = document.createElement('li');
+    prevLi.className = 'ct-page-nav-li ct-page-nav-prev';
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'ct-page-nav-btn';
+    prevBtn.innerHTML = '<span class="material-symbols-outlined">chevron_left</span>';
+    prevLi.appendChild(prevBtn);
+
+    // ── Scroll track (the only element that actually scrolls) ──────────
+    const trackLi = document.createElement('li');
+    trackLi.className = 'ct-page-scroll-li';
+    const scrollInner = document.createElement('div');
+    scrollInner.className = 'ct-page-scroll-inner';
+    trackLi.appendChild(scrollInner);
+
+    // ── Next arrow ───────────────────────────────────────────────────────
+    const nextLi  = document.createElement('li');
+    nextLi.className = 'ct-page-nav-li ct-page-nav-next';
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'ct-page-nav-btn';
+    nextBtn.innerHTML = '<span class="material-symbols-outlined">chevron_right</span>';
+    nextLi.appendChild(nextBtn);
+
     let dragSrcIndex: number | null = null;
+    let activeThumbEl: HTMLElement | null = null;
 
     pages.forEach((pageEl, idx) => {
-      const li = document.createElement('li');
-      li.className   = 'ct-page-thumb-item';
-      li.draggable   = true;
+      const item = document.createElement('div');
+      item.className = 'ct-page-thumb-item';
+      item.draggable = true;
 
       const frame = document.createElement('div');
       frame.className = 'ct-page-thumb-frame' + (pageEl === activePageEl ? ' active' : '');
+      if (pageEl === activePageEl) activeThumbEl = item;
 
       const w = pageEl.offsetWidth  || 1;
       const h = pageEl.offsetHeight || 1;
@@ -385,16 +430,16 @@ export class MobileToolbar {
         pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
 
-      li.addEventListener('dragstart', (e: DragEvent) => {
+      item.addEventListener('dragstart', (e: DragEvent) => {
         dragSrcIndex = idx;
         e.dataTransfer?.setData('text/plain', String(idx));
         if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
       });
-      li.addEventListener('dragover', (e: DragEvent) => {
+      item.addEventListener('dragover', (e: DragEvent) => {
         e.preventDefault();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       });
-      li.addEventListener('drop', (e: DragEvent) => {
+      item.addEventListener('drop', (e: DragEvent) => {
         e.preventDefault();
         if (dragSrcIndex === null || dragSrcIndex === idx) return;
         const srcEl = pages[dragSrcIndex];
@@ -405,9 +450,13 @@ export class MobileToolbar {
         MobileToolbar._renderPageThumbnails();
       });
 
-      li.appendChild(frame);
-      this._footer!.appendChild(li);
+      item.appendChild(frame);
+      scrollInner.appendChild(item);
     });
+
+    this._footer.appendChild(prevLi);
+    this._footer.appendChild(trackLi);
+    this._footer.appendChild(nextLi);
 
     // "+" add-page -- proxies the real sidebar/footer new-page button
     // instead of calling PageTool.addNewPage() directly, so this module
@@ -422,6 +471,30 @@ export class MobileToolbar {
       document.getElementById('pwa-sidebar-newpage')?.click();
     });
     this._footer.appendChild(addLi);
+
+    // ── Arrow visibility/enabled state + click-to-scroll wiring ─────────
+    const SCROLL_STEP = 160;
+    const updateArrowState = (): void => {
+      const hasOverflow = scrollInner.scrollWidth > scrollInner.clientWidth + 1;
+      prevLi.style.display = hasOverflow ? 'flex' : 'none';
+      nextLi.style.display = hasOverflow ? 'flex' : 'none';
+      if (!hasOverflow) return;
+      const atStart = scrollInner.scrollLeft <= 1;
+      const atEnd   = scrollInner.scrollLeft + scrollInner.clientWidth >= scrollInner.scrollWidth - 1;
+      prevBtn.disabled = atStart;
+      nextBtn.disabled = atEnd;
+    };
+    prevBtn.addEventListener('click', () => scrollInner.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' }));
+    nextBtn.addEventListener('click', () => scrollInner.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' }));
+    scrollInner.addEventListener('scroll', updateArrowState);
+    // scrollWidth/clientWidth aren't settled until layout runs on the
+    // freshly-appended nodes -- defer one frame rather than read stale
+    // (pre-layout) sizes synchronously here.
+    requestAnimationFrame(updateArrowState);
+
+    if (scrollActiveIntoView && activeThumbEl) {
+      (activeThumbEl as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   // ─── Footer rendering ────────────────────────────────────────────────────────

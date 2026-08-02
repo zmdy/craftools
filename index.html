@@ -640,32 +640,84 @@
         /* Page-preview footer strip -- runs on every device (see
            MobileToolbar.showPageMode()'s doc comment: #footerNav is the
            same fixed bottom bar on desktop, not mobile-only chrome), so
-           this lives outside the max-width:768px block. Mobile's
-           `.footer-nav ul` already gets overflow-x/gap/padding from its own
-           media-query rule above; desktop's base `.footer-nav ul` (the
-           `d-flex justify-content-between` bar from index.html) doesn't, so
-           `.ct-page-strip-active` adds just enough to let it scroll
-           horizontally too when there are more pages than fit. */
+           this lives outside the max-width:768px block.
+           MobileToolbar._renderPageThumbnails() builds the strip as 4
+           top-level `<li>`s: a prev-arrow, a flex:1 scroll-track (the ONLY
+           thing that scrolls -- see .ct-page-scroll-inner below), a
+           next-arrow, and the "+" add button, so the arrows and "+" always
+           sit in normal flex flow at the row's fixed edges and can never
+           overlap or hide behind each other regardless of page count. */
         .footer-nav ul.ct-page-strip-active {
-            overflow-x: auto;
             justify-content: flex-start !important;
+            gap: 6px;
+            padding: 0 8px !important;
+        }
+        /* !important is load-bearing on every direct `<li>` child of the
+           strip (nav arrows, scroll-track, "+"): vendor/pwa-template/
+           style.css ships a bare (no !important) `.footer-nav ul li {
+           flex: 1 1 0; }` rule that -- despite having no !important --
+           still wins the cascade over a plain class selector, because
+           ".footer-nav ul li" has HIGHER SPECIFICITY (1 class + 2
+           elements) than a single class alone (1 class, 0 elements); CSS
+           compares specificity before ever considering !important vs.
+           not. Without this, every `<li>` grows to fill an equal share of
+           the footer's full width instead of sizing to its own content. */
+        .ct-page-nav-li {
+            flex: 0 0 auto !important;
+            display: flex !important;
+            align-items: center;
+        }
+        .ct-page-nav-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-input, #f4f4f5);
+            color: var(--text-primary, #18181b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .ct-page-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+        .ct-page-nav-btn .material-symbols-outlined {
+            font-size: 18px;
+        }
+        [data-theme="dark"] .ct-page-nav-btn {
+            background: #27272a;
+            color: #fff;
+        }
+        /* The scroll-track <li> grows to fill whatever space the fixed-size
+           arrows/"+" leave behind; min-width:0 is required for a flex item
+           to be allowed to shrink below its content's natural width at all
+           (the default min-width:auto would otherwise force the footer
+           itself to grow/overflow instead of letting this scroll). */
+        .ct-page-scroll-li {
+            flex: 1 1 auto !important;
+            min-width: 0;
+            display: flex !important;
+            align-items: center;
+        }
+        .ct-page-scroll-inner {
+            display: flex;
+            align-items: center;
             gap: 10px;
-            padding: 0 12px !important;
+            width: 100%;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .ct-page-scroll-inner::-webkit-scrollbar {
+            display: none;
         }
         .ct-page-thumb-item {
-            /* !important is load-bearing here: vendor/pwa-template/style.css
-               ships a bare (no !important) `.footer-nav ul li { flex: 1 1 0; }`
-               rule that -- despite having no !important -- still wins the
-               cascade over a plain `.ct-page-thumb-item` selector, because
-               ".footer-nav ul li" has HIGHER SPECIFICITY (1 class + 2
-               elements) than ".ct-page-thumb-item" alone (1 class, 0
-               elements); CSS compares specificity before ever considering
-               !important vs. not. Without this, every thumbnail's <li> grows
-               to fill an equal share of the footer's full width, centering
-               the 42px thumbnail inside that wide box -- exactly the "huge
-               gaps between thumbnails" bug this fixes. */
             display: flex !important;
-            flex: 0 0 auto !important;
+            flex: 0 0 auto;
             align-items: center;
         }
         .ct-page-thumb-frame {
@@ -709,14 +761,14 @@
             line-height: 1.4;
             pointer-events: none;
         }
-        /* Pins the "+" thumbnail to the far right of the strip while the
-           .footer-nav ul.ct-page-strip-active flex-start row above keeps
-           every actual page thumbnail packed tightly together on the left
-           -- the standard flex trick (last item gets margin-left:auto in a
-           flex-start row) instead of relying on justify-content-between,
-           which would space EVERY item apart, not just this one. */
+        /* The "+" button is the 4th top-level `<li>` after the scroll-track
+           (see .ct-page-scroll-li above) -- since that's the only sibling
+           with flex-grow, "+" naturally lands at the strip's fixed right
+           edge without needing a margin-left:auto trick. Still needs the
+           same !important as the nav arrows (real `<li>`, same vendor
+           `.footer-nav ul li { flex: 1 1 0; }` conflict). */
         .ct-page-thumb-add {
-            margin-left: auto !important;
+            flex: 0 0 auto !important;
         }
         .ct-page-thumb-add-btn {
             width: 42px;
