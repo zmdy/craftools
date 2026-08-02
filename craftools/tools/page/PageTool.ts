@@ -4,6 +4,7 @@ import { Notify } from '../../utils/Notify.js';
 import { renderColorPicker, cssFromValue, parseCssBackground, normalizeValue, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
 import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, type PaperMeta } from '../paper/PaperTool.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
+import { MobileToolbar } from '../../utils/MobileToolbar.js';
 import './PageTool_Translations.js';
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -598,7 +599,14 @@ export class PageTool {
           rightPanel.style.removeProperty('width');
           if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
         }
-        if (window.innerWidth <= 768) rightPanel?.classList.add('mobile-modal-mode');
+        if (window.innerWidth <= 768) {
+          rightPanel?.classList.add('mobile-modal-mode');
+          // Swap the mobile footer for the page-thumbnail strip while this
+          // page's panel is open -- see MobileToolbar.showPageMode()'s own
+          // doc comment for why this lives here (the only place a page
+          // panel actually opens) rather than in Editor.ts.
+          MobileToolbar.showPageMode(pageEl);
+        }
       }
     });
   }

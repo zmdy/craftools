@@ -739,6 +739,19 @@ export class Craftools_Editor extends HTMLElement {
       restoreOriginalCanvas();
     };
 
+    // Page Settings' own fields (background, dimensions, custom paper...)
+    // mutate the page element's style directly rather than going through
+    // PropertyRenderer's 'craftools-state-change' event -- there's no
+    // single event to key a live-refresh off of, so instead any
+    // input/change/click bubbling out of the panel schedules a debounced
+    // re-render of the mobile page-thumbnail strip (a no-op outside page
+    // mode -- see MobileToolbar.scheduleThumbnailRefresh()'s own comment).
+    if (panelBody) {
+      ['input', 'change', 'click'].forEach(evt => {
+        panelBody.addEventListener(evt, () => MobileToolbar.scheduleThumbnailRefresh());
+      });
+    }
+
     // Desktop drag-and-drop source
     toolBtns.forEach(btn => {
       if (btn.getAttribute('draggable') === 'true') {

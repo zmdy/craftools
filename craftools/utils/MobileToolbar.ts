@@ -65,6 +65,11 @@ export class MobileToolbar {
   static _activeType:    string      | null  = null;
   static _editor:        HTMLElement | null  = null;
 
+  /** Page currently backing the 'page' footer mode (see showPageMode()). */
+  static _activePageEl:      HTMLElement | null = null;
+  /** Debounce handle for scheduleThumbnailRefresh() -- see its own comment. */
+  static _pageRefreshTimer:  number      | null = null;
+
   // ─── Entry point ────────────────────────────────────────────────────────────
 
   static init(editor: HTMLElement): void {
@@ -75,6 +80,16 @@ export class MobileToolbar {
     this._footer = footerUl;
     this._buildMiniPanel();
     this.showToolMode();
+
+    // Re-render the page-thumbnail strip whenever a page is appended
+    // (PageTool.addNewPage()/_duplicatePage() both dispatch this on
+    // `document`) -- keeps the "+" button and any other add-page entry
+    // point in sync without MobileToolbar needing to import PageTool.ts
+    // itself (which would create a circular import, since PageTool.ts
+    // already imports MobileToolbar to call showPageMode()).
+    document.addEventListener('craftools-page-add', () => {
+      if (this._activeType === 'page') this._renderPageThumbnails();
+    });
   }
 
   static isMobile(): boolean {
@@ -87,6 +102,7 @@ export class MobileToolbar {
     if (!this._footer) return;
     this._activeElement = null;
     this._activeType    = null;
+    this._activePageEl  = null;
     this.closeMiniPanel();
     this._updateScrollReserve();
 
@@ -133,6 +149,7 @@ export class MobileToolbar {
     if (!this._footer) return;
     this._activeElement = element as CraftoolsEl;
     this._activeType    = type;
+    this._activePageEl  = null;
     this.closeMiniPanel();
 
     const toolDef = ToolRegistry.get(type);
@@ -178,6 +195,149 @@ export class MobileToolbar {
 
     this._renderFooterItems(items);
     this._keepElementVisible();
+  }
+
+  /**
+   * Page-preview footer mode.
+   *
+   * Called by PageTool.ts's pageEl click handler (mobile only) right after
+   * it opens the full-screen Page Settings panel. Swaps the footer's tool
+   * list for a horizontal strip of live thumbnails -- one per page in
+   * `#pages-wrapper` -- so the user can jump between pages, reorder them,
+   * or add a new one without leaving the panel. Reverts to showToolMode()
+   * automatically via the existing mobile close paths (closePanelMenu()'s
+   * `if (isMobile()) MobileToolbar.showToolMode();` and the
+   * 'craftools-element-select' handler's showElementMode() call), so no
+   * extra wiring is needed on the "leaving page mode" side.
+   */
+  static showPageMode(pageEl: HTMLElement): void {
+    if (!this._footer) return;
+    this._activeElement = null;
+    this._activeType    = 'page';
+    this._activePageEl  = pageEl;
+    this.closeMiniPanel();
+    this._updateScrollReserve();
+    this._renderPageThumbnails();
+  }
+
+  /**
+   * Debounced live-refresh hook for page mode. Page Settings' fields
+   * (background, dimensions, custom paper...) mutate `pageEl.style`
+   * directly rather than through PropertyRenderer's
+   * 'craftools-state-change' event, so there's no single event to key off
+   * of -- instead Editor.ts's bindEvents() calls this on any
+   * input/change/click bubbling out of `#panel-body`. Debounced + a no-op
+   * outside page mode, so it's safe to wire unconditionally and cheap even
+   * on rapid typing (re-clones the page strip at most once per 300ms,
+   * never per-keystroke).
+   */
+  static scheduleThumbnailRefresh(): void {
+    if (this._activeType !== 'page') return;
+    if (this._pageRefreshTimer !== null) return;
+    this._pageRefreshTimer = window.setTimeout(() => {
+      this._pageRefreshTimer = null;
+      if (this._activeType === 'page') this._renderPageThumbnails();
+    }, 300);
+  }
+
+  /**
+   * Rebuilds the footer strip from the CURRENT DOM state of every page.
+   * Each thumbnail is a `cloneNode(true)` of the real page, CSS-scaled down
+   * via `transform: scale()` -- not rasterized (no html2canvas/canvas
+   * draws) -- so it reflects the actual live content (text, images,
+   * shapes, backgrounds) at effectively zero cost: a DOM clone + one style
+   * write per page, no pixel work. Selection handles never leak into the
+   * clone because `<craftools-element>`'s ctrlbar only becomes visible via
+   * its own select() (display:none by default, see Element.ts), and no
+   * element can be selected while a page's panel is open -- CSS in
+   * index.html force-hides `.craftools-ctrlbar`/`.craftools-selected`
+   * inside `.ct-page-thumb-inner` as a defensive backstop regardless.
+   */
+  private static _renderPageThumbnails(): void {
+    if (!this._footer || !this._activePageEl) return;
+    const wrapper = this._editor?.querySelector<HTMLElement>('#pages-wrapper');
+    if (!wrapper) return;
+    const activePageEl = this._activePageEl;
+    const pages = Array.from(wrapper.querySelectorAll<HTMLElement>(':scope > .craftools-page'));
+
+    this._footer.innerHTML = '';
+
+    let dragSrcIndex: number | null = null;
+
+    pages.forEach((pageEl, idx) => {
+      const li = document.createElement('li');
+      li.className   = 'ct-page-thumb-item';
+      li.draggable   = true;
+
+      const frame = document.createElement('div');
+      frame.className = 'ct-page-thumb-frame' + (pageEl === activePageEl ? ' active' : '');
+
+      const w = pageEl.offsetWidth  || 1;
+      const h = pageEl.offsetHeight || 1;
+      const THUMB_W = 42;
+      const scale   = THUMB_W / w;
+      frame.style.width  = THUMB_W + 'px';
+      frame.style.height = Math.max(24, Math.round(h * scale)) + 'px';
+
+      const inner = document.createElement('div');
+      inner.className   = 'ct-page-thumb-inner';
+      inner.style.width  = w + 'px';
+      inner.style.height = h + 'px';
+      inner.style.transform = `scale(${scale})`;
+      inner.appendChild(pageEl.cloneNode(true) as HTMLElement);
+      frame.appendChild(inner);
+
+      const numTag = document.createElement('span');
+      numTag.className = 'ct-page-thumb-num';
+      numTag.textContent = String(idx + 1);
+      frame.appendChild(numTag);
+
+      frame.addEventListener('click', () => {
+        if (pageEl === this._activePageEl) return;
+        // Re-dispatches through PageTool.ts's own pageEl click handler
+        // (e.target === pageEl satisfies its isPageClick check) instead of
+        // duplicating its panel-open logic here -- keeps this the single
+        // source of truth for "select this page" on every input path.
+        pageEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+
+      li.addEventListener('dragstart', (e: DragEvent) => {
+        dragSrcIndex = idx;
+        e.dataTransfer?.setData('text/plain', String(idx));
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      });
+      li.addEventListener('dragover', (e: DragEvent) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      });
+      li.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        if (dragSrcIndex === null || dragSrcIndex === idx) return;
+        const srcEl = pages[dragSrcIndex];
+        const refEl = pages[idx];
+        wrapper.insertBefore(srcEl, dragSrcIndex < idx ? refEl.nextSibling : refEl);
+        dragSrcIndex = null;
+        document.dispatchEvent(new CustomEvent('craftools-page-reorder', { bubbles: true }));
+        MobileToolbar._renderPageThumbnails();
+      });
+
+      li.appendChild(frame);
+      this._footer!.appendChild(li);
+    });
+
+    // "+" add-page -- proxies the real sidebar/footer new-page button
+    // instead of calling PageTool.addNewPage() directly, so this module
+    // never needs to import tools/page/PageTool.ts (which itself imports
+    // MobileToolbar to call showPageMode() -- a direct import back would
+    // be circular). The 'craftools-page-add' listener registered in
+    // init() re-renders this strip once the new page lands in the DOM.
+    const addLi = document.createElement('li');
+    addLi.className = 'ct-page-thumb-item ct-page-thumb-add';
+    addLi.innerHTML = `<button class="ct-page-thumb-add-btn" type="button" title="${I18n.t('mobileToolbar.toolNewPage')}"><span class="material-symbols-outlined">add</span></button>`;
+    addLi.querySelector('button')!.addEventListener('click', () => {
+      document.getElementById('pwa-sidebar-newpage')?.click();
+    });
+    this._footer.appendChild(addLi);
   }
 
   // ─── Footer rendering ────────────────────────────────────────────────────────

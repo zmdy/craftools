@@ -635,6 +635,82 @@
             }
             .mmp-color-big::-webkit-color-swatch-wrapper { padding: 0; }
             .mmp-color-big::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+            /* Page-preview footer strip -- reuses the same `.footer-nav ul`
+               scroll container as the tool list (see
+               MobileToolbar.showPageMode()), so overflow-x/gap/padding are
+               already inherited; only the thumbnail-specific bits live here. */
+            .ct-page-thumb-item {
+                display: inline-flex !important;
+                flex: 0 0 auto;
+                align-items: center;
+                padding: 12px 0;
+            }
+            .ct-page-thumb-frame {
+                position: relative;
+                overflow: hidden;
+                border-radius: 6px;
+                border: 2px solid var(--border, #e4e4e7);
+                background: #fff;
+                cursor: pointer;
+                box-shadow: 0 1px 3px rgba(0,0,0,.15);
+            }
+            .ct-page-thumb-frame.active {
+                border-color: var(--accent, #f97316);
+                box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
+            }
+            .ct-page-thumb-inner {
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-origin: top left;
+                pointer-events: none;
+            }
+            /* Defensive backstop: selection handles/overlays should never be
+               visible in a page's own panel (no element can be selected
+               while it's open), but force-hide them in the clone regardless
+               -- see MobileToolbar._renderPageThumbnails()'s doc comment. */
+            .ct-page-thumb-inner .craftools-ctrlbar,
+            .ct-page-thumb-inner craftools-element.craftools-selected {
+                display: none !important;
+            }
+            .ct-page-thumb-num {
+                position: absolute;
+                bottom: 2px;
+                right: 3px;
+                font-size: 9px;
+                font-weight: 700;
+                color: #fff;
+                background: rgba(0,0,0,0.55);
+                border-radius: 3px;
+                padding: 0 3px;
+                line-height: 1.4;
+                pointer-events: none;
+            }
+            .ct-page-thumb-add-btn {
+                width: 42px;
+                height: 42px;
+                border-radius: 6px;
+                border: 2px dashed var(--border, #e4e4e7);
+                background: none;
+                color: var(--text-muted, #7773a6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            .ct-page-thumb-add-btn:active {
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+            [data-theme="dark"] .ct-page-thumb-frame {
+                background: #27272a;
+                border-color: #3f3f46;
+            }
+            [data-theme="dark"] .ct-page-thumb-add-btn {
+                border-color: #3f3f46;
+                color: rgba(255,255,255,0.6);
+            }
         }
 
         /* Estilização Premium para botões de ação e select no Header */
