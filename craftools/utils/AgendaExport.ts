@@ -147,6 +147,9 @@ export class AgendaExport {
     // editor's own <head> fonts, and different repetitions can in principle differ
     // in which font a variable-bound element ends up using).
     const usedFonts = new Set<string>();
+    // Same accumulation, but keyed by exact weight/style -- see
+    // PdfExport._collectUsedFontFaces()'s doc comment.
+    const usedFontFacesByKey = new Map<string, { family: string; weight: string; style: string }>();
 
     renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
@@ -208,6 +211,7 @@ export class AgendaExport {
         .forEach(el => PdfExport._flattenElement(el));
 
       PdfExport._collectUsedFonts([clone]).forEach(f => usedFonts.add(f));
+      PdfExport._collectUsedFontFaces([clone]).forEach(f => usedFontFacesByKey.set(`${f.family}|${f.weight}|${f.style}`, f));
 
       const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
       const bgStyle   = size.background ? `background: ${size.background};` : '';
@@ -217,7 +221,11 @@ export class AgendaExport {
     });
 
     const css      = PdfExport._buildCSS(pageSizes);
-    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), { autoPrint: opts.autoPrint, usedFonts });
+    const fullHtml = PdfExport._wrapDocument(css, pagesHtmlParts.join('\n'), {
+      autoPrint:     opts.autoPrint,
+      usedFonts,
+      usedFontFaces: [...usedFontFacesByKey.values()],
+    });
 
     return { fullHtml, totalOutputPages };
   }

@@ -17,6 +17,25 @@ import './PdfExport_Translations.js';
  *  does for everything else. Kept as a static baseline like before this fix. */
 const BASELINE_FONTS = ['DM Sans', 'DM Serif Display', 'DM Mono'];
 
+/** Weight/style combinations of BASELINE_FONTS actually bundled/used across
+ *  the app's own generated markup (bold Titles, italic captions, ...) --
+ *  mirrors AgendaSvgExport.ts's CORE_FONTS weight/style coverage for the
+ *  same 3 families. Passed to _wrapDocument() so the print window's
+ *  explicit document.fonts.load() calls (see that method) cover these even
+ *  when a given export has no other elements that happen to declare an
+ *  inline font-family (e.g. calendar/paper generated markup, which sets
+ *  'DM Sans' via CSS text without ever going through _collectUsedFontFaces's
+ *  inline-style scan). */
+const BASELINE_FONT_FACES: Array<{ family: string; weight: string; style: string }> = [
+  { family: 'DM Sans',          weight: '400', style: 'normal' },
+  { family: 'DM Sans',          weight: '700', style: 'normal' },
+  { family: 'DM Sans',          weight: '400', style: 'italic' },
+  { family: 'DM Serif Display', weight: '400', style: 'normal' },
+  { family: 'DM Serif Display', weight: '400', style: 'italic' },
+  { family: 'DM Mono',          weight: '400', style: 'normal' },
+  { family: 'DM Mono',          weight: '500', style: 'normal' },
+];
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface PageSize {
@@ -37,11 +56,12 @@ export class PdfExport {
       return;
     }
 
-    const pageSizes = pages.map(p => this._parsePageSize(p));
-    const css       = this._buildCSS(pageSizes);
-    const pagesHtml = pages.map((page, i) => this._serializePage(page, pageSizes[i])).join('\n');
-    const usedFonts = this._collectUsedFonts(pages);
-    const fullHtml  = this._wrapDocument(css, pagesHtml, { usedFonts });
+    const pageSizes     = pages.map(p => this._parsePageSize(p));
+    const css           = this._buildCSS(pageSizes);
+    const pagesHtml     = pages.map((page, i) => this._serializePage(page, pageSizes[i])).join('\n');
+    const usedFonts     = this._collectUsedFonts(pages);
+    const usedFontFaces = this._collectUsedFontFaces(pages);
+    const fullHtml      = this._wrapDocument(css, pagesHtml, { usedFonts, usedFontFaces });
 
     this._openPrintWindow(fullHtml);
   }
@@ -90,32 +110,95 @@ export class PdfExport {
   }
 
   /**
-   * Builds the `<link>` that loads every family in `usedFonts` (minus
+   * Like _collectUsedFonts() but also captures the exact WEIGHT/STYLE each
+   * family is actually used at on the page (a bold Title, an italic
+   * caption, ...), not just the family name. Used to fire explicit
+   * `document.fonts.load('700 16px "DM Sans"')`-style calls in the print
+   * window (see _wrapDocument()'s print script) for precisely the faces the
+   * document needs, instead of only the more passive/general-purpose
+   * `document.fonts.ready` -- which resolves once whatever the browser
+   * already decided to fetch settles, but never forces a fetch on its own
+   * and gives no per-face confirmation. Explicitly loading each real face
+   * removes the guesswork from "did the bold weight actually finish
+   * downloading before print() fired" -- previously the only signal was a
+   * blind race against a fixed timeout.
+   */
+  static _collectUsedFontFaces(roots: HTMLElement[]): Array<{ family: string; weight: string; style: string }> {
+    const seen  = new Set<string>();
+    const faces: Array<{ family: string; weight: string; style: string }> = [];
+    const addFromElement = (rawFamily: string | null | undefined, rawWeight: string | null | undefined, rawStyle: string | null | undefined) => {
+      if (!rawFamily) return;
+      const family = rawFamily.split(',')[0]?.trim().replace(/^['"]|['"]$/g, '');
+      if (!family) return;
+      const weightStr = (rawWeight || '').trim().toLowerCase();
+      const weight = weightStr === 'bold' ? '700'
+        : /^\d+$/.test(weightStr) ? weightStr
+        : '400';
+      const style = /italic|oblique/i.test(rawStyle || '') ? 'italic' : 'normal';
+      const key = `${family}|${weight}|${style}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      faces.push({ family, weight, style });
+    };
+    roots.forEach(root => {
+      addFromElement(root.style?.fontFamily, root.style?.fontWeight, root.style?.fontStyle);
+      root.querySelectorAll<HTMLElement>('[style*="font-family"]').forEach(el =>
+        addFromElement(el.style.fontFamily, el.style.fontWeight, el.style.fontStyle));
+    });
+    return faces;
+  }
+
+  /**
+   * Builds the `<link>`(s) that load every family in `usedFonts` (minus
    * SYSTEM_FONTS, which are assumed pre-installed and never fetched
    * remotely -- same rule FontList.ts's loadCraftoolsFonts() uses for the
-   * live editor). Mirrors that same self-hosted-API-first, Google-Fonts-
-   * fallback strategy so the print window's fonts come from wherever the
-   * live editor's own fonts come from.
+   * live editor).
+   *
+   * IMPORTANT: this used to be a strict either/or -- self-hosted API link
+   * OR Google Fonts link, never both, chosen purely by whether an API base
+   * URL is configured at all (not by whether the API actually has the
+   * requested family/weight). That is NOT a real fallback despite the old
+   * comment here claiming it was: fonts.css.php (see craftools_api's
+   * public/v1/fonts.css.php) only emits an `@font-face` rule for a
+   * weight/style combination that actually has an uploaded file for it --
+   * if a family was registered with only its Regular file (no Bold ever
+   * uploaded), the self-hosted response simply omits `font-weight: 700`
+   * entirely, silently, with nothing else ever requested to cover that gap.
+   * The browser then has no choice but to synthesize a fake/faux bold from
+   * the Regular outline for that text -- which reads exactly like the
+   * reported "garbled/oversized/clipped" bold Title text, and is
+   * indistinguishable from font-loading failing outright.
+   *
+   * Now both links are emitted together whenever an API base is
+   * configured, self-hosted FIRST: per the CSS Fonts spec, multiple
+   * `@font-face` rules that declare the exact same family/weight/style are
+   * tried in DECLARATION ORDER as alternative sources for that one face
+   * (this is how the common `local()` + web-font-fallback trick works) --
+   * it is not a normal cascade override. So for any weight/style the
+   * self-hosted catalog actually has, its file is tried first (preferred,
+   * since it's the source the live editor itself uses via FontList.ts);
+   * for any weight/style it doesn't have a rule for at all, Google's rule
+   * for that same weight/style becomes the ONLY candidate and is used
+   * without the browser ever needing to synthesize a substitute.
    */
   static _buildFontLink(usedFonts: Iterable<string>): string {
     const families = [...new Set(usedFonts)].filter(f => !SYSTEM_FONTS.has(f));
     if (!families.length) return '';
 
-    const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
-    if (apiBase) {
-      // No :weight specifiers -- fonts.css.php returns EVERY registered
-      // weight/style for a family when none are given, which is safer here
-      // than guessing (an arbitrary API-catalog font might not even have a
-      // 700/italic file, unlike the 3 hand-picked baseline families the old
-      // code hardcoded weights for).
-      const fontQuery = families.map(f => f.replace(/\s+/g, '+')).join('|');
-      return `<link href="${apiBase}/v1/fonts.css.php?family=${fontQuery}" rel="stylesheet">`;
-    }
-
-    const fontQuery = families
+    const googleFontQuery = families
       .map(f => `family=${f.replace(/\s+/g, '+')}:ital,wght@0,400;0,700;1,400;1,700`)
       .join('&');
-    return `<link href="https://fonts.googleapis.com/css2?${fontQuery}&display=swap" rel="stylesheet">`;
+    const googleLink = `<link href="https://fonts.googleapis.com/css2?${googleFontQuery}&display=swap" rel="stylesheet">`;
+
+    const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
+    if (!apiBase) return googleLink;
+
+    // No :weight specifiers -- fonts.css.php returns EVERY registered
+    // weight/style for a family when none are given.
+    const selfHostedQuery = families.map(f => f.replace(/\s+/g, '+')).join('|');
+    const selfHostedLink = `<link href="${apiBase}/v1/fonts.css.php?family=${selfHostedQuery}" rel="stylesheet">`;
+
+    return `${selfHostedLink}\n    ${googleLink}`;
   }
 
   // ── Detecta o tamanho real da página ────────────────────────────────────────
@@ -343,10 +426,18 @@ ${pageRules}
    *   properties panel) -- without this, that embed would silently pop the
    *   browser's print dialog for whatever iframe/window it's loaded into.
    */
-  static _wrapDocument(css: string, body: string, opts: { autoPrint?: boolean; usedFonts?: Iterable<string> } = {}): string {
+  static _wrapDocument(css: string, body: string, opts: { autoPrint?: boolean; usedFonts?: Iterable<string>; usedFontFaces?: Array<{ family: string; weight: string; style: string }> } = {}): string {
     const htmlLangMap: Record<string, string> = { 'pt-br': 'pt-BR', 'en': 'en', 'es': 'es' };
     const htmlLang = htmlLangMap[I18n.currentLang] || 'pt-BR';
     const autoPrint = opts.autoPrint !== false;
+
+    // Dedupe against BASELINE_FONT_FACES + whatever the actual pages use
+    // (mirrors the family-only dedupe below for _buildFontLink).
+    const faceKey = (f: { family: string; weight: string; style: string }) => `${f.family}|${f.weight}|${f.style}`;
+    const facesByKey = new Map<string, { family: string; weight: string; style: string }>();
+    [...BASELINE_FONT_FACES, ...(opts.usedFontFaces ?? [])].forEach(f => facesByKey.set(faceKey(f), f));
+    const usedFontFacesJson = JSON.stringify([...facesByKey.values()]);
+
     const printScript = autoPrint ? `
 <script>
     // Dispara o print assim que as fontes e imagens carregarem
@@ -362,19 +453,34 @@ ${pageRules}
         // actually needs to paint with that font, and with font-display:swap
         // (used by both the self-hosted fonts.css.php endpoint and the
         // Google Fonts fallback) the browser paints with a FALLBACK font
-        // first and swaps in the real one whenever it finishes loading. A
-        // fixed setTimeout() before calling print() was a guess at "enough
-        // time" that gets less reliable the more fonts a document actually
-        // uses (see PdfExport._collectUsedFonts()) -- explicitly waiting on
-        // the Font Loading API's document.fonts.ready (resolves once every
-        // requested face has either loaded or failed) removes that guess
-        // entirely. Still capped by a hard timeout as a safety net in case
-        // a font request hangs (offline API, blocked CDN, ...) so export
-        // never silently hangs forever.
-        const whenFontsSettled = (window.document.fonts && window.document.fonts.ready)
-            ? window.document.fonts.ready
+        // first and swaps in the real one whenever it finishes loading.
+        //
+        // Waiting on document.fonts.ready alone is only a SOFT signal: it
+        // resolves once whatever the browser already decided to fetch has
+        // settled, but never forces a fetch on its own and gives no
+        // per-face confirmation that e.g. the BOLD weight specifically ever
+        // loaded (only that *something* did). This blob: print window is a
+        // cold, uncached, cross-origin fetch every single time (unlike the
+        // long-lived live editor tab), so it's the worst-case timing for
+        // that kind of soft race. Explicitly forcing + confirming every
+        // face the document actually needs via document.fonts.load()
+        // removes that guesswork entirely -- each call resolves once THAT
+        // exact family/weight/style has loaded or failed, no assumptions.
+        const usedFontFaces = ${usedFontFacesJson};
+        const explicitLoads = (window.document.fonts && window.document.fonts.load)
+            ? Promise.all(usedFontFaces.map(function (f) {
+                return window.document.fonts.load(f.style + ' ' + f.weight + ' 16px "' + f.family + '"').catch(function () { return null; });
+              }))
             : Promise.resolve();
-        const safetyTimeout = new Promise((resolve) => setTimeout(resolve, 4000));
+        const whenFontsSettled = explicitLoads.then(function () {
+            return (window.document.fonts && window.document.fonts.ready) ? window.document.fonts.ready : Promise.resolve();
+        });
+        // Still capped by a hard timeout as a safety net in case a font
+        // request hangs (offline API, blocked CDN, ...) so export never
+        // silently hangs forever. Raised from 4s to 6s: the self-hosted API
+        // is a single small server with no CDN, genuinely slower under a
+        // cold cross-origin fetch than Google Fonts' infrastructure.
+        const safetyTimeout = new Promise((resolve) => setTimeout(resolve, 6000));
         Promise.race([whenFontsSettled, safetyTimeout]).then(() => {
             // Small extra delay so the browser has a chance to actually
             // repaint/reflow with the now-settled fonts before print() --
