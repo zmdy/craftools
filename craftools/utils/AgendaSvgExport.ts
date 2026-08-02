@@ -9,12 +9,30 @@
  * see its README (github.com/tooooools/html-to-svg): it renders a generic
  * element's background-color + border-radius, vectorizes text via
  * Opentype.js, and passes through <img>/<canvas>/inline <svg> as embedded
- * images. It does NOT (yet) support box-shadow, border STYLES (only
- * background-color/radius), text-decoration, or CSS `transform: skew()`.
- * Per the user's own confirmation this project doesn't use skew or
- * box-shadow, so those two gaps shouldn't matter here -- everything else
- * (gradients, borders-as-color, rotation, photos, custom fonts) is
+ * images. It does NOT (yet) support box-shadow, text-decoration, or CSS
+ * `transform: skew()`. Per the user's own confirmation this project
+ * doesn't use skew or box-shadow, so those two gaps shouldn't matter here
+ * -- everything else (gradients, rotation, photos, custom fonts) is
  * genuinely untested until this button is actually used.
+ *
+ * Border handling: the vendored library's DivRenderer DOES read and draw
+ * border-*-color/width/style (its own dist source has real border logic --
+ * dashed/dotted dash patterns, a stroked rounded-rect when border-radius is
+ * set), contrary to what an earlier revision of this comment claimed. The
+ * actual bug was structural: the library draws that border geometry as a
+ * CHILD of the very same clip-path `<g>` it creates for that element's own
+ * `overflow: hidden`, with the clip rect set to EXACTLY the element's own
+ * bounding box. Every grid cell in this app (Table/Calendar/Agenda day
+ * boxes, header cells, ...) wraps its content in `overflow:hidden` sized
+ * identically to its own border box -- a thin (often 1px) border sitting
+ * exactly on that clip boundary gets partially or fully clipped away by
+ * sub-pixel rounding in whatever renders the final SVG, which reliably
+ * produced "no border at all" with no error anywhere. _extractClippedBorders()/
+ * _drawBorderOverlays() below work around this by neutralizing (not
+ * removing -- see their own doc comments) each affected element's CSS
+ * border before handing off to html-to-svg, then redrawing the exact same
+ * geometry as unclipped overlays appended directly to the finished SVG's
+ * root, where nothing clips them.
  *
  * Font handling: the renderer vectorizes every glyph via Opentype.js
  * (bundled inside @tooooools/html-to-svg, pinned at v1.3.4), which needs a
@@ -235,6 +253,15 @@ export class AgendaSvgExport {
         // tools before handing the DOM to html-to-svg (see _preprocessForSvgExport).
         await this._preprocessForSvgExport(el);
 
+        // Neutralize (not remove -- see its own doc comment) borders that
+        // would otherwise get clipped away by html-to-svg's own rendering
+        // of that same element's `overflow:hidden` (see this file's header
+        // comment). Must run AFTER _preprocessForSvgExport (reads whatever
+        // DOM state the other passes left behind) and its geometry must be
+        // captured BEFORE render() -- the actual overlay elements get drawn
+        // onto the finished SVG below instead.
+        const clippedBorders = this._extractClippedBorders(el);
+
         try {
           const svg = await renderer.render(
             el,
@@ -242,6 +269,7 @@ export class AgendaSvgExport {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             async (_from: any, to: any) => to,
           );
+          this._drawBorderOverlays(svg, clippedBorders);
           if (merge) {
             rendered.push(svg);
           } else {
@@ -520,6 +548,170 @@ export class AgendaSvgExport {
         console.warn('[AgendaSvgExport] Could not rasterize gradient text:', err);
       }
     }));
+  }
+
+  // ── Border-vs-overflow:hidden clipping workaround ────────────────────────
+  // See this file's header comment for the full root-cause explanation.
+
+  private static _isTransparentColor(color: string): boolean {
+    if (!color || color === 'none' || color === 'transparent') return true;
+    if (color.startsWith('rgba')) {
+      const nums = color.match(/[\d.]+/g);
+      if (nums && nums[3] === '0') return true;
+    }
+    return false;
+  }
+
+  /** Mirrors html-to-svg's own (dist source) `parseBorders()` exactly, so
+   *  a border we decide to redraw ourselves matches one it would have. */
+  private static _parseVisibleBorders(cs: CSSStyleDeclaration): Partial<Record<'top' | 'right' | 'bottom' | 'left', { color: string; width: number; style: string }>> | null {
+    let borders: Partial<Record<'top' | 'right' | 'bottom' | 'left', { color: string; width: number; style: string }>> | null = null;
+    (['top', 'right', 'bottom', 'left'] as const).forEach(dir => {
+      const color = cs.getPropertyValue(`border-${dir}-color`);
+      const width = parseInt(cs.getPropertyValue(`border-${dir}-width`));
+      const style = cs.getPropertyValue(`border-${dir}-style`);
+      if (this._isTransparentColor(color)) return;
+      if (!width || Number.isNaN(width)) return;
+      if (style === 'none' || style === 'hidden') return;
+      if (!borders) borders = {};
+      borders[dir] = { color, width, style };
+    });
+    return borders;
+  }
+
+  /**
+   * Scans `pageEl` for every element that has BOTH a visible CSS border AND
+   * computed `overflow: hidden` on itself -- exactly the combination that
+   * makes html-to-svg's own border rendering get clipped away (see this
+   * file's header comment). For each match: records a geometry descriptor
+   * (position/size relative to `pageEl`, per-side color/width/style, and
+   * border-radius) for _drawBorderOverlays() to redraw AFTER rendering, then
+   * neutralizes the element's OWN border by setting each affected side's
+   * `border-*-color` to `transparent` -- deliberately NOT `border: none`,
+   * which (under the `box-sizing: border-box` every one of these tools
+   * uses) would shrink the border's own box-model footprint and shift
+   * inner content inward by border-width on every affected side. Leaving
+   * width/style untouched and only blanking the color keeps html-to-svg's
+   * own `isTransparent()` check skipping it (so it draws nothing, avoiding
+   * a doubled-up border) with zero layout side effects.
+   *
+   * Skips any element whose `getBoundingClientRect()` doesn't match its own
+   * `offsetWidth`/`offsetHeight` -- a cheap, if imperfect, signal that a
+   * rotation/transform is active somewhere in its ancestor chain. The
+   * overlay geometry below is drawn in flat, unrotated root coordinates, so
+   * a genuinely transformed element would land in the wrong place; better
+   * to leave the native (still imperfect, but no worse than before)
+   * clipped rendering for that rare case than draw a confidently-wrong
+   * border.
+   */
+  private static _extractClippedBorders(pageEl: HTMLElement): Array<{
+    x: number; y: number; width: number; height: number; radius: number;
+    borders: Partial<Record<'top' | 'right' | 'bottom' | 'left', { color: string; width: number; style: string }>>;
+  }> {
+    const rootRect = pageEl.getBoundingClientRect();
+    const descriptors: Array<{
+      x: number; y: number; width: number; height: number; radius: number;
+      borders: Partial<Record<'top' | 'right' | 'bottom' | 'left', { color: string; width: number; style: string }>>;
+    }> = [];
+
+    const candidates = [pageEl, ...Array.from(pageEl.querySelectorAll<HTMLElement>('*'))];
+    for (const el of candidates) {
+      const cs = window.getComputedStyle(el);
+      if (cs.getPropertyValue('overflow') !== 'hidden') continue;
+      const borders = this._parseVisibleBorders(cs);
+      if (!borders) continue;
+
+      const rect = el.getBoundingClientRect();
+      if (Math.abs(rect.width - el.offsetWidth) > 1 || Math.abs(rect.height - el.offsetHeight) > 1) continue;
+
+      const radius = parseInt(cs.getPropertyValue('border-radius')) || 0;
+      descriptors.push({
+        x: rect.left - rootRect.left,
+        y: rect.top  - rootRect.top,
+        width:  rect.width,
+        height: rect.height,
+        radius,
+        borders,
+      });
+
+      (['top', 'right', 'bottom', 'left'] as const).forEach(dir => {
+        if (borders[dir]) el.style.setProperty(`border-${dir}-color`, 'transparent');
+      });
+    }
+
+    return descriptors;
+  }
+
+  /**
+   * Draws the geometry _extractClippedBorders() recorded directly onto the
+   * finished SVG's root -- OUTSIDE every clip-path context html-to-svg
+   * created while rendering, so none of it can clip these strokes away.
+   * The formulas are a straight port of html-to-svg's own DivRenderer
+   * border-drawing code (dist source): a stroked rounded-rect (inset by
+   * half the representative side's width, matching how the library only
+   * supports ONE uniform border when border-radius is set) when
+   * `radius > 0`, otherwise one `<line>` per visible side with the same
+   * dotted/dashed `stroke-dasharray` patterns it uses.
+   */
+  private static _drawBorderOverlays(
+    svg: SVGSVGElement,
+    descriptors: Array<{
+      x: number; y: number; width: number; height: number; radius: number;
+      borders: Partial<Record<'top' | 'right' | 'bottom' | 'left', { color: string; width: number; style: string }>>;
+    }>,
+  ): void {
+    if (!descriptors.length) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'ct-svg-border-overlay');
+
+    for (const d of descriptors) {
+      if (d.radius > 0) {
+        const rep = d.borders.top ?? d.borders.right ?? d.borders.bottom ?? d.borders.left;
+        if (!rep) continue;
+        const rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', String(d.x + rep.width / 2));
+        rect.setAttribute('y', String(d.y + rep.width / 2));
+        rect.setAttribute('width',  String(Math.max(0, d.width  - rep.width)));
+        rect.setAttribute('height', String(Math.max(0, d.height - rep.width)));
+        rect.setAttribute('rx', String(Math.max(0, d.radius - rep.width / 2)));
+        rect.setAttribute('fill', 'none');
+        rect.setAttribute('stroke', rep.color);
+        rect.setAttribute('stroke-width', String(rep.width));
+        g.appendChild(rect);
+        continue;
+      }
+
+      (['top', 'right', 'bottom', 'left'] as const).forEach(dir => {
+        const b = d.borders[dir];
+        if (!b) return;
+        let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        switch (dir) {
+          case 'top':    x1 = d.x; x2 = d.x + d.width; y1 = y2 = d.y + b.width / 2; break;
+          case 'bottom': x1 = d.x; x2 = d.x + d.width; y1 = y2 = d.y + d.height - b.width / 2; break;
+          case 'left':   y1 = d.y; y2 = d.y + d.height; x1 = x2 = d.x + b.width / 2; break;
+          case 'right':  y1 = d.y; y2 = d.y + d.height; x1 = x2 = d.x + d.width - b.width / 2; break;
+        }
+        const line = document.createElementNS(NS, 'line');
+        line.setAttribute('x1', String(x1));
+        line.setAttribute('y1', String(y1));
+        line.setAttribute('x2', String(x2));
+        line.setAttribute('y2', String(y2));
+        line.setAttribute('stroke', b.color);
+        line.setAttribute('stroke-width', String(b.width));
+        if (b.style === 'dotted') {
+          line.setAttribute('stroke-dasharray', `0 ${b.width * 2}`);
+          line.setAttribute('stroke-dashoffset', '1');
+          line.setAttribute('stroke-linejoin', 'round');
+          line.setAttribute('stroke-linecap', 'round');
+        } else if (b.style === 'dashed') {
+          line.setAttribute('stroke-dasharray', `${b.width * 2} 4`);
+        }
+        g.appendChild(line);
+      });
+    }
+
+    if (g.children.length) svg.appendChild(g);
   }
 
   /**
