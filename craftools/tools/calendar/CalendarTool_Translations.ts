@@ -20,6 +20,7 @@ I18n.addTranslations('calendarTool', {
         weekStartSunday: "Começar semana no Domingo",
 
         layout20: "20 slots (5x5cm)",
+        layout12: "12 meses por folha (3x4)",
         layout8sq: "8 slots quadrado (7x7cm)",
         layout8rect: "8 slots retangular (7x10cm)",
         layout4: "4 slots por folha",
@@ -85,6 +86,7 @@ I18n.addTranslations('calendarTool', {
         weekStartSunday: "Start week on Sunday",
 
         layout20: "20 slots (5x5cm)",
+        layout12: "12 months per sheet (3x4)",
         layout8sq: "8 square slots (7x7cm)",
         layout8rect: "8 rectangular slots (7x10cm)",
         layout4: "4 slots per sheet",
@@ -150,6 +152,7 @@ I18n.addTranslations('calendarTool', {
         weekStartSunday: "Comenzar semana en Domingo",
 
         layout20: "20 espacios (5x5cm)",
+        layout12: "12 meses por hoja (3x4)",
         layout8sq: "8 espacios cuadrados (7x7cm)",
         layout8rect: "8 espacios rectangulares (7x10cm)",
         layout4: "4 espacios por hoja",

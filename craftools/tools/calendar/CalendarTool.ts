@@ -52,6 +52,7 @@ interface GridPreset {
 // external layout engine involved.
 const GRID_PRESETS: GridPreset[] = [
   { id: 'grid20',    labelKey: 'layout20',    cellWidth: 50,  cellHeight: 50,  cols: 4, rows: 5, margin: 5 }, // 4x5 = 20
+  { id: 'grid12',    labelKey: 'layout12',    cellWidth: 66,  cellHeight: 71,  cols: 3, rows: 4, margin: 5 }, // 3x4 = 12 (1 sheet per year -- classic yearly calendar poster)
   { id: 'grid8sq',   labelKey: 'layout8sq',   cellWidth: 70,  cellHeight: 70,  cols: 2, rows: 4, margin: 5 }, // 2x4 = 8
   { id: 'grid8rect', labelKey: 'layout8rect', cellWidth: 100, cellHeight: 70,  cols: 2, rows: 4, margin: 5 }, // 2x4 = 8
   { id: 'grid4',     labelKey: 'layout4',     cellWidth: 100, cellHeight: 140, cols: 2, rows: 2, margin: 5 }, // 2x2 = 4
