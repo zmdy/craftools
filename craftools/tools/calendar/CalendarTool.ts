@@ -88,7 +88,7 @@ type EditorEl = HTMLElement & {
 
 export class CalendarTool {
 
-  public static setup(editor: HTMLElement): void {
+  public static setup(editor: HTMLElement, targetPage?: HTMLElement): void {
     const panelTitle  = document.getElementById('panel-title');
     const panelBody   = document.getElementById('panel-body');
     const defaultMenu = document.getElementById('panel-default-menu');
@@ -159,8 +159,25 @@ export class CalendarTool {
       const sectionFillMode = CalendarTool._renderFillModeSection(state);
       const sectionGenerate = CalendarTool._renderGenerateSection(state, currentPreset());
 
+      // Only shown when this panel is tied to a real, already-on-canvas
+      // page (dragged/clicked onto one) -- lets the user reach the real
+      // Page Settings panel (dimensions/background/clone/delete) from here,
+      // since clicking a calendar-generated page normally redirects
+      // straight back into this panel instead (see PageTool.ts's page-click
+      // handler), which used to make such a page's delete button
+      // unreachable entirely.
+      const pageSettingsHtml = targetPage ? `
+        <div style="padding:0 12px 8px;">
+          <button type="button" id="cal-page-settings-btn" class="craftools-topbtn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">settings</span>
+            ${I18n.t('pageTool.title')}
+          </button>
+        </div>
+      ` : '';
+
       panelBody.innerHTML = `
         <div id="cal-root">
+          ${pageSettingsHtml}
           ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), pad(sectionModel), { open: true })}
           ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), pad(sectionLayout))}
           ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), pad(sectionFillMode))}
@@ -178,6 +195,14 @@ export class CalendarTool {
     const bindEvents = (): void => {
       const root = panelBody.querySelector<HTMLElement>('#cal-root');
       if (!root) return;
+
+      // ── Página (only present when targetPage is known) ────────────────
+      const pageSettingsBtn = root.querySelector<HTMLButtonElement>('#cal-page-settings-btn');
+      if (pageSettingsBtn && targetPage) {
+        pageSettingsBtn.addEventListener('click', () => {
+          PageTool.openPageSettings(editor, targetPage);
+        });
+      }
 
       // ── Modelo ──────────────────────────────────────────────────────
       root.querySelectorAll<HTMLElement>('.cal-model-btn').forEach(btn => {

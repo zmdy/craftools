@@ -316,7 +316,7 @@ export class PageTool {
           if (gridContainer.dataset['gridSource'] === 'calendar') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const calMod = await import('../calendar/CalendarTool.js') as { [k: string]: any };
-            calMod['CalendarTool'].setup(editor);
+            calMod['CalendarTool'].setup(editor, pageEl);
             return;
           }
           // AlbumTool.js's wizard logic was ported to AlbumWizard.ts.
@@ -334,6 +334,19 @@ export class PageTool {
         // Page Settings, with that tab reflecting whatever paper element
         // (if any) already exists on this page.
 
+        PageTool.openPageSettings(editor, pageEl);
+      }
+    });
+  }
+
+  // ── Page Settings panel (dimensions/background/clone/delete) ───────────────
+  //
+  // Extracted from the page-click handler above so it can also be opened
+  // from tools that hijack a page's click (e.g. CalendarTool.ts's own panel
+  // exposes a "Configurações da Página" action that routes here) instead of
+  // that click always redirecting into the tool's own panel with no way to
+  // reach page deletion. See CalendarTool.ts for the calling side.
+  public static openPageSettings(editor: HTMLElement, pageEl: HTMLElement): void {
         const rightPanel  = document.getElementById('right-panel');
         const panelTitle  = document.getElementById('panel-title');
         const panelBody   = document.getElementById('panel-body');
@@ -607,8 +620,6 @@ export class PageTool {
         // a page panel actually opens, so it's the right (and only) hook
         // needed on the "entering page mode" side.
         MobileToolbar.showPageMode(pageEl);
-      }
-    });
   }
 
   // ── "Papel personalizado" (custom paper background) ────────────────────────
