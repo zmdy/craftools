@@ -564,6 +564,11 @@ export class Craftools_Editor extends HTMLElement {
       const closePanel  = document.getElementById('close-panel');
 
       const openPanelMenu = () => {
+        // Selecting an element always leaves page-preview mode -- needed on
+        // desktop too now, where nothing else was watching for this
+        // transition (mobile's showElementMode() below already fully
+        // rebuilds the footer itself, so this is a harmless no-op there).
+        MobileToolbar.exitPageMode();
         if (isMobile()) {
           MobileToolbar.showElementMode(el, toolType);
           return;
@@ -735,6 +740,12 @@ export class Craftools_Editor extends HTMLElement {
       clearToolActive();
       this.querySelectorAll('.craftools-grid-cell.cell-selected').forEach(c => c.classList.remove('cell-selected'));
       this.activePage = null;
+      // Leaves page-preview mode on every device -- exitPageMode() restores
+      // desktop's original footer buttons (same DOM nodes, listeners
+      // intact) and is a no-op if a page wasn't open; showToolMode() then
+      // additionally rebuilds mobile's own Canva-style tool list on top,
+      // matching its prior always-called behavior exactly.
+      MobileToolbar.exitPageMode();
       if (isMobile()) MobileToolbar.showToolMode();
       restoreOriginalCanvas();
     };

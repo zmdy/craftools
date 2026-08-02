@@ -599,14 +599,14 @@ export class PageTool {
           rightPanel.style.removeProperty('width');
           if (rightPanel.dataset.expandedWidth) rightPanel.style.width = rightPanel.dataset.expandedWidth;
         }
-        if (window.innerWidth <= 768) {
-          rightPanel?.classList.add('mobile-modal-mode');
-          // Swap the mobile footer for the page-thumbnail strip while this
-          // page's panel is open -- see MobileToolbar.showPageMode()'s own
-          // doc comment for why this lives here (the only place a page
-          // panel actually opens) rather than in Editor.ts.
-          MobileToolbar.showPageMode(pageEl);
-        }
+        if (window.innerWidth <= 768) rightPanel?.classList.add('mobile-modal-mode');
+        // Swap the footer for the page-thumbnail strip while this page's
+        // panel is open -- runs on every device: desktop's #footerNav is
+        // the same fixed bottom bar (see MobileToolbar.showPageMode()'s
+        // own doc comment), not mobile-only chrome. This is the only place
+        // a page panel actually opens, so it's the right (and only) hook
+        // needed on the "entering page mode" side.
+        MobileToolbar.showPageMode(pageEl);
       }
     });
   }

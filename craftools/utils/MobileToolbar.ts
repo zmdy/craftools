@@ -69,17 +69,36 @@ export class MobileToolbar {
   static _activePageEl:      HTMLElement | null = null;
   /** Debounce handle for scheduleThumbnailRefresh() -- see its own comment. */
   static _pageRefreshTimer:  number      | null = null;
+  /**
+   * Snapshot of `_footer`'s children taken the moment page mode is
+   * entered, so exitPageMode() can put the SAME nodes back (see its own
+   * comment for why this matters on desktop).
+   */
+  static _savedFooterChildren: HTMLElement[] | null = null;
 
   // ─── Entry point ────────────────────────────────────────────────────────────
 
+  /**
+   * `.footer-nav-area` (`#footerNav`) isn't mobile-only chrome -- on
+   * desktop it's the same fixed bottom bar, just showing the original
+   * static drag-and-drop tool buttons wired up once in Editor.ts's
+   * bindEvents() ("Estilo dos botões do footer (drag no PC)" in
+   * index.html). So `_footer` itself is acquired on every device; only the
+   * Canva-style tool-list/element-mode rebuild (showToolMode()/
+   * showElementMode()/the mini-panel) stays mobile-only -- desktop already
+   * has the sidebar + right panel for those. showPageMode()/exitPageMode()
+   * are the one mode meant to run on both.
+   */
   static init(editor: HTMLElement): void {
-    if (!this.isMobile()) return;
     this._editor = editor;
     const footerUl = document.querySelector<HTMLElement>('.footer-nav ul');
     if (!footerUl) return;
     this._footer = footerUl;
-    this._buildMiniPanel();
-    this.showToolMode();
+
+    if (this.isMobile()) {
+      this._buildMiniPanel();
+      this.showToolMode();
+    }
 
     // Re-render the page-thumbnail strip whenever a page is appended
     // (PageTool.addNewPage()/_duplicatePage() both dispatch this on
@@ -212,12 +231,49 @@ export class MobileToolbar {
    */
   static showPageMode(pageEl: HTMLElement): void {
     if (!this._footer) return;
+    if (this._activeType !== 'page') {
+      // Stash whatever's currently in the footer (the tool-list <li>s on
+      // mobile, or the original static drag-and-drop buttons on desktop)
+      // so exitPageMode() can restore the SAME nodes -- see its own
+      // comment for why this matters on desktop.
+      this._savedFooterChildren = Array.from(this._footer.children) as HTMLElement[];
+    }
     this._activeElement = null;
     this._activeType    = 'page';
     this._activePageEl  = pageEl;
+    this._footer.classList.add('ct-page-strip-active');
     this.closeMiniPanel();
     this._updateScrollReserve();
     this._renderPageThumbnails();
+  }
+
+  /**
+   * Reverts the footer out of page-preview mode. No-op if not currently in
+   * page mode, so it's safe to call defensively from every panel-closing
+   * path regardless of device.
+   *
+   * On mobile the caller follows this up with showToolMode()/
+   * showElementMode() (both do a full rebuild anyway), so restoring the
+   * stashed nodes here is a harmless, immediately-overwritten step. On
+   * desktop there IS no such rebuild -- the footer's buttons are the real
+   * drag-and-drop tool source, wired up ONCE in Editor.ts's bindEvents().
+   * Recreating them via innerHTML would produce look-alike nodes with no
+   * listeners, silently breaking drag-to-create until a full reload. So
+   * this always re-attaches the exact same detached DOM nodes (listeners
+   * survive detach/reattach) rather than rebuilding anything.
+   */
+  static exitPageMode(): void {
+    if (this._activeType !== 'page') return;
+    if (this._footer) {
+      this._footer.classList.remove('ct-page-strip-active');
+      if (this._savedFooterChildren) {
+        this._footer.innerHTML = '';
+        this._savedFooterChildren.forEach(c => this._footer!.appendChild(c));
+      }
+    }
+    this._savedFooterChildren = null;
+    this._activeType    = null;
+    this._activePageEl  = null;
   }
 
   /**
