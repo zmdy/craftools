@@ -653,8 +653,19 @@
             padding: 0 12px !important;
         }
         .ct-page-thumb-item {
+            /* !important is load-bearing here: vendor/pwa-template/style.css
+               ships a bare (no !important) `.footer-nav ul li { flex: 1 1 0; }`
+               rule that -- despite having no !important -- still wins the
+               cascade over a plain `.ct-page-thumb-item` selector, because
+               ".footer-nav ul li" has HIGHER SPECIFICITY (1 class + 2
+               elements) than ".ct-page-thumb-item" alone (1 class, 0
+               elements); CSS compares specificity before ever considering
+               !important vs. not. Without this, every thumbnail's <li> grows
+               to fill an equal share of the footer's full width, centering
+               the 42px thumbnail inside that wide box -- exactly the "huge
+               gaps between thumbnails" bug this fixes. */
             display: flex !important;
-            flex: 0 0 auto;
+            flex: 0 0 auto !important;
             align-items: center;
         }
         .ct-page-thumb-frame {
