@@ -337,7 +337,22 @@ export class CtxBar {
         } catch(e) {}
       }
 
-      const autoCenterBtn = this.createButton('drag_click', I18n.t('common.autoCenterDesc') || 'Centralizar ao selecionar', () => {
+      // When the global "Centralizar elemento ao selecionar" setting
+      // (Configurações > Tela, AppSettings.defaultAutoCenterOnSelect) is
+      // off, this per-element override toggle has no visible effect either
+      // way -- Editor.ts's shouldCenter check is
+      // `elAutoCenter === 'true' || (defaultAutoCenter && elAutoCenter !== 'false')`,
+      // so with the global default off, only an explicit per-element
+      // 'true' would ever center anything, and this button's own active
+      // state already reflects the per-element value regardless. Disabling
+      // it here (rather than just leaving it clickable-but-confusing)
+      // makes that dependency visible instead of silent.
+      const globalAutoCenterEnabled = AppSettings.get('defaultAutoCenterOnSelect');
+      const autoCenterBtn = this.createButton('drag_click', globalAutoCenterEnabled
+          ? (I18n.t('common.autoCenterDesc') || 'Centralizar ao selecionar')
+          : (I18n.t('common.autoCenterDisabledDesc') || 'Ative "Centralizar elemento ao selecionar" em Configurações para usar isso'),
+      () => {
+          if (!globalAutoCenterEnabled) return;
           const currentlyActive = autoCenterBtn.classList.contains('active');
           const nextState = !currentlyActive;
           element.setAttribute('data-autocenter', nextState ? 'true' : 'false');
@@ -345,6 +360,12 @@ export class CtxBar {
           this._setButtonActive(autoCenterBtn, nextState);
       });
       this._setButtonActive(autoCenterBtn, isAutoCenter);
+      if (!globalAutoCenterEnabled) {
+          autoCenterBtn.disabled = true;
+          autoCenterBtn.style.opacity = '0.35';
+          autoCenterBtn.style.cursor = 'not-allowed';
+          autoCenterBtn.style.pointerEvents = 'none';
+      }
       generalElements.push(autoCenterBtn);
 
       clusters.push({ elements: generalElements, isGeneral: true });
