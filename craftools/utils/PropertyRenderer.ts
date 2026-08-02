@@ -286,10 +286,29 @@ export class PropertyRenderer {
     const state = PropertyRenderer._readState(element);
     state[key] = value;
     element.dataset.ctState = JSON.stringify(state);
+    // Same self-origin problem runFromPanel() solves for the properties
+    // panel (see its own doc comment) also hits the floating ctx-bar, but
+    // ctx-bar options aren't funneled through one shared onChange callback
+    // the way panel fields are -- each tool's ctx-bar `render()` (e.g.
+    // TextTool.ts's font-size/font-select inputs) wires its own inline
+    // 'input'/'change' listener straight to `_applyProperty()`, so there's
+    // no single call-stack choke point left to wrap with a flag the way
+    // runFromPanel() does. Deriving the origin from document.activeElement
+    // instead works for every case without touching each tool's ctx-bar
+    // code individually: whatever the user is actively typing into or
+    // just clicked is still focused at the exact moment its own 'input'/
+    // 'change' handler runs this synchronously, before any focus can move.
+    // CtxBar.ts's _stateChangeHandler uses this to skip rebuilding (and
+    // thus destroying, mid-interaction) whatever ctx-bar input the user is
+    // currently in -- e.g. typing a 2nd digit into the font-size box used
+    // to close/reset it after the first, since the bar rebuilt itself via
+    // innerHTML = '' as a synchronous side effect of its own 'input' event.
+    const activeEl = document.activeElement;
+    const fromCtxBar = !!(activeEl && activeEl.closest('.craftools-ctxbar'));
     element.dispatchEvent(
       new CustomEvent('craftools-state-change', {
         bubbles: true,
-        detail: { key, value, fromPanel: PropertyRenderer._fromPanel },
+        detail: { key, value, fromPanel: PropertyRenderer._fromPanel, fromCtxBar },
       }),
     );
   }

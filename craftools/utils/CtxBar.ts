@@ -479,7 +479,23 @@ export class CtxBar {
       // triggered, including from a properties-panel field -- rebuilds this
       // same bar with the same options, so its buttons' active/rendered
       // state always reflects the latest value.
-      this._stateChangeHandler = () => this.show(element, this._lastOptions);
+      //
+      // EXCEPT when the change was caused by the ctx-bar itself
+      // (detail.fromCtxBar, set by PropertyRenderer.applyChange() -- see
+      // its own doc comment): rebuilding here used to run synchronously as
+      // a side effect of e.g. TextTool.ts's font-size ctx-bar input firing
+      // its own 'input' event, and since show() starts with
+      // `this.el.innerHTML = ''`, that destroyed the very input the user
+      // was still typing into -- closing/resetting it right after the
+      // first keystroke, before any further interaction was possible. Only
+      // the PANEL -> ctx-bar direction needs this rebuild; ctx-bar-caused
+      // changes already updated their own button's active state in-place
+      // (see the isActive re-check in show()'s option loop below).
+      this._stateChangeHandler = (e: Event) => {
+          const detail = (e as CustomEvent).detail as { fromCtxBar?: boolean } | undefined;
+          if (detail?.fromCtxBar) return;
+          this.show(element, this._lastOptions);
+      };
       element.addEventListener('craftools-state-change', this._stateChangeHandler);
   }
 
