@@ -20,10 +20,17 @@ const DIRECTIONS: Array<{ dir: string; icon: string }> = [
   { dir: 'bottom',   icon: 'align_vertical_bottom' },
 ];
 
+// Styled like align.field.ts/font-style.field.ts's pill groups (craftools-pill)
+// instead of the old plain/transparent craftools-icon-btn, so this reads as a
+// row of real buttons (border + background at rest) rather than bare icons --
+// same visual language as every other alignment-style control now, even
+// though (per the doc comment above) this one has no persisted "selected"
+// state to reflect: bind() below adds a brief `.active` flash on click for
+// tactile click feedback instead.
 const btnHtml = ({ dir, icon }: { dir: string; icon: string }): string => `
-  <button class="craftools-icon-btn ct-align-btn" data-align="${dir}" type="button"
-    style="flex:1; padding:5px 0; display:flex; align-items:center; justify-content:center; border-radius:6px;">
-    <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span>
+  <button class="craftools-pill ct-align-btn" data-align="${dir}" type="button"
+    style="flex:1; justify-content:center; padding:5px 0;">
+    <span class="material-symbols-outlined" style="font-size:14px;">${icon}</span>
   </button>`;
 
 FieldRegistry.register('page-align', {
@@ -43,7 +50,15 @@ FieldRegistry.register('page-align', {
 
   bind(container, _field, onChange) {
     container.querySelectorAll<HTMLButtonElement>('.ct-align-btn').forEach(b => {
-      b.addEventListener('click', () => onChange(b.dataset.align));
+      b.addEventListener('click', () => {
+        // Brief press feedback -- no persisted state to reflect (this is a
+        // fire-and-forget action, see doc comment above), so without this
+        // the button would otherwise give no visual acknowledgment of the
+        // click at all.
+        b.classList.add('active');
+        setTimeout(() => b.classList.remove('active'), 200);
+        onChange(b.dataset.align);
+      });
     });
   },
 });

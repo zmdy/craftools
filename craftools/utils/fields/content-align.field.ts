@@ -30,11 +30,16 @@ function splitValue(value: unknown): { h: string; v: string } {
   return { h: h || 'center', v: v || 'center' };
 }
 
+// Styled exactly like align.field.ts/font-style.field.ts's pill groups
+// (craftools-pill, same active-background treatment) instead of the old
+// plain/transparent craftools-icon-btn -- these grids used to be the only
+// alignment-style controls in the app that didn't visually read as
+// "selectable buttons" (no background even when active).
 const btnHtml = (dir: string, icon: string, axis: 'h' | 'v', active: string): string => `
-  <button class="craftools-icon-btn ct-content-align-btn${dir === active ? ' active' : ''}"
+  <button class="craftools-pill ct-content-align-btn${dir === active ? ' active' : ''}"
     data-axis="${axis}" data-dir="${dir}" type="button"
-    style="flex:1; padding:5px 0; display:flex; align-items:center; justify-content:center; border-radius:6px;">
-    <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span>
+    style="flex:1; justify-content:center; padding:5px 0;">
+    <span class="material-symbols-outlined" style="font-size:14px;">${icon}</span>
   </button>`;
 
 FieldRegistry.register('content-align', {
