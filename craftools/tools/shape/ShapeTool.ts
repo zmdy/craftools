@@ -763,6 +763,21 @@ export class ShapeTool extends BaseTool {
     }
 
     setMeta(element, { [key]: value } as Partial<ShapeMeta>);
+    // Switching INTO paper-fill mode for the first time: ShapeGenerator.ts's
+    // buildSvgString() only treats a shape as paper-filled when
+    // `meta.fillPaper` is already a real object (`usePaperFill = fillMode
+    // === 'paper' && !!fillPaper`) -- nothing else ever populates
+    // `meta.fillPaper` until the user edits one of the fillPaper* fields
+    // (the `key in FILL_PAPER_KEYS` branch above is the only other writer).
+    // Without this, clicking the "Papel personalizado" pill flipped
+    // fillMode but _regenerate() below still saw `fillPaper` as undefined
+    // and kept rendering the old color fill -- the shape only actually
+    // switched to paper once the user separately touched a paper sub-field
+    // (e.g. the background gradient picker), which is what "só muda depois
+    // de mexer no preenchimento e clicar duas vezes" was actually seeing.
+    if (key === 'fillMode' && value === 'paper' && !getMeta(element).fillPaper) {
+      setMeta(element, { fillPaper: defaultShapePaperFill() });
+    }
     ShapeTool._regenerate(element);
     // 'fillMode' governs whether the whole "Papel personalizado" field
     // group (fillPaperType, fillPaperBg, ...) shows up at all.
