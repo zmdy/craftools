@@ -6,7 +6,7 @@
 import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
-import { zIndexSection } from '../../utils/CommonSchema';
+import { zIndexSection, flipAlternateSection } from '../../utils/CommonSchema';
 import { PaperPatterns } from './PaperPatterns';
 import type { PropertySchema } from '../../types/PropertySchema';
 
@@ -36,6 +36,17 @@ export type PaperMeta = {
   pageSettings: { showPageNumber: boolean };
   /** Checkbox glyph drawn at the start of each line -- only read when paperType === 'todo_list'. */
   checkboxShape: string;
+  /**
+   * 'left' (default) or 'right' -- horizontally mirrors the drawn pattern
+   * (writing pattern + sidebar, NOT logo/watermark/page number -- see
+   * PaperPatterns.ts's generateContent() for why those three are excluded)
+   * within the page. Independent of, and composes with, CommonSchema.ts's
+   * `flipAlternate` toggle (mirrors the WHOLE element on alternate pages) --
+   * see that field's own doc comment for how the two combine. Useful for
+   * asymmetric patterns like todo_list, where this is the only way to move
+   * the checkboxes to the other side.
+   */
+  orientation: 'left' | 'right';
 };
 
 const getMeta = (el: HTMLElement): Partial<PaperMeta> =>
@@ -159,6 +170,7 @@ export class PaperTool extends BaseTool {
       logo: { enabled: false },
       pageSettings: { showPageNumber: false },
       checkboxShape: 'square',
+      orientation: 'left',
     };
   }
 
@@ -248,6 +260,7 @@ export class PaperTool extends BaseTool {
     if (!('bgColor'     in existing)) patch.bgColor     = meta.bgColor     ?? '#ffffff';
     if (!('bgPattern'   in existing)) patch.bgPattern   = meta.bgPattern   ?? 'none';
     if (!('checkboxShape' in existing)) patch.checkboxShape = meta.checkboxShape ?? 'square';
+    if (!('orientation'   in existing)) patch.orientation   = meta.orientation   ?? 'left';
 
     const m = meta.margins ?? { top: 25, right: 20, bottom: 25, left: 20 };
     if (!('marginTop'    in existing)) patch.marginTop    = m.top;
@@ -346,8 +359,16 @@ export class PaperTool extends BaseTool {
           { type: 'toggle', key: 'watermarkEnabled', label: 'Watermark',   i18nKey: 'paperTool.enableWatermark' },
           { type: 'toggle', key: 'logoEnabled',      label: 'Logo',        i18nKey: 'paperTool.enableLogo' },
           { type: 'toggle', key: 'showPageNumber',   label: 'Page numbers', i18nKey: 'paperTool.showPageNumber' },
+          {
+            type: 'select', key: 'orientation', label: 'Orientation', i18nKey: 'paperTool.orientation',
+            options: [
+              { value: 'left',  label: 'Left',  i18nKey: 'paperTool.orientationLeft' },
+              { value: 'right', label: 'Right', i18nKey: 'paperTool.orientationRight' },
+            ],
+          },
         ],
       },
+      flipAlternateSection(),
       zIndexSection(),
     ];
   }
@@ -370,6 +391,7 @@ export class PaperTool extends BaseTool {
         case 'bgColor':           meta.bgColor          = String(value); break;
         case 'bgPattern':         meta.bgPattern        = String(value); break;
         case 'checkboxShape':     meta.checkboxShape    = String(value); break;
+        case 'orientation':       meta.orientation      = value === 'right' ? 'right' : 'left'; break;
         case 'marginTop':         meta.margins.top      = Number(value); break;
         case 'marginRight':       meta.margins.right    = Number(value); break;
         case 'marginBottom':      meta.margins.bottom   = Number(value); break;

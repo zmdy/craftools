@@ -32,6 +32,8 @@ export interface ShapePaperFill {
   padding?:       number;
   /** Only read when paperType === 'todo_list'. */
   checkboxShape?: string;
+  /** 'left' (default) or 'right' -- see PaperTool.ts's PaperMeta.orientation doc comment; same horizontal-mirror behavior, just fed through _paperMetaFromFill() below into the same shared PaperPatterns.generateContent() engine. */
+  orientation?: 'left' | 'right';
 }
 
 export function defaultShapePaperFill(): ShapePaperFill {
@@ -45,6 +47,7 @@ export function defaultShapePaperFill(): ShapePaperFill {
     lineWidth: 0.6,
     padding: 10,
     checkboxShape: 'square',
+    orientation: 'left',
   };
 }
 
@@ -118,6 +121,7 @@ export class ShapeGenerator {
           logo: { enabled: false },
           pageSettings: { showPageNumber: false },
           checkboxShape: fill.checkboxShape || 'square',
+          orientation: fill.orientation === 'right' ? 'right' : 'left',
       };
   }
 

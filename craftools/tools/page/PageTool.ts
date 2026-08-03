@@ -445,7 +445,7 @@ export class PageTool {
           // (if any) already exists on THIS page. See PageTool._renderPaperTabHtml().
           const existingPaperEl = PageTool._findPaperElement(pageEl);
           const paperMeta = existingPaperEl ? (existingPaperEl as HTMLElement & { _craftoolsMeta?: PaperMeta })._craftoolsMeta ?? null : null;
-          const htmlPaper = PageTool._renderPaperTabHtml(paperMeta);
+          const htmlPaper = PageTool._renderPaperTabHtml(paperMeta, existingPaperEl);
 
           panelBody.innerHTML =
             PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
@@ -700,9 +700,19 @@ export class PageTool {
       </div>`;
   }
 
-  private static _renderPaperTabHtml(meta: PaperMeta | null): string {
+  private static _renderPaperTabHtml(meta: PaperMeta | null, paperEl?: HTMLElement | null): string {
     const enabled = meta !== null;
     const m = meta ?? PaperTool.getDefaultMeta();
+    // "Espelhar conteúdo em páginas alternadas" (CommonSchema.ts's
+    // flipAlternateSection()) isn't part of PaperMeta -- it's the same
+    // generic per-element `dataset.ctState` field every other tool's
+    // schema exposes, and PageTool.ts's own _duplicatePage()/
+    // AgendaExport.ts's _applyAlternateLayout() already read it off ANY
+    // craftools-element (including this paper one) unconditionally. So
+    // this tab just needs to surface a toggle for it -- read/write
+    // straight off the underlying element via PropertyRenderer, no new
+    // PaperMeta field or PaperTool._applyProperty() case needed.
+    const flipAlternate = paperEl ? PropertyRenderer._readState(paperEl).flipAlternate === true : false;
 
     return `
       ${PageTool._toggleRowHtml('paper-enable-chk', I18n.t('pageTool.paperEnable'), enabled)}
@@ -787,6 +797,17 @@ export class PageTool {
           ${PageTool._toggleRowHtml('paper-logo-enabled',        I18n.t('paperTool.enableLogo'),      m.logo.enabled)}
           ${PageTool._toggleRowHtml('paper-page-number-enabled', I18n.t('paperTool.showPageNumber'),  m.pageSettings.showPageNumber)}
         </div>
+
+        <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+          <span class="craftools-label">${I18n.t('paperTool.orientation')}</span>
+          <div class="ct-pill-group" id="paper-orientation-group" style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" class="craftools-topbtn paper-orientation-btn" data-orientation="left"  style="flex:1; justify-content:center; ${(m.orientation ?? 'left') === 'left'  ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('paperTool.orientationLeft')}</button>
+            <button type="button" class="craftools-topbtn paper-orientation-btn" data-orientation="right" style="flex:1; justify-content:center; ${(m.orientation ?? 'left') === 'right' ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('paperTool.orientationRight')}</button>
+          </div>
+          <div style="margin-top:10px;">
+            ${PageTool._toggleRowHtml('paper-flip-alternate', I18n.t('common.flipAlternate'), flipAlternate)}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -809,7 +830,7 @@ export class PageTool {
       const meta = paperEl?._craftoolsMeta ?? null;
       // PanelUI.accordion() uses data-accordion-id, not data-ct-section
       const target = panelBody.querySelector<HTMLElement>('[data-accordion-id="page-papel"] .ct-accordion-content');
-      if (target) target.innerHTML = PageTool._renderPaperTabHtml(meta);
+      if (target) target.innerHTML = PageTool._renderPaperTabHtml(meta, paperEl);
       PageTool._bindPaperTab(panelBody, editor, pageEl);
     };
 
@@ -900,6 +921,34 @@ export class PageTool {
       }, { allowGradient: true });
     }
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-gradient-mode')?.addEventListener('change', e => applyMeta({ lineGradientMode: (e.target as HTMLSelectElement).value }));
+
+    // Orientation pills (left/right) -- horizontally mirrors the drawn
+    // pattern within the page, e.g. moves todo_list's checkboxes to the
+    // other side. See PaperPatterns.ts's generateContent() and PaperMeta's
+    // own doc comment (PaperTool.ts) for how this composes with the
+    // flip-alternate toggle below.
+    fieldsWrap.querySelectorAll<HTMLButtonElement>('.paper-orientation-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applyMeta({ orientation: btn.getAttribute('data-orientation') === 'right' ? 'right' : 'left' });
+        fieldsWrap.querySelectorAll<HTMLButtonElement>('.paper-orientation-btn').forEach(b => {
+          const active = b === btn;
+          b.style.background = active ? 'var(--accent, #3b82f6)' : '';
+          b.style.color      = active ? '#fff' : '';
+        });
+      });
+    });
+
+    // "Espelhar conteúdo em páginas alternadas" -- see _renderPaperTabHtml()'s
+    // doc comment above for why this writes straight to the element's
+    // dataset.ctState (via PropertyRenderer) rather than PaperMeta: it's
+    // the same generic per-element field every other tool's schema exposes
+    // (CommonSchema.ts's flipAlternateSection()), already consumed
+    // unconditionally by PageTool.ts's own _duplicatePage() and
+    // AgendaExport.ts's _applyAlternateLayout() for ANY craftools-element.
+    fieldsWrap.querySelector<HTMLInputElement>('#paper-flip-alternate')?.addEventListener('change', e => {
+      const paperEl = getOrCreatePaperEl();
+      PropertyRenderer.applyChange(paperEl, 'flipAlternate', (e.target as HTMLInputElement).checked);
+    });
 
     // Wire standard toggle track/thumb animation for every ct-fi checkbox in the
     // paper tab (extras toggles + the main enable toggle).

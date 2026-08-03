@@ -73,6 +73,11 @@ I18n.addTranslations('paperTool', {
         checkboxStar: "Estrela",
         checkboxHeart: "Coração",
 
+        // Orientação (espelhamento horizontal do padrão desenhado)
+        orientation: "Orientação",
+        orientationLeft: "Esquerda",
+        orientationRight: "Direita",
+
         // Temas
         default: "Tema Padrão",
         night: "Tema Escuro",
@@ -168,6 +173,11 @@ I18n.addTranslations('paperTool', {
         checkboxStar: "Star",
         checkboxHeart: "Heart",
 
+        // Orientation (horizontal mirror of the drawn pattern)
+        orientation: "Orientation",
+        orientationLeft: "Left",
+        orientationRight: "Right",
+
         // Themes
         default: "Default",
         night: "Night",
@@ -262,6 +272,11 @@ I18n.addTranslations('paperTool', {
         checkboxCircle: "Círculo",
         checkboxStar: "Estrella",
         checkboxHeart: "Corazón",
+
+        // Orientación (espejado horizontal del patrón dibujado)
+        orientation: "Orientación",
+        orientationLeft: "Izquierda",
+        orientationRight: "Derecha",
 
         // Themes
         default: "Predeterminado",

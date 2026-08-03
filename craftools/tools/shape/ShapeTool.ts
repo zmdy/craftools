@@ -38,6 +38,12 @@ const FILL_PAPER_CHECKBOX_OPTIONS = [
   { value: 'heart',  label: 'Heart',  i18nKey: 'paperTool.checkboxHeart' },
 ];
 
+/** Same left/right mirror as PaperTool.ts's page-level "Papel personalizado" tab -- see ShapePaperFill.orientation's doc comment (ShapeGenerator.ts). */
+const FILL_PAPER_ORIENTATION_OPTIONS = [
+  { value: 'left',  label: 'Left',  i18nKey: 'paperTool.orientationLeft' },
+  { value: 'right', label: 'Right', i18nKey: 'paperTool.orientationRight' },
+];
+
 /** Flat ShapeTool.ts panel key -> real ShapePaperFill path, mirrors the small-scale version of CalendarThemeKeyPaths.ts's pattern (only 1 level deep here, so a plain Record is enough). */
 const FILL_PAPER_KEYS: Record<string, keyof ShapePaperFill> = {
   fillPaperType:          'paperType',
@@ -48,6 +54,7 @@ const FILL_PAPER_KEYS: Record<string, keyof ShapePaperFill> = {
   fillPaperLineWidth:     'lineWidth',
   fillPaperPadding:       'padding',
   fillPaperCheckboxShape: 'checkboxShape',
+  fillPaperOrientation:   'orientation',
 };
 
 const getMeta = (element: HTMLElement): ShapeMeta =>
@@ -611,6 +618,11 @@ export class ShapeTool extends BaseTool {
                 const st = PropertyRenderer._readState(el);
                 return st.fillMode !== 'paper' || st.fillPaperType !== 'todo_list';
               },
+            },
+            {
+              type: 'select' as const, key: 'fillPaperOrientation', label: s('fillPaperOrientation'), i18nKey: 'shapeTool.fillPaperOrientation',
+              options: FILL_PAPER_ORIENTATION_OPTIONS,
+              hidden: (el: HTMLElement) => PropertyRenderer._readState(el).fillMode !== 'paper',
             },
           ] : []),
           {

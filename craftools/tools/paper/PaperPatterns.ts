@@ -195,6 +195,26 @@ export class PaperPatterns {
             svgContent += `<line x1="${mL}" y1="0" x2="${mL}" y2="${height}" stroke="#3b82f6" stroke-width="${lWidth * 1.5}" stroke-dasharray="4,2"/>`;
         }
 
+        // Orientação (esquerda/direita) -- espelha horizontalmente tudo
+        // desenhado até aqui (padrão de fundo, padrão de escrita e a barra
+        // lateral) para o outro lado da folha, ex.: um todo_list com as
+        // caixinhas na esquerda passa a desenhá-las na direita. Aplicado
+        // ANTES de logo/marca d'água/número de página (abaixo) de propósito
+        // -- espelhar texto o deixaria de trás para frente, então esses três
+        // elementos ficam de fora do espelhamento (a marca d'água e o
+        // número de página já são centralizados, e o logo é puramente
+        // decorativo). Independente do "Espelhar em páginas alternadas"
+        // (flipAlternate, CommonSchema.ts) que PageTool.ts's
+        // _duplicatePage()/AgendaExport.ts's _applyAlternateLayout() ainda
+        // aplicam por cima disto ao elemento inteiro -- os dois efeitos
+        // compõem: uma folha com orientation:'right' definida manualmente
+        // que também tem flipAlternate ligado volta pra esquerda na página
+        // alternada, exatamente o comportamento esperado de um caderno com
+        // encadernação espelhada.
+        if (meta.orientation === 'right') {
+            svgContent = `<g transform="translate(${width},0) scale(-1,1)">${svgContent}</g>`;
+        }
+
         // 4. Logomarca no topo esquerdo
         if (meta.logo && meta.logo.enabled && mT > 10) {
             svgContent += `<g transform="translate(${mL}, ${mT - 14})" style="opacity: 0.6;">
