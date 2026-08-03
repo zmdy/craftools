@@ -505,14 +505,6 @@ export class AlbumTool {
                 </div>
             `;
 
-      // ── Preserve accordion open/close state across re-renders ──────────
-      // Capture which accordions are currently open BEFORE innerHTML wipes
-      // the DOM, so we can restore them when allowMultipleAccordions is on.
-      const prevOpen = new Set<string>();
-      panelBody.querySelectorAll<HTMLElement>('.ct-accordion.open[data-accordion-id]').forEach(el => {
-        prevOpen.add(el.dataset.accordionId!);
-      });
-
       // Determine which accordion should be open based on step completion
       // (wizard-step UX: guide the user to the next relevant section).
       let openTamanho = true;
@@ -530,23 +522,13 @@ export class AlbumTool {
         }
       }
 
-      // When "Permitir múltiplas abas abertas" is on and the panel already
-      // had accordions rendered (i.e. this is a re-render, not the first),
-      // restore whatever the user had open instead of forcing the wizard's
-      // single-section default. The wizard-determined section is still
-      // opened additively so the user sees the step they just advanced to.
-      if (prevOpen.size > 0 && AppSettings.get('allowMultipleAccordions')) {
-        openTamanho  = prevOpen.has('album-tamanho')  || openTamanho;
-        openConteudo = prevOpen.has('album-conteudo') || openConteudo;
-        openConfigs  = prevOpen.has('album-configs')  || openConfigs;
-        openAcoes    = prevOpen.has('album-acoes')    || openAcoes;
-      }
-
-      panelBody.innerHTML =
-        PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
-        PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
-        PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
-        PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
+      PanelUI.withStatePreservation(panelBody, () => {
+        panelBody.innerHTML =
+          PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
+          PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
+          PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
+          PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
+      });
 
       // ── Bind: Step 1 — Size ────────────────────────────────────────
       panelBody.querySelectorAll<HTMLButtonElement>('.size-btn').forEach(btn => {

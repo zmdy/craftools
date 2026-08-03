@@ -607,16 +607,18 @@ export class GeneratorTool {
         </div>
       `;
 
-      panelBody.innerHTML = `
-        <div id="generator-root">
-          ${PanelUI.accordion('gdr-name',   'badge',       g('sectionName'),   sectionName,   { open: true })}
-          ${PanelUI.accordion('gdr-size',   'straighten',  g('sectionSize'),   sectionSize,   { open: true })}
-          ${PanelUI.accordion('gdr-type',   'category',    g('sectionType'),   sectionType,   { open: true })}
-          ${PanelUI.accordion('gdr-config', 'tune',        g('sectionConfig'), sectionConfig, { open: true })}
-          ${PanelUI.accordion('gdr-saved',  'folder_open', g('sectionSaved'),  sectionSaved,  { open: false })}
-          ${saveFooter}
-        </div>
-      `;
+      PanelUI.withStatePreservation(panelBody, () => {
+        panelBody.innerHTML = `
+          <div id="generator-root">
+            ${PanelUI.accordion('gdr-name',   'badge',       g('sectionName'),   sectionName,   { open: true })}
+            ${PanelUI.accordion('gdr-size',   'straighten',  g('sectionSize'),   sectionSize,   { open: true })}
+            ${PanelUI.accordion('gdr-type',   'category',    g('sectionType'),   sectionType,   { open: true })}
+            ${PanelUI.accordion('gdr-config', 'tune',        g('sectionConfig'), sectionConfig, { open: true })}
+            ${PanelUI.accordion('gdr-saved',  'folder_open', g('sectionSaved'),  sectionSaved,  { open: false })}
+            ${saveFooter}
+          </div>
+        `;
+      });
 
       PanelUI.bindAccordions(panelBody);
       renderPreview();

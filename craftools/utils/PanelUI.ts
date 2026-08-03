@@ -115,6 +115,37 @@ export class PanelUI {
       });
   }
 
+  /**
+   * Preserves open accordion states (`.ct-accordion.open`) and scroll position
+   * across imperative innerHTML re-renders.
+   *
+   * @param container - The container element (e.g. #panel-body).
+   * @param renderFn  - Function performing the innerHTML re-render.
+   */
+  static withStatePreservation(container: HTMLElement, renderFn: () => void): void {
+    const prevOpen = new Set<string>();
+    container.querySelectorAll<HTMLElement>('.ct-accordion.open[data-accordion-id]').forEach(el => {
+      if (el.dataset.accordionId) prevOpen.add(el.dataset.accordionId);
+    });
+
+    const scrollTop = container.scrollTop;
+
+    renderFn();
+
+    if (prevOpen.size > 0 && AppSettings.get('allowMultipleAccordions')) {
+      container.querySelectorAll<HTMLElement>('.ct-accordion[data-accordion-id]').forEach(el => {
+        const id = el.dataset.accordionId;
+        if (id && prevOpen.has(id)) {
+          el.classList.add('open');
+        }
+      });
+    }
+
+    if (scrollTop > 0) {
+      container.scrollTop = scrollTop;
+    }
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   // Field helpers
   // ───────────────────────────────────────────────────────────────────────────

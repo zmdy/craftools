@@ -190,16 +190,18 @@ export class CalendarTool {
         </div>
       ` : '';
 
-      panelBody.innerHTML = `
-        <div id="cal-root">
-          ${pageSettingsHtml}
-          ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), pad(sectionModel), { open: true })}
-          ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), pad(sectionLayout))}
-          ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), pad(sectionFillMode))}
-          <div id="cal-style-sections"></div>
-          ${PanelUI.accordion('cal-gerar', 'auto_awesome', c('tabGenerate'), pad(sectionGenerate))}
-        </div>
-      `;
+      PanelUI.withStatePreservation(panelBody, () => {
+        panelBody.innerHTML = `
+          <div id="cal-root">
+            ${pageSettingsHtml}
+            ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), pad(sectionModel), { open: true })}
+            ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), pad(sectionLayout))}
+            ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), pad(sectionFillMode))}
+            <div id="cal-style-sections"></div>
+            ${PanelUI.accordion('cal-gerar', 'auto_awesome', c('tabGenerate'), pad(sectionGenerate))}
+          </div>
+        `;
+      });
 
       PanelUI.bindAccordions(panelBody);
       CalendarTool._renderStyleSections(panelBody, state, updatePreview);
