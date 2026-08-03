@@ -447,11 +447,13 @@ export class PageTool {
           const paperMeta = existingPaperEl ? (existingPaperEl as HTMLElement & { _craftoolsMeta?: PaperMeta })._craftoolsMeta ?? null : null;
           const htmlPaper = PageTool._renderPaperTabHtml(paperMeta, existingPaperEl);
 
-          panelBody.innerHTML =
-            PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
-            PanelUI.accordion('page-fundo',   'palette',    I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
-            PanelUI.accordion('page-papel',   'description',I18n.t('pageTool.customPaperTab') || 'Custom Paper',  htmlPaper) +
-            PanelUI.accordion('page-acoes',   'warning',    I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
+          PanelUI.withStatePreservation(panelBody, () => {
+            panelBody.innerHTML =
+              PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
+              PanelUI.accordion('page-fundo',   'palette',    I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
+              PanelUI.accordion('page-papel',   'description',I18n.t('pageTool.customPaperTab') || 'Custom Paper',  htmlPaper) +
+              PanelUI.accordion('page-acoes',   'warning',    I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
+          });
 
           // BaseTool.renderPropertiesPanel() tracks which element #panel-body
           // last rendered (via a _ctRenderedElement expando) so it knows when
