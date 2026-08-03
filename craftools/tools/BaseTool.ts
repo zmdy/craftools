@@ -497,12 +497,18 @@ export abstract class BaseTool {
    * @param value   - The new value from the field handler.
    */
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
-    // 'pageAlign' (from CommonSchema.ts's pageAlignSection()) is a
-    // fire-and-forget action, not a persisted property: it just re-runs
-    // SnapEngine's page-alignment math against the element's current size.
-    // Nothing to write to dataset.ctState for it.
+    // 'pageAlign' (from CommonSchema.ts's pageAlignSection()) re-runs
+    // SnapEngine's page-alignment math against the element's current size
+    // AND persists which direction was last clicked, purely so
+    // page-align.field.ts's button grid can show it as the active/selected
+    // one (matching content-align's grid) -- it's still not a property that
+    // constrains the element going forward: dragging/resizing afterward
+    // doesn't get reconciled against it or clear it, the stored value is
+    // only ever read back for this cosmetic "last alignment you picked"
+    // highlight.
     if (key === 'pageAlign') {
       SnapEngine.align(element as unknown as CraftoolsSnapTarget, value as string);
+      PropertyRenderer.applyChange(element, key, value);
       return;
     }
 
