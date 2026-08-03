@@ -44,6 +44,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection } from '../../utils/CommonSchema';
 import { CellPanel } from './CellPanel.js';
 import { PanelUI } from '../../utils/PanelUI.js';
+import { AppSettings } from '../../utils/AppSettings.js';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG.js';
 import './AlbumTool_Translations.js';
 
@@ -504,7 +505,16 @@ export class AlbumTool {
                 </div>
             `;
 
+      // ── Preserve accordion open/close state across re-renders ──────────
+      // Capture which accordions are currently open BEFORE innerHTML wipes
+      // the DOM, so we can restore them when allowMultipleAccordions is on.
+      const prevOpen = new Set<string>();
+      panelBody.querySelectorAll<HTMLElement>('.ct-accordion.open[data-accordion-id]').forEach(el => {
+        prevOpen.add(el.dataset.accordionId!);
+      });
+
       // Determine which accordion should be open based on step completion
+      // (wizard-step UX: guide the user to the next relevant section).
       let openTamanho = true;
       let openConteudo = false;
       let openConfigs = false;
@@ -518,6 +528,18 @@ export class AlbumTool {
         } else {
           openConteudo = true;
         }
+      }
+
+      // When "Permitir múltiplas abas abertas" is on and the panel already
+      // had accordions rendered (i.e. this is a re-render, not the first),
+      // restore whatever the user had open instead of forcing the wizard's
+      // single-section default. The wizard-determined section is still
+      // opened additively so the user sees the step they just advanced to.
+      if (prevOpen.size > 0 && AppSettings.get('allowMultipleAccordions')) {
+        openTamanho  = prevOpen.has('album-tamanho')  || openTamanho;
+        openConteudo = prevOpen.has('album-conteudo') || openConteudo;
+        openConfigs  = prevOpen.has('album-configs')  || openConfigs;
+        openAcoes    = prevOpen.has('album-acoes')    || openAcoes;
       }
 
       panelBody.innerHTML =
