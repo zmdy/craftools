@@ -174,9 +174,23 @@ export class PropertyRenderer {
     state: Record<string, unknown>,
     onChange: (key: string, value: unknown) => void,
   ): void {
-    // Evaluate hidden condition
+    const fieldId = `ct-field-${field.key}`;
+
+    // Evaluate hidden condition. A plain early-return here used to be fine
+    // when this only ran once per element (on select), but tools that
+    // force a re-render in response to their OWN panel-originated changes
+    // (see ShapeTool.ts's _refreshPanelIfShowing(), added for the
+    // fillMode/fillPaperType "papel personalizado" controls) can now hit
+    // this a second time for the SAME element with a field that just
+    // flipped from visible to hidden -- without explicitly hiding its
+    // already-created wrapper here, it would just sit there forever
+    // showing stale controls, since nothing else ever revisits it.
     const hidden = typeof field.hidden === 'function' ? field.hidden(element) : field.hidden;
-    if (hidden) return;
+    if (hidden) {
+      const existing = bodyEl.querySelector<HTMLElement>(`[data-ct-field="${fieldId}"]`);
+      if (existing) existing.style.display = 'none';
+      return;
+    }
 
     const handler = FieldRegistry.get(field.type);
     if (!handler) {
@@ -184,8 +198,10 @@ export class PropertyRenderer {
       return;
     }
 
-    const fieldId = `ct-field-${field.key}`;
     let wrapper = bodyEl.querySelector<HTMLElement>(`[data-ct-field="${fieldId}"]`);
+    // Clear a previous hide (a field toggling from hidden back to shown --
+    // the mirror image of the branch above).
+    if (wrapper) wrapper.style.display = '';
 
     // Most fields watch a single state key (field.key). A field can opt
     // into watching several at once via `watchKeys` (see

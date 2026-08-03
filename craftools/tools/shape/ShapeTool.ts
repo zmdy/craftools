@@ -755,11 +755,49 @@ export class ShapeTool extends BaseTool {
       const fillPaper: ShapePaperFill = { ...defaultShapePaperFill(), ...(meta.fillPaper ?? {}), [FILL_PAPER_KEYS[key]]: value };
       setMeta(element, { fillPaper });
       ShapeTool._regenerate(element);
+      // 'fillPaperType' governs whether fillPaperCheckboxShape shows up
+      // (only for paperType === 'todo_list') -- see _refreshPanelIfShowing()
+      // for why this needs forcing.
+      if (key === 'fillPaperType') ShapeTool._refreshPanelIfShowing(element);
       return;
     }
 
     setMeta(element, { [key]: value } as Partial<ShapeMeta>);
     ShapeTool._regenerate(element);
+    // 'fillMode' governs whether the whole "Papel personalizado" field
+    // group (fillPaperType, fillPaperBg, ...) shows up at all.
+    if (key === 'fillMode') ShapeTool._refreshPanelIfShowing(element);
+  }
+
+  /**
+   * Forces a full re-render of the (desktop) properties panel for `element`,
+   * if it's the one currently shown there.
+   *
+   * Needed because PropertyRenderer._renderField() only ever CREATES a
+   * field's wrapper the first time its `hidden` condition evaluates to
+   * false -- if a field starts hidden (e.g. fillPaperType, hidden while
+   * fillMode !== 'paper'), its wrapper is never built at all, so there's
+   * nothing to reveal later. Normally that's fine because SELECTING an
+   * element runs the full schema walk once; the gap is specifically for
+   * panel-originated changes, which Editor.ts's `_panelSyncHandler`
+   * deliberately does NOT re-render for (see PropertyRenderer.
+   * runFromPanel()'s doc comment -- that skip exists to stop a field from
+   * destroying its own mid-interaction DOM, e.g. the color picker's native
+   * popup, on every keystroke/click). Clicking the "Papel personalizado"
+   * fill-mode pill, or picking 'todo_list' from the paper-type select, are
+   * exactly this case: a panel-originated change whose entire PURPOSE is
+   * to reveal previously-hidden sibling fields, so re-running the full
+   * schema walk here is not just safe but the actual fix -- every field
+   * OTHER than the one just clicked has an unchanged value, so
+   * PropertyRenderer's own diffing (comparing `dataset.renderedValue`)
+   * still skips rebuilding any of them, exactly like a normal re-select
+   * would.
+   */
+  private static _refreshPanelIfShowing(element: HTMLElement): void {
+    const panelBody = document.getElementById('panel-body') as (HTMLElement & { _ctRenderedElement?: HTMLElement }) | null;
+    if (panelBody && panelBody._ctRenderedElement === element) {
+      ShapeTool.renderPropertiesPanel(panelBody, element);
+    }
   }
 
   /**
