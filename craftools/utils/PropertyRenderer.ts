@@ -45,6 +45,37 @@ export class PropertyRenderer {
   }
 
   /**
+   * Renders (or updates) a full property panel for a plain state object
+   * (non-canvas element objects like AppSettings, Page settings, etc.).
+   *
+   * Creates or updates an in-memory synthetic element wrapper attached to
+   * `container._ctSyntheticElement`, syncing its dataset.ctState automatically.
+   *
+   * @param container   The panel root element.
+   * @param schema      The PropertySchema descriptor.
+   * @param stateObject Plain key-value object containing the current state.
+   * @param onChange    Called with (key, value) on every user interaction.
+   */
+  static renderStateObject<T extends Record<string, unknown>>(
+    container: HTMLElement,
+    schema: PropertySchema,
+    stateObject: T,
+    onChange: (key: string, value: unknown) => void,
+  ): void {
+    const tracked = container as unknown as { _ctSyntheticElement?: HTMLElement };
+    if (!tracked._ctSyntheticElement) {
+      tracked._ctSyntheticElement = document.createElement('div');
+    }
+    const fakeEl = tracked._ctSyntheticElement;
+    fakeEl.dataset.ctState = JSON.stringify(stateObject);
+
+    PropertyRenderer.render(container, schema, fakeEl, (key, value) => {
+      PropertyRenderer.applyChange(fakeEl, key, value);
+      onChange(key, value);
+    });
+  }
+
+  /**
    * Renders a single section's fields directly into `container` — no accordion
    * wrapper. Used by MobileToolbar mini-panels to show one section at a time.
    *

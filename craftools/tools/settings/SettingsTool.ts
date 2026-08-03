@@ -80,13 +80,9 @@ export class SettingsTool {
   private static _render(panelBody: HTMLElement): void {
     const cur = AppSettings.getAll();
 
-    const fakeEl = document.createElement('div');
-    fakeEl.dataset.ctState = JSON.stringify(SettingsTool._toCtState(cur));
-
     panelBody.innerHTML = '';
 
-    PropertyRenderer.render(panelBody, SettingsTool._buildSchema(), fakeEl, (key, value) => {
-      PropertyRenderer.applyChange(fakeEl, key, value);
+    PropertyRenderer.renderStateObject(panelBody, SettingsTool._buildSchema(), SettingsTool._toCtState(cur), (key, value) => {
       SettingsTool._applyChange(key, value);
     });
 
