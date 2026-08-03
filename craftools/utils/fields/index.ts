@@ -20,6 +20,7 @@ export * from './toggle.field';
 export * from './select.field';
 export * from './align.field';
 export * from './font-style.field';
+export * from './pill-group.field';
 export * from './font-select.field';
 export * from './slider.field';
 export * from './divider.field';

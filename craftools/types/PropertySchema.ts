@@ -30,6 +30,7 @@ export type FieldType =
   | 'emoji-picker'
   | 'emoji-kitchen-pair'
   | 'font-style'
+  | 'pill-group'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -276,6 +277,19 @@ export interface FontStyleField extends BaseField {
   buttons: Array<{ key: string; icon: string; label?: string; i18nKey?: string }>;
 }
 
+export interface PillOption {
+  value: string;
+  icon?: string;
+  label?: string;
+  i18nKey?: string;
+}
+
+export interface PillGroupField extends BaseField {
+  type: 'pill-group';
+  options: PillOption[];
+  direction?: 'horizontal' | 'vertical';
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -309,6 +323,7 @@ export type Field =
   | EmojiPickerField
   | EmojiKitchenPairField
   | FontStyleField
+  | PillGroupField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

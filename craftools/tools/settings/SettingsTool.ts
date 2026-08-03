@@ -204,8 +204,12 @@ export class SettingsTool {
           { type: 'toggle', key: 'allowMultipleAccordions', label: s('fieldAllowMultipleAccordions'), i18nKey: 'settingsTool.fieldAllowMultipleAccordions' },
           { type: 'divider', key: 'ctxbar-mode-divider', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode', icon: 'dock_to_bottom' },
           {
-            type: 'custom', key: 'ctxBarMode', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode',
-            render: (element, onChange) => SettingsTool._renderCtxBarModePills(element, onChange),
+            type: 'pill-group', key: 'ctxBarMode', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode',
+            direction: 'vertical',
+            options: [
+              { value: 'floating', label: s('ctxBarModeFloating'), i18nKey: 'settingsTool.ctxBarModeFloating', icon: 'push_pin' },
+              { value: 'fixed',    label: s('ctxBarModeFixed'),    i18nKey: 'settingsTool.ctxBarModeFixed',    icon: 'dock_to_bottom' },
+            ],
           },
         ],
       },
@@ -221,48 +225,5 @@ export class SettingsTool {
         ],
       },
     ];
-  }
-
-  /**
-   * ctxBarMode's 2-state pill row -- no dedicated reusable field type exists
-   * for an arbitrary pill button group yet (PageTool.ts's preset/unit
-   * pickers and ColorPickerUI.ts's Cor/Gradiente toggle are each hand-rolled
-   * instances of the same `.craftools-pill` CSS pattern), so this reuses
-   * that pattern directly through the 'custom' field escape hatch rather
-   * than inventing a new field type for a single two-option control.
-   */
-  private static _renderCtxBarModePills(element: HTMLElement, onChange: (value: unknown) => void): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'ct-field-row';
-    wrap.style.gap = '6px';
-    // Stacked vertically (one option per row) rather than side-by-side --
-    // matches how every other multi-option control in this section reads
-    // top-to-bottom instead of competing for horizontal space.
-    wrap.style.flexDirection = 'column';
-
-    const paint = (): void => {
-      const state = PropertyRenderer._readState(element);
-      const mode  = (state.ctxBarMode as string) ?? 'floating';
-
-      wrap.innerHTML = `
-        <button type="button" class="craftools-pill${mode === 'floating' ? ' active' : ''}" data-mode="floating" style="width:100%; justify-content:center; gap:5px; padding:7px 10px;">
-          <span class="material-symbols-outlined" style="font-size:14px;">push_pin</span>
-          ${s('ctxBarModeFloating')}
-        </button>
-        <button type="button" class="craftools-pill${mode === 'fixed' ? ' active' : ''}" data-mode="fixed" style="width:100%; justify-content:center; gap:5px; padding:7px 10px;">
-          <span class="material-symbols-outlined" style="font-size:14px;">dock_to_bottom</span>
-          ${s('ctxBarModeFixed')}
-        </button>`;
-
-      wrap.querySelectorAll<HTMLButtonElement>('button[data-mode]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          onChange(btn.dataset.mode);
-          paint();
-        });
-      });
-    };
-
-    paint();
-    return wrap;
   }
 }
