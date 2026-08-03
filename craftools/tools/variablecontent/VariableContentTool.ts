@@ -13,6 +13,8 @@ import { I18n } from '../../settings/Translations.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { VariableEngine, type VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
+import { FONTS, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
+import '../../components/CtFontSelect.js';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
 // below (placeholder text) -- without this side-effect import the keys are
 // never registered and I18n.t() falls back to returning the raw key string.
@@ -42,11 +44,11 @@ const getContent = (el: HTMLElement): HTMLElement | null =>
  * rendered size -- re-run AutoFitText.applyAutoSize() after any of these
  * so the box keeps tracking the content while auto-fit is on. Matches
  * TextTool.ts's own AUTOFIT_RELEVANT_KEYS (see its header comment); this
- * tool's schema has no lineHeight/underline/margin fields, so the set is
- * smaller. textAlign/color are intentionally excluded -- neither changes
- * the text's measured size.
+ * tool's schema has no lineHeight/margin fields, so the set is smaller.
+ * textAlign/color are intentionally excluded -- neither changes the
+ * text's measured size.
  */
-const AUTOFIT_RELEVANT_KEYS = new Set(['font', 'fontSize', 'bold', 'italic']);
+const AUTOFIT_RELEVANT_KEYS = new Set(['font', 'fontSize', 'bold', 'italic', 'underline']);
 
 const rgbToHex = (rgb: string) => {
   const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
@@ -92,6 +94,7 @@ export class VariableContentTool extends BaseTool {
     }
     if (!('bold'     in existing)) patch.bold     = content.style.fontWeight === 'bold' || content.style.fontWeight === '700';
     if (!('italic'   in existing)) patch.italic   = content.style.fontStyle  === 'italic';
+    if (!('underline' in existing)) patch.underline = content.style.textDecoration?.includes('underline') ?? false;
     // Business Card mode only (see getPropertySchema()'s `hidden` on this
     // field) -- defaults to true so a freshly-dropped card group starts out
     // showing identical content on every card, matching the position/text
@@ -381,24 +384,6 @@ export class VariableContentTool extends BaseTool {
   }
   // ───────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Toggles bold/italic/underline on the whole element (there's no manual
-   * text selection to format -- content is always the resolved variable
-   * value, never typed by hand).
-   */
-  private static _toggleCtxStyle(
-    element: HTMLElement,
-    cssProp: 'fontWeight' | 'fontStyle' | 'textDecoration',
-    onValue: string,
-    offValue: string,
-  ): void {
-    const text = getContent(element);
-    if (!text) return;
-    text.style[cssProp] = (text.style[cssProp] === onValue) ? offValue : onValue;
-    AutoFitText.applyAutoSize(element, text);
-    element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
-  }
-
   // Border styling lives on the resolved-content child, not the outer
   // craftools-element (matches TextTool.ts's same override) -- so the
   // Copy/Paste style bar and the new gradient-capable border helpers read/
@@ -407,37 +392,132 @@ export class VariableContentTool extends BaseTool {
     return getContent(element) ?? element;
   }
 
-  static getCtxOptions(element?: HTMLElement): Array<{ icon: string; label: string; command: (element: HTMLElement) => void; isActive?: (element: HTMLElement) => boolean }> {
+  // Mirrors TextTool.ts's own getCtxOptions() exactly (same font/size
+  // selector, same grouped Bold/Italic/Underline trio, same grouped
+  // alignment trio) -- this tool's ctx-bar previously only exposed a lone,
+  // ungrouped Bold/Italic/Underline set with no active-state highlighting
+  // and no font/size/alignment controls at all, unlike every other
+  // typography-driven tool's ctx-bar.
+  static getCtxOptions(element?: HTMLElement): any[] {
     if (!element) return [];
     const isAutoFitOn = (el: HTMLElement) => (el as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize === true;
+    const isBold      = (el: HTMLElement) => PropertyRenderer._readState(el).bold === true;
+    const isItalic     = (el: HTMLElement) => PropertyRenderer._readState(el).italic === true;
+    const isUnderline  = (el: HTMLElement) => PropertyRenderer._readState(el).underline === true;
+
     return [
+      {
+        render: (el: HTMLElement) => {
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'display:flex; align-items:center; gap:6px; margin:0 4px;';
+
+          // Font selector
+          const currentFont = PropertyRenderer._readState(el).font || 'DM Sans';
+          const fontSelect = document.createElement('ct-font-select') as any;
+          fontSelect.className = 'craftools-select ct-fi';
+          fontSelect.style.width = '120px';
+
+          const allFonts = [...FONTS];
+          getSavedLocalFonts().forEach(f => { if (!allFonts.includes(f)) allFonts.push(f); });
+          if (currentFont && typeof currentFont === 'string' && !allFonts.includes(currentFont)) allFonts.push(currentFont);
+
+          allFonts.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            fontSelect.appendChild(opt);
+          });
+          loadGoogleFonts(allFonts);
+          fontSelect.value = currentFont;
+
+          fontSelect.addEventListener('change', (e: Event) => {
+            VariableContentTool._applyProperty(el, 'font', (e.target as HTMLSelectElement).value);
+          });
+
+          // Size selector
+          const currentSize = PropertyRenderer._readState(el).fontSize || 16;
+          const sizeInput = document.createElement('input');
+          sizeInput.type = 'number';
+          sizeInput.className = 'craftools-input';
+          sizeInput.style.cssText = 'width: 50px; height: 30px; padding: 0 4px; text-align: center; font-size: 13px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); outline: none; margin: 0; box-sizing: border-box;';
+          sizeInput.value = String(currentSize);
+          sizeInput.min = '8';
+          sizeInput.max = '500';
+
+          sizeInput.addEventListener('change', (e: Event) => {
+            VariableContentTool._applyProperty(el, 'fontSize', parseFloat((e.target as HTMLInputElement).value) || 16);
+          });
+          sizeInput.addEventListener('input', (e: Event) => {
+            const val = parseFloat((e.target as HTMLInputElement).value);
+            if (val > 0) VariableContentTool._applyProperty(el, 'fontSize', val);
+          });
+
+          wrapper.appendChild(fontSelect);
+          wrapper.appendChild(sizeInput);
+          return wrapper;
+        }
+      },
+      {
+        icon: 'format_bold',
+        label: I18n.t('textTool.bold'),
+        // Grouped with Italic/Underline below -- CtxBar.ts keeps same-group
+        // options together as one atomic cluster, never split across the
+        // ctx-bar's two lines. Matches TextTool.ts's own 'bius' group.
+        group: 'bius',
+        isActive: isBold,
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'bold', !isBold(el)),
+      },
+      {
+        icon: 'format_italic',
+        label: I18n.t('textTool.italic'),
+        group: 'bius',
+        isActive: isItalic,
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'italic', !isItalic(el)),
+      },
+      {
+        icon: 'format_underlined',
+        label: I18n.t('textTool.underline'),
+        group: 'bius',
+        isActive: isUnderline,
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'underline', !isUnderline(el)),
+      },
+      {
+        icon: 'format_align_left',
+        label: 'Align Left',
+        // Grouped with Center/Right below -- see the 'bius' comment above.
+        group: 'align',
+        isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'left',
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'textAlign', 'left'),
+      },
+      {
+        icon: 'format_align_center',
+        label: 'Align Center',
+        group: 'align',
+        isActive: (el: HTMLElement) => {
+          const state = PropertyRenderer._readState(el);
+          return state.textAlign === 'center' || !state.textAlign;
+        },
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'textAlign', 'center'),
+      },
+      {
+        icon: 'format_align_right',
+        label: 'Align Right',
+        group: 'align',
+        isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'right',
+        command: (el: HTMLElement) => VariableContentTool._applyProperty(el, 'textAlign', 'right'),
+      },
       // Same shared quick-action as TextTool.ts's own "Auto-fit to text" --
       // the underlying mechanism (AutoFitText.applyAutoSize(), gated on
       // `_craftoolsAutoResize`) was already wired up here (called from
       // _applyVariablePreview() whenever the resolved value changes, and
-      // from _toggleCtxStyle()'s bold/italic/underline toggles), but
-      // nothing anywhere in this tool's panel or ctx-bar ever exposed a way
-      // to turn it ON in the first place.
+      // from every AUTOFIT_RELEVANT_KEYS property change), but nothing
+      // anywhere in this tool's panel or ctx-bar ever exposed a way to turn
+      // it ON in the first place.
       this._autoFitCtxOption({
         isActive: isAutoFitOn,
         toggle:   (el: HTMLElement) => VariableContentTool._applyProperty(el, 'autoFit', !isAutoFitOn(el)),
         label:    'Auto-fit to content',
       }),
-      {
-        icon: 'format_bold',
-        label: I18n.t('textTool.bold'),
-        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'fontWeight', 'bold', 'normal'),
-      },
-      {
-        icon: 'format_italic',
-        label: I18n.t('textTool.italic'),
-        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'fontStyle', 'italic', 'normal'),
-      },
-      {
-        icon: 'format_underlined',
-        label: I18n.t('textTool.underline'),
-        command: (el: HTMLElement) => VariableContentTool._toggleCtxStyle(el, 'textDecoration', 'underline', 'none'),
-      },
     ];
   }
 
@@ -552,8 +632,9 @@ export class VariableContentTool extends BaseTool {
           { type: 'slider',      key: 'fontSize', label: 'Size',   i18nKey: 'textTool.size', min: 8, max: 200, step: 1 },
           { type: 'align',       key: 'textAlign' },
           fontStyleField([
-            { key: 'bold',   style: 'bold',   i18nKey: 'textTool.bold' },
-            { key: 'italic', style: 'italic', i18nKey: 'textTool.italic' },
+            { key: 'bold',      style: 'bold',      i18nKey: 'textTool.bold' },
+            { key: 'italic',    style: 'italic',    i18nKey: 'textTool.italic' },
+            { key: 'underline', style: 'underline', i18nKey: 'textTool.underline' },
           ]),
           // Same field as TextTool.ts's Title/Paragraph -- see its schema
           // for why (only the value is applied to `content`, not resolved
@@ -648,6 +729,7 @@ export class VariableContentTool extends BaseTool {
         break;
       case 'bold':      content.style.fontWeight  = value ? 'bold' : 'normal'; break;
       case 'italic':    content.style.fontStyle   = value ? 'italic' : 'normal'; break;
+      case 'underline': content.style.textDecoration = value ? 'underline' : 'none'; break;
       case 'textTransform': content.style.textTransform = String(value); break;
       case 'borderRadius': content.style.borderRadius = `${value}px`; break;
       case 'zIndex':    element.style.zIndex       = String(value); break;
