@@ -536,9 +536,25 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       const scX = this.unitW === 'mm' ? sc * MM_PX : sc;
       const scY = this.unitH === 'mm' ? sc * MM_PX : sc;
 
-      const dx = (e.clientX - this.startX) / scX;
-      const dy = (e.clientY - this.startY) / scY;
+      const rawDx = (e.clientX - this.startX) / scX;
+      const rawDy = (e.clientY - this.startY) / scY;
       const d  = this.resizeDir;
+
+      // Rotate the raw screen-space mouse delta into the element's own
+      // local (unrotated) coordinate frame before doing anything else.
+      // Without this, dragging a handle on a rotated element grew/shrank
+      // it along the SCREEN's axes instead of the element's own visual
+      // width/height axes -- so past a few degrees of rotation the box
+      // appeared to resize in a direction disconnected from the handle
+      // actually being dragged, making rotated elements very hard to
+      // resize predictably. Standard inverse-rotation correction (rotate
+      // the delta by -pr); this mirrors the same forward rotation
+      // `_applyTransform()` already applies via `rotate(${this.pr}deg)`.
+      const rad = this.pr * Math.PI / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const dx =  rawDx * cos + rawDy * sin;
+      const dy = -rawDx * sin + rawDy * cos;
 
       // An element's width/height must never exceed its own page's -- most
       // noticeable on text (which resizes freely to any dragged size), but
@@ -547,18 +563,45 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       // stays correct across zoom changes mid-drag.
       const { maxW, maxH } = SnapEngine.getMaxSize(this, this.unitW, this.unitH);
 
-      if (d === 'r' || d === 'tr' || d === 'br') this.pw = Math.min(maxW, Math.max(2, this.origW + dx));
-      if (d === 'b' || d === 'bl' || d === 'br') this.ph = Math.min(maxH, Math.max(2, this.origH + dy));
-      if (d === 'l' || d === 'tl' || d === 'bl') {
-        const nw = Math.min(maxW, Math.max(2, this.origW - dx));
-        this.pw = nw;
-        this.px = this.origX + (this.origW - nw);
-      }
-      if (d === 't' || d === 'tl' || d === 'tr') {
-        const nh = Math.min(maxH, Math.max(2, this.origH - dy));
-        this.ph = nh;
-        this.py = this.origY + (this.origH - nh);
-      }
+      const oldW = this.origW;
+      const oldH = this.origH;
+      let newW = oldW;
+      let newH = oldH;
+
+      if (d === 'r' || d === 'tr' || d === 'br') newW = Math.min(maxW, Math.max(2, oldW + dx));
+      if (d === 'l' || d === 'tl' || d === 'bl') newW = Math.min(maxW, Math.max(2, oldW - dx));
+      if (d === 'b' || d === 'bl' || d === 'br') newH = Math.min(maxH, Math.max(2, oldH + dy));
+      if (d === 't' || d === 'tl' || d === 'tr') newH = Math.min(maxH, Math.max(2, oldH - dy));
+
+      this.pw = newW;
+      this.ph = newH;
+
+      // Re-anchor px/py from a rotation-aware pivot instead of the old flat
+      // `origX + (origW - newW)` shift, which only kept the OPPOSITE
+      // edge/corner visually fixed for an unrotated box. `rotate()` pivots
+      // around the box's own center (_applyTransform()'s default
+      // transform-origin), so once any rotation is applied that naive
+      // local-space shift drifts visibly off the intended anchor. Instead:
+      // find the anchor's fixed on-screen (page-unit) position by rotating
+      // its local offset from the OLD center, then solve for the new
+      // center that keeps that same point fixed given the new half-extents.
+      // At pr=0 this reduces to exactly the previous formula (cos=1, sin=0).
+      const anchorSignX = d.includes('r') ? -1 : d.includes('l') ? 1 : 0;
+      const anchorSignY = d.includes('b') ? -1 : d.includes('t') ? 1 : 0;
+      const oldAnchorLocalX = anchorSignX * oldW / 2;
+      const oldAnchorLocalY = anchorSignY * oldH / 2;
+      const newAnchorLocalX = anchorSignX * newW / 2;
+      const newAnchorLocalY = anchorSignY * newH / 2;
+
+      const oldCenterX = this.origX + oldW / 2;
+      const oldCenterY = this.origY + oldH / 2;
+      const anchorX = oldCenterX + (oldAnchorLocalX * cos - oldAnchorLocalY * sin);
+      const anchorY = oldCenterY + (oldAnchorLocalX * sin + oldAnchorLocalY * cos);
+      const newCenterX = anchorX - (newAnchorLocalX * cos - newAnchorLocalY * sin);
+      const newCenterY = anchorY - (newAnchorLocalX * sin + newAnchorLocalY * cos);
+
+      this.px = newCenterX - newW / 2;
+      this.py = newCenterY - newH / 2;
 
       // Apply the proposed size/position first so getBoundingClientRect()
       // is current before SnapEngine reads screen position for snap
