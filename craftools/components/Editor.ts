@@ -112,6 +112,8 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   imageslicer: () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: () => import('../tools/settings/SettingsTool.js').then((m: any) => m.SettingsTool.setup.bind(m.SettingsTool)),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export:   () => import('../tools/export/ExportTool.js').then((m: any) => m.ExportTool.setup.bind(m.ExportTool)),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -1083,59 +1085,21 @@ export class Craftools_Editor extends HTMLElement {
       });
     });
 
-    // ── PDF Export ──────────────────────────────────────────────────────────
-    document.querySelectorAll('#pdf-btn, #pwa-sidebar-export').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault(); closeSidebar();
-        const { PdfExport } = await import('../utils/PdfExport.js');
-        PdfExport.print(this);
-      });
-    });
-
-    // ── PNG / JPG Export ────────────────────────────────────────────────────
-    document.querySelectorAll('#pwa-sidebar-png').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault(); closeSidebar();
-        const { ImageExport } = await import('../utils/ImageExport.js');
-        ImageExport.export(this);
-      });
-    });
-
-    // ── JSON Project Export / Import ─────────────────────────────────────────
-    const projPagesWrapper = this.querySelector<HTMLElement>('#pages-wrapper')!;
-
-    document.querySelectorAll('#pwa-sidebar-export-project').forEach(btn => {
+    // ── Centralized Export Hub ─────────────────────────────────────────────
+    document.querySelectorAll('#pdf-btn, #export-btn, #pwa-sidebar-export, #pwa-sidebar-png, #pwa-sidebar-export-project').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
         closeSidebar();
-        
-        const defaultTitle = 'Projeto CrafTools';
-        const title = window.prompt(I18n.t('editor.exportProjectPrompt') || 'Digite o nome do seu projeto:', defaultTitle);
-        if (title === null) return; // Cancelled
-        
-        const finalTitle = title.trim() || defaultTitle;
-        
-        const dismissLoading = Notify.toast(I18n.t('editor.generating') || 'Gerando projeto...', 'info', 60_000);
-        try {
-          const { ProjectSerializer } = await import('../utils/ProjectSerializer.js');
-          const blob = await ProjectSerializer.exportProject(projPagesWrapper, finalTitle);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${finalTitle}.craftools`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } catch (err) {
-          console.error('[Editor] Export project failed:', err);
-          Notify.toast(I18n.t('agendaExportTool.exportError') || 'Erro ao exportar', 'error');
-        } finally {
-          dismissLoading?.();
-        }
+        openPanelMenu();
+        const { ExportTool } = await import('../tools/export/ExportTool.js');
+        const panelBody = this.querySelector<HTMLElement>('#panel-body');
+        const panelTitle = this.querySelector<HTMLElement>('#panel-title');
+        if (panelTitle) panelTitle.textContent = I18n.t('exportTool.title') || 'Exportar & Salvar';
+        if (panelBody) ExportTool.renderPickerPanel(panelBody, this);
       });
     });
 
+    const projPagesWrapper = this.querySelector<HTMLElement>('#pages-wrapper')!;
     const fileInput = document.getElementById('project-import-file') as HTMLInputElement;
     document.querySelectorAll('#pwa-sidebar-import-project').forEach(btn => {
       btn.addEventListener('click', (e) => {
