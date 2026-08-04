@@ -281,6 +281,62 @@ export abstract class BaseTool {
     }
   }
 
+  // ── Radius, Padding, and Margin (CommonSchema.ts helpers) ────────────────────
+
+  protected static _applyRadius(element: HTMLElement, key: string, value: unknown): boolean {
+    if (
+      key !== 'borderRadius' &&
+      key !== 'borderTopLeftRadius' &&
+      key !== 'borderTopRightRadius' &&
+      key !== 'borderBottomRightRadius' &&
+      key !== 'borderBottomLeftRadius'
+    ) return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+    const state = this._readState(element);
+    const target = this._getStyleTarget(element);
+
+    const tl = state.borderTopLeftRadius ?? state.borderRadius ?? 0;
+    const tr = state.borderTopRightRadius ?? state.borderRadius ?? 0;
+    const br = state.borderBottomRightRadius ?? state.borderRadius ?? 0;
+    const bl = state.borderBottomLeftRadius ?? state.borderRadius ?? 0;
+
+    target.style.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
+    return true;
+  }
+
+  protected static _applyPadding(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'paddingTop' && key !== 'paddingRight' && key !== 'paddingBottom' && key !== 'paddingLeft' && key !== 'padding') return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+    const state = this._readState(element);
+    const target = this._getStyleTarget(element);
+
+    const pt = state.paddingTop ?? 0;
+    const pr = state.paddingRight ?? 0;
+    const pb = state.paddingBottom ?? 0;
+    const pl = state.paddingLeft ?? 0;
+
+    target.style.padding = `${pt}px ${pr}px ${pb}px ${pl}px`;
+    return true;
+  }
+
+  protected static _applyMargin(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'marginTop' && key !== 'marginRight' && key !== 'marginBottom' && key !== 'marginLeft' && key !== 'margin') return false;
+
+    PropertyRenderer.applyChange(element, key, value);
+    const state = this._readState(element);
+    const target = this._getStyleTarget(element);
+
+    const mt = state.marginTop ?? 0;
+    const mr = state.marginRight ?? 0;
+    const mb = state.marginBottom ?? 0;
+    const ml = state.marginLeft ?? 0;
+
+    target.style.margin = `${mt}px ${mr}px ${mb}px ${ml}px`;
+    return true;
+  }
+
   // ── Text color (solid-or-gradient, CommonSchema-free -- see each tool's own 'color' field) ──
 
   /**
@@ -497,29 +553,18 @@ export abstract class BaseTool {
    * @param value   - The new value from the field handler.
    */
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
-    // 'pageAlign' (from CommonSchema.ts's pageAlignSection()) re-runs
-    // SnapEngine's page-alignment math against the element's current size
-    // AND persists which direction was last clicked, purely so
-    // page-align.field.ts's button grid can show it as the active/selected
-    // one (matching content-align's grid) -- it's still not a property that
-    // constrains the element going forward: dragging/resizing afterward
-    // doesn't get reconciled against it or clear it, the stored value is
-    // only ever read back for this cosmetic "last alignment you picked"
-    // highlight.
+    if (this._applyBackground(element, key, value)) return;
+    if (this._applyBorder(element, key, value)) return;
+    if (this._applyRadius(element, key, value)) return;
+    if (this._applyPadding(element, key, value)) return;
+    if (this._applyMargin(element, key, value)) return;
+
     if (key === 'pageAlign') {
       SnapEngine.align(element as unknown as CraftoolsSnapTarget, value as string);
       PropertyRenderer.applyChange(element, key, value);
       return;
     }
 
-    // 'autoFit' (from CommonSchema.ts's sizePositionSection({ autoFit: true }))
-    // toggles the `_craftoolsAutoResize` expando that AutoFitText.js and the
-    // legacy panel already key off of (see CommonProperties.js's
-    // _appendTamanho()) -- kept in sync here so any tool that spreads in
-    // sizePositionSection() gets working W/H-disable-while-autofit behavior
-    // for free, even without overriding _applyProperty(). Tools that also
-    // need to trigger an immediate resize on toggle (e.g. TextTool) should
-    // override _applyProperty() and call AutoFitText.applyAutoSize() there.
     if (key === 'autoFit') {
       (element as unknown as { _craftoolsAutoResize?: boolean })._craftoolsAutoResize = !!value;
     }

@@ -31,6 +31,7 @@ export type FieldType =
   | 'emoji-kitchen-pair'
   | 'font-style'
   | 'pill-group'
+  | 'quad-number'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -290,6 +291,18 @@ export interface PillGroupField extends BaseField {
   direction?: 'horizontal' | 'vertical';
 }
 
+export interface QuadNumberField extends BaseField {
+  type: 'quad-number';
+  keys: [string, string, string, string];
+  labels?: [string, string, string, string];
+  i18nKeys?: [string, string, string, string];
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  defaultLinked?: boolean;
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -324,6 +337,7 @@ export type Field =
   | EmojiKitchenPairField
   | FontStyleField
   | PillGroupField
+  | QuadNumberField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────

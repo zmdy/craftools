@@ -30,4 +30,5 @@ export * from './content-align.field';
 export * from './variable-binding.field';
 export * from './emoji-picker.field';
 export * from './emoji-kitchen-pair.field';
+export * from './quad-number.field';
 export * from './custom.field';

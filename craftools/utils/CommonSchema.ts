@@ -87,13 +87,17 @@ export const radiusSection = (): Section => ({
   defaultOpen: false,
   fields: [
     {
-      type: 'slider',
-      key: 'borderRadius',
+      type: 'quad-number',
+      key: 'borderTopLeftRadius',
+      keys: ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius'],
+      watchKeys: ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'borderRadius'],
       label: 'Radius',
       i18nKey: 'common.borderRadius',
+      labels: ['TL', 'TR', 'BR', 'BL'],
+      i18nKeys: ['common.tl', 'common.tr', 'common.br', 'common.bl'],
       min: 0,
       max: 200,
-      step: 1,
+      unit: 'px',
     },
   ],
 });
@@ -105,10 +109,19 @@ export const paddingSection = (): Section => ({
   collapsible: true,
   defaultOpen: false,
   fields: [
-    { type: 'number', key: 'paddingTop',    label: 'Top',    min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'paddingRight',  label: 'Right',  min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'paddingBottom', label: 'Bottom', min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'paddingLeft',   label: 'Left',   min: 0, max: 200, unit: 'px' },
+    {
+      type: 'quad-number',
+      key: 'paddingTop',
+      keys: ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'],
+      watchKeys: ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'],
+      label: 'Padding',
+      i18nKey: 'common.padding',
+      labels: ['Cima', 'Direita', 'Baixo', 'Esquerda'],
+      i18nKeys: ['common.top', 'common.right', 'common.bottom', 'common.left'],
+      min: 0,
+      max: 200,
+      unit: 'px',
+    },
   ],
 });
 
@@ -119,10 +132,19 @@ export const marginSection = (): Section => ({
   collapsible: true,
   defaultOpen: false,
   fields: [
-    { type: 'number', key: 'marginTop',    label: 'Top',    i18nKey: 'common.top',    min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'marginRight',  label: 'Right',  i18nKey: 'common.right',  min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'marginBottom', label: 'Bottom', i18nKey: 'common.bottom', min: 0, max: 200, unit: 'px' },
-    { type: 'number', key: 'marginLeft',   label: 'Left',   i18nKey: 'common.left',   min: 0, max: 200, unit: 'px' },
+    {
+      type: 'quad-number',
+      key: 'marginTop',
+      keys: ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
+      watchKeys: ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
+      label: 'Margin',
+      i18nKey: 'common.margin',
+      labels: ['Cima', 'Direita', 'Baixo', 'Esquerda'],
+      i18nKeys: ['common.top', 'common.right', 'common.bottom', 'common.left'],
+      min: 0,
+      max: 200,
+      unit: 'px',
+    },
   ],
 });
 
