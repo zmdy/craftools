@@ -961,7 +961,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings', 'line',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings', 'export', 'line',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
@@ -1086,16 +1086,13 @@ export class Craftools_Editor extends HTMLElement {
     });
 
     // ── Centralized Export Hub ─────────────────────────────────────────────
-    document.querySelectorAll('#pdf-btn, #export-btn, #pwa-sidebar-export, #pwa-sidebar-png, #pwa-sidebar-export-project').forEach(btn => {
+    document.querySelectorAll('#pdf-btn, #export-btn, #pwa-sidebar-export').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
         closeSidebar();
         openPanelMenu();
         const { ExportTool } = await import('../tools/export/ExportTool.js');
-        const panelBody = this.querySelector<HTMLElement>('#panel-body');
-        const panelTitle = this.querySelector<HTMLElement>('#panel-title');
-        if (panelTitle) panelTitle.textContent = I18n.t('exportTool.title') || 'Exportar & Salvar';
-        if (panelBody) ExportTool.renderPickerPanel(panelBody, this);
+        ExportTool.setup(this);
       });
     });
 
