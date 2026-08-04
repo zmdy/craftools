@@ -19,7 +19,7 @@ import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG';
 import { UserTemplates } from '../../utils/UserTemplates';
-import type { GridTemplate, GridTemplateSlot } from '../../utils/GridSizes.js';
+import { getEffectiveDimensions, type GridTemplate, type GridTemplateSlot, type Orientation } from '../../utils/GridSizes.js';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import './GeneratorTool_Translations.js';
 
@@ -110,13 +110,15 @@ interface SizeOption {
 
 // Standard page sizes always available in the builder
 const STANDARD_SIZES: SizeOption[] = [
-  { name: 'A4',    size: '210,297', sizeUnit: 'mm' },
-  { name: 'A5',    size: '148,210', sizeUnit: 'mm' },
-  { name: 'A3',    size: '297,420', sizeUnit: 'mm' },
-  { name: '10×15', size: '100,150', sizeUnit: 'mm' },
-  { name: '15×21', size: '150,210', sizeUnit: 'mm' },
-  { name: '20×30', size: '200,300', sizeUnit: 'mm' },
-  { name: '30×40', size: '300,400', sizeUnit: 'mm' },
+  { name: 'A4',            size: '210,297', sizeUnit: 'mm' },
+  { name: 'A5',            size: '148,210', sizeUnit: 'mm' },
+  { name: 'A6',            size: '105,148', sizeUnit: 'mm' },
+  { name: 'A3',            size: '297,420', sizeUnit: 'mm' },
+  { name: '10×15',         size: '100,150', sizeUnit: 'mm' },
+  { name: '15×21',         size: '150,210', sizeUnit: 'mm' },
+  { name: '20×30',         size: '200,300', sizeUnit: 'mm' },
+  { name: '30×40',         size: '300,400', sizeUnit: 'mm' },
+  { name: 'Personalizado', size: 'custom',  sizeUnit: 'mm' },
 ];
 
 const MAX_PROMO_SLOTS = 6;
@@ -164,6 +166,9 @@ export class GeneratorTool {
     let editingId: string | null = null;
     let name = '';
     let selectedSize: SizeOption | null = null;
+    let orientation: Orientation = 'portrait';
+    let customWidth = 210;
+    let customHeight = 297;
     let layoutType: LayoutType = 'grid';
 
     // Grid / Strip state -- margins stored as MarginObj
@@ -245,9 +250,14 @@ export class GeneratorTool {
 
     // ── Template object builder ────────────────────────────────────────
     const buildTemplateObject = (): GridTemplate => {
+      const sizeStr = selectedSize?.size === 'custom'
+        ? `${customWidth},${customHeight}`
+        : (selectedSize?.size || '210,297');
+
       const base = {
         name,
-        sizes:      selectedSize ? [selectedSize.size] : [],
+        sizes: [sizeStr],
+        allowedOrientations: [orientation],
         pageMargin: marginToStr(cfg.pageMargin),
         cellGap:    parseFloat(String(cfg.cellGap)) || 0,
         autoCenterMargin: !!cfg.autoCenter,
@@ -335,12 +345,21 @@ export class GeneratorTool {
         return;
       }
 
-      const parts = String(selectedSize.size || '210,297').split(',').map(Number);
-      const docW  = parts[0] || 210;
-      const docH  = parts[1] || 297;
-      const unit  = selectedSize.sizeUnit || 'mm';
+      let baseW = 210;
+      let baseH = 297;
+      if (selectedSize.size === 'custom') {
+        baseW = customWidth || 210;
+        baseH = customHeight || 297;
+      } else {
+        const parts = String(selectedSize.size || '210,297').split(',').map(Number);
+        baseW = parts[0] || 210;
+        baseH = parts[1] || 297;
+      }
 
-      // Resize the actual canvas page to reflect the selected size
+      const { docW, docH } = getEffectiveDimensions(baseW, baseH, orientation);
+      const unit = selectedSize.sizeUnit || 'mm';
+
+      // Resize the actual canvas page to reflect the selected size and orientation
       mainPage.style.width = docW + unit;
       mainPage.style.height = docH + unit;
       mainPage.style.minHeight = docH + unit;
@@ -582,7 +601,34 @@ export class GeneratorTool {
         </div>
       `;
 
-      const sectionSize = `<div style="display:flex; flex-wrap:wrap; gap:5px;">${sizePills}</div>`;
+      const sectionSize = `
+        <div style="display:flex; flex-wrap:wrap; gap:5px;">${sizePills}</div>
+        ${selectedSize?.size === 'custom' ? `
+          <div style="display:flex; gap:8px; margin-top:8px;" id="generator-custom-size-wrap">
+            <div class="craftools-field" style="flex:1;">
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Largura (mm)</label>
+              <input type="number" id="generator-custom-width" class="craftools-input" value="${customWidth}" min="10" max="2000" step="1" style="width:100%; text-align:center; padding:4px 6px;">
+            </div>
+            <div class="craftools-field" style="flex:1;">
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Altura (mm)</label>
+              <input type="number" id="generator-custom-height" class="craftools-input" value="${customHeight}" min="10" max="2000" step="1" style="width:100%; text-align:center; padding:4px 6px;">
+            </div>
+          </div>
+        ` : ''}
+        <div class="craftools-field" style="margin-top:10px;">
+          <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:5px;">Orientação</label>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="craftools-pill generator-orient-btn ${orientation === 'portrait' ? 'active' : ''}" data-orient="portrait" style="flex:1; justify-content:center; gap:4px; padding:6px;">
+              <span class="material-symbols-outlined" style="font-size:16px;">crop_portrait</span>
+              Retrato
+            </button>
+            <button type="button" class="craftools-pill generator-orient-btn ${orientation === 'landscape' ? 'active' : ''}" data-orient="landscape" style="flex:1; justify-content:center; gap:4px; padding:6px;">
+              <span class="material-symbols-outlined" style="font-size:16px;">crop_landscape</span>
+              Paisagem
+            </button>
+          </div>
+        </div>
+      `;
 
       const sectionType = `<div style="display:flex; gap:8px;">${typeCards}</div>`;
 
@@ -642,9 +688,31 @@ export class GeneratorTool {
       root.querySelectorAll<HTMLElement>('.generator-size-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           selectedSize = allSizes[parseInt(btn.dataset.idx!, 10)];
-          root.querySelectorAll('.generator-size-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
+          renderPanel();
+        });
+      });
+
+      // Custom size inputs
+      const customWInput = root.querySelector<HTMLInputElement>('#generator-custom-width');
+      const customHInput = root.querySelector<HTMLInputElement>('#generator-custom-height');
+      if (customWInput) {
+        customWInput.addEventListener('input', () => {
+          customWidth = parseFloat(customWInput.value) || 210;
           renderPreview();
+        });
+      }
+      if (customHInput) {
+        customHInput.addEventListener('input', () => {
+          customHeight = parseFloat(customHInput.value) || 297;
+          renderPreview();
+        });
+      }
+
+      // Orientation pills
+      root.querySelectorAll<HTMLElement>('.generator-orient-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          orientation = (btn.dataset.orient as Orientation) || 'portrait';
+          renderPanel();
         });
       });
 

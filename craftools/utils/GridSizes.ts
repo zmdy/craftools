@@ -16,6 +16,8 @@ export interface GridTemplateSlot {
   cellSpacing?: number;
 }
 
+export type Orientation = 'portrait' | 'landscape';
+
 export interface GridTemplate {
   _id?:         string; // Added by UserTemplates
   _source?:     string; // Added by UserTemplates
@@ -25,6 +27,7 @@ export interface GridTemplate {
   pageMargin:   string;
   cellGap:      number;
   sizes:        (string | undefined)[];
+  allowedOrientations?: Orientation[];
   cellWidth?:   number;
   cellHeight?:  number;
   cellPadding?: string;
@@ -35,6 +38,19 @@ export interface GridTemplate {
   // "auto-center" toggle rather than entered manually; persisted so
   // re-editing the template in GeneratorTool restores the toggle state.
   autoCenterMargin?: boolean;
+}
+
+export function getEffectiveDimensions(
+  width: number,
+  height: number,
+  orientation: Orientation = 'portrait'
+): { docW: number; docH: number } {
+  const minDim = Math.min(width, height);
+  const maxDim = Math.max(width, height);
+  if (orientation === 'landscape') {
+    return { docW: maxDim, docH: minDim };
+  }
+  return { docW: minDim, docH: maxDim };
 }
 
 export const GridSizes: GridTemplate[] = [
