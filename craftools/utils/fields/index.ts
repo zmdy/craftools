@@ -31,4 +31,5 @@ export * from './variable-binding.field';
 export * from './emoji-picker.field';
 export * from './emoji-kitchen-pair.field';
 export * from './quad-number.field';
+export * from './text-transform.field';
 export * from './custom.field';

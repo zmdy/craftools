@@ -245,15 +245,7 @@ export class TextTool extends BaseTool {
             { key: 'italic',    style: 'italic',    i18nKey: 'textTool.italic' },
             { key: 'underline', style: 'underline', i18nKey: 'textTool.underline' },
           ]),
-          {
-            type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
-            options: [
-              { value: 'none',       label: 'None',       i18nKey: 'textTool.textTransformNone' },
-              { value: 'uppercase',  label: 'UPPERCASE',  i18nKey: 'textTool.textTransformUppercase' },
-              { value: 'lowercase',  label: 'lowercase',  i18nKey: 'textTool.textTransformLowercase' },
-              { value: 'capitalize', label: 'Capitalize', i18nKey: 'textTool.textTransformCapitalize' },
-            ],
-          },
+          { type: 'text-transform', key: 'textTransform' },
         ],
       },
       {

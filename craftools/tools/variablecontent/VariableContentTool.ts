@@ -639,15 +639,7 @@ export class VariableContentTool extends BaseTool {
           // Same field as TextTool.ts's Title/Paragraph -- see its schema
           // for why (only the value is applied to `content`, not resolved
           // per-repetition, so it composes fine with variable bindings).
-          {
-            type: 'select', key: 'textTransform', label: 'Text transform', i18nKey: 'textTool.textTransform',
-            options: [
-              { value: 'none',       label: 'None',       i18nKey: 'textTool.textTransformNone' },
-              { value: 'uppercase',  label: 'UPPERCASE',  i18nKey: 'textTool.textTransformUppercase' },
-              { value: 'lowercase',  label: 'lowercase',  i18nKey: 'textTool.textTransformLowercase' },
-              { value: 'capitalize', label: 'Capitalize', i18nKey: 'textTool.textTransformCapitalize' },
-            ],
-          },
+          { type: 'text-transform', key: 'textTransform' },
           // Gradient-capable (BaseTool._paintTextColor(), the same
           // background-clip:text technique TextTool.ts uses). No explicit
           // defaultSolid needed: ColorPickerUI.ts's shared default is

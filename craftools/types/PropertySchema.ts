@@ -32,6 +32,7 @@ export type FieldType =
   | 'font-style'
   | 'pill-group'
   | 'quad-number'
+  | 'text-transform'
   | 'custom';   // escape hatch: render function provided inline
 
 // ── Base field ────────────────────────────────────────────────────────────────
@@ -303,6 +304,10 @@ export interface QuadNumberField extends BaseField {
   defaultLinked?: boolean;
 }
 
+export interface TextTransformField extends BaseField {
+  type: 'text-transform';
+}
+
 export interface CustomField extends BaseField {
   type: 'custom';
   /**
@@ -338,6 +343,7 @@ export type Field =
   | FontStyleField
   | PillGroupField
   | QuadNumberField
+  | TextTransformField
   | CustomField;
 
 // ── Section ───────────────────────────────────────────────────────────────────
