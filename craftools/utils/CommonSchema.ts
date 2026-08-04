@@ -504,19 +504,16 @@ export const formaSection = (
   }
   if (radius) {
     fields.push(
-      { type: 'divider', key: 'div-forma-radius', icon: 'rounded_corner', label: 'Radius', i18nKey: 'common.radius' },
       ...radiusSection().fields,
     );
   }
   if (padding) {
     fields.push(
-      { type: 'divider', key: 'div-forma-padding', icon: 'padding', label: 'Padding', i18nKey: 'common.padding' },
       ...paddingSection().fields,
     );
   }
   if (margin) {
     fields.push(
-      { type: 'divider', key: 'div-forma-margin', icon: 'margin', label: 'Margin', i18nKey: 'common.margin' },
       ...marginSection().fields,
     );
   }

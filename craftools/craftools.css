@@ -283,8 +283,9 @@ html, body {
 .ct-accordion-content .ct-content-align-grid { padding: 8px 12px; }
 .ct-accordion-content .ct-align-group { padding: 5px 12px; }
 
-/* Complex non-.ct-field wrappers (emoji picker, variable panel, etc.) */
+/* Complex non-.ct-field wrappers (emoji picker, variable panel, quad number fields, etc.) */
 .ct-accordion-content .ct-emoji-picker-wrap { padding: 8px 12px; }
+.ct-accordion-content .ct-quad-container    { padding: 6px 12px; }
 .ct-accordion-content .ct-var-panel-wrap    { padding: 4px 0; }
 
 /* Filter icon badges (Image tool) */
