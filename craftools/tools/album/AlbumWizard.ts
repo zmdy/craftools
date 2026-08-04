@@ -202,7 +202,8 @@ export class AlbumTool {
     // loadGridSizes()'s JSDoc return type is the generic `Promise<object[]>`
     // (loose on purpose, since entries are API-driven) -- cast to the modeled
     // shape rather than fighting the loose upstream annotation.
-    const gridSizes = (await loadGridSizes()) as unknown as AlbumTemplate[];
+    // gridSizes starts empty — loaded asynchronously below so the panel opens instantly.
+    let gridSizes: AlbumTemplate[] = [];
 
     const renderPanel = (): void => {
       if (!panelBody) return;
@@ -310,65 +311,72 @@ export class AlbumTool {
         return AlbumPreviewSVG.build(t, selectedSize!, { maxW: 180, maxH: 140 });
       };
 
-      const templateHtml = matchingTemplates.length > 0
-        ? matchingTemplates.map((t, idx) => {
-          const slotPreview = buildSlotPreview(t);
-          const isActive = selectedTemplate === t;
-          const rowStyle = isActive
-            ? `background:var(--accent); border-color:var(--accent);`
-            : `background:var(--bg-input,#1e1e2e); border-color:var(--border,#374151);`;
-          const textColor = isActive ? 'color:#fff;' : '';
-          const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
-          const secColor = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
+      // Show a spinner while gridSizes hasn't arrived from the API/local file yet.
+      const isLoadingTemplates = gridSizes.length === 0;
+      const templateHtml = isLoadingTemplates
+        ? `<div style="font-size:12px; color:var(--text-muted); padding:10px 0; display:flex; align-items:center; gap:6px;">
+               <span class="material-symbols-outlined" style="font-size:15px;">sync</span>
+               Carregando layouts...
+           </div>`
+        : matchingTemplates.length > 0
+          ? matchingTemplates.map((t, idx) => {
+            const slotPreview = buildSlotPreview(t);
+            const isActive = selectedTemplate === t;
+            const rowStyle = isActive
+              ? `background:var(--accent); border-color:var(--accent);`
+              : `background:var(--bg-input,#1e1e2e); border-color:var(--border,#374151);`;
+            const textColor = isActive ? 'color:#fff;' : '';
+            const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
+            const secColor = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
 
-          const isPromo = t.type === 'promo_kit';
-          const isUserTemplate = t._source === 'user';
-          const userBadge = isUserTemplate
-            ? `<span style="display:inline-block; background:#f97316; color:#fff; font-size:8px; padding:1px 5px; border-radius:8px; font-weight:700; margin-left:4px; vertical-align:middle;">✦ Meu Kit</span>`
-            : '';
+            const isPromo = t.type === 'promo_kit';
+            const isUserTemplate = t._source === 'user';
+            const userBadge = isUserTemplate
+              ? `<span style="display:inline-block; background:#f97316; color:#fff; font-size:8px; padding:1px 5px; border-radius:8px; font-weight:700; margin-left:4px; vertical-align:middle;">✦ Meu Kit</span>`
+              : '';
 
-          // Calculate slot preview dimensions for the wrapper
-          let wrapW = 72;
-          let wrapH = 68;
-          if (!isPromo) {
-            const scale = Math.min(72 / t.cellWidth, 68 / t.cellHeight, 1);
-            wrapW = Math.round(t.cellWidth * scale);
-            wrapH = Math.round(t.cellHeight * scale);
-          }
+            // Calculate slot preview dimensions for the wrapper
+            let wrapW = 72;
+            let wrapH = 68;
+            if (!isPromo) {
+              const scale = Math.min(72 / t.cellWidth, 68 / t.cellHeight, 1);
+              wrapW = Math.round(t.cellWidth * scale);
+              wrapH = Math.round(t.cellHeight * scale);
+            }
 
-          return `
-                    <div class="template-row" data-idx="${idx}" style="margin-bottom:6px;">
-                        <div class="template-btn" data-idx="${idx}" style="
-                            width:100%; padding:10px 12px; box-sizing:border-box;
-                            display:flex; align-items:center; gap:12px;
-                            border-radius:8px; cursor:pointer; overflow:hidden;
-                            border:1px solid; transition:all .12s;
-                            ${rowStyle}
-                        ">
-                            <div style="flex:0 0 ${wrapW}px; width:${wrapW}px; height:${wrapH}px; display:flex; align-items:center; justify-content:center;">
-                                ${slotPreview}
-                            </div>
-                            <div style="flex:1; min-width:0; overflow:hidden;">
-                                <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}${userBadge}</div>
-                                <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
-                                <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
-                                <button class="page-preview-btn" data-tidx="${idx}" style="
-                                    font-size:9px; padding:2px 7px; border-radius:4px;
-                                    background:transparent; border:1px solid ${isActive ? 'rgba(255,255,255,0.5)' : 'var(--border,#374151)'};
-                                    color:${isActive ? '#fff' : 'var(--text-secondary)'}; cursor:pointer;
-                                    display:inline-flex; align-items:center; gap:3px;
-                                ">
-                                    <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
-                                    ${I18n.t('albumTool.viewPage')}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="page-preview-panel" data-tidx="${idx}" style="display:none; padding:6px; border-radius:6px; background:var(--bg-input,#1e1e2e); border:1px solid var(--border,#374151); margin-top:3px; text-align:center;">
-                            ${buildPagePreview(t)}
-                        </div>
-                    </div>`;
-        }).join('')
-        : `<div style="font-size: 12px; color: var(--text-muted)">${I18n.t('albumTool.noTemplate')}</div>`;
+            return `
+                      <div class="template-row" data-idx="${idx}" style="margin-bottom:6px;">
+                          <div class="template-btn" data-idx="${idx}" style="
+                              width:100%; padding:10px 12px; box-sizing:border-box;
+                              display:flex; align-items:center; gap:12px;
+                              border-radius:8px; cursor:pointer; overflow:hidden;
+                              border:1px solid; transition:all .12s;
+                              ${rowStyle}
+                          ">
+                              <div style="flex:0 0 ${wrapW}px; width:${wrapW}px; height:${wrapH}px; display:flex; align-items:center; justify-content:center;">
+                                  ${slotPreview}
+                              </div>
+                              <div style="flex:1; min-width:0; overflow:hidden;">
+                                  <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}${userBadge}</div>
+                                  <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
+                                  <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
+                                  <button class="page-preview-btn" data-tidx="${idx}" style="
+                                      font-size:9px; padding:2px 7px; border-radius:4px;
+                                      background:transparent; border:1px solid ${isActive ? 'rgba(255,255,255,0.5)' : 'var(--border,#374151)'};
+                                      color:${isActive ? '#fff' : 'var(--text-secondary)'}; cursor:pointer;
+                                      display:inline-flex; align-items:center; gap:3px;
+                                  ">
+                                      <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
+                                      ${I18n.t('albumTool.viewPage')}
+                                  </button>
+                              </div>
+                          </div>
+                          <div class="page-preview-panel" data-tidx="${idx}" style="display:none; padding:6px; border-radius:6px; background:var(--bg-input,#1e1e2e); border:1px solid var(--border,#374151); margin-top:3px; text-align:center;">
+                              ${buildPagePreview(t)}
+                          </div>
+                      </div>`;
+          }).join('')
+          : `<div style="font-size: 12px; color: var(--text-muted)">${I18n.t('albumTool.noTemplate')}</div>`;
 
       // Step 4 — specific to each mode
       let step4Html = '';
@@ -764,8 +772,7 @@ export class AlbumTool {
       PanelUI.bindAccordions(panelBody);
     };
 
-    renderPanel();
-
+    // ── Open panel immediately (before gridSizes API resolves) ────────────
     if (defaultMenu) defaultMenu.classList.add('d-none');
     if (panelBody) panelBody.classList.remove('d-none');
     if (closePanel) closePanel.classList.remove('d-none');
@@ -785,6 +792,15 @@ export class AlbumTool {
       const sideOverlay = document.querySelector('.craftools-sidebar-overlay');
       if (sideOverlay) sideOverlay.classList.add('visible');
     }
+
+    // Render initial panel (gridSizes still empty → template list shows loading spinner)
+    renderPanel();
+
+    // Load grid sizes in the background — re-render once ready, non-blocking
+    loadGridSizes().then((sizes) => {
+      gridSizes = sizes as unknown as AlbumTemplate[];
+      renderPanel();
+    });
   }
 
   // ── Helpers: build a locked ImageTool element for a grid cell ────────────
