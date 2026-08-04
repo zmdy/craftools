@@ -5,7 +5,7 @@ const OPTIONS = [
   { value: 'none',       icon: 'match_case_off', i18nKey: 'textTool.textTransformNone',      label: 'Nenhuma' },
   { value: 'uppercase',  icon: 'uppercase',      i18nKey: 'textTool.textTransformUppercase', label: 'MAIÚSCULAS' },
   { value: 'lowercase',  icon: 'lowercase',      i18nKey: 'textTool.textTransformLowercase', label: 'minúsculas' },
-  { value: 'capitalize', icon: 'title',          i18nKey: 'textTool.textTransformCapitalize', label: 'Primeira Letra Maiúscula' },
+  { value: 'capitalize', icon: 'titlecase',      i18nKey: 'textTool.textTransformCapitalize', label: 'Primeira Letra Maiúscula' },
 ];
 
 FieldRegistry.register('text-transform', {

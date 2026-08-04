@@ -4,12 +4,13 @@
  */
 
 import { FieldRegistry } from '../FieldRegistry';
+import { tr } from '../i18nLabel';
 
 const OPTIONS = [
-  { value: 'left',   icon: 'format_align_left' },
-  { value: 'center', icon: 'format_align_center' },
-  { value: 'right',  icon: 'format_align_right' },
-  { value: 'justify', icon: 'format_align_justify' },
+  { value: 'left',    icon: 'format_align_left',    i18nKey: 'common.alignLeft',    label: 'Alinhar à esquerda' },
+  { value: 'center',  icon: 'format_align_center',  i18nKey: 'common.alignCenterH', label: 'Centralizar horizontalmente' },
+  { value: 'right',   icon: 'format_align_right',   i18nKey: 'common.alignRight',   label: 'Alinhar à direita' },
+  { value: 'justify', icon: 'format_align_justify', i18nKey: 'common.alignJustify', label: 'Justificar' },
 ];
 
 FieldRegistry.register('align', {
@@ -23,7 +24,7 @@ FieldRegistry.register('align', {
             <button class="craftools-pill ct-align-btn${o.value === active ? ' active' : ''}"
               type="button" data-align-val="${o.value}"
               style="flex:1; justify-content:center; padding:5px 0;"
-              title="${o.value}">
+              title="${tr(o.i18nKey, o.label)}">
               <span class="material-symbols-outlined" style="font-size:14px;">${o.icon}</span>
             </button>
           `).join('')}

@@ -281,7 +281,9 @@ html, body {
 /* Alignment grids that have no .ct-field wrapper — add consistent padding */
 .ct-accordion-content .ct-align-grid,
 .ct-accordion-content .ct-content-align-grid { padding: 8px 12px; }
-.ct-accordion-content .ct-align-group { padding: 5px 12px; }
+.ct-accordion-content .ct-align-group,
+.ct-accordion-content .ct-fontstyle-group,
+.ct-accordion-content .ct-text-transform-group { padding: 5px 12px; }
 
 /* Complex non-.ct-field wrappers (emoji picker, variable panel, quad number fields, etc.) */
 .ct-accordion-content .ct-emoji-picker-wrap { padding: 8px 12px; }
