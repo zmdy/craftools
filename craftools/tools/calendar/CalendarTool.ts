@@ -166,7 +166,7 @@ export class CalendarTool {
     // panel walls. The 5 style tabs below don't need this -- they're built
     // through PropertyRenderer, which already produces correctly-padded
     // field wrappers, same as every other element's properties panel.
-    const pad = (html: string): string => `<div style="padding:0 12px 4px;">${html}</div>`;
+    const pad = (html: string): string => `<div style="padding:10px 14px 14px;">${html}</div>`;
 
     const renderPanel = (): void => {
       const sectionModel    = CalendarTool._renderModelSection(state);

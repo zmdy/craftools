@@ -64,14 +64,28 @@ function borderFields(prefix: string): Field[] {
   ];
 }
 
-/** Independent 4-corner radius (TL/TR/BR/BL number fields, CSS shorthand order). */
+/** 4-corner radius via standardized quad-number 2x2 field with link toggle. */
 function radiusFields(prefix: string): Field[] {
+  const keys: [string, string, string, string] = [
+    `${prefix}RadiusTL`,
+    `${prefix}RadiusTR`,
+    `${prefix}RadiusBR`,
+    `${prefix}RadiusBL`,
+  ];
   return [
-    { type: 'divider', key: `${prefix}-radius-divider`, label: s('radius'), i18nKey: 'calendarStyle.radius', icon: 'rounded_corner' },
-    { type: 'number', key: `${prefix}RadiusTL`, label: s('cornerTL'), i18nKey: 'calendarStyle.cornerTL', min: 0, max: 300, unit: 'px' },
-    { type: 'number', key: `${prefix}RadiusTR`, label: s('cornerTR'), i18nKey: 'calendarStyle.cornerTR', min: 0, max: 300, unit: 'px' },
-    { type: 'number', key: `${prefix}RadiusBR`, label: s('cornerBR'), i18nKey: 'calendarStyle.cornerBR', min: 0, max: 300, unit: 'px' },
-    { type: 'number', key: `${prefix}RadiusBL`, label: s('cornerBL'), i18nKey: 'calendarStyle.cornerBL', min: 0, max: 300, unit: 'px' },
+    {
+      type: 'quad-number',
+      key: `${prefix}RadiusTL`,
+      keys,
+      watchKeys: keys,
+      label: s('radius'),
+      i18nKey: 'calendarStyle.radius',
+      labels: ['Topo', 'Direita', 'Base', 'Esquerda'],
+      i18nKeys: ['common.top', 'common.right', 'common.bottom', 'common.left'],
+      min: 0,
+      max: 300,
+      unit: 'px',
+    },
   ];
 }
 
@@ -101,7 +115,7 @@ export function monthBarSection(): Section {
       ...fontFields('monthBar'),
       { type: 'color', key: 'monthBarTextColor', label: s('textColor'), i18nKey: 'calendarStyle.textColor' },
       { type: 'color-picker', key: 'monthBarBg', label: s('background'), i18nKey: 'calendarStyle.background', defaultSolid: '#e11d2e' },
-      { type: 'divider', key: 'monthBar-split-divider', label: s('splitMonthYear'), i18nKey: 'calendarStyle.splitMonthYear', icon: 'align_horizontal_space_between' },
+      { type: 'divider', key: 'monthBar-split-divider', label: s('splitMonthYear'), i18nKey: 'calendarStyle.splitMonthYear', icon: 'swap_horiz' },
       { type: 'toggle', key: 'monthBarSplitMonthYear', label: s('splitMonthYear'), i18nKey: 'calendarStyle.splitMonthYear' },
       ...radiusFields('monthBar'),
     ],
