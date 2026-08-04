@@ -148,9 +148,8 @@ export class MobileToolbar {
     }));
 
     const actionItems: FooterItem[] = [
-      { icon: 'note_add',       label: I18n.t('mobileToolbar.toolNewPage'), action: () => document.getElementById('pwa-sidebar-newpage')?.click() },
-      { icon: 'picture_as_pdf', label: I18n.t('mobileToolbar.toolPdf'),     action: () => document.getElementById('pwa-sidebar-export')?.click() },
-      { icon: 'image',          label: I18n.t('mobileToolbar.toolPng'),     action: () => document.getElementById('pwa-sidebar-png')?.click() },
+      { icon: 'note_add',  label: I18n.t('mobileToolbar.toolNewPage'), action: () => document.getElementById('pwa-sidebar-newpage')?.click() },
+      { icon: 'ios_share', label: I18n.t('exportTool.title') || 'Exportar & Salvar', action: () => document.getElementById('pwa-sidebar-export')?.click() },
     ];
 
     this._renderFooterItems([...toolItems, ...actionItems]);
