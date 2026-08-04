@@ -91,6 +91,7 @@ import dmMonoMediumUrl          from '../../assets/fonts/DMMono-Medium.woff?url'
 // the app's own withEmojiFallback() (rather than hand-copying it) keeps
 // this in sync automatically if that fallback stack ever changes.
 import { loadFontCatalog } from './ApiDataLoader.ts';
+import { PdfExport } from './PdfExport.js';
 
 const fontFamilyKey = (primary: string): string => withEmojiFallback(primary).replace(/['"]/g, '');
 
@@ -183,7 +184,53 @@ export class AgendaSvgExport {
    * way the PDF path has; if it's noticeably slow or a page's font isn't
    * covered by CORE_FONTS, that failure is caught per-page (see the loop
    * below) so one bad page doesn't abort the whole run.
+  /**
+   * Converts a single page element into a standalone SVGSVGElement
    */
+  static async pageToSvg(pageEl: HTMLElement): Promise<SVGSVGElement> {
+    const clone = pageEl.cloneNode(true) as HTMLElement;
+    const size = PdfExport._parsePageSize(pageEl);
+
+    const styleTag = document.createElement('style');
+    styleTag.id = 'agenda-svg-export-css';
+    styleTag.textContent = SVG_STAGE_CSS;
+    document.head.appendChild(styleTag);
+
+    const stage = document.createElement('div');
+    stage.style.cssText = 'position:fixed; left:-99999px; top:0; z-index:-1;';
+    document.body.appendChild(stage);
+
+    try {
+      const fontsToUse = await resolveSvgExportFonts();
+      const renderer = new HtmlToSvg({ fonts: fontsToUse });
+      await renderer.preload();
+
+      clone.classList.add('print-page');
+      clone.style.width = size.width;
+      clone.style.minHeight = size.height;
+      if (size.background) clone.style.background = size.background;
+      clone.style.animation = 'none';
+
+      stage.innerHTML = '';
+      stage.appendChild(clone);
+
+      await this._preprocessForSvgExport(clone);
+      const clippedBorders = this._extractClippedBorders(clone);
+
+      const svg = await renderer.render(
+        clone,
+        { rasterizeNestedSVG: true },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (_from: any, to: any) => to,
+      );
+      this._drawBorderOverlays(svg, clippedBorders);
+      return svg;
+    } finally {
+      stage.remove();
+      styleTag.remove();
+    }
+  }
+
   static async print(editor: HTMLElement, opts: { maxOutputPages?: number; merge?: boolean } = {}): Promise<void> {
     const merge = opts.merge !== false;
 

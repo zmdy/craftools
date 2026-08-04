@@ -52,6 +52,20 @@ export class ExportTool extends BaseTool {
               <div style="font-size:10px; color:var(--text-muted);">${t('pdfVectorDesc')}</div>
             </div>
           </div>
+          <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px; font-size:11px; color:var(--text-secondary);" onclick="event.stopPropagation()">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="pdf-vector-cropmarks" checked style="accent-color:var(--accent);">
+              <span>Marcas de corte</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="pdf-vector-bleed" checked style="accent-color:var(--accent);">
+              <span>Sangria de 3mm</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="pdf-vector-cmyk" checked style="accent-color:var(--accent);">
+              <span>Perfil CMYK (Coated FOGRA39)</span>
+            </label>
+          </div>
           <button type="button" class="craftools-pill export-action-btn" data-action="pdf-vector" style="
             width:100%; justify-content:center; gap:6px; padding:6px 12px; background:rgba(59,130,246,0.15); color:#60a5fa; border-color:rgba(59,130,246,0.3); font-weight:600;
           ">
@@ -145,8 +159,12 @@ export class ExportTool extends BaseTool {
             break;
           }
           case 'pdf-vector': {
-            const { PdfExport } = await import('../../utils/PdfExport.js');
-            PdfExport.print(editor);
+            const cropMarks = container.querySelector<HTMLInputElement>('#pdf-vector-cropmarks')?.checked ?? true;
+            const bleedMm = container.querySelector<HTMLInputElement>('#pdf-vector-bleed')?.checked ? 3 : 0;
+            const cmykOutputIntent = container.querySelector<HTMLInputElement>('#pdf-vector-cmyk')?.checked ?? true;
+
+            const { PdfVectorExport } = await import('../../utils/PdfVectorExport.js');
+            await PdfVectorExport.exportAndDownload(editor, { cropMarks, bleedMm, cmykOutputIntent });
             break;
           }
           case 'image': {
