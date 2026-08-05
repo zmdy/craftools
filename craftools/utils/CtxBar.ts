@@ -596,18 +596,18 @@ export class CtxBar {
       this._lastOptions  = [];
       this.el.innerHTML  = '';
 
-      // Pinned-top style (same as fixed ctx-bar mode)
-      this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 10px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
+      // Pinned-top style with system default orange accent
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:5px 12px; border-radius:12px; background:var(--bg-shell, #fff); border:2px solid var(--accent, #f97316); box-shadow:0 4px 16px rgba(249,115,22,0.2); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
       this.el.classList.remove('hidden');
 
       const row = document.createElement('div');
       row.className = 'craftools-ctxbar-row';
-      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
+      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:6px; width:100%; box-sizing:border-box;';
 
-      // Count badge
+      // Count badge with system orange pill styling & icon
       const badge = document.createElement('span');
-      badge.style.cssText = 'font-size:12px; font-weight:600; color:var(--text-secondary); padding:0 6px; white-space:nowrap; flex-shrink:0;';
-      badge.textContent = `${elements.length} elementos selecionados`;
+      badge.style.cssText = 'font-size:12px; font-weight:700; color:var(--accent, #f97316); background:rgba(249,115,22,0.12); padding:3px 10px; border-radius:12px; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px;';
+      badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; color:var(--accent, #f97316);">select_all</span> ${elements.length} elementos selecionados`;
       row.appendChild(badge);
 
       // Separator

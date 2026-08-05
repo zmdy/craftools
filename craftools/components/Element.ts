@@ -51,6 +51,7 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
   isDragging  = false;
   isResizing  = false;
   isRotating  = false;
+  private _dragMoved = false;
   resizeDir   = '';
   startX      = 0;
   startY      = 0;
@@ -81,7 +82,7 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       s.id = 'craftools-multi-select-style';
       s.textContent = [
         'craftools-element.craftools-multi-selected {',
-        '  outline: 2px solid #3b82f6;',
+        '  outline: 2px solid var(--accent, #f97316);',
         '  outline-offset: 1px;',
         '}',
       ].join('\n');
@@ -224,17 +225,28 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
       // multi-selection group without deselecting the current active element.
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
+        // If there was a single active element not yet in SelectionManager, add it first
+        const activeSingle = document.querySelector<Craftools_Element>('craftools-element.craftools-selected');
+        if (activeSingle && activeSingle !== this && !SelectionManager.has(activeSingle)) {
+          SelectionManager.add(activeSingle);
+        }
         SelectionManager.toggle(this);
         return;
       }
 
-      // Normal click: clear multi-selection group before selecting this element.
-      SelectionManager.clear();
-      this.select();
+      // Normal click: if this element is NOT in the multi-selection group,
+      // clear the group and select only this element. If it IS in the group,
+      // preserve the group so dragging moves all selected elements together.
+      const isMultiSelected = SelectionManager.has(this);
+      if (!isMultiSelected) {
+        SelectionManager.clear();
+        this.select();
+      }
 
       const isLocked = this.getAttribute('data-locked') === 'true';
       if (!isLocked) {
         this.isDragging = true;
+        this._dragMoved = false;
         this.startX     = e.clientX;
         this.startY     = e.clientY;
         this._overlay.setPointerCapture(e.pointerId);
@@ -546,6 +558,7 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     const oldPy = this.py;
 
     if (this.isDragging) {
+      this._dragMoved = true;
       const scX = this.unitX === 'mm' ? sc * MM_PX : sc;
       const scY = this.unitY === 'mm' ? sc * MM_PX : sc;
       const rawDxGroup = (e.clientX - this.startX) / scX;
@@ -683,6 +696,14 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
 
   private _handleUp(e: PointerEvent): void {
     SnapEngine.clear(this.closest<HTMLElement>('.craftools-page'));
+
+    // If the element was in a multi-selection group but the user just clicked it
+    // without actually dragging (pointer didn't move), clear multi-selection
+    // and select only this element.
+    if (this.isDragging && !this._dragMoved && SelectionManager.has(this) && SelectionManager.size() > 1) {
+      SelectionManager.clear();
+      this.select();
+    }
 
     if (
       this.isDragging &&

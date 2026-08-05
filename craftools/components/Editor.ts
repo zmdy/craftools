@@ -526,8 +526,8 @@ export class Craftools_Editor extends HTMLElement {
       'position:fixed;',
       'pointer-events:none;',
       'z-index:2000;',
-      'border:2px dashed #3b82f6;',
-      'background:rgba(59,130,246,0.08);',
+      'border:2px dashed var(--accent, #f97316);',
+      'background:rgba(249,115,22,0.08);',
       'border-radius:3px;',
       'display:none;',
     ].join('');
