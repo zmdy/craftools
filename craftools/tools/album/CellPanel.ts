@@ -7,6 +7,7 @@
 import { CellBackground, type CellState } from './CellBackground.js';
 import { ApiPicker }   from './ApiPicker.js';
 import { I18n }        from '../../settings/Translations.js';
+import { ImageTool }   from '../image/ImageTool.js';
 import './CellPanel_Translations.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -127,6 +128,8 @@ export class CellPanel {
       if      (activeTab === 'bg')      renderBgTab(content, cellEl, state, () => { triggerChange(); render(); });
       else if (activeTab === 'overlay') renderOverlayTab(content, cellEl, state, () => { triggerChange(); render(); });
       else if (activeTab === 'border')  renderBorderTab(content, cellEl);
+
+      renderCellPhotoEnhanceSection(container, cellEl);
     };
 
     render();
@@ -623,6 +626,43 @@ function renderBorderTab(container: HTMLElement, cellEl: HTMLElement): void {
     const el = section.querySelector<HTMLElement>(sel);
     if (el) el.addEventListener('input', update);
   });
+
+  container.appendChild(section);
+}
+
+function renderCellPhotoEnhanceSection(container: HTMLElement, cellEl: HTMLElement): void {
+  const imageEl = cellEl.querySelector<HTMLElement & { _craftoolsMeta?: Record<string, unknown> }>('craftools-element[data-craftool="image"]');
+  if (!imageEl) return;
+
+  const meta = imageEl._craftoolsMeta || {};
+  let isEnhanced = !!meta.autoEnhance;
+
+  const section = document.createElement('div');
+  section.style.cssText = 'margin-top:14px; padding-top:10px; border-top:1px dashed var(--border); display:flex; flex-direction:column; gap:6px;';
+  section.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:11px; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
+        <span class="material-symbols-outlined" style="font-size:15px; color:var(--accent);">auto_fix_high</span>
+        Melhorar Qualidade da Imagem
+      </span>
+      <button type="button" class="craftools-pill enhance-cell-toggle ${isEnhanced ? 'active' : ''}" style="display:flex; align-items:center; gap:4px; font-size:10px; padding:3px 8px;">
+        ${isEnhanced ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
+      </button>
+    </div>
+    <span style="font-size:10px; color:var(--text-muted);">Aplica ajuste automático de tom e cor a esta foto da célula.</span>
+  `;
+
+  const toggleBtn = section.querySelector<HTMLButtonElement>('.enhance-cell-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isEnhanced = !isEnhanced;
+      toggleBtn.classList.toggle('active', isEnhanced);
+      toggleBtn.textContent = isEnhanced ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled');
+      (ImageTool as any)._applyProperty(imageEl, 'autoEnhance', isEnhanced);
+    });
+  }
 
   container.appendChild(section);
 }

@@ -134,6 +134,7 @@ export class AlbumTool {
     let cardQuantityMode: 'auto' | 'manual' = 'auto';
     let cardManualQty = 1;
     let smartFit = false; // Auto rotate mismatched aspect ratios
+    let autoEnhanceAll = false; // Auto enhance image quality for all album photos
 
     // Load sizes from global settings
     let availableSizes: PageSize[];
@@ -493,7 +494,16 @@ export class AlbumTool {
                             ${smartFit ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
                         </button>
                     </div>
-                    <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px;">${I18n.t('albumTool.smartFitHelp')}</span>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px; margin-bottom: 10px;">${I18n.t('albumTool.smartFitHelp')}</span>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px dashed var(--border);">
+                        <span class="craftools-label" style="margin:0;">Melhorar Qualidade de Imagens</span>
+                        <button class="craftools-pill auto-enhance-all-btn ${autoEnhanceAll ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:14px;">auto_fix_high</span>
+                            ${autoEnhanceAll ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
+                        </button>
+                    </div>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 4px;">Aplica o ajuste de qualidade e cor a todas as fotos do álbum.</span>
                 </div>
             `;
 
@@ -630,6 +640,20 @@ export class AlbumTool {
         smartFitBtn.addEventListener('click', () => {
           smartFit = !smartFit;
           renderPanel();
+        });
+      }
+
+      const autoEnhanceAllBtn = panelBody.querySelector<HTMLButtonElement>('.auto-enhance-all-btn');
+      if (autoEnhanceAllBtn) {
+        autoEnhanceAllBtn.addEventListener('click', () => {
+          autoEnhanceAll = !autoEnhanceAll;
+          renderPanel();
+
+          // Apply to existing album image elements on canvas
+          const albumImages = editor.querySelectorAll<HTMLElement>('.craftools-grid-container craftools-element[data-craftool="image"]');
+          albumImages.forEach(el => {
+            ImageTool._applyProperty(el, 'autoEnhance', autoEnhanceAll);
+          });
         });
       }
 
@@ -804,7 +828,7 @@ export class AlbumTool {
   }
 
   // ── Helpers: build a locked ImageTool element for a grid cell ────────────
-  static _buildCellElement(editor: HTMLElement, src: string, pl: number, pt: number, cw: number, ch: number, unit = 'px'): HTMLElement {
+  static _buildCellElement(editor: HTMLElement, src: string, pl: number, pt: number, cw: number, ch: number, unit = 'px', autoEnhance = false): HTMLElement {
     const imgEl = ImageTool.createElement('image', editor) as HTMLElement & {
       _craftoolsMeta: Record<string, unknown>;
     };
@@ -816,8 +840,12 @@ export class AlbumTool {
 
     imgEl._craftoolsMeta.bgBlur = 30; // Ativa por padrão no álbum
     imgEl._craftoolsMeta.src = src;
-    const imgTag = imgEl.querySelector<HTMLImageElement>('img');
-    if (imgTag) imgTag.src = src;
+    if (autoEnhance) {
+      ImageTool._applyProperty(imgEl, 'autoEnhance', true);
+    } else {
+      const imgTag = imgEl.querySelector<HTMLImageElement>('img');
+      if (imgTag) imgTag.src = src;
+    }
 
     return imgEl;
   }
@@ -853,6 +881,7 @@ export class AlbumTool {
     template: AlbumTemplate,
     files: File[],
     smartFit = false,
+    autoEnhanceAll = false,
   ): Promise<void> {
     const images: PhotoImageData[] = await Promise.all(files.map(f => new Promise<PhotoImageData>(resolve => {
       const fr = new FileReader();
@@ -875,7 +904,7 @@ export class AlbumTool {
 
       // In photostrip mode, the slot fills the entire container (no padding offset)
       // because the inner-grid already handles the stripe-level padding positioning.
-      const imgEl = AlbumTool._buildCellElement(editor, imgData.src, pl, pt, cw, ch, unit) as HTMLElement & {
+      const imgEl = AlbumTool._buildCellElement(editor, imgData.src, pl, pt, cw, ch, unit, autoEnhanceAll) as HTMLElement & {
         _craftoolsMeta: Record<string, unknown>;
       };
 
