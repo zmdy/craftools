@@ -33,6 +33,8 @@ import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
 import { Notify } from '../utils/Notify.js';
+import { SelectionManager } from '../utils/SelectionManager.js';
+import type { Craftools_Element } from './Element.js';
 // PdfExport, ImageExport and ProjectSerializer are intentionally NOT imported
 // statically here. All three are only ever used inside button-click callbacks
 // (export actions) -- loading them eagerly would pull html2canvas (332 KB)
@@ -158,6 +160,14 @@ export class Craftools_Editor extends HTMLElement {
   // leaking one every time the same element is reselected).
   private _panelSyncHandler?: (e: Event) => void;
   private _panelSyncTarget?: HTMLElement;
+
+  // ── Rubber Band selection state ─────────────────────────────────────────
+  private _rubberBandEl?: HTMLElement;
+  private _rubberAnchorX = 0;
+  private _rubberAnchorY = 0;
+  private _rubberActive  = false;
+  private _rubberOnMove?: (e: PointerEvent) => void;
+  private _rubberOnUp?:   (e: PointerEvent) => void;
 
   constructor() { super(); }
 
@@ -297,8 +307,15 @@ export class Craftools_Editor extends HTMLElement {
 
       // ── Element shortcuts: Esc, Delete, Ctrl+C / Ctrl+V, Arrow-key nudge ─────
       const selected = document.querySelector<PositionedElement>('craftools-element.craftools-selected');
+      const multiSelected = SelectionManager.getAll() as unknown as PositionedElement[];
+      const hasMulti = multiSelected.length > 0;
 
       if (e.key === 'Escape') {
+        if (hasMulti) {
+          e.preventDefault();
+          SelectionManager.clear();
+          return;
+        }
         if (!selected) return;
         e.preventDefault();
         // Element.ts's own outside-click handler calls this exact method --
@@ -311,6 +328,16 @@ export class Craftools_Editor extends HTMLElement {
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (hasMulti) {
+          e.preventDefault();
+          // Delete all multi-selected elements that are not locked.
+          [...multiSelected].forEach(el => {
+            if (el.getAttribute('data-locked') === 'true') return;
+            el.querySelector<HTMLElement>('.del-handle')?.click();
+          });
+          SelectionManager.clear();
+          return;
+        }
         if (!selected || selected.getAttribute('data-locked') === 'true') return;
         e.preventDefault();
         // Reuse Element.ts's own delete-handle click handler rather than
@@ -323,6 +350,12 @@ export class Craftools_Editor extends HTMLElement {
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (hasMulti) {
+          e.preventDefault();
+          // Store the array of multi-selected elements in the clipboard.
+          window.__craftoolsElementClipboard = multiSelected as unknown as HTMLElement;
+          return;
+        }
         if (!selected) return;
         e.preventDefault();
         window.__craftoolsElementClipboard = selected;
@@ -331,23 +364,48 @@ export class Craftools_Editor extends HTMLElement {
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         const source = window.__craftoolsElementClipboard;
-        if (!source || !source.isConnected) return;
+        if (!source) return;
         e.preventDefault();
+        // If clipboard holds an array (multi-copy), paste all elements
+        // preserving their relative positions.
+        if (Array.isArray(source)) {
+          const elements = source as unknown as PositionedElement[];
+          if (elements.length === 0 || !elements[0].isConnected) return;
+          const OFFSET = 20;
+          elements.forEach(el => this._pasteElementClipboard(el, OFFSET));
+          return;
+        }
+        if (!source.isConnected) return;
         this._pasteElementClipboard(source as PositionedElement);
         return;
       }
 
-      if (selected && !e.ctrlKey && !e.metaKey && !e.altKey &&
+      if (!e.ctrlKey && !e.metaKey && !e.altKey &&
           (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-        if (selected.getAttribute('data-locked') === 'true') return;
-        e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
-        if (e.key === 'ArrowUp')    selected.py -= step;
-        if (e.key === 'ArrowDown')  selected.py += step;
-        if (e.key === 'ArrowLeft') selected.px -= step;
-        if (e.key === 'ArrowRight') selected.px += step;
-        selected._applyTransform();
-        selected.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: selected } }));
+        // Nudge multi-selected elements first if any are selected.
+        if (hasMulti) {
+          e.preventDefault();
+          multiSelected.forEach(el => {
+            if (el.getAttribute('data-locked') === 'true') return;
+            if (e.key === 'ArrowUp')    el.py -= step;
+            if (e.key === 'ArrowDown')  el.py += step;
+            if (e.key === 'ArrowLeft')  el.px -= step;
+            if (e.key === 'ArrowRight') el.px += step;
+            el._applyTransform();
+            el.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }));
+          });
+          return;
+        }
+        if (selected && selected.getAttribute('data-locked') !== 'true') {
+          e.preventDefault();
+          if (e.key === 'ArrowUp')    selected.py -= step;
+          if (e.key === 'ArrowDown')  selected.py += step;
+          if (e.key === 'ArrowLeft') selected.px -= step;
+          if (e.key === 'ArrowRight') selected.px += step;
+          selected._applyTransform();
+          selected.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: selected } }));
+        }
       }
     };
     document.addEventListener('keydown', this._onKeydown);
@@ -397,7 +455,7 @@ export class Craftools_Editor extends HTMLElement {
    * clones `source` onto the same page it lives on, offset diagonally, and
    * selects the new copy.
    */
-  private _pasteElementClipboard(source: PositionedElement): void {
+  private _pasteElementClipboard(source: PositionedElement, offsetOverride?: number): void {
     const page = source.closest<HTMLElement>('.craftools-page');
     if (!page) return;
 
@@ -439,13 +497,120 @@ export class Craftools_Editor extends HTMLElement {
     // source.px/py is its LIVE position (drag/nudge never touch the x/y
     // attributes, only the transform), so read from there, not from
     // source's possibly-stale x/y attributes.
-    const OFFSET = 20;
+    const OFFSET = offsetOverride ?? 20;
     clone.setAttribute('x', String(source.px + OFFSET));
     clone.setAttribute('y', String(source.py + OFFSET));
 
     page.appendChild(clone);
     clone.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: clone } }));
     (clone as HTMLElement & { select?: () => void }).select?.();
+  }
+
+  /**
+   * Initialises rubber-band marquee selection on the #canvas-area.
+   *
+   * Pointerdown on the background (target must NOT be a craftools-element
+   * or any element inside one) starts the rubber band. Pointermove draws
+   * the animated selection rectangle. Pointerup finalises the selection:
+   * any <craftools-element> whose bounding rect intersects the rubber band
+   * is added to SelectionManager.
+   */
+  private _initRubberBand(): void {
+    const canvasArea = document.getElementById('canvas-area');
+    if (!canvasArea) return;
+
+    // Create rubber band element (hidden until dragging starts)
+    const band = document.createElement('div');
+    band.id = 'craftools-rubber-band';
+    band.style.cssText = [
+      'position:fixed;',
+      'pointer-events:none;',
+      'z-index:2000;',
+      'border:2px dashed #3b82f6;',
+      'background:rgba(59,130,246,0.08);',
+      'border-radius:3px;',
+      'display:none;',
+    ].join('');
+    document.body.appendChild(band);
+    this._rubberBandEl = band;
+
+    const onMove = (e: PointerEvent) => {
+      if (!this._rubberActive) return;
+      const x1 = Math.min(this._rubberAnchorX, e.clientX);
+      const y1 = Math.min(this._rubberAnchorY, e.clientY);
+      const x2 = Math.max(this._rubberAnchorX, e.clientX);
+      const y2 = Math.max(this._rubberAnchorY, e.clientY);
+      band.style.left   = `${x1}px`;
+      band.style.top    = `${y1}px`;
+      band.style.width  = `${x2 - x1}px`;
+      band.style.height = `${y2 - y1}px`;
+      band.style.display = 'block';
+    };
+
+    const onUp = (e: PointerEvent) => {
+      this._rubberActive = false;
+      band.style.display = 'none';
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup',   onUp);
+
+      // Compute final rubber band rect in viewport coords
+      const bRect = band.getBoundingClientRect();
+      const rbLeft   = Math.min(this._rubberAnchorX, e.clientX);
+      const rbTop    = Math.min(this._rubberAnchorY, e.clientY);
+      const rbRight  = Math.max(this._rubberAnchorX, e.clientX);
+      const rbBottom = Math.max(this._rubberAnchorY, e.clientY);
+
+      // Only trigger if the user actually dragged a meaningful distance
+      if (rbRight - rbLeft < 4 && rbBottom - rbTop < 4) return;
+
+      // Find all elements on the active page that intersect the rubber band
+      const page = this.activePage ?? document.querySelector('.craftools-page');
+      if (!page) return;
+
+      const elements = page.querySelectorAll<Craftools_Element & HTMLElement>('craftools-element');
+      let count = 0;
+      elements.forEach(el => {
+        const r = el.getBoundingClientRect();
+        const intersects = r.left < rbRight && r.right > rbLeft &&
+                           r.top  < rbBottom && r.bottom > rbTop;
+        if (intersects) {
+          SelectionManager.add(el as unknown as import('./Element.js').Craftools_Element);
+          count++;
+        }
+      });
+
+      // If only 1 element intersected, normal-select it instead of multi-select
+      if (count === 1) {
+        const el = SelectionManager.getAll()[0] as unknown as HTMLElement & { select?: () => void };
+        SelectionManager.clear();
+        el.select?.();
+      }
+    };
+
+    this._rubberOnMove = onMove;
+    this._rubberOnUp   = onUp;
+
+    canvasArea.addEventListener('pointerdown', (e: PointerEvent) => {
+      const target = e.target as Element;
+
+      // Only start rubber band when clicking on empty canvas space
+      // (not on an element, not on the control bar, not on the canvas itself)
+      if (target.closest('craftools-element')) return;
+      if (target.closest('.craftools-ctxbar')) return;
+      if (target.closest('.craftools-panel')) return;
+
+      // Must be a real drag (not a quick click on the page for page settings)
+      // — defer decision to move, just record anchor point.
+      this._rubberAnchorX = e.clientX;
+      this._rubberAnchorY = e.clientY;
+      this._rubberActive  = true;
+
+      // Clear any existing multi-selection on new rubber band start
+      SelectionManager.clear();
+
+      document.addEventListener('pointermove', onMove, { passive: true });
+      document.addEventListener('pointerup',   onUp,   { once: true });
+    }, { passive: true });
   }
 
   bindEvents() {
@@ -459,6 +624,23 @@ export class Craftools_Editor extends HTMLElement {
     // leaving the footer stuck on the default tool list even after
     // selecting an element. Restored to match the original Editor.js.
     MobileToolbar.init(this);
+
+    // Initialize rubber band marquee selection.
+    this._initRubberBand();
+
+    // When multi-selection changes, show/hide the group action bar.
+    document.addEventListener('craftools-multiselect-change', (e: Event) => {
+      const { elements } = (e as CustomEvent).detail as { elements: Craftools_Element[] };
+      if (elements.length >= 2) {
+        this.ctxBar.showMultiSelect(elements);
+      } else if (elements.length === 0) {
+        // If a single-selected element is still active, re-show its ctx bar
+        const single = document.querySelector<HTMLElement & { _craftoolsMeta?: unknown }>('craftools-element.craftools-selected');
+        if (!single) {
+          this.ctxBar.hide();
+        }
+      }
+    });
 
     // ── Sidebar helpers ─────────────────────────────────────────────────────
     const closeSidebar = () => {

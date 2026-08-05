@@ -5,6 +5,7 @@
 import { I18n } from "../settings/Translations.js";
 import { AppSettings } from "./AppSettings.js";
 import { PropertyRenderer } from "./PropertyRenderer.js";
+import { SelectionManager } from "./SelectionManager.js";
 
 export interface CtxOption {
   icon:    string;
@@ -577,5 +578,85 @@ export class CtxBar {
       this._detachListeners();
       this.activeElement = null;
       this._lastOptions  = [];
+  }
+
+  /**
+   * Shows a minimal group-action bar when 2+ elements are multi-selected.
+   * The bar is pinned to the top of the viewport (fixed-top mode style),
+   * displaying a count badge plus Delete All and Duplicate All actions.
+   *
+   * Calling show() or hide() from the normal selection flow will replace
+   * or dismiss this bar, so no extra cleanup is needed.
+   */
+  showMultiSelect(elements: HTMLElement[]): void {
+      if (elements.length < 2) return;
+
+      this._detachListeners();
+      this.activeElement = null;
+      this._lastOptions  = [];
+      this.el.innerHTML  = '';
+
+      // Pinned-top style (same as fixed ctx-bar mode)
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:4px 10px; border-radius:12px; background:var(--bg-shell, #fff); border:1px solid var(--border, #ccc); box-shadow:var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
+      this.el.classList.remove('hidden');
+
+      const row = document.createElement('div');
+      row.className = 'craftools-ctxbar-row';
+      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:4px; width:100%; box-sizing:border-box;';
+
+      // Count badge
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:12px; font-weight:600; color:var(--text-secondary); padding:0 6px; white-space:nowrap; flex-shrink:0;';
+      badge.textContent = `${elements.length} elementos selecionados`;
+      row.appendChild(badge);
+
+      // Separator
+      row.appendChild(this.createSeparator());
+
+      // Delete All button
+      row.appendChild(this.createButton('delete_sweep', 'Excluir seleção', () => {
+          const toDelete = [...elements];
+          toDelete.forEach(el => {
+              if (el.getAttribute('data-locked') !== 'true') {
+                  el.querySelector<HTMLElement>('.del-handle')?.click();
+              }
+          });
+          SelectionManager.clear();
+          this.hide();
+      }, 'danger'));
+
+      // Duplicate All button
+      row.appendChild(this.createButton('content_copy', 'Duplicar seleção', async () => {
+          const OFFSET = 20;
+          for (const el of elements) {
+              const clone = el.cloneNode(true) as HTMLElement & {
+                  _craftoolsMeta?: unknown;
+                  _craftoolsAutoResize?: boolean;
+                  _craftoolsVariable?: unknown;
+                  px?: number;
+                  py?: number;
+              };
+              const srcX = parseFloat(el.getAttribute('x') || '0') || 0;
+              const srcY = parseFloat(el.getAttribute('y') || '0') || 0;
+              clone.setAttribute('x', String(srcX + OFFSET));
+              clone.setAttribute('y', String(srcY + OFFSET));
+              clone.removeAttribute('data-linked-id');
+              clone.removeAttribute('data-locked');
+
+              if ((el as any)._craftoolsMeta) clone._craftoolsMeta = JSON.parse(JSON.stringify((el as any)._craftoolsMeta));
+              if ((el as any)._craftoolsAutoResize !== undefined) clone._craftoolsAutoResize = (el as any)._craftoolsAutoResize;
+              if ((el as any)._craftoolsVariable) clone._craftoolsVariable = JSON.parse(JSON.stringify((el as any)._craftoolsVariable));
+
+              const page = el.closest('.craftools-page');
+              if (page) {
+                  page.appendChild(clone);
+                  clone.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: clone } }));
+              }
+          }
+          SelectionManager.clear();
+          this.hide();
+      }));
+
+      this.el.appendChild(row);
   }
 }

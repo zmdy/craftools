@@ -13,6 +13,7 @@
 
 import { SnapEngine, type CraftoolsSnapTarget } from '../utils/SnapEngine.js';
 import { AutoFitText } from '../utils/AutoFitText.js';
+import { SelectionManager } from '../utils/SelectionManager.js';
 
 const MM_PX = 3.7795275591; // CSS pixels per mm at 96 dpi
 
@@ -74,6 +75,18 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     super();
     this._onMove = this._handleMove.bind(this);
     this._onUp   = this._handleUp.bind(this);
+    // Inject multi-selected outline style once
+    if (!document.getElementById('craftools-multi-select-style')) {
+      const s = document.createElement('style');
+      s.id = 'craftools-multi-select-style';
+      s.textContent = [
+        'craftools-element.craftools-multi-selected {',
+        '  outline: 2px solid #3b82f6;',
+        '  outline-offset: 1px;',
+        '}',
+      ].join('\n');
+      document.head.appendChild(s);
+    }
   }
 
   connectedCallback(): void {
@@ -206,6 +219,17 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     // Drag start (overlay captures pointer so siblings don't receive events)
     this._overlay.addEventListener('pointerdown', (e: PointerEvent) => {
       e.stopPropagation();
+
+      // Ctrl+Click (or Cmd+Click on Mac): toggle this element in the
+      // multi-selection group without deselecting the current active element.
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        SelectionManager.toggle(this);
+        return;
+      }
+
+      // Normal click: clear multi-selection group before selecting this element.
+      SelectionManager.clear();
       this.select();
 
       const isLocked = this.getAttribute('data-locked') === 'true';
@@ -444,6 +468,8 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
 
   deselect(): void {
     this.classList.remove('craftools-selected');
+    // Also remove from multi-selection group when explicitly deselected.
+    SelectionManager.remove(this);
     this._ctrlbar.style.display = 'none';
     // select() always bumps zIndex to '100' so the element being edited
     // renders above everything else while selected -- deselect() used to
@@ -522,10 +548,15 @@ export class Craftools_Element extends HTMLElement implements CraftoolsSnapTarge
     if (this.isDragging) {
       const scX = this.unitX === 'mm' ? sc * MM_PX : sc;
       const scY = this.unitY === 'mm' ? sc * MM_PX : sc;
-      this.px += (e.clientX - this.startX) / scX;
-      this.py += (e.clientY - this.startY) / scY;
+      const rawDxGroup = (e.clientX - this.startX) / scX;
+      const rawDyGroup = (e.clientY - this.startY) / scY;
+      this.px += rawDxGroup;
+      this.py += rawDyGroup;
       this.startX = e.clientX;
       this.startY = e.clientY;
+
+      // Move all other multi-selected elements by the same raw delta.
+      SelectionManager.moveGroupBy(this, rawDxGroup, rawDyGroup);
 
       // Apply initial transform so getBoundingClientRect() is current
       // before SnapEngine reads screen position for snap calculation.
