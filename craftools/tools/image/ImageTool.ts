@@ -13,6 +13,8 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection, radiusSection, zIndexSection, backgroundSection, contentAlignSection } from '../../utils/CommonSchema';
 import { ImageFilters } from './ImageFilters.js';
 import { ImageTransform } from './ImageTransform.js';
+import { ImageEnhancer } from '../../utils/ImageEnhancer.js';
+import { AppSettings } from '../../utils/AppSettings.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // Filter keys that map to CSS filter functions
@@ -25,22 +27,15 @@ type FilterKey = typeof FILTER_KEYS[number];
 
 interface ImageMeta {
   src:         string;
+  originalSrc?: string;
+  autoEnhance?: boolean;
   objectFit:   string;
-  /**
-   * "h-v" string (e.g. "center-center"), same shape as every other
-   * content-align.field.ts value -- painted as native CSS object-position
-   * on the `<img>` (see _applyProperty()'s 'contentAlign' case). Only
-   * visible when objectFit === 'contain' (the only fit mode that doesn't
-   * already fill the box edge-to-edge); harmless no-op under 'cover'/'fill'.
-   */
   contentAlign: string;
   zoom:        number;
   posX:        number;
   posY:        number;
   rotation:    number;
-  /** Mirrors the image horizontally (scaleX(-1)) -- composed into ImageTransform.applyTransform()'s single `transform` string. */
   flipH:       boolean;
-  /** Mirrors the image vertically (scaleY(-1)) -- same composition as flipH. */
   flipV:       boolean;
   bgBlur:      number;
   blendMode:   string;
@@ -53,7 +48,7 @@ interface ImageMeta {
 
 const getMeta = (element: HTMLElement): ImageMeta =>
   (element as HTMLElement & { _craftoolsMeta?: ImageMeta })._craftoolsMeta ?? {
-    src: '', objectFit: 'cover', contentAlign: 'center-center', zoom: 1, posX: 0, posY: 0, rotation: 0,
+    src: '', originalSrc: '', autoEnhance: false, objectFit: 'cover', contentAlign: 'center-center', zoom: 1, posX: 0, posY: 0, rotation: 0,
     flipH: false, flipV: false,
     bgBlur: 0, blendMode: 'normal',
     borderWidth: 0, borderStyle: 'none', borderColor: '#000000', borderRadius: 0,
@@ -383,6 +378,7 @@ export class ImageTool extends BaseTool {
         icon: 'photo_camera',
         fields: [
           { type: 'image-upload', key: 'src', label: 'Switch photo', i18nKey: 'imageTool.switchPhoto' },
+          { type: 'toggle', key: 'autoEnhance', label: 'Melhorar Qualidade da Imagem', i18nKey: 'imageTool.autoEnhance' },
         ],
       },
       {
@@ -486,10 +482,17 @@ export class ImageTool extends BaseTool {
     // Map schema key → meta key
     if (key === 'src') {
       meta.src = String(value);
+      meta.originalSrc = meta.src;
       const img = (el.contentArea ?? element).querySelector<HTMLImageElement>('img');
       if (img) img.src = meta.src;
       const blurBg = element.querySelector<HTMLElement>('.craftools-element-blur-bg');
       if (blurBg) blurBg.style.backgroundImage = `url(${meta.src})`;
+      if (meta.autoEnhance) {
+        ImageTool._processAutoEnhance(el);
+      }
+    } else if (key === 'autoEnhance') {
+      meta.autoEnhance = Boolean(value);
+      ImageTool._processAutoEnhance(el);
     } else if (key.startsWith('filter_')) {
       const filterKey = key.replace('filter_', '').replace('_', '-') as FilterKey;
       if (meta.filters) meta.filters[filterKey] = value as number;
@@ -553,6 +556,45 @@ export class ImageTool extends BaseTool {
     // means every key -- current and future -- is covered by construction.
     ImageTool._propagateToSiblings(element, meta);
   }
+
+  /**
+   * Non-destructive Canvas enhancement processing helper for an Image element.
+   */
+  private static async _processAutoEnhance(el: HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement }): Promise<void> {
+    const meta = el._craftoolsMeta;
+    if (!meta) return;
+    const img = (el.contentArea ?? el).querySelector<HTMLImageElement>('img');
+    if (!img) return;
+
+    if (meta.autoEnhance) {
+      if (!meta.originalSrc) {
+        meta.originalSrc = meta.src || img.src;
+      }
+      const profile = AppSettings.get('autoEnhanceProfile');
+      try {
+        const enhancedUrl = await ImageEnhancer.enhanceImage(meta.originalSrc, profile);
+        meta.src = enhancedUrl;
+        img.src = enhancedUrl;
+      } catch (err) {
+        console.error('[ImageTool] Failed auto enhance:', err);
+      }
+    } else if (meta.originalSrc) {
+      meta.src = meta.originalSrc;
+      img.src = meta.originalSrc;
+    }
+  }
+}
+
+// Global listener to update active auto-enhanced images when settings profile changes
+if (typeof document !== 'undefined') {
+  document.addEventListener('craftools-auto-enhance-update', () => {
+    document.querySelectorAll<HTMLElement>('craftools-element[data-craftool="image"]').forEach(el => {
+      const meta = (el as unknown as { _craftoolsMeta?: ImageMeta })._craftoolsMeta;
+      if (meta && meta.autoEnhance) {
+        (ImageTool as unknown as { _processAutoEnhance(element: HTMLElement): void })._processAutoEnhance(el);
+      }
+    });
+  });
 }
 
 // ── Self-registration ─────────────────────────────────────────────────────────

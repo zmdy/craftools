@@ -33,6 +33,19 @@ I18n.addTranslations('settingsTool', {
         sectionIcons: "Ícones",
         fieldIconPack: "Biblioteca de ícones padrão",
 
+        sectionImageEnhance: "Aprimoramento Automático de Imagens",
+        fieldUploadReference: "Imagens de Referência para Aprendizado de Cor",
+        btnAnalyze: "Analisar Referência(s)",
+        fieldBrightness: "Brilho",
+        fieldContrast: "Contraste",
+        fieldSaturation: "Saturação",
+        fieldShadows: "Sombras (Tons Escuros)",
+        fieldMidtones: "Tons Médios",
+        fieldHighlights: "Realces (Tons Claros)",
+        fieldCyanRed: "Ciano - Vermelho",
+        fieldMagentaGreen: "Magenta - Verde",
+        fieldYellowBlue: "Amarelo - Azul",
+
         resetButton: "Restaurar padrões"
     },
     "en": {

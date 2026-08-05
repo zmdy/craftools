@@ -14,6 +14,8 @@
  * does not retroactively touch existing elements, only future ones.
  */
 
+import { DEFAULT_ENHANCE_PROFILE, type EnhanceProfile } from './ImageEnhancer.js';
+
 export type WeekStart = 'sunday' | 'monday';
 
 export interface AppSettingsData {
@@ -39,12 +41,12 @@ export interface AppSettingsData {
   // 'fixed' = pinned below the top toolbar (Canva-style, wider, up to 16 items)
   ctxBarMode: 'floating' | 'fixed';
 
-  // Properties-panel accordions: true (default) = any number of sections/tabs
-  // can stay open at once (PanelUI.bindAccordions()/PropertyRenderer's own
-  // accordion binding both read this live, at click time). false = opening
-  // one section closes every other one in the same panel -- the original,
-  // pre-toggle behaviour every tool (Album, Calendar, ...) used to hardcode.
+  // Properties-panel accordions
   allowMultipleAccordions: boolean;
+
+  // Image Auto-Enhancer Profile & Reference Data
+  autoEnhanceProfile: EnhanceProfile;
+  autoEnhanceReferences: string[];
 }
 
 const STORAGE_KEY = 'craftools-app-settings';
@@ -60,6 +62,8 @@ const DEFAULTS: AppSettingsData = {
   defaultIconPack: 'material-symbols',
   ctxBarMode: 'floating',
   allowMultipleAccordions: true,
+  autoEnhanceProfile: { ...DEFAULT_ENHANCE_PROFILE },
+  autoEnhanceReferences: [],
 };
 
 class _AppSettings {

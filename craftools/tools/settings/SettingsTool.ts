@@ -32,6 +32,7 @@ import { I18n } from '../../settings/Translations.js';
 import { AppSettings, type AppSettingsData } from '../../utils/AppSettings.js';
 import { IconLibrary } from '../../utils/IconLibrary.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
+import { ImageEnhancer } from '../../utils/ImageEnhancer.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 import './SettingsTool_Translations.js';
 
@@ -86,6 +87,8 @@ export class SettingsTool {
       SettingsTool._applyChange(key, value);
     });
 
+    SettingsTool._renderEnhanceSection(panelBody);
+
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
     resetBtn.id = 'set-reset';
@@ -95,9 +98,206 @@ export class SettingsTool {
     resetBtn.addEventListener('click', () => {
       AppSettings.resetAll();
       AppSettings.applyRuntimeDefaults();
+      ImageEnhancer.clearCache();
       SettingsTool._render(panelBody);
     });
     panelBody.appendChild(resetBtn);
+  }
+
+  private static _renderEnhanceSection(panelBody: HTMLElement): void {
+    const cur = AppSettings.getAll();
+    const profile = cur.autoEnhanceProfile;
+    const refs = cur.autoEnhanceReferences || [];
+
+    const sectionEl = document.createElement('div');
+    sectionEl.className = 'ct-accordion-item open';
+    sectionEl.style.cssText = 'border-bottom:1px solid var(--border); margin-bottom:8px;';
+    sectionEl.innerHTML = `
+      <div class="ct-accordion-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; user-select:none; background:var(--bg-card,#181825);">
+        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:12px; color:var(--text-primary);">
+          <span class="material-symbols-outlined" style="font-size:18px; color:var(--accent,#f97316);">auto_fix_high</span>
+          ${s('sectionImageEnhance')}
+        </div>
+        <span class="material-symbols-outlined ct-accordion-chevron" style="font-size:18px; transform:rotate(180deg); transition:transform .2s;">expand_more</span>
+      </div>
+      <div class="ct-accordion-content" style="padding:12px 14px 16px; display:flex; flex-direction:column; gap:12px;">
+        <!-- Upload Reference Button & Thumbnails -->
+        <div class="craftools-field">
+          <label style="font-size:11px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">
+            ${s('fieldUploadReference')}
+          </label>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+            <label class="craftools-topbtn" style="padding:6px 12px; font-size:11px; gap:6px; cursor:pointer; background:var(--bg-input,#1e1e2e);">
+              <span class="material-symbols-outlined" style="font-size:16px;">upload_file</span>
+              Adicionar Referência(s)
+              <input type="file" id="set-enhance-upload" accept="image/*" multiple style="display:none;">
+            </label>
+            ${refs.length ? `
+              <button type="button" id="set-enhance-analyze" class="craftools-topbtn" style="padding:6px 12px; font-size:11px; gap:6px; background:linear-gradient(135deg,#f97316,#ef4444); color:#fff; border:none; font-weight:700;">
+                <span class="material-symbols-outlined" style="font-size:16px;">psychology</span>
+                ${s('btnAnalyze')}
+              </button>
+            ` : ''}
+          </div>
+          <!-- Thumbnails gallery -->
+          <div id="set-enhance-thumbs" style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${refs.map((url, idx) => `
+              <div style="position:relative; width:48px; height:48px; border-radius:6px; overflow:hidden; border:1px solid var(--border);">
+                <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+                <button type="button" class="set-enhance-del-ref" data-idx="${idx}" style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,0.7); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px;">×</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Global Tone Controls -->
+        <div style="border-top:1px dashed var(--border); padding-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">Ajustes Globais</div>
+          ${SettingsTool._renderSliderField('brightness', s('fieldBrightness'), profile.brightness, -100, 100)}
+          ${SettingsTool._renderSliderField('contrast', s('fieldContrast'), profile.contrast, -100, 100)}
+          ${SettingsTool._renderSliderField('saturation', s('fieldSaturation'), profile.saturation, -100, 100)}
+        </div>
+
+        <!-- 3-Zone Color Balance: Shadows, Midtones, Highlights -->
+        ${SettingsTool._renderZoneSliders('shadows', s('fieldShadows'), profile.shadows)}
+        ${SettingsTool._renderZoneSliders('midtones', s('fieldMidtones'), profile.midtones)}
+        ${SettingsTool._renderZoneSliders('highlights', s('fieldHighlights'), profile.highlights)}
+      </div>
+    `;
+
+    panelBody.appendChild(sectionEl);
+    SettingsTool._bindEnhanceSectionEvents(sectionEl, panelBody);
+  }
+
+  private static _renderSliderField(key: string, label: string, value: number, min = -100, max = 100): string {
+    return `
+      <div class="craftools-field" style="display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-secondary);">
+          <span>${label}</span>
+          <span style="font-weight:700; color:var(--accent,#f97316);">${value}</span>
+        </div>
+        <input type="range" class="set-enhance-slider" data-key="${key}" min="${min}" max="${max}" value="${value}" style="width:100%; accent-color:var(--accent,#f97316);">
+      </div>
+    `;
+  }
+
+  private static _renderZoneSliders(zone: 'shadows' | 'midtones' | 'highlights', label: string, values: { cyanRed: number; magentaGreen: number; yellowBlue: number }): string {
+    return `
+      <div style="border-top:1px dashed var(--border); padding-top:8px; display:flex; flex-direction:column; gap:6px;">
+        <div style="font-size:10px; font-weight:700; color:var(--text-primary); uppercase; letter-spacing:0.5px;">${label}</div>
+        ${SettingsTool._renderSliderField(`${zone}.cyanRed`, s('fieldCyanRed'), values.cyanRed, -100, 100)}
+        ${SettingsTool._renderSliderField(`${zone}.magentaGreen`, s('fieldMagentaGreen'), values.magentaGreen, -100, 100)}
+        ${SettingsTool._renderSliderField(`${zone}.yellowBlue`, s('fieldYellowBlue'), values.yellowBlue, -100, 100)}
+      </div>
+    `;
+  }
+
+  private static _bindEnhanceSectionEvents(sectionEl: HTMLElement, panelBody: HTMLElement): void {
+    const header = sectionEl.querySelector('.ct-accordion-header');
+    const content = sectionEl.querySelector<HTMLElement>('.ct-accordion-content');
+    const chevron = sectionEl.querySelector<HTMLElement>('.ct-accordion-chevron');
+
+    if (header && content && chevron) {
+      header.addEventListener('click', () => {
+        const isOpen = sectionEl.classList.contains('open');
+        if (isOpen) {
+          sectionEl.classList.remove('open');
+          content.style.display = 'none';
+          chevron.style.transform = 'rotate(0deg)';
+        } else {
+          sectionEl.classList.add('open');
+          content.style.display = 'flex';
+          chevron.style.transform = 'rotate(180deg)';
+        }
+      });
+    }
+
+    // File upload
+    const uploadInput = sectionEl.querySelector<HTMLInputElement>('#set-enhance-upload');
+    if (uploadInput) {
+      uploadInput.addEventListener('change', async () => {
+        const files = Array.from(uploadInput.files || []);
+        if (!files.length) return;
+
+        const cur = AppSettings.getAll();
+        const existingRefs = cur.autoEnhanceReferences || [];
+        const newUrls: string[] = [];
+
+        for (const file of files) {
+          const url = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(file);
+          });
+          newUrls.push(url);
+        }
+
+        const updatedRefs = [...existingRefs, ...newUrls];
+        AppSettings.set({ autoEnhanceReferences: updatedRefs });
+
+        // Auto analyze new references
+        const profile = await ImageEnhancer.analyzeReferences(updatedRefs);
+        AppSettings.set({ autoEnhanceProfile: profile });
+        ImageEnhancer.clearCache();
+        SettingsTool._render(panelBody);
+      });
+    }
+
+    // Analyze button
+    const analyzeBtn = sectionEl.querySelector<HTMLElement>('#set-enhance-analyze');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', async () => {
+        const cur = AppSettings.getAll();
+        const refs = cur.autoEnhanceReferences || [];
+        if (!refs.length) return;
+
+        const profile = await ImageEnhancer.analyzeReferences(refs);
+        AppSettings.set({ autoEnhanceProfile: profile });
+        ImageEnhancer.clearCache();
+        SettingsTool._render(panelBody);
+      });
+    }
+
+    // Delete ref buttons
+    sectionEl.querySelectorAll<HTMLElement>('.set-enhance-del-ref').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.idx!, 10);
+        const cur = AppSettings.getAll();
+        const refs = [...(cur.autoEnhanceReferences || [])];
+        refs.splice(idx, 1);
+        AppSettings.set({ autoEnhanceReferences: refs });
+        ImageEnhancer.clearCache();
+        SettingsTool._render(panelBody);
+      });
+    });
+
+    // Sliders input
+    sectionEl.querySelectorAll<HTMLInputElement>('.set-enhance-slider').forEach(slider => {
+      slider.addEventListener('input', () => {
+        const keyPath = slider.dataset.key!;
+        const val = parseInt(slider.value, 10);
+        const cur = AppSettings.getAll();
+        const profile = JSON.parse(JSON.stringify(cur.autoEnhanceProfile)) as typeof cur.autoEnhanceProfile;
+
+        if (keyPath.includes('.')) {
+          const [zone, field] = keyPath.split('.') as ['shadows' | 'midtones' | 'highlights', 'cyanRed' | 'magentaGreen' | 'yellowBlue'];
+          profile[zone][field] = val;
+        } else {
+          (profile as unknown as Record<string, number>)[keyPath] = val;
+        }
+
+        AppSettings.set({ autoEnhanceProfile: profile });
+        ImageEnhancer.clearCache();
+
+        // Update value badge label
+        const labelVal = slider.previousElementSibling?.querySelector('span:last-child');
+        if (labelVal) labelVal.textContent = String(val);
+
+        // Notify active elements to re-run autoEnhance if active
+        document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
+      });
+    });
   }
 
   /** Maps real AppSettings data onto the synthetic element's field keys/shapes. */
