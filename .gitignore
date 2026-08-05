@@ -11,5 +11,10 @@ dist/
 # Dependencies
 node_modules/
 
+# Environment files
+.env
+.env.*
+!.env.example
+
 # TypeScript cache
 *.tsbuildinfo
