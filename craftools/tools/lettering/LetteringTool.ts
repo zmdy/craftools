@@ -122,7 +122,7 @@ export class LetteringTool extends BaseTool {
     const patch: Record<string, unknown> = {};
 
     const keys: (keyof LetteringMeta)[] = [
-      'text', 'splitMode', 'arrangement', 'fontSize', 'letterSpacing', 'lineSpacing',
+      'text', 'splitMode', 'arrangement', 'fontSize', 'letterSpacing', 'lineSpacing', 'textAlign',
       'bounceIntensity', 'rotationIntensity', 'skewIntensity', 'sizeIntensity', 'opacityIntensity',
       'fontMode', 'font', 'color', 'colorRandom',
       'curveRadius', 'curveSpread',
@@ -191,6 +191,7 @@ export class LetteringTool extends BaseTool {
           { type: 'slider', key: 'fontSize',      label: s('fontSize'),      i18nKey: 'letteringTool.fontSize',      min: 10, max: 400, step: 1 },
           { type: 'slider', key: 'letterSpacing',  label: s('letterSpacing'), i18nKey: 'letteringTool.letterSpacing', min: -20, max: 60, step: 1 },
           { type: 'slider', key: 'lineSpacing',    label: s('lineSpacing'),   i18nKey: 'letteringTool.lineSpacing',   min: 0.8, max: 3, step: 0.05 },
+          { type: 'align',  key: 'textAlign' },
         ],
       },
       {

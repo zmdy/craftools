@@ -68,6 +68,8 @@ export interface LetteringMeta {
   letterSpacing: number;
   /** Line-height-like multiplier used for the gap between hard (\n) lines. */
   lineSpacing: number;
+  /** Horizontal alignment of multi-word / multi-line lettering tokens. */
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
 
   /** 0-1 sliders driving the random spread of each per-token property. */
   bounceIntensity: number;
@@ -137,6 +139,7 @@ export function defaultLetteringMeta(): LetteringMeta {
     fontSize: 64,
     letterSpacing: 0,
     lineSpacing: 1.3,
+    textAlign: 'center',
 
     bounceIntensity: 0.4,
     rotationIntensity: 0.25,
@@ -273,6 +276,15 @@ export class LetteringGenerator {
     const wordGap = Math.max(2, meta.fontSize * 0.28);
     const lineGap = Math.max(0, meta.fontSize * (meta.lineSpacing - 1));
 
+    const textAlign = meta.textAlign || 'center';
+    const lineJustify = textAlign === 'left' ? 'flex-start'
+      : textAlign === 'right' ? 'flex-end'
+      : textAlign === 'justify' ? 'space-between'
+      : 'center';
+    const containerAlign = textAlign === 'left' ? 'flex-start'
+      : textAlign === 'right' ? 'flex-end'
+      : 'center';
+
     const linesHtml = lines.map(line => {
       const wordsHtml = line.map(wordGroup => {
         if (wordGroup.length === 1 && wordGroup[0].isSpace) {
@@ -284,10 +296,10 @@ export class LetteringGenerator {
         }).join('');
         return `<span class="ct-lettering-word" style="display:inline-flex;flex:0 0 auto;">${inner}</span>`;
       }).join('');
-      return `<div style="display:flex;flex-wrap:wrap;align-items:baseline;column-gap:${wordGap.toFixed(1)}px;width:100%;">${wordsHtml}</div>`;
+      return `<div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:${lineJustify};column-gap:${wordGap.toFixed(1)}px;width:100%;">${wordsHtml}</div>`;
     }).join('');
 
-    return `<div class="ct-lettering-flow" style="display:flex;flex-direction:column;row-gap:${lineGap.toFixed(1)}px;width:100%;height:100%;align-items:center;justify-content:center;">${linesHtml}</div>`;
+    return `<div class="ct-lettering-flow" style="display:flex;flex-direction:column;row-gap:${lineGap.toFixed(1)}px;width:100%;height:100%;align-items:${containerAlign};justify-content:center;">${linesHtml}</div>`;
   }
 
   private static _buildCircularMarkup(meta: LetteringMeta, lines: Line[], totalTokens: number): string {
