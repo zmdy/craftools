@@ -144,11 +144,11 @@ export function defaultLetteringMeta(): LetteringMeta {
     sizeIntensity: 0,
     opacityIntensity: 0,
 
-    fontMode: 'single',
+    fontMode: 'random',
     font: 'DM Sans',
 
     color: '#18181b',
-    colorRandom: false,
+    colorRandom: true,
     colorPalette: ['#f97316', '#ec4899', '#6366f1', '#10b981'],
 
     curveRadius: 40,
