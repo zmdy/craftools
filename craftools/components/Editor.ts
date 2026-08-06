@@ -32,8 +32,11 @@ import { MobileToolbar } from '../utils/MobileToolbar.js';
 import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
-import { Notify } from '../utils/Notify.js';
 import { SelectionManager } from '../utils/SelectionManager.js';
+import { safeImport } from '../utils/SafeImport.js';
+import { UIErrorBoundary } from '../utils/UIErrorBoundary.js';
+import { VersionCheckEngine } from '../utils/VersionCheckEngine.js';
+import { SafeStorage } from '../utils/SafeStorage.js';
 import type { Craftools_Element } from './Element.js';
 // PdfExport, ImageExport and ProjectSerializer are intentionally NOT imported
 // statically here. All three are only ever used inside button-click callbacks
@@ -71,23 +74,23 @@ interface PositionedElement extends HTMLElement {
 // craftools-element-select handler below to import a tool's module
 // on-demand the first time one of its elements is selected in this session.
 const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
-  title:            () => import('../tools/text/TextTool.js'),
-  paragraph:        () => import('../tools/text/TextTool.js'),
-  image:           () => import('../tools/image/ImageTool.js'),
-  shape:            () => import('../tools/shape/ShapeTool.js'),
-  icon:             () => import('../tools/icon/IconTool.js'),
-  emoji:            () => import('../tools/emoji/EmojiTool.js'),
-  emojikitchen:     () => import('../tools/emojikitchen/EmojiKitchenTool.js'),
-  qrcode:           () => import('../tools/qrcode/QRCodeTool.js'),
-  barcode:          () => import('../tools/barcode/BarcodeTool.js'),
-  minicalendar:   () => import('../tools/minicalendar/MiniCalendarTool.js'),
-  curvedtext:       () => import('../tools/curvedtext/CurvedTextTool.js'),
-  stamp:            () => import('../tools/stamp/StampTool.js'),
-  lettering:        () => import('../tools/lettering/LetteringTool.js'),
-  paper:            () => import('../tools/paper/PaperTool.js'),
-  variablecontent: () => import('../tools/variablecontent/VariableContentTool.js'),
-  table:            () => import('../tools/table/TableTool.js'),
-  line:             () => import('../tools/line/LineTool.js'),
+  title:            () => safeImport(() => import('../tools/text/TextTool.js'), { moduleName: 'TextTool' }),
+  paragraph:        () => safeImport(() => import('../tools/text/TextTool.js'), { moduleName: 'TextTool' }),
+  image:           () => safeImport(() => import('../tools/image/ImageTool.js'), { moduleName: 'ImageTool' }),
+  shape:            () => safeImport(() => import('../tools/shape/ShapeTool.js'), { moduleName: 'ShapeTool' }),
+  icon:             () => safeImport(() => import('../tools/icon/IconTool.js'), { moduleName: 'IconTool' }),
+  emoji:            () => safeImport(() => import('../tools/emoji/EmojiTool.js'), { moduleName: 'EmojiTool' }),
+  emojikitchen:     () => safeImport(() => import('../tools/emojikitchen/EmojiKitchenTool.js'), { moduleName: 'EmojiKitchenTool' }),
+  qrcode:           () => safeImport(() => import('../tools/qrcode/QRCodeTool.js'), { moduleName: 'QRCodeTool' }),
+  barcode:          () => safeImport(() => import('../tools/barcode/BarcodeTool.js'), { moduleName: 'BarcodeTool' }),
+  minicalendar:   () => safeImport(() => import('../tools/minicalendar/MiniCalendarTool.js'), { moduleName: 'MiniCalendarTool' }),
+  curvedtext:       () => safeImport(() => import('../tools/curvedtext/CurvedTextTool.js'), { moduleName: 'CurvedTextTool' }),
+  stamp:            () => safeImport(() => import('../tools/stamp/StampTool.js'), { moduleName: 'StampTool' }),
+  lettering:        () => safeImport(() => import('../tools/lettering/LetteringTool.js'), { moduleName: 'LetteringTool' }),
+  paper:            () => safeImport(() => import('../tools/paper/PaperTool.js'), { moduleName: 'PaperTool' }),
+  variablecontent: () => safeImport(() => import('../tools/variablecontent/VariableContentTool.js'), { moduleName: 'VariableContentTool' }),
+  table:            () => safeImport(() => import('../tools/table/TableTool.js'), { moduleName: 'TableTool' }),
+  line:             () => safeImport(() => import('../tools/line/LineTool.js'), { moduleName: 'LineTool' }),
 };
 
 // ── Panel-only tools: key → lazy setup() import ───────────────────────────────
@@ -100,22 +103,22 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   // Dynamic imports target .js files; cast via `any` because TypeScript resolves
   // '.js' to '.ts' stubs (side-effect only) that don't export named classes.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  agenda:    () => import('../tools/agenda/AgendaExportTool.js').then((m: any) => m.AgendaExportTool.setup.bind(m.AgendaExportTool)),
+  agenda:    () => safeImport(() => import('../tools/agenda/AgendaExportTool.js').then((m: any) => UIErrorBoundary.wrap('Agenda', m.AgendaExportTool.setup.bind(m.AgendaExportTool))), { moduleName: 'AgendaExportTool' }),
   // AlbumTool.js's wizard logic was ported to AlbumWizard.ts (see that file's
   // header comment for why it's split from AlbumTool.ts, the eagerly-loaded
   // ToolRegistry-only stub above). AlbumTool.js itself is now dead code.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  album:     () => import('../tools/album/AlbumWizard').then((m: any) => m.AlbumTool.setup.bind(m.AlbumTool)),
+  album:     () => safeImport(() => import('../tools/album/AlbumWizard').then((m: any) => UIErrorBoundary.wrap('Álbum', m.AlbumTool.setup.bind(m.AlbumTool))), { moduleName: 'AlbumWizard' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  calendar:() => import('../tools/calendar/CalendarTool.js').then((m: any) => m.CalendarTool.setup.bind(m.CalendarTool)),
+  calendar:  () => safeImport(() => import('../tools/calendar/CalendarTool.js').then((m: any) => UIErrorBoundary.wrap('Calendário', m.CalendarTool.setup.bind(m.CalendarTool))), { moduleName: 'CalendarTool' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  generator: () => import('../tools/generator/GeneratorTool.js').then((m: any) => m.GeneratorTool.setup.bind(m.GeneratorTool)),
+  generator: () => safeImport(() => import('../tools/generator/GeneratorTool.js').then((m: any) => UIErrorBoundary.wrap('Gerador de Templates', m.GeneratorTool.setup.bind(m.GeneratorTool))), { moduleName: 'GeneratorTool' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  imageslicer: () => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => m.ImageSlicerTool.setup.bind(m.ImageSlicerTool)),
+  imageslicer: () => safeImport(() => import('../tools/imageslicer/ImageSlicerTool.js').then((m: any) => UIErrorBoundary.wrap('Fatiador de Imagens', m.ImageSlicerTool.setup.bind(m.ImageSlicerTool))), { moduleName: 'ImageSlicerTool' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  settings: () => import('../tools/settings/SettingsTool.js').then((m: any) => m.SettingsTool.setup.bind(m.SettingsTool)),
+  settings: () => safeImport(() => import('../tools/settings/SettingsTool.js').then((m: any) => UIErrorBoundary.wrap('Configurações', m.SettingsTool.setup.bind(m.SettingsTool))), { moduleName: 'SettingsTool' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  export:   () => import('../tools/export/ExportTool.js').then((m: any) => m.ExportTool.setup.bind(m.ExportTool)),
+  export:   () => safeImport(() => import('../tools/export/ExportTool.js').then((m: any) => UIErrorBoundary.wrap('Exportar', m.ExportTool.setup.bind(m.ExportTool))), { moduleName: 'ExportTool' }),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -176,6 +179,36 @@ export class Craftools_Editor extends HTMLElement {
     // runtime globals before anything is dragged or selected this session.
     AppSettings.applyRuntimeDefaults();
     this.render();
+
+    // Start background deployment version poller & cache manager
+    VersionCheckEngine.startMonitoring();
+
+    // Check if page reloaded due to emergency auto-heal
+    this._checkEmergencyDraftRestore();
+  }
+
+  private _checkEmergencyDraftRestore(): void {
+    try {
+      const isEmergencyReload = SafeStorage.getItem('craftools_emergency_reload_flag', sessionStorage);
+      if (isEmergencyReload === 'true') {
+        SafeStorage.removeItem('craftools_emergency_reload_flag', sessionStorage);
+        const draftJson = SafeStorage.getItem('craftools_emergency_draft', sessionStorage);
+        if (draftJson) {
+          SafeStorage.removeItem('craftools_emergency_draft', sessionStorage);
+          setTimeout(async () => {
+            try {
+              const { ProjectSerializer } = await safeImport(() => import('../utils/ProjectSerializer.js'), { moduleName: 'ProjectSerializer' });
+              ProjectSerializer.importProjectJson(draftJson);
+              Notify.show('Sua sessão foi recuperada com sucesso após uma atualização do sistema.', 'success');
+            } catch (err) {
+              console.warn('[Editor] Emergency draft restoration error:', err);
+            }
+          }, 300);
+        }
+      }
+    } catch (e) {
+      console.warn('[Editor] Emergency draft check failed:', e);
+    }
   }
 
   disconnectedCallback() {

@@ -93,6 +93,23 @@ export default defineConfig({
     },
   },
 
+  plugins: [
+    {
+      name: 'generate-version-plugin',
+      generateBundle() {
+        const versionData = JSON.stringify({
+          version: `1.0.${Date.now()}`,
+          buildTime: Date.now(),
+        }, null, 2);
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: versionData,
+        });
+      },
+    },
+  ],
+
   // Needed so Vite serves vendor/ and assets/ correctly in dev mode
-  publicDir: false,
+  publicDir: 'public',
 });
