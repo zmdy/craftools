@@ -431,11 +431,48 @@ ${pageRules}
     const htmlLang = htmlLangMap[I18n.currentLang] || 'pt-BR';
     const autoPrint = opts.autoPrint !== false;
 
+    /**
+     * "Preview shows blank/missing emoji, but the actually-saved PDF has
+     * them" bug: window.print()'s live preview pane is a snapshot taken
+     * whenever the browser last repainted the document, while the final
+     * output (fired when the user clicks Save/Print) is rendered fresh at
+     * that later moment. 'Noto Color Emoji' -- the only entry in
+     * EmojiFont.ts's EMOJI_FONT_STACK that's an actual web font (the rest
+     * are OS-installed fallbacks like Apple/Segoe UI Emoji) -- is a large
+     * file, and nothing was ever forcing the browser to fetch + wait for it
+     * specifically: _collectUsedFonts()/_collectUsedFontFaces() deliberately
+     * keep only the FIRST family in each element's font-family stack (the
+     * user's actually-chosen font), so 'Noto Color Emoji' never made it
+     * into the explicit document.fonts.load() calls below even though a
+     * `<link>` for it could still land in <head>. It was purely a passive,
+     * lazy fetch (font-display:swap) triggered only once the browser
+     * decided some glyph on the page actually needed that fallback -- with
+     * no explicit wait, print()'s 150ms-after-fonts.ready timing routinely
+     * fired the preview snapshot before that fetch finished, while the
+     * user's own delay before clicking Save gave it enough time to land
+     * for the real output.
+     *
+     * Fix: scan the serialized body for any emoji glyph and, if present,
+     * treat 'Noto Color Emoji' exactly like every other real font used on
+     * the page -- request its `<link>` (previously this was ALSO wrongly
+     * skipped entirely whenever a self-hosted font API base was configured,
+     * see the old apiBase-gated emojiFontLink this replaces) and add it to
+     * the explicit document.fonts.load() list so print() genuinely waits
+     * for it before firing, same as every other face.
+     */
+    const hasEmoji = /\p{Extended_Pictographic}/u.test(body);
+    const usedFonts = new Set(opts.usedFonts ?? []);
+    const usedFontFacesInput = [...(opts.usedFontFaces ?? [])];
+    if (hasEmoji) {
+      usedFonts.add('Noto Color Emoji');
+      usedFontFacesInput.push({ family: 'Noto Color Emoji', weight: '400', style: 'normal' });
+    }
+
     // Dedupe against BASELINE_FONT_FACES + whatever the actual pages use
     // (mirrors the family-only dedupe below for _buildFontLink).
     const faceKey = (f: { family: string; weight: string; style: string }) => `${f.family}|${f.weight}|${f.style}`;
     const facesByKey = new Map<string, { family: string; weight: string; style: string }>();
-    [...BASELINE_FONT_FACES, ...(opts.usedFontFaces ?? [])].forEach(f => facesByKey.set(faceKey(f), f));
+    [...BASELINE_FONT_FACES, ...usedFontFacesInput].forEach(f => facesByKey.set(faceKey(f), f));
     const usedFontFacesJson = JSON.stringify([...facesByKey.values()]);
 
     const printScript = autoPrint ? `
@@ -490,13 +527,16 @@ ${pageRules}
         });
     });
 <\/script>` : '';
-    const apiBase = (window as any).CRAFTOOLS_CONFIG?.apiBase?.replace(/\/$/, '');
     // BASELINE_FONTS always included (see its own comment above) + whatever
     // fonts the actual pages use (Text/Title/Variable Content/Lettering/...)
     // -- see _collectUsedFonts()'s doc comment for why this print window
-    // can't just inherit the live editor's own <head> fonts.
-    const fontLink       = this._buildFontLink(new Set([...BASELINE_FONTS, ...(opts.usedFonts ?? [])]));
-    const emojiFontLink  = apiBase ? '' : `<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">`;
+    // can't just inherit the live editor's own <head> fonts. 'Noto Color
+    // Emoji' rides along here too now (via `usedFonts`, see the hasEmoji
+    // block above) instead of the old separate apiBase-gated emojiFontLink
+    // -- _buildFontLink() already emits both the self-hosted AND Google
+    // Fonts links together whenever an API base is configured, so this
+    // covers the emoji font the exact same reliable way as any real font.
+    const fontLink = this._buildFontLink(new Set([...BASELINE_FONTS, ...usedFonts]));
 
     return `<!DOCTYPE html>
 <html lang="${htmlLang}">
@@ -505,7 +545,6 @@ ${pageRules}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Craftools</title>
     ${fontLink}
-    ${emojiFontLink}
     <style>${css}</style>
 </head>
 <body>
