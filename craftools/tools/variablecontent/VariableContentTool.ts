@@ -14,6 +14,7 @@ import { AppSettings } from '../../utils/AppSettings.js';
 import { VariableEngine, type VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
 import { FONTS, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
+import { LetteringGenerator, defaultLetteringMeta } from '../../utils/LetteringGenerator';
 import '../../components/CtFontSelect.js';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
 // below (placeholder text) -- without this side-effect import the keys are
@@ -115,6 +116,18 @@ export class VariableContentTool extends BaseTool {
     } else {
       patch.variableBinding = stringifyVariableBinding(memoryBinding);
     }
+
+    if (!('useLettering' in existing)) patch.useLettering = false;
+    if (!('splitMode' in existing)) patch.splitMode = 'letter';
+    if (!('bounceIntensity' in existing)) patch.bounceIntensity = 0.4;
+    if (!('rotationIntensity' in existing)) patch.rotationIntensity = 0.25;
+    if (!('skewIntensity' in existing)) patch.skewIntensity = 0;
+    if (!('sizeIntensity' in existing)) patch.sizeIntensity = 0;
+    if (!('opacityIntensity' in existing)) patch.opacityIntensity = 0;
+    if (!('fontMode' in existing)) patch.fontMode = 'random';
+    if (!('colorRandom' in existing)) patch.colorRandom = false;
+    if (!('letteringSeed' in existing)) patch.letteringSeed = 1001;
+
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
 
@@ -204,8 +217,43 @@ export class VariableContentTool extends BaseTool {
             textEl.style.whiteSpace = 'normal';
             textEl.innerHTML = val || '—';
           } else {
-            textEl.style.whiteSpace = 'pre-wrap';
-            textEl.textContent = (val && String(val).length) ? val : '—';
+            const state = PropertyRenderer._readState(element);
+            const useLettering = state.useLettering === true;
+            if (useLettering && val) {
+              textEl.style.whiteSpace = 'normal';
+              const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
+              const letteringMeta = {
+                ...defaultLetteringMeta(),
+                text: String(val),
+                splitMode: (state.splitMode === 'word' ? 'word' : 'letter') as 'word' | 'letter',
+                bounceIntensity: Number(state.bounceIntensity ?? 0.4),
+                rotationIntensity: Number(state.rotationIntensity ?? 0.25),
+                skewIntensity: Number(state.skewIntensity ?? 0),
+                sizeIntensity: Number(state.sizeIntensity ?? 0),
+                opacityIntensity: Number(state.opacityIntensity ?? 0),
+                fontMode: (state.fontMode === 'random' ? 'random' : 'single') as 'random' | 'single',
+                colorRandom: state.colorRandom === true,
+                font: fontVal,
+                fontSize: Number(state.fontSize ?? 16),
+                color: typeof state.color === 'string' ? state.color : '#18181b',
+                seed: Number(state.letteringSeed ?? 1001),
+              };
+              textEl.innerHTML = LetteringGenerator.buildMarkup(letteringMeta);
+              textEl.querySelectorAll<HTMLElement>('[data-ct-token]').forEach(span => {
+                span.style.cursor = 'pointer';
+                span.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const idx = Number(span.dataset.ctToken);
+                  if (!Number.isFinite(idx)) return;
+                  const newSeed = Math.floor(Math.random() * 1e9);
+                  PropertyRenderer.applyChange(element, 'letteringSeed', newSeed);
+                  VariableContentTool._applyVariablePreview(element, textEl, binding);
+                });
+              });
+            } else {
+              textEl.style.whiteSpace = 'pre-wrap';
+              textEl.textContent = (val && String(val).length) ? val : '—';
+            }
           }
           AutoFitText.applyAutoSize(element, textEl);
         };
@@ -648,11 +696,103 @@ export class VariableContentTool extends BaseTool {
         ],
       },
       backgroundSection(),
+      {
+        section: 'Lettering',
+        i18nKey: 'variableContentTool.sectionLettering',
+        icon: 'auto_awesome',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'toggle',
+            key: 'useLettering',
+            label: 'Ativar Lettering',
+            i18nKey: 'variableContentTool.useLettering',
+          },
+          {
+            type: 'custom',
+            key: 'splitMode',
+            label: 'Modo de Divisão',
+            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            render: (el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderPillGroup(
+              () => (PropertyRenderer._readState(el).splitMode === 'word' ? 'word' : 'letter'),
+              onChange,
+              [
+                { value: 'letter', label: 'Letras', icon: 'text_fields' },
+                { value: 'word',   label: 'Palavras', icon: 'splitscreen' },
+              ]
+            ),
+          },
+          { type: 'slider', key: 'bounceIntensity',   label: 'Elevação',    hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'rotationIntensity', label: 'Rotação',     hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'skewIntensity',     label: 'Inclinação',  hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'sizeIntensity',     label: 'Tam. Variado',hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'opacityIntensity',  label: 'Opacidade',   hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          {
+            type: 'custom',
+            key: 'fontMode',
+            label: 'Fontes Aleatórias',
+            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            render: (el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderPillGroup(
+              () => (PropertyRenderer._readState(el).fontMode === 'random' ? 'random' : 'single'),
+              onChange,
+              [
+                { value: 'single', label: 'Única', icon: 'font_download' },
+                { value: 'random', label: 'Aleatória', icon: 'casino' },
+              ]
+            ),
+          },
+          { type: 'toggle', key: 'colorRandom', label: 'Cores Aleatórias', hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering },
+          {
+            type: 'custom',
+            key: 'letteringReroll',
+            label: 'Sortear Novos Estilos',
+            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            render: (_el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderActionButton('Sortear Novos Estilos', 'shuffle', () => onChange(Math.floor(Math.random() * 1e9))),
+          },
+        ],
+      },
       borderSection(),
       radiusSection(),
       contentAlignSection(),
       zIndexSection(),
     ];
+  }
+
+  private static _renderPillGroup(
+    readValue: () => string,
+    onChange: (value: unknown) => void,
+    options: Array<{ value: string; label: string; icon?: string }>,
+  ): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'ct-field-row';
+    wrap.style.gap = '6px';
+    wrap.style.marginBottom = '4px';
+
+    const paint = (): void => {
+      const current = readValue();
+      wrap.innerHTML = options.map(o => `
+        <button type="button" class="craftools-pill${o.value === current ? ' active' : ''}" data-val="${o.value}" style="flex:1;justify-content:center;gap:5px;padding:7px 10px;">
+          ${o.icon ? `<span class="material-symbols-outlined" style="font-size:14px;">${o.icon}</span>` : ''}
+          ${o.label}
+        </button>`).join('');
+      wrap.querySelectorAll<HTMLButtonElement>('button[data-val]').forEach(btn => {
+        btn.addEventListener('click', () => { onChange(btn.dataset.val); paint(); });
+      });
+    };
+
+    paint();
+    return wrap;
+  }
+
+  private static _renderActionButton(label: string, icon: string, onClick: () => void): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <button type="button" class="craftools-pill" style="width:100%;justify-content:center;gap:6px;padding:8px 10px;">
+        <span class="material-symbols-outlined" style="font-size:15px;">${icon}</span>
+        ${label}
+      </button>`;
+    wrap.querySelector('button')!.addEventListener('click', onClick);
+    return wrap;
   }
 
   protected static _applyProperty(element: HTMLElement, key: string, value: unknown): void {
@@ -692,6 +832,27 @@ export class VariableContentTool extends BaseTool {
       const content = getContent(element);
       if (content) VariableContentTool._applyVariablePreview(element, content, binding);
       return;
+    }
+
+    const LETTERING_KEYS = new Set([
+      'useLettering', 'splitMode', 'bounceIntensity', 'rotationIntensity',
+      'skewIntensity', 'sizeIntensity', 'opacityIntensity', 'fontMode',
+      'colorRandom', 'letteringReroll', 'letteringSeed'
+    ]);
+
+    if (key === 'letteringReroll') {
+      const newSeed = Math.floor(Math.random() * 1e9);
+      PropertyRenderer.applyChange(element, 'letteringSeed', newSeed);
+      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+      const content = getContent(element);
+      if (content) VariableContentTool._applyVariablePreview(element, content, binding);
+      return;
+    }
+
+    if (LETTERING_KEYS.has(key)) {
+      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+      const content = getContent(element);
+      if (content) VariableContentTool._applyVariablePreview(element, content, binding);
     }
 
     const content = getContent(element);
