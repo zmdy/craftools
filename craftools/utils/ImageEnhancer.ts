@@ -9,6 +9,8 @@
  * Provides fast 2D ImageData pixel processing for the "Melhorar Qualidade da Imagem" toggle.
  */
 
+import { AppSettings } from './AppSettings.js';
+
 export interface ColorBalanceZone {
   cyanRed: number;      // -100 to +100 (Red <-> Cyan)
   magentaGreen: number; // -100 to +100 (Green <-> Magenta)
@@ -36,6 +38,16 @@ export const DEFAULT_ENHANCE_PROFILE: EnhanceProfile = {
 export class ImageEnhancer {
   /** Cache of enhanced image Data URLs keyed by src + profile hash */
   private static _cache = new Map<string, string>();
+
+  /** Returns active enhance profile from AppSettings or DEFAULT_ENHANCE_PROFILE */
+  static getProfile(): EnhanceProfile {
+    try {
+      const settings = (window as any).craftoolsAppSettings ?? AppSettings.getAll();
+      return settings?.autoEnhanceProfile || DEFAULT_ENHANCE_PROFILE;
+    } catch {
+      return DEFAULT_ENHANCE_PROFILE;
+    }
+  }
 
   /**
    * Analyzes one or more reference images to extract color balance, brightness,

@@ -61,6 +61,7 @@ import { AgendaExport }      from './AgendaExport.js';
 import { withEmojiFallback } from './EmojiFont.js';
 import HtmlToSvg              from '@tooooools/html-to-svg';
 import html2canvas            from 'html2canvas';
+import { ExportNormalizer }   from './ExportNormalizer.js';
 import './AgendaSvgExport_Translations.js';
 
 import dmSansRegularUrl         from '../../assets/fonts/DMSans-Regular.woff?url';
@@ -500,6 +501,8 @@ export class AgendaSvgExport {
    *    paint the (unsupported) clipped background behind our raster.
    */
   private static async _preprocessForSvgExport(pageEl: HTMLElement): Promise<void> {
+    // ── Pass 0: ExportNormalizer (object-fit, pan/zoom, auto-enhance, text styles) ──
+    await ExportNormalizer.normalizePage(pageEl);
 
     // ── Pass 1: emoji ────────────────────────────────────────────────────
     pageEl.querySelectorAll<HTMLElement>('[data-emoji-char]').forEach(emojiDiv => {

@@ -5,6 +5,7 @@
 import { Notify } from './Notify.js';
 import { I18n }   from '../settings/Translations.js';
 import './ImageExport_Translations.js';
+import { ExportNormalizer } from './ExportNormalizer.js';
 // Vendored via npm (previously loaded on first use from a cdnjs CDN <script>
 // injected at runtime, see _loadHtml2Canvas() below pre-migration) -- Vite
 // bundles it into dist/assets/*.js on build, so PNG/JPG export no longer
@@ -56,35 +57,58 @@ export class ImageExport {
             this._hideUI(editor);
             await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-            for (let i = 0; i < pages.length; i++) {
-                const canvas = await html2canvas(pages[i], {
-                    scale:           opts.scale,
-                    useCORS:         true,
-                    allowTaint:      true,
-                    backgroundColor: opts.format === 'jpg' ? '#ffffff' : null,
-                    logging:         false,
-                    ignoreElements:  (el: Element) =>
-                        el.classList?.contains('craftools-ctrlbar')  ||
-                        el.id === 'ct-snap-overlay'                  ||
-                        el.classList?.contains('album-drag-handle')  ||
-                        el.classList?.contains('slot-drag-handle')   ||
-                        el.classList?.contains('cell-edit-btn'),
-                });
+            // Create off-screen stage attached to body for rendering
+            const stage = document.createElement('div');
+            stage.style.cssText = 'position:fixed; left:-99999px; top:0; z-index:-1; pointer-events:none;';
+            document.body.appendChild(stage);
 
-                const mimeType = opts.format === 'jpg' ? 'image/jpeg' : 'image/png';
-                const quality  = opts.format === 'jpg' ? 0.92 : undefined;
+            try {
+              for (let i = 0; i < pages.length; i++) {
+                  const origPage = pages[i];
+                  const pageClone = origPage.cloneNode(true) as HTMLElement;
+                  
+                  // Match dimensions of original page
+                  pageClone.style.width = origPage.style.width || getComputedStyle(origPage).width;
+                  pageClone.style.height = origPage.style.height || getComputedStyle(origPage).height;
 
-                const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, mimeType, quality));
-                if (!blob) {
-                    Notify.toast(I18n.t('imageExport.pageError').replace('{n}', String(i + 1)), 'error');
-                    continue;
-                }
+                  stage.appendChild(pageClone);
 
-                const suffix   = pages.length > 1 ? `-p${i + 1}` : '';
-                const resLabel = _resolutions().find(r => r.scale === opts.scale)?.id ?? 'export';
-                this._triggerDownload(blob, `craftools${suffix}-${resLabel}.${opts.format}`);
+                  // Normalize images, object-fit, auto-enhancement and text styles
+                  await ExportNormalizer.normalizePage(pageClone);
 
-                if (i < pages.length - 1) await new Promise<void>(r => setTimeout(r, 400));
+                  const canvas = await html2canvas(pageClone, {
+                      scale:           opts.scale,
+                      useCORS:         true,
+                      allowTaint:      true,
+                      backgroundColor: opts.format === 'jpg' ? '#ffffff' : null,
+                      logging:         false,
+                      ignoreElements:  (el: Element) =>
+                          el.classList?.contains('craftools-ctrlbar')  ||
+                          el.id === 'ct-snap-overlay'                  ||
+                          el.classList?.contains('album-drag-handle')  ||
+                          el.classList?.contains('slot-drag-handle')   ||
+                          el.classList?.contains('cell-edit-btn'),
+                  });
+
+                  stage.innerHTML = '';
+
+                  const mimeType = opts.format === 'jpg' ? 'image/jpeg' : 'image/png';
+                  const quality  = opts.format === 'jpg' ? 0.92 : undefined;
+
+                  const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, mimeType, quality));
+                  if (!blob) {
+                      Notify.toast(I18n.t('imageExport.pageError').replace('{n}', String(i + 1)), 'error');
+                      continue;
+                  }
+
+                  const suffix   = pages.length > 1 ? `-p${i + 1}` : '';
+                  const resLabel = _resolutions().find(r => r.scale === opts.scale)?.id ?? 'export';
+                  this._triggerDownload(blob, `craftools${suffix}-${resLabel}.${opts.format}`);
+
+                  if (i < pages.length - 1) await new Promise<void>(r => setTimeout(r, 400));
+              }
+            } finally {
+              stage.remove();
             }
 
             Notify.toast(
