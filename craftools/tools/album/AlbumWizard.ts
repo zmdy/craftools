@@ -322,13 +322,19 @@ export class AlbumTool {
         : matchingTemplates.length > 0
           ? matchingTemplates.map((t, idx) => {
             const slotPreview = buildSlotPreview(t);
-            const isActive = selectedTemplate === t;
+            const isActive = !!selectedTemplate && (
+              selectedTemplate === t ||
+              (selectedTemplate.id && t.id ? selectedTemplate.id === t.id : selectedTemplate.name === t.name)
+            );
             const rowStyle = isActive
-              ? `background:var(--accent); border-color:var(--accent);`
-              : `background:var(--bg-input,#1e1e2e); border-color:var(--border,#374151);`;
-            const textColor = isActive ? 'color:#fff;' : '';
-            const mutedColor = isActive ? 'color:rgba(255,255,255,0.7);' : 'color:var(--text-muted);';
-            const secColor = isActive ? 'color:rgba(255,255,255,0.85);' : 'color:var(--text-secondary);';
+              ? `background:rgba(249,115,22,0.08); border:2px solid var(--accent,#f97316); box-shadow:0 0 0 1px var(--accent,#f97316), 0 2px 8px rgba(249,115,22,0.18);`
+              : `background:var(--bg-input,#f4f4f5); border:1px solid var(--border,#e4e4e7);`;
+            const textColor = isActive ? 'color:var(--accent,#f97316);' : 'color:var(--text-primary);';
+            const mutedColor = 'color:var(--text-muted);';
+            const secColor = 'color:var(--text-secondary);';
+            const checkBadge = isActive
+              ? `<span class="material-symbols-outlined" style="font-size:18px; color:var(--accent,#f97316); flex-shrink:0;">check_circle</span>`
+              : '';
 
             const isPromo = t.type === 'promo_kit';
             const isUserTemplate = t._source === 'user';
@@ -351,20 +357,23 @@ export class AlbumTool {
                               width:100%; padding:10px 12px; box-sizing:border-box;
                               display:flex; align-items:center; gap:12px;
                               border-radius:8px; cursor:pointer; overflow:hidden;
-                              border:1px solid; transition:all .12s;
+                              transition:all .12s;
                               ${rowStyle}
                           ">
                               <div style="flex:0 0 ${wrapW}px; width:${wrapW}px; height:${wrapH}px; display:flex; align-items:center; justify-content:center;">
                                   ${slotPreview}
                               </div>
                               <div style="flex:1; min-width:0; overflow:hidden;">
-                                  <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}${userBadge}</div>
+                                  <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:4px;">
+                                      <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${textColor}">${t.name}${userBadge}</div>
+                                      ${checkBadge}
+                                  </div>
                                   <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
                                   <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
                                   <button class="page-preview-btn" data-tidx="${idx}" style="
                                       font-size:9px; padding:2px 7px; border-radius:4px;
-                                      background:transparent; border:1px solid ${isActive ? 'rgba(255,255,255,0.5)' : 'var(--border,#374151)'};
-                                      color:${isActive ? '#fff' : 'var(--text-secondary)'}; cursor:pointer;
+                                      background:transparent; border:1px solid ${isActive ? 'var(--accent,#f97316)' : 'var(--border,#374151)'};
+                                      color:${isActive ? 'var(--accent,#f97316)' : 'var(--text-secondary)'}; cursor:pointer;
                                       display:inline-flex; align-items:center; gap:3px;
                                   ">
                                       <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
