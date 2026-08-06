@@ -43,6 +43,7 @@ import { loadGridSizes } from '../../utils/ApiDataLoader.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection } from '../../utils/CommonSchema';
 import { CellPanel } from './CellPanel.js';
+import { GeneratorTool } from '../generator/GeneratorTool.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG.js';
@@ -370,15 +371,26 @@ export class AlbumTool {
                                   </div>
                                   <div style="font-size:10px; margin-bottom:2px; ${secColor}">${isPromo ? I18n.t('albumTool.mixedSizes') : `${t.cellWidth} × ${t.cellHeight} mm`}</div>
                                   <div style="font-size:10px; margin-bottom:6px; ${mutedColor}">${I18n.t('albumTool.gapLabel')}: ${t.cellGap} mm</div>
-                                  <button class="page-preview-btn" data-tidx="${idx}" style="
-                                      font-size:9px; padding:2px 7px; border-radius:4px;
-                                      background:transparent; border:1px solid ${isActive ? 'var(--accent,#f97316)' : 'var(--border,#374151)'};
-                                      color:${isActive ? 'var(--accent,#f97316)' : 'var(--text-secondary)'}; cursor:pointer;
-                                      display:inline-flex; align-items:center; gap:3px;
-                                  ">
-                                      <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
-                                      ${I18n.t('albumTool.viewPage')}
-                                  </button>
+                                  <div style="display:flex; gap:6px; align-items:center;">
+                                      <button class="page-preview-btn" data-tidx="${idx}" style="
+                                          font-size:9px; padding:2px 7px; border-radius:4px;
+                                          background:transparent; border:1px solid ${isActive ? 'var(--accent,#f97316)' : 'var(--border,#374151)'};
+                                          color:${isActive ? 'var(--accent,#f97316)' : 'var(--text-secondary)'}; cursor:pointer;
+                                          display:inline-flex; align-items:center; gap:3px;
+                                      ">
+                                          <span class="material-symbols-outlined" style="font-size:11px;">grid_view</span>
+                                          ${I18n.t('albumTool.viewPage')}
+                                      </button>
+                                      <button class="edit-template-btn" data-tidx="${idx}" style="
+                                          font-size:9px; padding:2px 7px; border-radius:4px;
+                                          background:transparent; border:1px solid ${isActive ? 'var(--accent,#f97316)' : 'var(--border,#374151)'};
+                                          color:${isActive ? 'var(--accent,#f97316)' : 'var(--text-secondary)'}; cursor:pointer;
+                                          display:inline-flex; align-items:center; gap:3px;
+                                      ">
+                                          <span class="material-symbols-outlined" style="font-size:11px;">edit</span>
+                                          ${I18n.t('albumTool.editTemplate')}
+                                      </button>
+                                  </div>
                               </div>
                           </div>
                           <div class="page-preview-panel" data-tidx="${idx}" style="display:none; padding:6px; border-radius:6px; background:var(--bg-input,#1e1e2e); border:1px solid var(--border,#374151); margin-top:3px; text-align:center;">
@@ -575,8 +587,8 @@ export class AlbumTool {
       // ── Bind: Step 2 — Template (now div, not button) ────────────────
       panelBody.querySelectorAll<HTMLElement>('.template-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          // Ignore clicks that originated from the page-preview-btn
-          if ((e.target as HTMLElement).closest('.page-preview-btn')) return;
+          // Ignore clicks that originated from page-preview-btn or edit-template-btn
+          if ((e.target as HTMLElement).closest('.page-preview-btn') || (e.target as HTMLElement).closest('.edit-template-btn')) return;
           selectedTemplate = matchingTemplates[Number(btn.getAttribute('data-idx'))];
           renderPanel();
         });
@@ -594,6 +606,17 @@ export class AlbumTool {
           btn.style.background = isOpen ? 'transparent' : 'var(--accent-dim, #1e3a5f)';
           btn.style.color = isOpen ? 'var(--text-secondary)' : 'var(--accent, #3b82f6)';
           btn.style.borderColor = isOpen ? 'var(--border,#374151)' : 'var(--accent, #3b82f6)';
+        });
+      });
+
+      // ── Bind: Edit template in Generator ───────────────────────────
+      panelBody.querySelectorAll<HTMLElement>('.edit-template-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tidx = Number(btn.getAttribute('data-tidx'));
+          const tmpl = matchingTemplates[tidx];
+          if (!tmpl) return;
+          GeneratorTool.loadTemplateForEdit(tmpl);
         });
       });
 

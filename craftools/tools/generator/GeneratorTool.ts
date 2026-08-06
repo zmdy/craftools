@@ -155,6 +155,16 @@ type CraftoolsWindow = typeof window & {
 
 export class GeneratorTool {
 
+  public static pendingTemplateToLoad: GridTemplate | null = null;
+
+  public static loadTemplateForEdit(template: GridTemplate): void {
+    GeneratorTool.pendingTemplateToLoad = template;
+    const btn = document.querySelector('[data-tool="generator"]') as HTMLElement | null;
+    if (btn) {
+      btn.click();
+    }
+  }
+
   public static setup(editor: HTMLElement): void {
     const panelTitle = document.getElementById('panel-title');
     const panelBody  = document.getElementById('panel-body');
@@ -247,6 +257,22 @@ export class GeneratorTool {
         };
       }
     };
+
+    // Check if a template was requested for editing from AlbumWizard or elsewhere
+    if (GeneratorTool.pendingTemplateToLoad) {
+      const templateToEdit = GeneratorTool.pendingTemplateToLoad;
+      GeneratorTool.pendingTemplateToLoad = null;
+
+      loadTemplate(templateToEdit);
+
+      // If user-created (_source === 'user' with _id), preserve editingId so save updates it.
+      // If built-in JS or API template, clear editingId so saving creates a NEW user template.
+      if (templateToEdit._source === 'user' && templateToEdit._id) {
+        editingId = templateToEdit._id;
+      } else {
+        editingId = null;
+      }
+    }
 
     // ── Template object builder ────────────────────────────────────────
     const buildTemplateObject = (): GridTemplate => {
