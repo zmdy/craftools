@@ -48,15 +48,15 @@ export default defineConfig({
   // so this just makes that deterministic and avoids the first-load penalty
   // on a cold cache or after `vite --force`.
   optimizeDeps: {
+    entries: ['./index.html', './main.ts'],
     include: [
       'bootstrap/dist/js/bootstrap.bundle.min.js',
       'html2canvas',
       'sortablejs',
       '@tooooools/html-to-svg',
+    ],
+    exclude: [
       '@fortawesome/free-solid-svg-icons',
-      'jspdf',
-      'pdf-lib',
-      'svg2pdf.js',
     ],
   },
 
