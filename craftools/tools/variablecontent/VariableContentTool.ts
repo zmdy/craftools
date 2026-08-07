@@ -13,7 +13,7 @@ import { I18n } from '../../settings/Translations.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { VariableEngine, type VariableBinding } from '../../utils/VariableEngine';
 import type { PropertySchema } from '../../types/PropertySchema';
-import { FONTS, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
+import { FONTS, loadCraftoolsFonts, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
 import { LetteringGenerator, defaultLetteringMeta } from '../../utils/LetteringGenerator';
 import '../../components/CtFontSelect.js';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
@@ -201,7 +201,45 @@ export class VariableContentTool extends BaseTool {
       textEl.textContent = I18n.t('variablePanel.previewLoading');
       import('../../utils/VariableEngine.js').then(({ VariableEngine }) => {
         const applyResolved = (val: string): void => {
-          if (binding.type === 'emojiKitchen') {
+          const state = PropertyRenderer._readState(element);
+          const rawUseLettering = state.useLettering;
+          const useLettering = rawUseLettering === true || rawUseLettering === 'true' || rawUseLettering === 1 || rawUseLettering === '1';
+
+          if (useLettering && val && binding.type !== 'emojiKitchen' && binding.type !== 'image' && binding.type !== 'miniCalendar') {
+            loadCraftoolsFonts(FONTS);
+            textEl.style.whiteSpace = 'normal';
+            const plainText = String(val).replace(/<[^>]*>/g, '').trim() || String(val);
+            const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
+            const currentFontSize = parseFloat(textEl.style.fontSize) || parseFloat(element.style.fontSize) || 24;
+            const letteringMeta = {
+              ...defaultLetteringMeta(),
+              text: plainText,
+              splitMode: (state.splitMode === 'word' ? 'word' : 'letter') as 'word' | 'letter',
+              bounceIntensity: Number(state.bounceIntensity ?? 0.4),
+              rotationIntensity: Number(state.rotationIntensity ?? 0.25),
+              skewIntensity: Number(state.skewIntensity ?? 0),
+              sizeIntensity: Number(state.sizeIntensity ?? 0),
+              opacityIntensity: Number(state.opacityIntensity ?? 0),
+              fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
+              colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
+              font: fontVal,
+              fontSize: Number(state.fontSize ?? currentFontSize),
+              color: typeof state.color === 'string' ? state.color : '#18181b',
+              seed: Number(state.letteringSeed ?? 1001),
+            };
+            textEl.innerHTML = LetteringGenerator.buildMarkup(letteringMeta);
+            textEl.querySelectorAll<HTMLElement>('[data-ct-token]').forEach(span => {
+              span.style.cursor = 'pointer';
+              span.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = Number(span.dataset.ctToken);
+                if (!Number.isFinite(idx)) return;
+                const newSeed = Math.floor(Math.random() * 1e9);
+                PropertyRenderer.applyChange(element, 'letteringSeed', newSeed);
+                VariableContentTool._applyVariablePreview(element, textEl, binding);
+              });
+            });
+          } else if (binding.type === 'emojiKitchen') {
             // Real markup (not typed text) -- see the miniCalendar note below
             // about why whiteSpace goes back to 'normal' for HTML content.
             textEl.style.whiteSpace = 'normal';
@@ -217,44 +255,8 @@ export class VariableContentTool extends BaseTool {
             textEl.style.whiteSpace = 'normal';
             textEl.innerHTML = val || '—';
           } else {
-            const state = PropertyRenderer._readState(element);
-            const rawUseLettering = state.useLettering;
-            const useLettering = rawUseLettering === true || rawUseLettering === 'true' || rawUseLettering === 1 || rawUseLettering === '1';
-            if (useLettering && val) {
-              textEl.style.whiteSpace = 'normal';
-              const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
-              const letteringMeta = {
-                ...defaultLetteringMeta(),
-                text: String(val),
-                splitMode: (state.splitMode === 'word' ? 'word' : 'letter') as 'word' | 'letter',
-                bounceIntensity: Number(state.bounceIntensity ?? 0.4),
-                rotationIntensity: Number(state.rotationIntensity ?? 0.25),
-                skewIntensity: Number(state.skewIntensity ?? 0),
-                sizeIntensity: Number(state.sizeIntensity ?? 0),
-                opacityIntensity: Number(state.opacityIntensity ?? 0),
-                fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
-                colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
-                font: fontVal,
-                fontSize: Number(state.fontSize ?? 16),
-                color: typeof state.color === 'string' ? state.color : '#18181b',
-                seed: Number(state.letteringSeed ?? 1001),
-              };
-              textEl.innerHTML = LetteringGenerator.buildMarkup(letteringMeta);
-              textEl.querySelectorAll<HTMLElement>('[data-ct-token]').forEach(span => {
-                span.style.cursor = 'pointer';
-                span.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const idx = Number(span.dataset.ctToken);
-                  if (!Number.isFinite(idx)) return;
-                  const newSeed = Math.floor(Math.random() * 1e9);
-                  PropertyRenderer.applyChange(element, 'letteringSeed', newSeed);
-                  VariableContentTool._applyVariablePreview(element, textEl, binding);
-                });
-              });
-            } else {
-              textEl.style.whiteSpace = 'pre-wrap';
-              textEl.textContent = (val && String(val).length) ? val : '—';
-            }
+            textEl.style.whiteSpace = 'pre-wrap';
+            textEl.textContent = (val && String(val).length) ? val : '—';
           }
           AutoFitText.applyAutoSize(element, textEl);
         };
