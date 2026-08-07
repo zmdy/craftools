@@ -6,6 +6,7 @@
  */
 
 import { Notify } from './Notify.js';
+import { PanelManager } from './PanelManager.js';
 
 export class UIErrorBoundary {
   /**
@@ -16,9 +17,11 @@ export class UIErrorBoundary {
     setupFn: (editor: HTMLElement, ...args: unknown[]) => void | Promise<void>
   ): (editor: HTMLElement, ...args: unknown[]) => Promise<void> {
     return async (editor: HTMLElement, ...args: unknown[]) => {
+      const reqId = PanelManager.currentRequestId;
       try {
         await setupFn(editor, ...args);
       } catch (err) {
+        if (!PanelManager.isValid(reqId)) return;
         console.error(`[UIErrorBoundary] Error mounting panel for tool "${toolName}":`, err);
         this.renderFallbackUI(toolName, editor, () => this.wrap(toolName, setupFn)(editor, ...args));
       }

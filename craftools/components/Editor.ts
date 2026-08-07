@@ -39,6 +39,7 @@ import { safeImport } from '../utils/SafeImport.js';
 import { UIErrorBoundary } from '../utils/UIErrorBoundary.js';
 import { VersionCheckEngine } from '../utils/VersionCheckEngine.js';
 import { SafeStorage } from '../utils/SafeStorage.js';
+import { PanelManager } from '../utils/PanelManager.js';
 import type { Craftools_Element } from './Element.js';
 // PdfExport, ImageExport and ProjectSerializer are intentionally NOT imported
 // statically here. All three are only ever used inside button-click callbacks
@@ -824,7 +825,10 @@ export class Craftools_Editor extends HTMLElement {
         if (menuIcon && menuIcon.textContent !== 'close') menuIcon.textContent = 'close';
       };
 
+      const reqId = PanelManager.startSession();
+
       const dispatch = (): void => {
+        if (!PanelManager.isValid(reqId)) return;
         const toolDef = ToolRegistry.get(toolType);
         if (toolDef?.tool) {
           const tool = toolDef.tool;
@@ -834,23 +838,11 @@ export class Craftools_Editor extends HTMLElement {
           openPanelMenu();
           this.activePage = null;
 
-          // Keep the properties panel in sync when the ctx-bar changes the
-          // element's state (CtxBar mirrors this the other way -- it
-          // re-shows itself on the same event, see CtxBar.show()'s
-          // 'craftools-state-change' listener). Detach the previous
-          // element's listener first so reselecting never leaks one.
           if (this._panelSyncHandler && this._panelSyncTarget) {
             this._panelSyncTarget.removeEventListener('craftools-state-change', this._panelSyncHandler);
           }
           this._panelSyncHandler = (e: Event) => {
-            // Skip changes the panel itself just caused (tagged by
-            // PropertyRenderer.runFromPanel() -- see its own doc comment).
-            // This handler's only real job is the ctx-bar -> panel
-            // direction; re-running it for the panel's OWN change used to
-            // force a synchronous full re-render of the very field the
-            // user was mid-interaction with (e.g. destroying the color
-            // picker's native <input type="color"> while its OS popup was
-            // still open, closing it after the very first pick).
+            if (!PanelManager.isValid(reqId)) return;
             const detail = (e as CustomEvent).detail as { fromPanel?: boolean } | undefined;
             if (detail?.fromPanel) return;
             if (panelBody) tool.renderPropertiesPanel(panelBody, el);
@@ -867,7 +859,9 @@ export class Craftools_Editor extends HTMLElement {
       // element reconstructed from a restored session never went through
       // that path — lazily import its module now, on first selection.
       if (!ToolRegistry.has(toolType) && LAZY_TOOL_LOADERS[toolType]) {
-        LAZY_TOOL_LOADERS[toolType]().then(dispatch);
+        LAZY_TOOL_LOADERS[toolType]().then(() => {
+          if (PanelManager.isValid(reqId)) dispatch();
+        });
       } else {
         dispatch();
       }
@@ -1149,25 +1143,31 @@ export class Craftools_Editor extends HTMLElement {
           clearToolActive();
           btn.classList.add('active');
 
+          const reqId = PanelManager.startSession();
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (tool === 'emoji') {
             const m: any = await import('../tools/emoji/EmojiTool.js');
+            if (!PanelManager.isValid(reqId)) return;
             if (panelTitle) panelTitle.textContent = 'Emoji';
             if (panelBody)  m.EmojiTool.renderPickerPanel(panelBody, this);
           } else if (tool === 'shape') {
             const m: any = await import('../tools/shape/ShapeTool.js');
+            if (!PanelManager.isValid(reqId)) return;
             if (panelTitle) panelTitle.textContent = I18n.t('shapeTool.panelTitle');
             if (panelBody)  m.ShapeTool.renderPickerPanel(panelBody, this);
           } else if (tool === 'icon') {
             const m: any = await import('../tools/icon/IconTool.js');
+            if (!PanelManager.isValid(reqId)) return;
             if (panelTitle) panelTitle.textContent = I18n.t('iconTool.panelTitle');
             if (panelBody)  m.IconTool.renderPickerPanel(panelBody, this);
           } else if (tool === 'table') {
             const m: any = await import('../tools/table/TableTool.js');
+            if (!PanelManager.isValid(reqId)) return;
             if (panelTitle) panelTitle.textContent = I18n.t('tableTool.pickerTitle');
             if (panelBody)  m.TableTool.renderPickerPanel(panelBody, this);
           }
-          openPanelMenu();
+          if (PanelManager.isValid(reqId)) openPanelMenu();
         });
       }
 
@@ -1191,10 +1191,13 @@ export class Craftools_Editor extends HTMLElement {
           clearToolActive();
           btn.classList.add('active');
 
+          const reqId = PanelManager.startSession();
+
           // album: open the wizard panel on the active page
           if (tool === 'album') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const m: any = await import('../tools/album/AlbumWizard');
+            if (!PanelManager.isValid(reqId)) return;
             const targetPage = (this.activePage ?? this.querySelector('.craftools-page')) as HTMLElement | null;
             if (targetPage) m.AlbumTool.setup(this, targetPage);
             return;
@@ -1223,6 +1226,7 @@ export class Craftools_Editor extends HTMLElement {
             const loader = LAZY_TOOL_LOADERS[tool];
             if (!targetPage || !loader) return;
             const mod = await loader();
+            if (!PanelManager.isValid(reqId)) return;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ToolClass = Object.values(mod as object)[0] as any;
             if (!ToolClass?.createElement) return;
@@ -1248,13 +1252,16 @@ export class Craftools_Editor extends HTMLElement {
           }
 
           // panel-only tools: agenda / calendar / generator / imageslicer
+          if (!PanelManager.isValid(reqId)) return;
           openPanelMenu();
           this.activePage = null;
           const setupLoader = PANEL_SETUP_MAP[tool];
           if (setupLoader) {
             const setupFn = await setupLoader();
+            if (!PanelManager.isValid(reqId)) return;
             await setupFn(this);
           } else {
+            if (!PanelManager.isValid(reqId)) return;
             if (panelTitle) panelTitle.textContent = (btn as HTMLElement).title || I18n.t('editor.papers');
             if (panelBody)  panelBody.innerHTML = `<div style="padding:14px;"><p style="font-size:12px;color:var(--text-secondary)">${I18n.t('editor.emptyPanel')}</p></div>`;
           }
