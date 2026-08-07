@@ -756,12 +756,12 @@ export class AlbumTool {
         generateBtn.addEventListener('click', () => {
           if (!selectedTemplate || !selectedSize) return;
           if (selectedMode === 'album') {
-            AlbumTool.processAlbum(editor, pageEl, selectedSize, selectedTemplate, photos, smartFit);
+            AlbumTool.processAlbum(editor, pageEl, selectedSize, selectedTemplate, photos, smartFit, autoEnhanceAll);
           } else if (cardPhoto) {
             const qty = cardQuantityMode === 'auto'
               ? calcPerPage(selectedTemplate, selectedSize)
               : cardManualQty;
-            AlbumTool.processBusinessCard(editor, pageEl, selectedSize, selectedTemplate, cardPhoto, qty, smartFit);
+            AlbumTool.processBusinessCard(editor, pageEl, selectedSize, selectedTemplate, cardPhoto, qty, smartFit, autoEnhanceAll);
           }
           if (defaultMenu) defaultMenu.classList.remove('d-none');
           if (panelBody) panelBody.classList.add('d-none');
@@ -872,11 +872,13 @@ export class AlbumTool {
 
     imgEl._craftoolsMeta.bgBlur = 30; // Ativa por padrão no álbum
     imgEl._craftoolsMeta.src = src;
+    imgEl._craftoolsMeta.originalSrc = src;
+
+    const imgTag = imgEl.querySelector<HTMLImageElement>('img');
+    if (imgTag) imgTag.src = src;
+
     if (autoEnhance) {
       ImageTool._applyProperty(imgEl, 'autoEnhance', true);
-    } else {
-      const imgTag = imgEl.querySelector<HTMLImageElement>('img');
-      if (imgTag) imgTag.src = src;
     }
 
     return imgEl;
@@ -977,6 +979,7 @@ export class AlbumTool {
     file: File,
     quantity: number,
     smartFit = false,
+    autoEnhanceAll = false,
   ): Promise<void> {
     const imgData: PhotoImageData = await new Promise(resolve => {
       const fr = new FileReader();
@@ -1046,6 +1049,10 @@ export class AlbumTool {
         if (smartFit && sharedMeta.objectFit === 'contain') {
           imgTag.style.objectFit = 'contain';
         }
+      }
+
+      if (autoEnhanceAll) {
+        ImageTool._applyProperty(imgEl, 'autoEnhance', true);
       }
 
       allElements.push(imgEl);
