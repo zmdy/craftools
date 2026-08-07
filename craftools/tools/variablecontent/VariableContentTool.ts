@@ -218,7 +218,8 @@ export class VariableContentTool extends BaseTool {
             textEl.innerHTML = val || '—';
           } else {
             const state = PropertyRenderer._readState(element);
-            const useLettering = state.useLettering === true;
+            const rawUseLettering = state.useLettering;
+            const useLettering = rawUseLettering === true || rawUseLettering === 'true' || rawUseLettering === 1 || rawUseLettering === '1';
             if (useLettering && val) {
               textEl.style.whiteSpace = 'normal';
               const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
@@ -231,8 +232,8 @@ export class VariableContentTool extends BaseTool {
                 skewIntensity: Number(state.skewIntensity ?? 0),
                 sizeIntensity: Number(state.sizeIntensity ?? 0),
                 opacityIntensity: Number(state.opacityIntensity ?? 0),
-                fontMode: (state.fontMode === 'random' ? 'random' : 'single') as 'random' | 'single',
-                colorRandom: state.colorRandom === true,
+                fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
+                colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
                 font: fontVal,
                 fontSize: Number(state.fontSize ?? 16),
                 color: typeof state.color === 'string' ? state.color : '#18181b',
@@ -712,7 +713,10 @@ export class VariableContentTool extends BaseTool {
             type: 'custom',
             key: 'splitMode',
             label: 'Modo de Divisão',
-            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            hidden: (el: HTMLElement) => {
+              const v = PropertyRenderer._readState(el).useLettering;
+              return !(v === true || v === 'true' || v === 1 || v === '1');
+            },
             render: (el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderPillGroup(
               () => (PropertyRenderer._readState(el).splitMode === 'word' ? 'word' : 'letter'),
               onChange,
@@ -722,18 +726,18 @@ export class VariableContentTool extends BaseTool {
               ]
             ),
           },
-          { type: 'slider', key: 'bounceIntensity',   label: 'Elevação',    hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
-          { type: 'slider', key: 'rotationIntensity', label: 'Rotação',     hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
-          { type: 'slider', key: 'skewIntensity',     label: 'Inclinação',  hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
-          { type: 'slider', key: 'sizeIntensity',     label: 'Tam. Variado',hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
-          { type: 'slider', key: 'opacityIntensity',  label: 'Opacidade',   hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'bounceIntensity',   label: 'Elevação',    hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); }, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'rotationIntensity', label: 'Rotação',     hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); }, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'skewIntensity',     label: 'Inclinação',  hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === '1'); }, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'sizeIntensity',     label: 'Tam. Variado',hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); }, min: 0, max: 1, step: 0.05 },
+          { type: 'slider', key: 'opacityIntensity',  label: 'Opacidade',   hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === '1'); }, min: 0, max: 1, step: 0.05 },
           {
             type: 'custom',
             key: 'fontMode',
             label: 'Fontes Aleatórias',
-            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); },
             render: (el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderPillGroup(
-              () => (PropertyRenderer._readState(el).fontMode === 'random' ? 'random' : 'single'),
+              () => (PropertyRenderer._readState(el).fontMode === 'single' ? 'single' : 'random'),
               onChange,
               [
                 { value: 'single', label: 'Única', icon: 'font_download' },
@@ -741,12 +745,12 @@ export class VariableContentTool extends BaseTool {
               ]
             ),
           },
-          { type: 'toggle', key: 'colorRandom', label: 'Cores Aleatórias', hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering },
+          { type: 'toggle', key: 'colorRandom', label: 'Cores Aleatórias', hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); } },
           {
             type: 'custom',
             key: 'letteringReroll',
             label: 'Sortear Novos Estilos',
-            hidden: (el: HTMLElement) => !PropertyRenderer._readState(el).useLettering,
+            hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); },
             render: (_el: HTMLElement, onChange: (v: unknown) => void) => VariableContentTool._renderActionButton('Sortear Novos Estilos', 'shuffle', () => onChange(Math.floor(Math.random() * 1e9))),
           },
         ],
@@ -843,16 +847,21 @@ export class VariableContentTool extends BaseTool {
     if (key === 'letteringReroll') {
       const newSeed = Math.floor(Math.random() * 1e9);
       PropertyRenderer.applyChange(element, 'letteringSeed', newSeed);
-      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+      const binding = VariableContentTool._readAnyVariableBinding(element);
       const content = getContent(element);
       if (content) VariableContentTool._applyVariablePreview(element, content, binding);
       return;
     }
 
     if (LETTERING_KEYS.has(key)) {
-      const binding = (element as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+      const binding = VariableContentTool._readAnyVariableBinding(element);
       const content = getContent(element);
       if (content) VariableContentTool._applyVariablePreview(element, content, binding);
+      // Re-render property panel when toggling useLettering so hidden fields show/hide immediately
+      if (key === 'useLettering') {
+        const panelBody = document.getElementById('panel-body');
+        if (panelBody) this.renderPropertiesPanel(panelBody, element);
+      }
     }
 
     const content = getContent(element);
