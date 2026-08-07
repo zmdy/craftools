@@ -33,6 +33,7 @@ import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
 import { SelectionManager } from '../utils/SelectionManager.js';
+import { Notify } from '../utils/Notify.js';
 import { safeImport } from '../utils/SafeImport.js';
 import { UIErrorBoundary } from '../utils/UIErrorBoundary.js';
 import { VersionCheckEngine } from '../utils/VersionCheckEngine.js';
@@ -198,8 +199,12 @@ export class Craftools_Editor extends HTMLElement {
           setTimeout(async () => {
             try {
               const { ProjectSerializer } = await safeImport(() => import('../utils/ProjectSerializer.js'), { moduleName: 'ProjectSerializer' });
-              ProjectSerializer.importProjectJson(draftJson);
-              Notify.show('Sua sessão foi recuperada com sucesso após uma atualização do sistema.', 'success');
+              const pagesWrapper = document.getElementById('pages-wrapper');
+              if (pagesWrapper) {
+                const blob = new Blob([draftJson], { type: 'application/json' });
+                await ProjectSerializer.importProject(pagesWrapper, blob);
+              }
+              Notify.toast('Sua sessão foi recuperada com sucesso após uma atualização do sistema.', 'info');
             } catch (err) {
               console.warn('[Editor] Emergency draft restoration error:', err);
             }

@@ -88,6 +88,6 @@ export class VersionCheckEngine {
   }
 
   private static _promptUserForUpdate(_newVersion: string): void {
-    Notify.show('Nova atualização do Craftool Studio disponível! As alterações serão aplicadas na próxima inicialização.', 'info');
+    Notify.toast('Nova atualização do Craftool Studio disponível! As alterações serão aplicadas na próxima inicialização.', 'info');
   }
 }

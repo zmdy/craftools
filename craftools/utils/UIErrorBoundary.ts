@@ -76,6 +76,6 @@ export class UIErrorBoundary {
       });
     }
 
-    Notify.show('Ocorreu uma oscilação temporária ao abrir a ferramenta.', 'warning');
+    Notify.toast('Ocorreu uma oscilação temporária ao abrir a ferramenta.', 'warning');
   }
 }

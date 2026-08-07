@@ -7,7 +7,7 @@
 
 import { I18n } from '../settings/Translations.js';
 
-type ToastType = 'info' | 'success' | 'error';
+type ToastType = 'info' | 'success' | 'error' | 'warning';
 
 /**
  * Calling the handle directly still just dismisses the toast (100%
@@ -33,12 +33,14 @@ const TYPE_ICON: Record<ToastType, string> = {
     info:    'info',
     success: 'check_circle',
     error:   'error',
+    warning: 'warning',
 };
 
 const TYPE_COLOR_VAR: Record<ToastType, string> = {
     info:    '--accent',
     success: '--success',
     error:   '--danger',
+    warning: '--accent',
 };
 
 function ensureToastContainer(): HTMLElement {
