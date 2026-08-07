@@ -594,8 +594,10 @@ export class VariablePanel {
                 </div>
                 <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('variablePanel.dateCustomLabel')}</span>
-                    <div id="var-date-chips-editor" class="ct-chips-editor" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:var(--bg-card, #ffffff); border:1px solid var(--border, #e4e4e7); border-radius:8px; min-height:46px; cursor:text;"></div>
-                    <input type="hidden" id="var-date-custom-format" value="${this._esc(customValue)}">
+                    <div id="var-date-chips-editor" class="ct-chips-editor" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:var(--bg-card, #ffffff); border:1px solid var(--border, #e4e4e7); border-radius:8px; min-height:46px; cursor:text; margin-bottom:8px;"></div>
+                    <input type="text" id="var-date-custom-format" class="craftools-input" style="width:100%; font-family:var(--font-mono, monospace); font-size:13px;"
+                        placeholder="${this._esc(I18n.t('variablePanel.dateCustomPlaceholder'))}"
+                        value="${this._esc(customValue)}">
                 </div>
             </div>
 
@@ -1233,8 +1235,10 @@ export class VariablePanel {
                     // one of those tokens (and their whole-format
                     // counterparts) render through -- so it shows whenever
                     // ANY of the three is present, not just one.
-                    const applyCustomText = (text: string): void => {
-                        if (customFormat) customFormat.value = text;
+                    const applyCustomText = (text: string, sourceEl?: HTMLElement): void => {
+                        if (customFormat && customFormat !== sourceEl && customFormat.value !== text) {
+                            customFormat.value = text;
+                        }
                         binding!.format       = 'CUSTOM';
                         binding!.customFormat = text;
                         const lower = text.toLowerCase();
@@ -1317,7 +1321,7 @@ export class VariablePanel {
                             applyCustomText(next);
                         };
                     });
-                    if (customFormat) customFormat.oninput = () => applyCustomText(customFormat.value);
+                    if (customFormat) customFormat.oninput = () => applyCustomText(customFormat.value, customFormat);
                     // "Caixa de dias" is a whole separate render mode (a row
                     // of colored weekday boxes -- see VariableEngine.ts's
                     // 'DAYS_BOX' case), not a text token, so it can't compose
