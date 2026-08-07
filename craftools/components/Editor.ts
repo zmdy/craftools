@@ -24,6 +24,7 @@
  */
 
 import { PageTool } from '../tools/page/PageTool.js';
+import { PaperTool } from '../tools/paper/PaperTool.js';
 import { CtxBar } from '../utils/CtxBar.js';
 import { I18n } from '../settings/Translations.js';
 import { HistoryManager } from '../utils/HistoryManager.js';
@@ -88,7 +89,7 @@ const LAZY_TOOL_LOADERS: Record<string, () => Promise<unknown>> = {
   curvedtext:       () => safeImport(() => import('../tools/curvedtext/CurvedTextTool.js'), { moduleName: 'CurvedTextTool' }),
   stamp:            () => safeImport(() => import('../tools/stamp/StampTool.js'), { moduleName: 'StampTool' }),
   lettering:        () => safeImport(() => import('../tools/lettering/LetteringTool.js'), { moduleName: 'LetteringTool' }),
-  paper:            () => safeImport(() => import('../tools/paper/PaperTool.js'), { moduleName: 'PaperTool' }),
+  paper:            () => Promise.resolve({ PaperTool }),
   variablecontent: () => safeImport(() => import('../tools/variablecontent/VariableContentTool.js'), { moduleName: 'VariableContentTool' }),
   table:            () => safeImport(() => import('../tools/table/TableTool.js'), { moduleName: 'TableTool' }),
   line:             () => safeImport(() => import('../tools/line/LineTool.js'), { moduleName: 'LineTool' }),

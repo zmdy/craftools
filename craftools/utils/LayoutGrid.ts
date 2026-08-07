@@ -8,6 +8,7 @@ import type { GridTemplate, GridTemplateSlot } from './GridSizes.js';
 // build, so grid drag-reorder no longer depends on a third-party network
 // request the first time it's used.
 import Sortable from 'sortablejs';
+import { CellPanel } from '../tools/album/CellPanel.js';
 
 export interface PageSizeDef {
   size: string;
@@ -560,18 +561,14 @@ export class Craftools_LayoutGrid {
       `;
       editBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          import('../tools/album/CellPanel.js').then(({ CellPanel }) => {
-              CellPanel.open(this.editor, cellWrap);
-          });
+          CellPanel.open(this.editor, cellWrap);
       });
       cellWrap.appendChild(editBtn);
 
       cellWrap.addEventListener('click', (e: Event) => {
           const target = e.target as HTMLElement;
           if (!target.closest('.photostrip-slot') && !target.closest('.album-drag-handle') && !target.closest('.cell-edit-btn')) {
-              import('../tools/album/CellPanel.js').then(({ CellPanel }) => {
-                  CellPanel.open(this.editor, cellWrap);
-              });
+              CellPanel.open(this.editor, cellWrap);
           }
       });
 

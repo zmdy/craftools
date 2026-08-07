@@ -2,7 +2,7 @@ import { I18n } from '../../settings/Translations.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { Notify } from '../../utils/Notify.js';
 import { renderColorPicker, cssFromValue, parseCssBackground, normalizeValue, type ColorPickerValue } from '../../utils/ColorPickerUI.js';
-import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, type PaperMeta } from '../paper/PaperTool.js';
+import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, PaperThemes, type PaperMeta } from '../paper/PaperTool.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
 import { MobileToolbar } from '../../utils/MobileToolbar.js';
 import './PageTool_Translations.js';
@@ -884,12 +884,9 @@ export class PageTool {
     });
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-theme')?.addEventListener('change', e => {
       const theme = (e.target as HTMLSelectElement).value;
-      // Import PaperThemes to apply the theme's colors to meta immediately
-      import('../paper/PaperTool.js').then(({ PaperThemes }) => {
-        const cfg = (PaperThemes as Record<string, { bg: string; line: string }>)[theme];
-        if (cfg) applyMeta({ theme, bgColor: cfg.bg, lineColor: cfg.line });
-        else applyMeta({ theme });
-      });
+      const cfg = (PaperThemes as Record<string, { bg: string; line: string }>)[theme];
+      if (cfg) applyMeta({ theme, bgColor: cfg.bg, lineColor: cfg.line });
+      else applyMeta({ theme });
     });
     fieldsWrap.querySelector<HTMLSelectElement>('#paper-line-style')?.addEventListener('change', e => applyMeta({ lineStyle: (e.target as HTMLSelectElement).value }));
     fieldsWrap.querySelector<HTMLInputElement>('#paper-line-spacing')?.addEventListener('input', e => applyMeta({ lineSpacing: parseFloat((e.target as HTMLInputElement).value) || 0 }));
