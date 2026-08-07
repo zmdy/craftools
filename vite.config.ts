@@ -54,17 +54,14 @@ export default defineConfig({
       'sortablejs',
       '@tooooools/html-to-svg',
       '@fortawesome/free-solid-svg-icons',
+      'jspdf',
+      'pdf-lib',
+      'svg2pdf.js',
     ],
   },
 
   // ── Dev server ────────────────────────────────────────────────────────────
   server: {
-    // Pre-transforms the critical-path source files before the first browser
-    // request. Without warmup Vite transforms each file on-demand as the
-    // browser walks the import graph -- for a deep graph like this app's
-    // (Editor.ts → CtxBar, PropertyRenderer, HistoryManager, …) that
-    // creates a sequential waterfall. Warming these files up front collapses
-    // that waterfall into a single paint.
     warmup: {
       clientFiles: [
         './main.ts',
@@ -86,10 +83,27 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    target: 'esnext',
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('jspdf') || id.includes('pdf-lib') || id.includes('svg2pdf.js')) {
+              return 'vendor-pdf';
+            }
+            if (id.includes('@fortawesome')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('html2canvas') || id.includes('html-to-svg') || id.includes('sortablejs')) {
+              return 'vendor-dom';
+            }
+          }
+        },
       },
     },
   },
