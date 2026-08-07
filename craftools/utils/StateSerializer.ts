@@ -161,6 +161,33 @@ export class StateSerializer {
         existingPages.delete(pageState.id);
       }
       
+      // Backfill the real DOM `id` attribute -- completely separate from
+      // `dataset.ctId` above, which only exists for THIS function's own
+      // reconciliation matching. AgendaExportTool.ts's Pages/Preview tabs
+      // look pages up via `document.getElementById(page.id)` (see its
+      // `data-page-id="${page.id}"` checkboxes/selects), the same
+      // convention PageTool.ts's "add page" uses (`clone.id = 'page-' +
+      // Date.now()`) -- but the "create a new page" branch just above
+      // never assigned one, only `dataset.ctId`. Every page reconciled
+      // here without a prior matching `ctId` (i.e. EVERY page the very
+      // first time a .craftools project is imported into a session, since
+      // none of its pages have a `ctId` yet to match against) therefore
+      // ended up with `id === ''`. AgendaExportTool's
+      // `document.getElementById('')` calls then silently returned null
+      // for every page, so its "repeat this page" checkboxes/selects and
+      // preview toggle had no page to write `data-agenda-*` attributes
+      // onto or read the resolved plan from -- no error, the code just
+      // guards on `if (page)` and no-ops. Kept idempotent (`if (!pageEl.id)`)
+      // so it also repairs any page left id-less by an earlier session
+      // that hit this same bug before this fix shipped, and does nothing
+      // to already-healthy pages on every other reconcile call (undo/redo
+      // of an already-imported project, where every page already matched
+      // by ctId and kept whatever real id it had).
+      // `pageState.id` is already a "page-<random>"-shaped token (see
+      // serialize()'s fallback generator above) so it doubles as a valid,
+      // sufficiently-unique real `id` on its own -- no extra prefix needed.
+      if (!pageEl.id) pageEl.id = pageState.id;
+
       pageEl.style.cssText = pageState.cssText;
       newPages.push(pageEl);
       
