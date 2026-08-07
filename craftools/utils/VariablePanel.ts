@@ -256,13 +256,268 @@ export class VariablePanel {
         }
     }
 
+    // ── Date Format Token Helpers & Chip System ──────────────────────────────
+
+    private static readonly TOKEN_GROUPS: Record<string, { label: string; options: { code: string; label: string }[] }> = {
+        day: {
+            label: 'FORMATO DE DIA',
+            options: [
+                { code: 'dd', label: 'dd — Dia com 2 dígitos (07, 15...)' },
+                { code: 'd',  label: 'd — Dia simples (7, 15...)' },
+            ],
+        },
+        month: {
+            label: 'FORMATO DE MÊS',
+            options: [
+                { code: 'mmmm', label: 'mmmm — Mês por extenso (Agosto)' },
+                { code: 'mmm',  label: 'mmm — Mês abreviado (Ago)' },
+                { code: 'mm',   label: 'mm — Mês número com 0 (08)' },
+                { code: 'm',    label: 'm — Mês número simples (8)' },
+            ],
+        },
+        year: {
+            label: 'FORMATO DE ANO',
+            options: [
+                { code: 'yyyy', label: 'yyyy — Ano 4 dígitos (2026)' },
+                { code: 'yy',   label: 'yy — Ano 2 dígitos (26)' },
+            ],
+        },
+        weekday: {
+            label: 'FORMATO DE DIA DA SEMANA',
+            options: [
+                { code: 'wwww', label: 'wwww — Dia por extenso (Sexta-feira)' },
+                { code: 'ww',   label: 'ww — Dia abreviado (Sex)' },
+                { code: 'w',    label: 'w — 1ª Letra do dia (S)' },
+            ],
+        },
+    };
+
+    private static readonly ALL_KNOWN_TOKENS = [
+        { code: '{dayofyear}',  label: 'Dia do ano',         group: 'other' },
+        { code: '{weeknumber}', label: 'Semana do ano',      group: 'other' },
+        { code: '{season}',    label: 'Estação',            group: 'other' },
+        { code: '{moon}',      label: 'Fase da Lua',        group: 'other' },
+        { code: '{zodiac}',    label: 'Signo',              group: 'other' },
+        { code: '{holiday}',   label: 'Feriado',            group: 'other' },
+        { code: 'wwww',        label: 'Dia da semana',      group: 'weekday' },
+        { code: 'ww',          label: 'Dia da semana',      group: 'weekday' },
+        { code: 'w',           label: 'Dia da semana',      group: 'weekday' },
+        { code: 'mmmm',        label: 'Mês',                group: 'month' },
+        { code: 'mmm',         label: 'Mês',                group: 'month' },
+        { code: 'mm',          label: 'Mês',                group: 'month' },
+        { code: 'm',           label: 'Mês',                group: 'month' },
+        { code: 'yyyy',        label: 'Ano',                group: 'year' },
+        { code: 'yy',          label: 'Ano',                group: 'year' },
+        { code: 'dd',          label: 'Dia',                group: 'day' },
+        { code: 'd',           label: 'Dia',                group: 'day' },
+    ];
+
+    private static _parseCustomFormatToItems(formatText: string): { type: 'token' | 'literal'; group?: string; code?: string; label?: string; text?: string }[] {
+        if (!formatText) return [];
+        let remaining = formatText;
+        const items: { type: 'token' | 'literal'; group?: string; code?: string; label?: string; text?: string }[] = [];
+
+        while (remaining.length > 0) {
+            let bestMatch: { code: string; label: string; group: string } | null = null;
+            let bestIdx = -1;
+
+            for (const t of this.ALL_KNOWN_TOKENS) {
+                const idx = remaining.toLowerCase().indexOf(t.code.toLowerCase());
+                if (idx !== -1) {
+                    if (bestIdx === -1 || idx < bestIdx || (idx === bestIdx && t.code.length > (bestMatch?.code.length ?? 0))) {
+                        bestIdx = idx;
+                        bestMatch = t;
+                    }
+                }
+            }
+
+            if (bestMatch && bestIdx !== -1) {
+                if (bestIdx > 0) {
+                    items.push({ type: 'literal', text: remaining.slice(0, bestIdx) });
+                }
+                items.push({
+                    type: 'token',
+                    group: bestMatch.group,
+                    code: remaining.slice(bestIdx, bestIdx + bestMatch.code.length),
+                    label: bestMatch.label,
+                });
+                remaining = remaining.slice(bestIdx + bestMatch.code.length);
+            } else {
+                items.push({ type: 'literal', text: remaining });
+                break;
+            }
+        }
+
+        return items;
+    }
+
+    private static _serializeItemsToText(items: { type: 'token' | 'literal'; group?: string; code?: string; label?: string; text?: string }[]): string {
+        return items.map(item => item.type === 'token' ? (item.code || '') : (item.text || '')).join('');
+    }
+
+    private static _renderActiveSelects(
+        container: HTMLElement,
+        items: { type: 'token' | 'literal'; group?: string; code?: string; label?: string; text?: string }[],
+        onUpdate: (newText: string) => void
+    ): void {
+        const selectsContainer = container.querySelector<HTMLElement>('#var-date-active-selects');
+        if (!selectsContainer) return;
+
+        const activeGroups: string[] = [];
+        items.forEach(item => {
+            if (item.type === 'token' && item.group && this.TOKEN_GROUPS[item.group] && !activeGroups.includes(item.group)) {
+                activeGroups.push(item.group);
+            }
+        });
+
+        if (activeGroups.length === 0) {
+            selectsContainer.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        activeGroups.forEach(groupKey => {
+            const groupDef = this.TOKEN_GROUPS[groupKey];
+            const currentItem = items.find(i => i.type === 'token' && i.group === groupKey);
+            const currentCode = currentItem ? (currentItem.code || '').toLowerCase() : '';
+
+            html += `
+                <div class="ct-field" style="margin-top:6px;">
+                    <span class="craftools-label" style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-secondary); margin-bottom:4px; display:block;">${this._esc(groupDef.label)}</span>
+                    <select class="craftools-select var-date-group-select" data-group="${groupKey}" style="width:100%;">
+                        ${groupDef.options.map(opt => `
+                            <option value="${opt.code}" ${currentCode === opt.code.toLowerCase() ? 'selected' : ''}>${this._esc(opt.label)}</option>
+                        `).join('')}
+                    </select>
+                </div>
+            `;
+        });
+
+        selectsContainer.innerHTML = html;
+
+        selectsContainer.querySelectorAll<HTMLSelectElement>('.var-date-group-select').forEach(sel => {
+            sel.onchange = () => {
+                const groupKey = sel.dataset.group;
+                const newCode = sel.value;
+                if (!groupKey) return;
+
+                let changed = false;
+                const updatedItems = items.map(item => {
+                    if (item.type === 'token' && item.group === groupKey) {
+                        changed = true;
+                        return { ...item, code: newCode };
+                    }
+                    return item;
+                });
+
+                if (changed) {
+                    onUpdate(this._serializeItemsToText(updatedItems));
+                }
+            };
+        });
+    }
+
+    private static _renderChipsEditor(
+        container: HTMLElement,
+        items: { type: 'token' | 'literal'; group?: string; code?: string; label?: string; text?: string }[],
+        onUpdate: (newText: string) => void
+    ): void {
+        const editor = container.querySelector<HTMLElement>('#var-date-chips-editor');
+        if (!editor) return;
+
+        if (items.length === 0) {
+            editor.innerHTML = `
+                <div style="font-size:12px; color:var(--text-muted); padding:4px;">Clique nos botões acima para adicionar formatos...</div>
+            `;
+            return;
+        }
+
+        let html = '';
+        items.forEach((item, idx) => {
+            if (item.type === 'token') {
+                html += `
+                    <div class="ct-format-chip" draggable="true" data-index="${idx}"
+                         style="display:inline-flex; align-items:center; gap:5px; padding:4px 9px; background:var(--accent-light, #fff7ed); border:1px solid var(--accent, #f97316); color:var(--accent-dark, #c2410c); border-radius:6px; font-size:12px; font-weight:600; cursor:grab; user-select:none; transition:all .15s;">
+                        <span class="material-symbols-outlined" style="font-size:13px; opacity:0.65;">drag_indicator</span>
+                        <span>${this._esc(item.label || item.code)} <small style="font-weight:normal; opacity:0.8;">(${this._esc(item.code)})</small></span>
+                        <button type="button" class="ct-chip-remove" data-index="${idx}" style="background:none; border:none; color:inherit; font-size:14px; cursor:pointer; padding:0 3px; line-height:1; border-radius:50%; margin-left:2px;" title="Remover">×</button>
+                    </div>
+                `;
+            } else {
+                const textVal = item.text || '';
+                const widthPx = Math.max(16, textVal.length * 8 + 10);
+                html += `
+                    <input type="text" class="ct-literal-input" data-index="${idx}" value="${this._esc(textVal)}"
+                           style="border:none; border-bottom:1px dashed var(--border, #ccc); background:transparent; font-size:13px; font-family:inherit; color:var(--text-main); width:${widthPx}px; outline:none; text-align:center; padding:2px 0;" placeholder="...">
+                `;
+            }
+        });
+
+        editor.innerHTML = html;
+
+        editor.querySelectorAll<HTMLButtonElement>('.ct-chip-remove').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.index || '-1', 10);
+                if (idx < 0 || idx >= items.length) return;
+                const newItems = [...items];
+                newItems.splice(idx, 1);
+                onUpdate(this._serializeItemsToText(newItems));
+            };
+        });
+
+        editor.querySelectorAll<HTMLInputElement>('.ct-literal-input').forEach(inp => {
+            const updateText = () => {
+                const idx = parseInt(inp.dataset.index || '-1', 10);
+                if (idx < 0 || idx >= items.length) return;
+                const newItems = [...items];
+                newItems[idx] = { type: 'literal', text: inp.value };
+                onUpdate(this._serializeItemsToText(newItems));
+            };
+            inp.oninput = () => {
+                inp.style.width = `${Math.max(16, inp.value.length * 8 + 10)}px`;
+            };
+            inp.onchange = updateText;
+            inp.onblur = updateText;
+        });
+
+        let draggedIdx = -1;
+        editor.querySelectorAll<HTMLElement>('.ct-format-chip').forEach(chip => {
+            chip.ondragstart = (e) => {
+                draggedIdx = parseInt(chip.dataset.index || '-1', 10);
+                e.dataTransfer?.setData('text/plain', String(draggedIdx));
+                chip.style.opacity = '0.4';
+            };
+
+            chip.ondragend = () => {
+                chip.style.opacity = '1';
+                editor.querySelectorAll<HTMLElement>('.ct-format-chip').forEach(c => c.style.borderStyle = 'solid');
+            };
+
+            chip.ondragover = (e) => {
+                e.preventDefault();
+                chip.style.borderStyle = 'dashed';
+            };
+
+            chip.ondragleave = () => {
+                chip.style.borderStyle = 'solid';
+            };
+
+            chip.ondrop = (e) => {
+                e.preventDefault();
+                chip.style.borderStyle = 'solid';
+                const targetIdx = parseInt(chip.dataset.index || '-1', 10);
+                if (draggedIdx === -1 || targetIdx === -1 || draggedIdx === targetIdx) return;
+
+                const newItems = [...items];
+                const [moved] = newItems.splice(draggedIdx, 1);
+                newItems.splice(targetIdx, 0, moved);
+                onUpdate(this._serializeItemsToText(newItems));
+            };
+        });
+    }
+
     private static _dateConfig(b: VariableBinding): string {
-        // Best-effort text driving both the always-visible custom box and
-        // the buttons' initial active state: the binding's own customFormat
-        // when it's already 'CUSTOM', otherwise a derived equivalent for
-        // whatever legacy whole format it currently has (see
-        // _legacyFormatToCustomToken()) -- purely for display until the
-        // user actually edits something (see that method's doc comment).
         const customValue = b.format === 'CUSTOM' ? (b.customFormat ?? '') : this._legacyFormatToCustomToken(b.format);
         const hasToken = (t: string) => customValue.toLowerCase().includes(t.toLowerCase());
         return `
@@ -291,6 +546,9 @@ export class VariablePanel {
                 </div>
             </div>
 
+            <!-- Active Per-Token Select Dropdowns (FORMATO DE DIA, FORMATO DE MÊS, etc.) -->
+            <div id="var-date-active-selects" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
+
             <div id="var-date-daysbox-options" style="display: ${b.format === 'DAYS_BOX' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div class="ct-field">
                     <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
@@ -298,33 +556,32 @@ export class VariablePanel {
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxRadius')}</span>
-                        <input type="number" id="var-date-daysbox-radius" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderRadius !== undefined ? b.daysBoxBorderRadius : 50}" min="0">
+                        <span class="craftools-label">${I18n.t('common.borderRadius')} (px)</span>
+                        <input type="number" id="var-date-daysbox-radius" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderRadius !== undefined ? b.daysBoxBorderRadius : 6}" min="0">
                     </div>
                     <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxPadding')}</span>
+                        <span class="craftools-label">${I18n.t('common.padding')} (px)</span>
                         <input type="number" id="var-date-daysbox-padding" class="craftools-input" style="width:100%;" value="${b.daysBoxPadding !== undefined ? b.daysBoxPadding : 4}" min="0">
                     </div>
                 </div>
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxHeight')}</span>
-                    <input type="number" id="var-date-daysbox-height" class="craftools-input" style="width:100%;"
-                        value="${b.daysBoxHeight !== undefined ? b.daysBoxHeight : ''}" min="0"
-                        placeholder="${this._esc(I18n.t('variablePanel.dateDaysBoxHeightPlaceholder'))}">
-                    <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.dateDaysBoxHeightHelp')}</span>
-                </div>
-                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-date-daysbox-borderstyle-btn',
-                    ['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style =>
-                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
-                    ), b.daysBoxBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
-                    <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.height')} (px)</span>
+                        <input type="number" id="var-date-daysbox-height" class="craftools-input" style="width:100%;" value="${b.daysBoxHeight !== undefined ? b.daysBoxHeight : 40}" min="10">
+                    </div>
+                    <div class="ct-field">
+                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                        <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
+                    </div>
                 </div>
                 <div class="ct-field" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderColor')}</span>
                     <div id="var-date-daysbox-bordercolor-picker"></div>
                 </div>
+                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-date-daysbox-borderstyle-btn',
+                    ['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style =>
+                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
+                    ), b.daysBoxBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
                 <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
                     <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateDaysBoxSundayFirst')}</span>
@@ -335,11 +592,10 @@ export class VariablePanel {
                 <div style="font-size:11px; color:var(--text-muted); line-height:1.6; margin-bottom:8px;">
                     ${I18n.t('variablePanel.dateCustomLegend')}
                 </div>
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('variablePanel.dateCustomLabel')}</span>
-                    <input type="text" id="var-date-custom-format" class="craftools-input" style="width:100%;"
-                        placeholder="${this._esc(I18n.t('variablePanel.dateCustomPlaceholder'))}"
-                        value="${this._esc(customValue)}">
+                    <div id="var-date-chips-editor" class="ct-chips-editor" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:var(--bg-card, #ffffff); border:1px solid var(--border, #e4e4e7); border-radius:8px; min-height:46px; cursor:text;"></div>
+                    <input type="hidden" id="var-date-custom-format" value="${this._esc(customValue)}">
                 </div>
             </div>
 
@@ -986,12 +1242,23 @@ export class VariablePanel {
                             const token = (btn.dataset.token || '').toLowerCase();
                             btn.classList.toggle('active', !!token && lower.includes(token));
                         });
+
+                        const items = VariablePanel._parseCustomFormatToItems(text);
+                        VariablePanel._renderActiveSelects(container, items, applyCustomText);
+                        VariablePanel._renderChipsEditor(container, items, applyCustomText);
+
                         if (daysBoxOpts)  daysBoxOpts.style.display  = 'none';
                         if (specialOpts)  specialOpts.style.display  = lower.includes('{holiday}') ? 'block' : 'none';
                         if (seasonOpts)   seasonOpts.style.display   = lower.includes('{season}') ? 'block' : 'none';
                         if (calendarOpts) calendarOpts.style.display = (lower.includes('{season}') || lower.includes('{moon}') || lower.includes('{zodiac}')) ? 'block' : 'none';
                         notify();
                     };
+
+                    // Initial render of active selects & chip editor
+                    const initialCustomText = binding!.format === 'CUSTOM' ? (binding!.customFormat ?? 'dd/mm/yyyy') : VariablePanel._legacyFormatToCustomToken(binding!.format);
+                    const initialItems = VariablePanel._parseCustomFormatToItems(initialCustomText);
+                    VariablePanel._renderActiveSelects(container, initialItems, applyCustomText);
+                    VariablePanel._renderChipsEditor(container, initialItems, applyCustomText);
                     // Dia/mês/ano are the one trio in the pill row that the
                     // legacy default ('dd/mm/yyyy') and this UI's own
                     // convention always glue together with "/" -- so unlike
