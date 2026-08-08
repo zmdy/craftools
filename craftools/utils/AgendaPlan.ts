@@ -54,6 +54,33 @@ export interface AgendaPlanInstance {
   /** Continuous 0-based index within this page's own chain/loop -- what
    *  ResolveContext.repetitionIndex should be for this instance. */
   repetitionIndex: number;
+  /**
+   * 0-based index of which iteration of the ENCLOSING loop this instance
+   * belongs to -- 0 for every instance outside a loop (a non-repeating
+   * page, a simple repeating page with no chain, or an open chain's
+   * prelude pages before any loop starts), and 0..cycles-1 for every page
+   * inside a closed loop's body, the SAME value for every page emitted
+   * during that one pass through the loop.
+   *
+   * Exists specifically for a "month header + variable day count" chain
+   * (page A = a month page, repeat 1x per cycle; page B = a days page,
+   * repeat ~30x per cycle; B's "continuar com" loops back to A, cycled
+   * 12x): page A's date binding needs to advance by exactly 1 month per
+   * CYCLE (0, 1, 2 .. 11 -> Jan, Fev, Mar .. Dez), but `repetitionIndex`
+   * counts every instance of BOTH pages continuously (so page A's 2nd
+   * occurrence lands at repetitionIndex ~32, not 1, once page B's ~31
+   * interleaved instances from cycle 1 are counted too) -- feeding that
+   * straight into a `interval: 'monthly'` binding computes "start date +
+   * 32 months", which is what actually produced the reported "shows
+   * Agosto/Setembro instead of Fevereiro" bug. `cycleIndex` gives a date
+   * binding on a page like A a clean 0/1/2/../11 counter to advance by
+   * instead, opted into per-binding via VariableBinding.repetitionScope
+   * (see VariableEngine.ts) -- `repetitionIndex` keeps its existing
+   * continuous meaning unchanged, still exactly what a page like B (whose
+   * days need to flow continuously day-to-day across the whole export,
+   * not reset every cycle) should keep using.
+   */
+  cycleIndex: number;
 }
 
 /** One node in a resolved chain's summary breakdown -- see AgendaPlan.describe(). */
@@ -194,7 +221,7 @@ export class AgendaPlan {
 
     pages.forEach(page => {
       if (!AgendaPlan.repeatEnabled(page)) {
-        plan.push({ page, repetitionIndex: 0 });
+        plan.push({ page, repetitionIndex: 0, cycleIndex: 0 });
         return;
       }
       if (!heads.has(page.id)) return; // reached via some other head's chain instead
@@ -202,22 +229,22 @@ export class AgendaPlan {
       const { chain, loopStart } = AgendaPlan._walkChain(page, byId);
 
       let runningIndex = 0;
-      const emit = (pg: HTMLElement): void => {
+      const emit = (pg: HTMLElement, cycleIndex: number): void => {
         const count = AgendaPlan.repeatCount(pg);
         for (let i = 0; i < count; i++) {
-          plan.push({ page: pg, repetitionIndex: runningIndex });
+          plan.push({ page: pg, repetitionIndex: runningIndex, cycleIndex });
           runningIndex++;
         }
       };
 
       if (loopStart === -1) {
-        chain.forEach(emit);
+        chain.forEach(pg => emit(pg, 0));
       } else {
-        chain.slice(0, loopStart).forEach(emit); // prelude -- runs once
+        chain.slice(0, loopStart).forEach(pg => emit(pg, 0)); // prelude -- runs once, cycle 0
         const loopPages = chain.slice(loopStart);
         const closer = chain[chain.length - 1];
         const cycles = AgendaPlan.cycleCount(closer);
-        for (let k = 0; k < cycles; k++) loopPages.forEach(emit);
+        for (let k = 0; k < cycles; k++) loopPages.forEach(pg => emit(pg, k));
       }
     });
 

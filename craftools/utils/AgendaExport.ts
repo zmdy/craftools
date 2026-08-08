@@ -151,7 +151,7 @@ export class AgendaExport {
     // PdfExport._collectUsedFontFaces()'s doc comment.
     const usedFontFacesByKey = new Map<string, { family: string; weight: string; style: string }>();
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -169,6 +169,7 @@ export class AgendaExport {
 
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
+        cycleIndex:      cycleIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
@@ -281,7 +282,7 @@ export class AgendaExport {
 
     const outputPages: { html: string; size: import('./PdfExport.js').PageSize }[] = [];
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -306,6 +307,7 @@ export class AgendaExport {
 
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
+        cycleIndex:      cycleIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
@@ -399,7 +401,7 @@ export class AgendaExport {
 
     const result: { el: HTMLElement; size: import('./PdfExport.js').PageSize }[] = [];
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -414,6 +416,7 @@ export class AgendaExport {
 
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
+        cycleIndex:      cycleIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
