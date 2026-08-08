@@ -340,6 +340,12 @@ export class AgendaExportTool {
     // comment: a purely forward link that never loops back doesn't need one).
     const closingIds = AgendaPlan.closingPageIds(pages);
 
+    // Whether chaining/looping is even possible right now (needs at least
+    // 2 repeat-enabled pages) -- gates the general explanation box below
+    // so it doesn't clutter the by-far-most-common case of a single
+    // repeating page with nothing to chain to.
+    const hasChainPotential = pages.filter(p => AgendaPlan.repeatEnabled(p)).length >= 2;
+
     const cards = pages.map((page, idx) => {
       const size = PdfExport._parsePageSize(page);
       const checked = AgendaPlan.repeatEnabled(page);
@@ -374,6 +380,13 @@ export class AgendaExportTool {
           label: `${a('pageLabel')} ${pages.indexOf(p) + 1}`,
           backward: pages.indexOf(p) < idx,
         }));
+
+      // Label of whichever earlier page THIS page's own "continuar com"
+      // currently loops back to -- filled into cycleCountHint below so the
+      // hint names the actual pages involved ("Página 2 → Página 3
+      // repetem juntas...") instead of speaking abstractly about "this
+      // block".
+      const loopStartLabel = targetOptions.find(t => t.id === nextId && t.backward)?.label ?? '';
 
       return `
         <div class="ct-field ct-field--block" style="border:1px solid var(--border, #e4e4e7); border-radius:8px; padding:10px; margin-bottom:8px;">
@@ -411,9 +424,13 @@ export class AgendaExportTool {
                 </select>
               </div>
               ${closingIds.has(page.id) ? `
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg-accent, rgba(99,102,241,0.1)); border-radius:6px; padding:8px 10px; margin-top:8px;">
-                  <span style="font-size:11px; color:var(--text-accent, #4f46e5); font-weight:500;">${a('cycleCountLabel')}</span>
-                  <input type="number" class="craftools-input agenda-page-cycle-input" data-page-id="${page.id}" min="1" max="500" value="${cycleCount}" style="width:60px;">
+                <div style="background:var(--bg-accent, rgba(99,102,241,0.1)); border-radius:6px; padding:8px 10px; margin-top:8px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <span style="font-size:11px; color:var(--text-accent, #4f46e5); font-weight:500;">${a('cycleCountLabel')}</span>
+                    <input type="number" class="craftools-input agenda-page-cycle-input" data-page-id="${page.id}" min="1" max="500" value="${cycleCount}" style="width:60px;">
+                  </div>
+                  <span style="font-size:10px; color:var(--text-accent, #4f46e5); opacity:.85; display:block; margin-top:4px;">${a('cycleCountHint').replace('{loopStart}', loopStartLabel).replace('{page}', `${a('pageLabel')} ${idx + 1}`)}</span>
+                  <span style="font-size:10px; color:var(--text-accent, #4f46e5); opacity:.85; display:block; margin-top:4px;">${a('cycleScopeReminder')}</span>
                 </div>
               ` : ''}
             ` : ''}
@@ -430,6 +447,12 @@ export class AgendaExportTool {
 
     return `
       <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">${a('pagesIntro')}</p>
+      ${hasChainPotential ? `
+        <details style="margin-bottom:10px; background:var(--bg-shell, #f5f5f5); border-radius:6px; padding:8px 10px;">
+          <summary style="font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;">${a('chainHelpTitle')}</summary>
+          <p style="font-size:11px; color:var(--text-secondary); margin:6px 0 0; white-space:pre-line;">${a('chainHelpBody')}</p>
+        </details>
+      ` : ''}
       <div id="agenda-plan-summary" style="display:flex; flex-wrap:wrap; align-items:center; gap:4px; font-size:11px; color:var(--text-secondary); background:var(--bg-shell, #f5f5f5); border-radius:6px; padding:8px 10px; margin-bottom:10px;">${AgendaExportTool._buildPlanSummaryHtml(pages)}</div>
       ${cards}
     `;
