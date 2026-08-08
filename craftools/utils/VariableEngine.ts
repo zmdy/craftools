@@ -737,20 +737,35 @@ export class VariableEngine {
     }
 
     /**
-     * Computes how many repetitions of a 'date' binding (starting at
-     * repetitionIndex 0, stepping the same way _pickDate()/_addInterval()
-     * do) stay within the SAME fixed calendar period as the binding's own
-     * start date -- e.g. a daily binding starting August 1st with
-     * `trigger: 'month'` returns 31 (every day of August); starting August
-     * 15th returns 17 (the 15th through the 31st).
+     * Computes how many repetitions of a 'date' binding, STARTING at
+     * `startIndex` (stepping the same way _pickDate()/_addInterval() do),
+     * stay within the SAME fixed calendar period as the date AT
+     * `startIndex` itself -- e.g. a daily binding starting August 1st with
+     * `trigger: 'month'` and `startIndex: 0` returns 31 (every day of
+     * August); starting August 15th returns 17 (the 15th through the
+     * 31st); the same binding with `startIndex: 31` (the 32nd step from
+     * `startDate`, i.e. September 1st) returns 30, the length of
+     * September, not August.
      *
-     * This is the computation behind AgendaExportTool.ts's Pages tab "how
-     * many times to repeat" field's date-triggered mode (month/bimester/
-     * trimester/semester/year, alongside the existing plain manual-number
-     * entry) -- the panel calls this once to resolve a concrete number,
-     * then stores that plain number in `data-agenda-repeat` exactly like
-     * manual entry always has, so AgendaPlan.ts/AgendaExport.ts need no
-     * changes at all to support it.
+     * `startIndex` defaults to 0 -- i.e. "how many repetitions share the
+     * binding's own configured start date's period" -- which is what
+     * AgendaExportTool.ts's Pages tab calls with when the user first picks
+     * a repeat-mode trigger, to show a representative number in the
+     * (disabled) manual-count field.
+     *
+     * AgendaPlan.build() is the other caller, and the reason `startIndex`
+     * exists at all: for a page CHAINED into a loop (the "month header +
+     * variable day count" scenario, see AgendaPlan.ts's header comment),
+     * this page's own repeat count needs to be recomputed FRESH on every
+     * pass through the loop, from wherever this page's own date binding
+     * has actually advanced to by then -- e.g. a days page starting
+     * January 1st (`startIndex: 0`) needs 31 repetitions, but by the time
+     * its 2nd cycle starts it has already advanced 31 days (`startIndex:
+     * 31`, landing on February 1st) and needs only 28/29 -- not frozen at
+     * whatever period the binding's static `startDate` happened to fall in
+     * when the trigger was first configured. Without this, a days page
+     * configured against a 31-day January kept showing 31 day-slots for
+     * every later month in the same chain/loop, even 28/29/30-day ones.
      *
      * Bounded at 2000 iterations (same ceiling as the panel's own manual
      * repeat-count input) as a safety net against a binding whose interval
@@ -759,16 +774,17 @@ export class VariableEngine {
      * never crosses -- shouldn't happen with real calendar math, but a
      * runaway loop is worse than an under-count).
      */
-    static computeDateTriggerRepeatCount(b: VariableBinding, trigger: DateRepeatTrigger, now: Date = new Date()): number {
+    static computeDateTriggerRepeatCount(b: VariableBinding, trigger: DateRepeatTrigger, now: Date = new Date(), startIndex: number = 0): number {
         const base = b.startDate ? new Date(`${b.startDate}T00:00:00`) : new Date(now);
         if (isNaN(base.getTime())) return 1;
         const step     = parseInt(String(b.step), 10) || 1;
         const interval = b.interval ?? 'daily';
         const MAX = 2000;
+        const refDate = this._addInterval(base, interval, step * startIndex);
         let count = 0;
         for (let i = 0; i < MAX; i++) {
-            const d = this._addInterval(base, interval, step * i);
-            if (!this._samePeriod(d, base, trigger)) break;
+            const d = this._addInterval(base, interval, step * (startIndex + i));
+            if (!this._samePeriod(d, refDate, trigger)) break;
             count++;
         }
         return Math.max(count, 1);

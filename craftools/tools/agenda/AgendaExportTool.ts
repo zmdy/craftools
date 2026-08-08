@@ -470,26 +470,46 @@ export class AgendaExportTool {
   private static _buildPlanSummaryHtml(pages: PageEl[]): string {
     if (!pages.length) return '';
     const pageIndex = new Map<HTMLElement, number>(pages.map((p, i) => [p, i]));
-    const label = (p: HTMLElement, count: number): string => {
+    // `dynamic` marks a date-triggered page whose real per-cycle count can
+    // differ from cycle to cycle (see AgendaPlan.ts's "Dynamic
+    // (date-triggered) repeat counts" section + AgendaPlanSummaryPage's
+    // doc comment) -- shown as "~Nx" (tilde) instead of a plain "Nx" so
+    // the breadcrumb doesn't imply every cycle repeats exactly that many
+    // times, only that THIS one (the first) does.
+    const label = (p: HTMLElement, count: number, dynamic: boolean): string => {
       const n = (pageIndex.get(p) ?? 0) + 1;
       const base = `${a('pageLabel')} ${n}`;
-      return count > 1 ? `${base} (${count}x)` : base;
+      if (count <= 1) return base;
+      return `${base} (${dynamic ? '~' : ''}${count}x)`;
     };
+    let anyDynamic = false;
 
     const groups = AgendaPlan.describe(pages);
     const parts = groups.map(g => {
-      if (g.kind === 'single') return AgendaExportTool._esc(label(g.page, g.count));
+      if (g.kind === 'single') {
+        if (g.dynamic) anyDynamic = true;
+        return AgendaExportTool._esc(label(g.page, g.count, g.dynamic));
+      }
 
-      const preludeHtml = g.prelude.map(pg => AgendaExportTool._esc(label(pg.page, pg.count))).join(' &rarr; ');
+      const preludeHtml = g.prelude.map(pg => {
+        if (pg.dynamic) anyDynamic = true;
+        return AgendaExportTool._esc(label(pg.page, pg.count, pg.dynamic));
+      }).join(' &rarr; ');
       if (!g.loop.length) return preludeHtml;
 
-      const loopHtml = g.loop.map(pg => AgendaExportTool._esc(label(pg.page, pg.count))).join(' &rarr; ');
+      const loopHtml = g.loop.map(pg => {
+        if (pg.dynamic) anyDynamic = true;
+        return AgendaExportTool._esc(label(pg.page, pg.count, pg.dynamic));
+      }).join(' &rarr; ');
       const chip = `<span style="background:var(--bg-accent, rgba(99,102,241,0.15)); color:var(--text-accent, #4f46e5); padding:1px 6px; border-radius:4px; font-weight:500;">${loopHtml}</span> &times;${g.cycles}`;
       return preludeHtml ? `${preludeHtml} &rarr; ${chip}` : chip;
     });
 
     const total = AgendaPlan.build(pages).length;
-    return `${parts.join(' &rarr; ')} &rarr; <strong>${total}</strong> ${a('planSummaryTotalSuffix')}`;
+    const dynamicNote = anyDynamic
+      ? ` <span style="color:var(--text-muted); font-style:italic;">(${a('planSummaryDynamicNote')})</span>`
+      : '';
+    return `${parts.join(' &rarr; ')} &rarr; <strong>${total}</strong> ${a('planSummaryTotalSuffix')}${dynamicNote}`;
   }
 
   // ── Tab 2: Preview ────────────────────────────────────────────────────────

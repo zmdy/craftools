@@ -47,7 +47,29 @@
  * A page that ISN'T part of any chain (the overwhelmingly common case: a
  * single repeating page with nothing pointing to/from it) keeps starting
  * fresh at index 0 for its own batch, exactly like before.
+ *
+ * ── Dynamic (date-triggered) repeat counts ──────────────────────────────
+ * `data-agenda-repeat` is normally a plain static number the user typed
+ * in. But a page can instead carry `data-agenda-repeat-trigger` (one of
+ * VariableEngine's `DateRepeatTrigger` values: month/bimester/trimester/
+ * semester/year) -- AgendaExportTool.ts's Pages tab UI for "repeat until
+ * the month changes" etc. When set, `build()` ignores the STATIC
+ * `data-agenda-repeat` number for every emission after the first and
+ * instead recomputes it fresh via `VariableEngine.computeDateTriggerRepeatCount()`,
+ * passing this page's own accumulated `repetitionIndex` at the point each
+ * emission starts -- so a "days" page chained into a 12-cycle loop behind
+ * a "month" page correctly shows 31 slots in a January cycle, 28/29 in a
+ * February cycle, 30 in an April cycle, etc, instead of being frozen at
+ * whatever count matched its binding's static `startDate` when the
+ * trigger was first configured (the second half of the reported
+ * "shows Agosto/Setembro" bug, alongside the `cycleIndex` fix above --
+ * see `computeDateTriggerRepeatCount()`'s own doc comment for the exact
+ * mechanics).
  */
+
+import { VariableEngine, type VariableBinding, type DateRepeatTrigger } from './VariableEngine.js';
+import { PropertyRenderer } from './PropertyRenderer.js';
+import { parseVariableBinding } from './fields/variable-binding.field.js';
 
 export interface AgendaPlanInstance {
   page: HTMLElement;
@@ -87,12 +109,20 @@ export interface AgendaPlanInstance {
 export interface AgendaPlanSummaryPage {
   page: HTMLElement;
   count: number;
+  /** True when `count` comes from a date-triggered repeat mode (see this
+   *  file's header comment, "Dynamic (date-triggered) repeat counts") --
+   *  meaning it's only representative of THIS page's first occurrence and
+   *  the real per-cycle count can differ (e.g. 31 in a January cycle, 28
+   *  in a February one). AgendaExportTool.ts's summary breadcrumb uses
+   *  this to mark the number as approximate (e.g. "~31x") instead of
+   *  implying every cycle repeats exactly that many times. */
+  dynamic: boolean;
 }
 
 /** One top-level group in AgendaPlan.describe()'s output -- either a
  *  standalone page (repeating or not) or a chain (open or closed-loop). */
 export type AgendaPlanSummaryGroup =
-  | { kind: 'single'; page: HTMLElement; count: number }
+  | { kind: 'single'; page: HTMLElement; count: number; dynamic: boolean }
   | { kind: 'chain'; prelude: AgendaPlanSummaryPage[]; loop: AgendaPlanSummaryPage[]; cycles: number };
 
 const MAX_CHAIN_HOPS = 200; // safety net against pathological/corrupted next-pointer data
@@ -114,6 +144,69 @@ export class AgendaPlan {
   static nextPageId(page: HTMLElement): string | null {
     const id = page.dataset['agendaNext'];
     return id ? id : null;
+  }
+
+  /** Whether `page` uses date-triggered dynamic repeat mode instead of a
+   *  plain static count -- see this file's header comment. */
+  static hasRepeatTrigger(page: HTMLElement): boolean {
+    return !!page.dataset['agendaRepeatTrigger'];
+  }
+
+  /**
+   * The page's own "leading" date binding, if it has one -- i.e. the
+   * binding a date-triggered repeat count (month/bimester/trimester/
+   * semester/year) computes FROM. Deliberately excludes followers
+   * (`binding.linkedTo` set): a page can have several elements bound to
+   * the SAME date (a "Vincular a" follower just mirrors the leader's
+   * resolved value), and the leader is the one whose own `startDate`/
+   * `interval`/`step` actually drive the date math.
+   *
+   * A self-contained near-duplicate of AgendaExportTool.ts's own private
+   * `_findLeadingDateBinding()`/`_collectPageBindings()` (same reasoning
+   * as AgendaExport.ts's own independent `_collectBindings()`/
+   * `_getBinding()`, see that file's doc comments) -- this one exists
+   * specifically so `build()` below can recompute a dynamic repeat count
+   * without depending on the UI-only tool module.
+   */
+  static findLeadingDateBinding(page: HTMLElement): VariableBinding | null {
+    for (const el of Array.from(page.querySelectorAll<HTMLElement>('craftools-element'))) {
+      const toolType = el.getAttribute('data-craftool') ?? '';
+      let binding: VariableBinding | null = null;
+      if (toolType === 'variablecontent') {
+        binding = (el as HTMLElement & { _craftoolsVariable?: VariableBinding | null })._craftoolsVariable ?? null;
+        if (!binding) {
+          const state = PropertyRenderer._readState(el);
+          if ('variableBinding' in state) binding = parseVariableBinding(state.variableBinding);
+        }
+      } else if (toolType === 'qrcode' || toolType === 'barcode') {
+        binding = (el as HTMLElement & { _craftoolsMeta?: { variableBinding?: VariableBinding | null } })._craftoolsMeta?.variableBinding ?? null;
+        if (!binding) {
+          const state = PropertyRenderer._readState(el);
+          if ('variableBinding' in state) binding = parseVariableBinding(state.variableBinding);
+        }
+      }
+      if (binding && binding.type === 'date' && !binding.linkedTo) return binding;
+    }
+    return null;
+  }
+
+  /**
+   * Resolves how many times `pg` should repeat for the emission starting
+   * at `startIndex` (this page's own `repetitionIndex` for its first
+   * instance in this pass) -- the static `data-agenda-repeat` snapshot
+   * for a plain manually-numbered page, or a freshly recomputed count for
+   * a `hasRepeatTrigger()` page (see this file's header comment). Falls
+   * back to the static snapshot if the page's leading date binding can't
+   * be found (e.g. it was deleted after the trigger was configured) --
+   * same graceful degradation the rest of this file uses for corrupted/
+   * stale state rather than throwing.
+   */
+  private static _resolveRepeatCount(pg: HTMLElement, startIndex: number): number {
+    const trigger = pg.dataset['agendaRepeatTrigger'] as DateRepeatTrigger | undefined;
+    if (!trigger) return AgendaPlan.repeatCount(pg);
+    const binding = AgendaPlan.findLeadingDateBinding(pg);
+    if (!binding) return AgendaPlan.repeatCount(pg);
+    return VariableEngine.computeDateTriggerRepeatCount(binding, trigger, new Date(), startIndex);
   }
 
   /**
@@ -230,7 +323,14 @@ export class AgendaPlan {
 
       let runningIndex = 0;
       const emit = (pg: HTMLElement, cycleIndex: number): void => {
-        const count = AgendaPlan.repeatCount(pg);
+        // _resolveRepeatCount(pg, runningIndex) recomputes a date-triggered
+        // page's count FRESH from wherever its own binding has advanced to
+        // by this point in the chain -- see this file's header comment
+        // ("Dynamic (date-triggered) repeat counts"). For a plain
+        // manually-numbered page (no trigger) this is identical to the old
+        // `AgendaPlan.repeatCount(pg)` call, so nothing changes for the
+        // overwhelmingly common non-trigger case.
+        const count = AgendaPlan._resolveRepeatCount(pg, runningIndex);
         for (let i = 0; i < count; i++) {
           plan.push({ page: pg, repetitionIndex: runningIndex, cycleIndex });
           runningIndex++;
@@ -265,20 +365,35 @@ export class AgendaPlan {
 
     pages.forEach(page => {
       if (!AgendaPlan.repeatEnabled(page)) {
-        groups.push({ kind: 'single', page, count: 1 });
+        groups.push({ kind: 'single', page, count: 1, dynamic: false });
         return;
       }
       if (!heads.has(page.id)) return;
 
       const { chain, loopStart } = AgendaPlan._walkChain(page, byId);
 
+      // Mirrors build()'s own runningIndex bookkeeping (prelude, then cycle
+      // 0 of the loop) so a dynamic (date-triggered) page's displayed
+      // count here is the exact SAME first-cycle number build() actually
+      // produces, not an independent recomputation that could drift out
+      // of sync with it. `dynamic` flags whether that number is only
+      // representative of this first cycle -- see AgendaPlanSummaryPage's
+      // doc comment.
+      let runningIndex = 0;
+      const describePage = (pg: HTMLElement): AgendaPlanSummaryPage => {
+        const count = AgendaPlan._resolveRepeatCount(pg, runningIndex);
+        runningIndex += count;
+        return { page: pg, count, dynamic: AgendaPlan.hasRepeatTrigger(pg) };
+      };
+
       if (loopStart === -1) {
         if (chain.length === 1) {
-          groups.push({ kind: 'single', page, count: AgendaPlan.repeatCount(page) });
+          const d = describePage(page);
+          groups.push({ kind: 'single', page, count: d.count, dynamic: d.dynamic });
         } else {
           groups.push({
             kind: 'chain',
-            prelude: chain.map(pg => ({ page: pg, count: AgendaPlan.repeatCount(pg) })),
+            prelude: chain.map(pg => describePage(pg)),
             loop: [],
             cycles: 1,
           });
@@ -289,8 +404,8 @@ export class AgendaPlan {
       const closer = chain[chain.length - 1];
       groups.push({
         kind: 'chain',
-        prelude: chain.slice(0, loopStart).map(pg => ({ page: pg, count: AgendaPlan.repeatCount(pg) })),
-        loop: chain.slice(loopStart).map(pg => ({ page: pg, count: AgendaPlan.repeatCount(pg) })),
+        prelude: chain.slice(0, loopStart).map(pg => describePage(pg)),
+        loop: chain.slice(loopStart).map(pg => describePage(pg)),
         cycles: AgendaPlan.cycleCount(closer),
       });
     });
