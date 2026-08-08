@@ -125,14 +125,36 @@ export class StateSerializer {
     });
     
     const newPages: HTMLElement[] = [];
-    
+
+    // Guards against two DIFFERENT pages sharing the same `pageState.id`
+    // within this one reconcile pass. This shouldn't happen for anything
+    // exported after PageTool.ts's _duplicatePage()/addNewPage() were
+    // fixed to strip a cloned page's copied `dataset.ctId` -- but a
+    // .craftools file exported from a session that hit that bug (or any
+    // other stale in-memory state with a collision) can still legitimately
+    // contain it, and the effect is severe: `existingPages.get()` below
+    // would resolve every page sharing that id to the exact same lookup
+    // key, and (before this guard) each would go on to claim the exact
+    // same real DOM `id` too -- reproducing the "only the first page's
+    // Agenda checkbox/select actually works, the rest silently do nothing"
+    // symptom the id-backfill just above this loop was written to fix,
+    // just one level up the causal chain. Any occurrence of an id beyond
+    // the first is treated as an unrelated page and given a freshly
+    // minted, guaranteed-unique id instead of the colliding one.
+    const seenPageIds = new Set<string>();
+
     for (const pageState of targetState.pages) {
-      let pageEl = existingPages.get(pageState.id);
-      
+      const effectiveId = seenPageIds.has(pageState.id)
+        ? 'page-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5)
+        : pageState.id;
+      seenPageIds.add(effectiveId);
+
+      let pageEl = existingPages.get(effectiveId);
+
       if (!pageEl) {
         pageEl = document.createElement('section');
         pageEl.className = 'craftools-page';
-        pageEl.dataset.ctId = pageState.id;
+        pageEl.dataset.ctId = effectiveId;
 
         // Pages usually have a specific structure, let's ensure the default empty content div exists
         // However, most of the time pages aren't deleted, just elements are.
@@ -158,9 +180,9 @@ export class StateSerializer {
         // already silently no-op'd against a still-missing content area.
         pagesWrapper.appendChild(pageEl);
       } else {
-        existingPages.delete(pageState.id);
+        existingPages.delete(effectiveId);
       }
-      
+
       // Backfill the real DOM `id` attribute -- completely separate from
       // `dataset.ctId` above, which only exists for THIS function's own
       // reconciliation matching. AgendaExportTool.ts's Pages/Preview tabs
@@ -183,10 +205,11 @@ export class StateSerializer {
       // to already-healthy pages on every other reconcile call (undo/redo
       // of an already-imported project, where every page already matched
       // by ctId and kept whatever real id it had).
-      // `pageState.id` is already a "page-<random>"-shaped token (see
-      // serialize()'s fallback generator above) so it doubles as a valid,
+      // `effectiveId` is already a "page-<random>"-shaped token (either
+      // `pageState.id` itself, from serialize()'s own fallback generator,
+      // or the deduped replacement minted above) so it doubles as a valid,
       // sufficiently-unique real `id` on its own -- no extra prefix needed.
-      if (!pageEl.id) pageEl.id = pageState.id;
+      if (!pageEl.id) pageEl.id = effectiveId;
 
       pageEl.style.cssText = pageState.cssText;
       newPages.push(pageEl);
@@ -196,22 +219,36 @@ export class StateSerializer {
         const e = el as HTMLElement;
         if (e.dataset.ctId) existingEls.set(e.dataset.ctId, e);
       });
-      
+
+      // Same class of collision as `seenPageIds` above, scoped to this
+      // page's own elements -- two elements sharing an `elState.id` (e.g.
+      // a page duplicated before PageTool.ts's _duplicatePage() fix, which
+      // used to leave every cloned <craftools-element> carrying its
+      // source's copied `data-ct-id`) would otherwise both resolve to the
+      // same `existingEls` slot, silently collapsing two distinct elements
+      // into one on every future reconcile.
+      const seenElIds = new Set<string>();
+
       for (const elState of pageState.elements) {
-        let el = existingEls.get(elState.id);
-        
+        const effectiveElId = seenElIds.has(elState.id)
+          ? 'el-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5)
+          : elState.id;
+        seenElIds.add(effectiveElId);
+
+        let el = existingEls.get(effectiveElId);
+
         if (!el) {
           el = document.createElement('craftools-element') as HTMLElement;
-          el.dataset.ctId = elState.id;
+          el.dataset.ctId = effectiveElId;
           if (elState.attributes['data-craftool']) {
             el.setAttribute('data-craftool', elState.attributes['data-craftool']);
           }
           pageEl.appendChild(el);
-          
+
           // Force connectedCallback and _build synchronous execution by reading a property
           // if it hasn't fired yet (Browsers usually fire it synchronously on appendChild, but just in case)
         } else {
-          existingEls.delete(elState.id);
+          existingEls.delete(effectiveElId);
         }
         
         // 1. Restore attributes

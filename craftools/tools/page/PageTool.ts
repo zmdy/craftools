@@ -984,6 +984,23 @@ export class PageTool {
     clone.id = 'page-' + Date.now();
     delete (clone as HTMLElement & { _craftoolsEventsAttached?: boolean })._craftoolsEventsAttached;
 
+    // `cloneNode(true)` copies EVERY attribute verbatim, including
+    // `data-ct-id` -- StateSerializer.ts's own identity key, set lazily by
+    // serialize() (e.g. via HistoryManager tracking an edit) the first
+    // time this exact page/element is ever serialized. Left uncleared, the
+    // clone silently carries the SAME ctId as its source for as long as
+    // the session lasts, and once this project gets exported and
+    // re-imported, StateSerializer.reconcile() sees two page (or element)
+    // entries sharing one id: its own dedup guard now catches that and
+    // mints a fresh replacement, but only as a safety net -- the two are
+    // meant to be independent pages/elements from the moment they're
+    // created here, not near-duplicates that merely happen to collide
+    // later. Deleting it (rather than assigning a new value) lets
+    // serialize() regenerate a proper fresh one exactly like it does for
+    // any other never-before-serialized node.
+    delete clone.dataset.ctId;
+    clone.querySelectorAll<HTMLElement>('craftools-element').forEach(el => { delete el.dataset.ctId; });
+
     // A largura da página em pixels lógicos
     const pageWidthPx  = pageEl.offsetWidth;
     const rawPageWidth = pageEl.style.width || '210mm';
@@ -1065,6 +1082,10 @@ export class PageTool {
     // Clone the last page to preserve local dimensions
     const clone = lastPage.cloneNode(true) as HTMLElement;
     clone.id    = 'page-' + Date.now();
+    // See _duplicatePage()'s matching comment: cloneNode(true) copies
+    // `data-ct-id` too, which would otherwise leave this brand-new page
+    // silently sharing StateSerializer.ts's identity key with `lastPage`.
+    delete clone.dataset.ctId;
 
     // Remove child components entirely but keep the page shape
     clone.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px;">${I18n.t('pageTool.newPageLabel')}</div>`;
