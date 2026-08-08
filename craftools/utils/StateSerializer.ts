@@ -366,5 +366,34 @@ export class StateSerializer {
         currentChild = currentChild.nextElementSibling;
       }
     }
+
+    // Guarantee exactly one page carries the literal `id="main-page"` --
+    // the FIRST one, in final document order. Editor.ts's own bootstrap
+    // markup hardcodes this id on the very first page it ever creates, and
+    // a wide swath of the app (Editor.ts's restoreOriginalCanvas(),
+    // GeneratorTool.ts, CalendarTool.ts, AgendaExportTool.ts's canvas
+    // preview) still looks it up via plain `document.getElementById(
+    // 'main-page')` to mean "the first physical page", entirely separate
+    // from `dataset.ctId`/the per-page `id` backfill above (which only
+    // guarantee UNIQUENESS, not this specific well-known value). Nothing
+    // ever re-applied it once the original bootstrap page got replaced --
+    // which happens on literally every project import (none of the
+    // imported pages match any live `ctId`, so the old #main-page is
+    // removed as "orphaned" and brand new <section> elements take its
+    // place). Every one of those call sites guards on `if (!mainPage)
+    // return`, so the practical effect was silent: e.g.
+    // AgendaExportTool.ts's "Ativar Pré-visualização" toggle set its
+    // status text to "Carregando..." and then, unable to find #main-page,
+    // returned before ever updating it again -- stuck on that message
+    // forever with no error. Re-derived on every reconcile (not just
+    // import) so a page reorder or undo/redo that changes which page is
+    // first keeps this in sync automatically.
+    newPages.forEach((page, i) => {
+      if (i === 0) {
+        if (page.id !== 'main-page') page.id = 'main-page';
+      } else if (page.id === 'main-page') {
+        page.id = page.dataset.ctId || ('page-' + Math.random().toString(36).slice(2, 9));
+      }
+    });
   }
 }

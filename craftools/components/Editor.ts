@@ -205,6 +205,17 @@ export class Craftools_Editor extends HTMLElement {
               if (pagesWrapper) {
                 const blob = new Blob([draftJson], { type: 'application/json' });
                 await ProjectSerializer.importProject(pagesWrapper, blob);
+                // Same follow-up the manual "Importar Projeto" button does
+                // after its own ProjectSerializer.importProject() call
+                // (see the `#project-import-file` change handler below) --
+                // StateSerializer.reconcile() only ever rebuilds the DOM
+                // tree, it never (re)attaches PageTool's click/drag
+                // handlers to whatever pages it created or reused. Missing
+                // here meant every page restored via this emergency-reload
+                // path was unclickable/undraggable until the user manually
+                // triggered some other action that happened to reattach
+                // them (e.g. undo/redo, which does call this).
+                this._reattachAllPageEvents(pagesWrapper);
               }
               Notify.toast('Sua sessão foi recuperada com sucesso após uma atualização do sistema.', 'info');
             } catch (err) {
