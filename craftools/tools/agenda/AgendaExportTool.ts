@@ -271,6 +271,12 @@ export class AgendaExportTool {
             Notify.toast(a('noPagesFound'), 'error');
             return;
           }
+          // See _forceDisablePreviewIfActive()'s doc comment -- without
+          // this, exporting while the Preview tab's toggle was left ON
+          // (and navigated past the first output page) baked whatever
+          // page the live canvas preview last injected into main-page
+          // into the export's OWN page 1, permanently overwriting it.
+          AgendaExportTool._forceDisablePreviewIfActive(root, ed);
           exportBtn.disabled = true;
           const originalHtml = exportBtn.innerHTML;
           exportBtn.innerHTML = `<span class="material-symbols-outlined spin" style="font-size:16px;">progress_activity</span> ${a('generating')}`;
@@ -300,6 +306,8 @@ export class AgendaExportTool {
             Notify.toast(a('noPagesFound'), 'error');
             return;
           }
+          // Same reasoning as the PDF export button above.
+          AgendaExportTool._forceDisablePreviewIfActive(root, ed);
           const merge = mergeInput?.checked ?? true;
           exportSvgBtn.disabled = true;
           const originalHtml = exportSvgBtn.innerHTML;
@@ -700,6 +708,47 @@ export class AgendaExportTool {
     if (pageLabel) pageLabel.textContent = '—';
     if (prevBtn)   prevBtn.disabled  = true;
     if (nextBtn)   nextBtn.disabled  = true;
+  }
+
+  /**
+   * Guards both export buttons against a real data-corrupting bug: the
+   * canvas preview (_loadCanvasPreview()/_showCanvasPage()) injects each
+   * navigated output page's resolved HTML DIRECTLY into the live,
+   * REAL `#main-page` DOM element -- the same physical node that's also
+   * page 1 of the actual document. That's fine while the preview is the
+   * only thing reading it, but AgendaExport.ts / AgendaSvgExport.ts build
+   * the real export by re-querying `.craftools-page` straight off the
+   * LIVE editor DOM. If the user left the Preview tab's toggle ON and had
+   * navigated to any page other than the first (e.g. clicked "next" to
+   * check the month/day pages look right) and THEN switched to Actions
+   * and clicked Export without first turning the toggle off, `#main-page`
+   * still held whatever output page was last shown there -- so the
+   * exported PDF/SVG's own page 1 came out as a copy of THAT page instead
+   * of page 1's real, original content. This exactly matches the reported
+   * "the first page gets overwritten by the first page that has variable
+   * content" symptom.
+   *
+   * Called at the very start of both export button handlers, unconditionally
+   * (only actually does anything if `_canvasState` shows the preview is
+   * currently active) -- restores `#main-page` from its saved original
+   * HTML (same path Editor.ts's restoreOriginalCanvas() already provides
+   * and CalendarTool.ts/GeneratorTool.ts already call before generating
+   * their own real pages, see Editor.ts's own doc comment on
+   * `restoreOriginalCanvas`) and resets the toggle's own checkbox/visual
+   * state so the panel doesn't show "preview on" while it's actually been
+   * silently turned off underneath it.
+   */
+  private static _forceDisablePreviewIfActive(root: HTMLElement, editor: EditorEl): void {
+    if (!_canvasState) return;
+    AgendaExportTool._disableCanvasPreview(root, editor);
+    const previewToggle = root.querySelector<HTMLInputElement>('#agenda-preview-toggle');
+    if (previewToggle) {
+      previewToggle.checked = false;
+      const track = previewToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+      const thumb = previewToggle.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+      if (track) track.style.background = 'var(--border, #e4e4e7)';
+      if (thumb) thumb.style.transform   = 'translateX(0)';
+    }
   }
 
   /**
