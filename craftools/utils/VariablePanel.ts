@@ -539,6 +539,7 @@ export class VariablePanel {
             ${this._pillGroup(I18n.t('variablePanel.dateRepetitionScopeLabel'), 'var-date-repetition-scope-btn', [
                 ['instance', I18n.t('variablePanel.dateRepetitionScopeInstance')],
                 ['cycle',    I18n.t('variablePanel.dateRepetitionScopeCycle')],
+                ['chain',    I18n.t('variablePanel.dateRepetitionScopeChain')],
             ], b.repetitionScope ?? 'instance', { help: I18n.t('variablePanel.dateRepetitionScopeHint') })}
             <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.dateFormatLabel')}</span>
@@ -1224,7 +1225,7 @@ export class VariablePanel {
                     if (startInput)  startInput.oninput    = () => { binding!.startDate = startInput.value;                                notify(); };
                     this._bindPillGroup(container, 'var-date-interval-btn', v => { binding!.interval = v; }, notify);
                     if (stepInput)   stepInput.oninput     = () => { binding!.step      = parseInt(stepInput.value, 10) || 1;              notify(); };
-                    this._bindPillGroup(container, 'var-date-repetition-scope-btn', v => { binding!.repetitionScope = v as 'instance' | 'cycle'; }, notify);
+                    this._bindPillGroup(container, 'var-date-repetition-scope-btn', v => { binding!.repetitionScope = v as 'instance' | 'cycle' | 'chain'; }, notify);
                     // Applies a new custom-format string from either a
                     // button click or free typing: writes it into the text
                     // box + binding (always flipping `format` to 'CUSTOM'

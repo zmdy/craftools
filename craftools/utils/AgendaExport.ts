@@ -151,7 +151,7 @@ export class AgendaExport {
     // PdfExport._collectUsedFontFaces()'s doc comment.
     const usedFontFacesByKey = new Map<string, { family: string; weight: string; style: string }>();
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex, pageIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -170,6 +170,7 @@ export class AgendaExport {
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
         cycleIndex:      cycleIndex,
+        pageIndex:       pageIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
@@ -282,7 +283,7 @@ export class AgendaExport {
 
     const outputPages: { html: string; size: import('./PdfExport.js').PageSize }[] = [];
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex, pageIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -308,6 +309,7 @@ export class AgendaExport {
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
         cycleIndex:      cycleIndex,
+        pageIndex:       pageIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
@@ -401,7 +403,7 @@ export class AgendaExport {
 
     const result: { el: HTMLElement; size: import('./PdfExport.js').PageSize }[] = [];
 
-    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex }, planIdx) => {
+    renderPlan.forEach(({ page, repetitionIndex: globalRepetitionIndex, cycleIndex, pageIndex }, planIdx) => {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
@@ -417,6 +419,7 @@ export class AgendaExport {
       const context: ResolveContext = {
         repetitionIndex: globalRepetitionIndex,
         cycleIndex:      cycleIndex,
+        pageIndex:       pageIndex,
         pageNumber:      outputPageNumber,
         totalPages:      totalOutputPages,
         now:             new Date(),
@@ -646,6 +649,15 @@ export class AgendaExport {
    * position) so a page that ALSO repeats via "Repetir página" keeps
    * producing a fresh, non-overlapping batch of per-card values on every
    * repetition instead of reusing indices 0..N-1 every time.
+   *
+   * Also overrides `pageIndex` the exact same way (not just
+   * `repetitionIndex`) -- a date binding using the default
+   * `repetitionScope: 'instance'` resolves off `pageIndex` now (see
+   * AgendaPlan.ts's `pageIndex` doc comment), and without this override
+   * every card would keep resolving that binding at the SAME `pageIndex`
+   * (the page's own, untouched by card position), silently undoing this
+   * whole per-card variation feature for any Business Card date field
+   * left on its default scope.
    */
   static _cardRepetitionContext(origEls: CraftoolsEl[], origEl: CraftoolsEl, context: ResolveContext): ResolveContext {
     const lid = origEl.getAttribute('data-linked-id');
@@ -657,8 +669,9 @@ export class AgendaExport {
     const group = origEls.filter(e => e.getAttribute('data-linked-id') === lid);
     const idx = group.indexOf(origEl);
     if (idx < 0) return context;
-    const base = context.repetitionIndex ?? 0;
-    return { ...context, repetitionIndex: base * group.length + idx };
+    const baseRep  = context.repetitionIndex ?? 0;
+    const basePage = context.pageIndex ?? baseRep;
+    return { ...context, repetitionIndex: baseRep * group.length + idx, pageIndex: basePage * group.length + idx };
   }
 
   /**

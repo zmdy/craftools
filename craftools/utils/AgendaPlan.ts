@@ -37,16 +37,23 @@
  * position) or something reached only via another head's chain.
  *
  * Walking a chain never needs an explicit "continue sequence" opt-in
- * anymore (the old `data-agenda-continue-sequence` flag): the whole point
- * of chaining two pages is that their repetitions are meant to form one
- * continuous run (e.g. a weekday layout's dates flowing straight into a
- * weekend layout's dates for the same week), so `repetitionIndex` simply
- * counts up continuously across every instance in a chain/loop -- across
- * every cycle too, not reset per cycle, so a full-year loop keeps dates
- * flowing forward the same way a human filling in a physical agenda would.
- * A page that ISN'T part of any chain (the overwhelmingly common case: a
- * single repeating page with nothing pointing to/from it) keeps starting
- * fresh at index 0 for its own batch, exactly like before.
+ * anymore (the old `data-agenda-continue-sequence` flag): `repetitionIndex`
+ * counts up continuously across EVERY instance of EVERY page in a
+ * chain/loop -- across every cycle too, not reset per cycle -- so two
+ * pages that are meant to share one continuous flow (e.g. a weekday
+ * layout's dates flowing straight into a weekend layout's dates for the
+ * same week) can. `pageIndex` (below) instead counts only THIS SPECIFIC
+ * page's own instances, ignoring any other page interleaved into the same
+ * chain/loop -- what a page's OWN date binding should normally advance
+ * by (see `VariableBinding.repetitionScope`'s doc comment in
+ * VariableEngine.ts for why `repetitionIndex` alone is wrong for this:
+ * a header page contributing even 1 instance ahead of a days page in the
+ * same cycle silently shifts the days page's whole sequence by 1, e.g.
+ * skipping day 1 and ending on the 1st of the NEXT month instead of the
+ * last day of the current one). A page that ISN'T part of any chain (the
+ * overwhelmingly common case: a single repeating page with nothing
+ * pointing to/from it) has `pageIndex === repetitionIndex` always, so
+ * nothing changes for it either way.
  *
  * ── Dynamic (date-triggered) repeat counts ──────────────────────────────
  * `data-agenda-repeat` is normally a plain static number the user typed
@@ -74,8 +81,25 @@ import { parseVariableBinding } from './fields/variable-binding.field.js';
 export interface AgendaPlanInstance {
   page: HTMLElement;
   /** Continuous 0-based index within this page's own chain/loop -- what
-   *  ResolveContext.repetitionIndex should be for this instance. */
+   *  ResolveContext.repetitionIndex should be for this instance. Shared
+   *  across every DIFFERENT page emitted in the same chain/loop -- see
+   *  `pageIndex` below for the per-page-only counterpart. */
   repetitionIndex: number;
+  /**
+   * Continuous 0-based index of how many times THIS EXACT page (by
+   * element identity, not by page type/position) has been emitted so
+   * far -- across the WHOLE build, never reset per cycle, but NEVER
+   * incremented by any OTHER page's own emissions either, unlike
+   * `repetitionIndex` above. For a page with no chain (the common case)
+   * this is always identical to `repetitionIndex`. For a page chained
+   * behind a DIFFERENT page (e.g. a "days" page behind a "month" header
+   * in the same cycle), this is what lets the days page's own date
+   * binding start each cycle at its own day 1 instead of being shifted
+   * forward by however many instances the header page contributed first
+   * -- see `VariableBinding.repetitionScope`'s doc comment in
+   * VariableEngine.ts.
+   */
+  pageIndex: number;
   /**
    * 0-based index of which iteration of the ENCLOSING loop this instance
    * belongs to -- 0 for every instance outside a loop (a non-repeating
@@ -192,20 +216,34 @@ export class AgendaPlan {
 
   /**
    * Resolves how many times `pg` should repeat for the emission starting
-   * at `startIndex` (this page's own `repetitionIndex` for its first
-   * instance in this pass) -- the static `data-agenda-repeat` snapshot
-   * for a plain manually-numbered page, or a freshly recomputed count for
-   * a `hasRepeatTrigger()` page (see this file's header comment). Falls
-   * back to the static snapshot if the page's leading date binding can't
-   * be found (e.g. it was deleted after the trigger was configured) --
-   * same graceful degradation the rest of this file uses for corrupted/
-   * stale state rather than throwing.
+   * at `indices` (this page's own repetitionIndex/pageIndex/cycleIndex
+   * for its first instance in this pass) -- the static `data-agenda-repeat`
+   * snapshot for a plain manually-numbered page, or a freshly recomputed
+   * count for a `hasRepeatTrigger()` page (see this file's header
+   * comment). Falls back to the static snapshot if the page's leading
+   * date binding can't be found (e.g. it was deleted after the trigger
+   * was configured) -- same graceful degradation the rest of this file
+   * uses for corrupted/stale state rather than throwing.
+   *
+   * Which of the three indices actually gets used as the count's
+   * `startIndex` follows the SAME `repetitionScope` the binding's own
+   * date math (`VariableEngine._pickDate()`) uses to render -- otherwise
+   * the computed COUNT and the actual RENDERED dates could desync (e.g.
+   * a count computed from `pageIndex` but dates rendered from
+   * `repetitionIndex` would produce the wrong number of pages for
+   * whichever index was NOT used to pick the reference date).
    */
-  private static _resolveRepeatCount(pg: HTMLElement, startIndex: number): number {
+  private static _resolveRepeatCount(
+    pg: HTMLElement,
+    indices: { repetitionIndex: number; pageIndex: number; cycleIndex: number },
+  ): number {
     const trigger = pg.dataset['agendaRepeatTrigger'] as DateRepeatTrigger | undefined;
     if (!trigger) return AgendaPlan.repeatCount(pg);
     const binding = AgendaPlan.findLeadingDateBinding(pg);
     if (!binding) return AgendaPlan.repeatCount(pg);
+    const startIndex = binding.repetitionScope === 'cycle' ? indices.cycleIndex
+                      : binding.repetitionScope === 'chain' ? indices.repetitionIndex
+                      : indices.pageIndex; // default/'instance' -- this page's OWN count, see pageIndex's doc comment
     return VariableEngine.computeDateTriggerRepeatCount(binding, trigger, new Date(), startIndex);
   }
 
@@ -312,9 +350,18 @@ export class AgendaPlan {
     const heads = AgendaPlan._computeHeads(pages);
     const plan: AgendaPlanInstance[] = [];
 
+    // Per-PAGE running index -- see AgendaPlanInstance.pageIndex's doc
+    // comment. Declared OUTSIDE the pages.forEach below (shared across
+    // every head's own chain) purely for simplicity: by construction
+    // (each page has at most one incoming edge, see this file's header
+    // comment) a given page element is only ever emitted from exactly one
+    // head's walk anyway, so a single shared map behaves identically to
+    // one map per head would, without needing to thread it through.
+    const pageRunningIndex = new Map<HTMLElement, number>();
+
     pages.forEach(page => {
       if (!AgendaPlan.repeatEnabled(page)) {
-        plan.push({ page, repetitionIndex: 0, cycleIndex: 0 });
+        plan.push({ page, repetitionIndex: 0, cycleIndex: 0, pageIndex: 0 });
         return;
       }
       if (!heads.has(page.id)) return; // reached via some other head's chain instead
@@ -323,18 +370,21 @@ export class AgendaPlan {
 
       let runningIndex = 0;
       const emit = (pg: HTMLElement, cycleIndex: number): void => {
-        // _resolveRepeatCount(pg, runningIndex) recomputes a date-triggered
-        // page's count FRESH from wherever its own binding has advanced to
-        // by this point in the chain -- see this file's header comment
-        // ("Dynamic (date-triggered) repeat counts"). For a plain
-        // manually-numbered page (no trigger) this is identical to the old
+        const pageStartIndex = pageRunningIndex.get(pg) ?? 0;
+        // _resolveRepeatCount() recomputes a date-triggered page's count
+        // FRESH from wherever ITS OWN binding has advanced to by this
+        // point (using whichever of the 3 indices its repetitionScope
+        // picks) -- see this file's header comment ("Dynamic
+        // (date-triggered) repeat counts"). For a plain manually-numbered
+        // page (no trigger) this is identical to the old
         // `AgendaPlan.repeatCount(pg)` call, so nothing changes for the
         // overwhelmingly common non-trigger case.
-        const count = AgendaPlan._resolveRepeatCount(pg, runningIndex);
+        const count = AgendaPlan._resolveRepeatCount(pg, { repetitionIndex: runningIndex, pageIndex: pageStartIndex, cycleIndex });
         for (let i = 0; i < count; i++) {
-          plan.push({ page: pg, repetitionIndex: runningIndex, cycleIndex });
+          plan.push({ page: pg, repetitionIndex: runningIndex, cycleIndex, pageIndex: pageStartIndex + i });
           runningIndex++;
         }
+        pageRunningIndex.set(pg, pageStartIndex + count);
       };
 
       if (loopStart === -1) {
@@ -363,6 +413,10 @@ export class AgendaPlan {
     const heads = AgendaPlan._computeHeads(pages);
     const groups: AgendaPlanSummaryGroup[] = [];
 
+    // Mirrors build()'s own pageRunningIndex bookkeeping -- see that
+    // method's matching comment for why one shared map is safe here too.
+    const pageRunningIndex = new Map<HTMLElement, number>();
+
     pages.forEach(page => {
       if (!AgendaPlan.repeatEnabled(page)) {
         groups.push({ kind: 'single', page, count: 1, dynamic: false });
@@ -381,8 +435,10 @@ export class AgendaPlan {
       // doc comment.
       let runningIndex = 0;
       const describePage = (pg: HTMLElement): AgendaPlanSummaryPage => {
-        const count = AgendaPlan._resolveRepeatCount(pg, runningIndex);
+        const pageStartIndex = pageRunningIndex.get(pg) ?? 0;
+        const count = AgendaPlan._resolveRepeatCount(pg, { repetitionIndex: runningIndex, pageIndex: pageStartIndex, cycleIndex: 0 });
         runningIndex += count;
+        pageRunningIndex.set(pg, pageStartIndex + count);
         return { page: pg, count, dynamic: AgendaPlan.hasRepeatTrigger(pg) };
       };
 

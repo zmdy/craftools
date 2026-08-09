@@ -51,31 +51,44 @@ export interface VariableBinding {
     interval?:     string;
     step?:         number | string;
     /**
-     * Which counter this date binding advances by, per repetition --
-     * 'instance' (default, and the only behavior before this field
-     * existed) advances once per individual page instance across the
-     * whole Agenda Export chain/loop (ResolveContext.repetitionIndex);
-     * 'cycle' advances once per full CYCLE of the enclosing loop instead
-     * (ResolveContext.cycleIndex), the SAME value shared by every page
-     * emitted during that one pass through the loop.
+     * Which counter this date binding advances by, per repetition:
+     *
+     * - 'instance' (default) -- advances once per THIS PAGE'S OWN
+     *   instance, ignoring any other page interleaved into the same
+     *   chain/loop (ResolveContext.pageIndex). Right for the overwhelming
+     *   majority of pages, including every page NOT part of any chain at
+     *   all (where this is the only sensible meaning anyway).
+     * - 'cycle' -- advances once per full CYCLE of the enclosing loop
+     *   instead (ResolveContext.cycleIndex), the SAME value shared by
+     *   every page emitted during that one pass through the loop.
+     * - 'chain' -- advances once per instance of ANY page in the whole
+     *   chain/loop, combined (ResolveContext.repetitionIndex) -- the
+     *   old/original behavior this field's default used to mean before
+     *   `pageIndex` existed. Only useful when two DIFFERENT page types in
+     *   the same chain are meant to share one continuous flow (e.g. a
+     *   weekday layout's dates flowing straight into a weekend layout's
+     *   dates for the same week) -- an advanced, uncommon case.
      *
      * Only matters when this page is chained/looped with at least one
-     * OTHER differently-repeating page (AgendaExportTool.ts's "Depois,
-     * continuar com" / "Repetir este bloco" controls) -- e.g. a month
-     * page (repeats once per cycle) looped with a days page (repeats
-     * ~30x per cycle), cycled 12x for a full year: the days page wants
-     * 'instance' (so Jan 1..31 flows straight into Fev 1..28 without
-     * resetting, exactly like a human filling in a physical agenda), but
-     * the month page needs 'cycle' -- with 'instance' it would advance by
-     * however many total page instances (both pages combined) came before
-     * it, not by how many cycles, landing on the wrong month entirely
+     * OTHER page (AgendaExportTool.ts's "Depois, continuar com" /
+     * "Repetir este bloco" controls) -- e.g. a month page (repeats once
+     * per cycle) looped with a days page (repeats ~30x per cycle), cycled
+     * 12x for a full year: the days page wants the default 'instance' (so
+     * Jan 1..31 flows straight into Fev 1..28 without resetting, exactly
+     * like a human filling in a physical agenda, and WITHOUT being
+     * shifted forward by however many instances the month page itself
+     * contributes each cycle -- see AgendaPlan.ts's `pageIndex` doc
+     * comment for the exact bug this avoids), but the month page needs
+     * 'cycle' -- with 'instance' OR 'chain' it would advance by how many
+     * page instances came before it (itself or combined with the days
+     * page), not by how many cycles, landing on the wrong month entirely
      * (e.g. showing Setembro instead of Fevereiro on its 2nd occurrence).
      * Outside of Agenda Export (editing on canvas, VariablePanel.ts's
-     * config-time preview), `cycleIndex` isn't a meaningful concept at
-     * all and silently mirrors `repetitionIndex`, so 'cycle' behaves
-     * exactly like 'instance' there instead of looking frozen.
+     * config-time preview), `cycleIndex`/`pageIndex` aren't meaningful
+     * concepts at all and silently mirror `repetitionIndex`, so every
+     * scope behaves like 'chain' there instead of looking frozen.
      */
-    repetitionScope?: 'instance' | 'cycle';
+    repetitionScope?: 'instance' | 'cycle' | 'chain';
     format?:       string;
     daysBoxHighlightColor?: string;
     daysBoxBorderRadius?:   number | string;
@@ -298,6 +311,16 @@ export interface ResolveContext {
      * while the user is just editing on canvas.
      */
     cycleIndex?:      number;
+    /**
+     * Continuous 0-based index of how many times THIS SPECIFIC page (by
+     * element identity) has been emitted so far -- see AgendaPlan.ts's
+     * AgendaPlanInstance.pageIndex for the full explanation. Only ever
+     * set by AgendaExport.ts; every other caller leaves it undefined, so
+     * it defaults to mirroring `repetitionIndex` -- a binding using the
+     * default `repetitionScope: 'instance'` then behaves exactly like it
+     * always has outside of a real Agenda export.
+     */
+    pageIndex?:       number;
     pageNumber?:      number;
     totalPages?:      number;
     now?:             Date;
@@ -457,6 +480,7 @@ export class VariableEngine {
         const ctx = {
             repetitionIndex,
             cycleIndex:      context?.cycleIndex ?? repetitionIndex,
+            pageIndex:       context?.pageIndex  ?? repetitionIndex,
             pageNumber:      context?.pageNumber      ?? 1,
             totalPages:      context?.totalPages      ?? 1,
             now:             context?.now             ?? new Date(),
@@ -493,6 +517,7 @@ export class VariableEngine {
         const context = {
             repetitionIndex: previewRepetitionIndex,
             cycleIndex:      sampleContext.cycleIndex ?? previewRepetitionIndex,
+            pageIndex:       sampleContext.pageIndex  ?? previewRepetitionIndex,
             pageNumber:      sampleContext.pageNumber      ?? 1,
             totalPages:      sampleContext.totalPages      ?? 1,
             now:             new Date(),
@@ -688,21 +713,21 @@ export class VariableEngine {
 
     // ── date ──────────────────────────────────────────────────────────────────
 
-    private static _pickDate(b: VariableBinding, ctx: { repetitionIndex: number; cycleIndex?: number; now: Date }): Date | null {
+    private static _pickDate(b: VariableBinding, ctx: { repetitionIndex: number; cycleIndex?: number; pageIndex?: number; now: Date }): Date | null {
         const base = b.startDate ? new Date(`${b.startDate}T00:00:00`) : new Date(ctx.now);
         if (isNaN(base.getTime())) return null;
-        // `repetitionScope: 'cycle'` opts a date binding into advancing once
-        // per Agenda Export chain/loop CYCLE (AgendaPlan.ts's cycleIndex)
-        // instead of once per individual page instance across the whole
-        // chain (`repetitionIndex`, the default/'instance' behavior, and
-        // the only option that existed before this field) -- see
-        // AgendaPlanInstance.cycleIndex's doc comment for the full "month
-        // header + variable day count" scenario this exists to support.
-        // Falls back to repetitionIndex whenever cycleIndex isn't provided
-        // (every call site outside a real Agenda export), and to 0 as a
-        // last resort so a binding accidentally marked 'cycle' outside
-        // that context still resolves to something instead of crashing.
-        const idx = b.repetitionScope === 'cycle' ? (ctx.cycleIndex ?? ctx.repetitionIndex ?? 0) : ctx.repetitionIndex;
+        // See VariableBinding.repetitionScope's doc comment for what each
+        // of the 3 scopes means and why the default changed from
+        // `repetitionIndex` to `pageIndex` (AgendaPlan.ts's `pageIndex`
+        // doc comment has the concrete "day 1 gets skipped" bug this
+        // avoids). Every index falls back to `repetitionIndex` (and that,
+        // in turn, to 0) whenever it isn't provided -- every call site
+        // outside a real Agenda export -- so a binding marked 'cycle' or
+        // 'chain' outside that context still resolves to something
+        // instead of crashing or looking permanently frozen.
+        const idx = b.repetitionScope === 'cycle' ? (ctx.cycleIndex ?? ctx.repetitionIndex ?? 0)
+                  : b.repetitionScope === 'chain' ? ctx.repetitionIndex
+                  : (ctx.pageIndex ?? ctx.repetitionIndex ?? 0); // default/'instance'
         return this._addInterval(base, b.interval ?? 'daily', (parseInt(String(b.step), 10) || 1) * idx);
     }
 
