@@ -840,10 +840,22 @@ export class VariableContentTool extends BaseTool {
       return;
     }
 
+    // 'fontSize' and 'font' used to be missing here, so changing either
+    // via the ctx-bar (or the properties panel) while in lettering mode
+    // only ever reached the plain `case 'fontSize'`/`case 'font'` below,
+    // which sets the CONTAINER's CSS font-size/font-family -- but
+    // LetteringGenerator.ts bakes an absolute `font-size:${meta.fontSize}px`
+    // and `font-family:${style.fontFamily}` inline onto every individual
+    // `<span class="ct-lettering-token">` at build time (higher specificity
+    // than the container, doesn't inherit), so those container-level
+    // styles were visually inert. Both need a real
+    // `_applyVariablePreview()` re-run (which rebuilds that markup reading
+    // the freshly-changed `state.fontSize`/`state.font`) to actually take
+    // effect -- same as every other lettering-affecting field below.
     const LETTERING_KEYS = new Set([
       'useLettering', 'splitMode', 'bounceIntensity', 'rotationIntensity',
       'skewIntensity', 'sizeIntensity', 'opacityIntensity', 'fontMode',
-      'colorRandom', 'letteringReroll', 'letteringSeed'
+      'colorRandom', 'letteringReroll', 'letteringSeed', 'fontSize', 'font',
     ]);
 
     if (key === 'letteringReroll') {
