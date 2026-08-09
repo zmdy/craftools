@@ -1012,6 +1012,7 @@ export class PageTool {
           <div class="ct-pill-group" id="cropmarks-count-group" style="display:flex; gap:6px; margin-top:4px;">
             <button type="button" class="craftools-topbtn cropmarks-count-btn" data-count="4" style="flex:1; justify-content:center; ${config.count === 4 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount4')}</button>
             <button type="button" class="craftools-topbtn cropmarks-count-btn" data-count="6" style="flex:1; justify-content:center; ${config.count === 6 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount6')}</button>
+            <button type="button" class="craftools-topbtn cropmarks-count-btn" data-count="8" style="flex:1; justify-content:center; ${config.count === 8 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount8')}</button>
           </div>
         </div>
       </div>
@@ -1059,7 +1060,8 @@ export class PageTool {
 
     wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-count-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const count = btn.getAttribute('data-count') === '6' ? 6 : 4;
+        const countAttr = btn.getAttribute('data-count');
+        const count = countAttr === '8' ? 8 : countAttr === '6' ? 6 : 4;
         CropMarks.writeConfig(pageEl, { count });
         CropMarks.renderLiveOverlay(pageEl);
         wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-count-btn').forEach(b => {

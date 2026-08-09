@@ -38,6 +38,7 @@ I18n.addTranslations('pageTool', {
         cropMarksCount: "Quantidade de marcas",
         cropMarksCount4: "4 marcas",
         cropMarksCount6: "6 marcas",
+        cropMarksCount8: "8 marcas",
         bleedLabel: "Sangria",
         bleedHint: "A sangria acrescenta uma margem extra ao redor da página na hora de exportar (PDF, SVG, imagem e .craftools), preenchida com o fundo da página. As marcas de corte, quando ativadas, são desenhadas logo fora do limite real da página, dentro dessa margem."
     },
@@ -78,6 +79,7 @@ I18n.addTranslations('pageTool', {
         cropMarksCount: "Number of marks",
         cropMarksCount4: "4 marks",
         cropMarksCount6: "6 marks",
+        cropMarksCount8: "8 marks",
         bleedLabel: "Bleed",
         bleedHint: "Bleed adds an extra margin around the page on export (PDF, SVG, image and .craftools), filled with the page's own background. Crop marks, when enabled, are drawn just outside the page's real edge, inside that margin."
     },
@@ -118,6 +120,7 @@ I18n.addTranslations('pageTool', {
         cropMarksCount: "Cantidad de marcas",
         cropMarksCount4: "4 marcas",
         cropMarksCount6: "6 marcas",
+        cropMarksCount8: "8 marcas",
         bleedLabel: "Sangrado",
         bleedHint: "El sangrado agrega un margen extra alrededor de la página al exportar (PDF, SVG, imagen y .craftools), relleno con el fondo de la página. Las marcas de corte, cuando están activadas, se dibujan justo fuera del límite real de la página, dentro de ese margen."
     }

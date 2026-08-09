@@ -12,7 +12,7 @@
  * `dataset.agendaRepeatTrigger` etc.):
  *   - dataset.cropMarksEnabled : "true" | "false"
  *   - dataset.cropMarksStyle   : "standard" | "cross" | "circle"
- *   - dataset.cropMarksCount   : "4" | "6"
+ *   - dataset.cropMarksCount   : "4" | "6" | "8"
  *   - dataset.bleedMm          : number as string (0 = no bleed)
  *
  * `StateSerializer.ts`'s `PageState.dataset` field round-trips this exactly
@@ -48,7 +48,7 @@ export type CropMarksStyle = 'standard' | 'cross' | 'circle';
 export interface CropMarksConfig {
   enabled: boolean;
   style:   CropMarksStyle;
-  count:   4 | 6;
+  count:   4 | 6 | 8;
   bleedMm: number;
 }
 
@@ -75,7 +75,7 @@ export class CropMarks {
     return {
       enabled: ds.cropMarksEnabled === 'true',
       style:   (style === 'cross' || style === 'circle') ? style : 'standard',
-      count:   ds.cropMarksCount === '6' ? 6 : 4,
+      count:   ds.cropMarksCount === '8' ? 8 : ds.cropMarksCount === '6' ? 6 : 4,
       bleedMm: parseFloat(ds.bleedMm ?? '0') || 0,
     };
   }
@@ -141,12 +141,19 @@ export class CropMarks {
       { x: 0,        y: trimH,   dx: -1, dy: 1  }, // bottom-left
       { x: trimW,    y: trimH,   dx: 1,  dy: 1  }, // bottom-right
     ];
-    if (config.count === 6) {
+    if (config.count === 6 || config.count === 8) {
       // Extra pair at the horizontal edges' midpoints (top-center /
       // bottom-center) -- the common convention for larger sheets needing
       // an extra vertical alignment/fold reference beyond the 4 corners.
       positions.push({ x: trimW / 2, y: 0,     dx: 0, dy: -1 });
       positions.push({ x: trimW / 2, y: trimH, dx: 0, dy: 1  });
+    }
+    if (config.count === 8) {
+      // Second extra pair at the vertical edges' midpoints (left-center /
+      // right-center), completing all 4 side midpoints alongside the 4
+      // corners for the largest mark set.
+      positions.push({ x: 0,     y: trimH / 2, dx: -1, dy: 0 });
+      positions.push({ x: trimW, y: trimH / 2, dx: 1,  dy: 0 });
     }
 
     for (const p of positions) {
@@ -377,9 +384,13 @@ export class CropMarks {
         { x: 0,       y: trimH,  dx: 1,  dy: -1 },
         { x: trimW,   y: trimH,  dx: -1, dy: -1 },
       ];
-      if (config.count === 6) {
+      if (config.count === 6 || config.count === 8) {
         positions.push({ x: trimW / 2, y: 0,     dx: 0, dy: 1  });
         positions.push({ x: trimW / 2, y: trimH, dx: 0, dy: -1 });
+      }
+      if (config.count === 8) {
+        positions.push({ x: 0,     y: trimH / 2, dx: 1,  dy: 0 });
+        positions.push({ x: trimW, y: trimH / 2, dx: -1, dy: 0 });
       }
 
       for (const p of positions) {
