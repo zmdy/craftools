@@ -57,6 +57,13 @@ export class PageTool {
     // undo/redo involved at all). Centralizing the guard here instead of in
     // each caller means every call site is safe by construction, including
     // ones added later.
+    // Refresh the live crop-marks/bleed on-canvas preview every time this
+    // runs (initial load, undo/redo/session restore, .craftools import,
+    // restoreOriginalCanvas(), addNewPage() clone) -- unlike the event
+    // listeners below this is cheap and idempotent, so it deliberately
+    // sits OUTSIDE the `_craftoolsEventsAttached` guard.
+    CropMarks.renderLiveOverlay(pageEl);
+
     const p = pageEl as HTMLElement & { _craftoolsEventsAttached?: boolean };
     if (p._craftoolsEventsAttached) return;
     p._craftoolsEventsAttached = true;
@@ -498,6 +505,7 @@ export class PageTool {
               });
               pageEl.style.width     = parts[0] + activeUnit;
               pageEl.style.minHeight = parts[1] + activeUnit;
+              CropMarks.renderLiveOverlay(pageEl);
             }
           });
         });
@@ -510,6 +518,8 @@ export class PageTool {
           const h = (document.getElementById('dim-h') as HTMLInputElement).value;
           pageEl.style.width     = w + activeUnit;
           pageEl.style.minHeight = h + activeUnit;
+          // Crop-marks/bleed live preview geometry depends on trim size.
+          CropMarks.renderLiveOverlay(pageEl);
         };
 
         (document.getElementById('dim-w') as HTMLInputElement).addEventListener('input', applyDims);
@@ -1029,6 +1039,7 @@ export class PageTool {
     if (enableChk) {
       enableChk.onchange = () => {
         CropMarks.writeConfig(pageEl, { enabled: enableChk.checked });
+        CropMarks.renderLiveOverlay(pageEl);
         rerender();
       };
     }
@@ -1037,6 +1048,7 @@ export class PageTool {
       btn.addEventListener('click', () => {
         const style = (btn.getAttribute('data-style') as CropMarksStyle) || 'standard';
         CropMarks.writeConfig(pageEl, { style });
+        CropMarks.renderLiveOverlay(pageEl);
         wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-style-btn').forEach(b => {
           const active = b === btn;
           b.style.background = active ? 'var(--accent, #3b82f6)' : '';
@@ -1049,6 +1061,7 @@ export class PageTool {
       btn.addEventListener('click', () => {
         const count = btn.getAttribute('data-count') === '6' ? 6 : 4;
         CropMarks.writeConfig(pageEl, { count });
+        CropMarks.renderLiveOverlay(pageEl);
         wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-count-btn').forEach(b => {
           const active = b === btn;
           b.style.background = active ? 'var(--accent, #3b82f6)' : '';
@@ -1060,6 +1073,7 @@ export class PageTool {
     wrap.querySelector<HTMLInputElement>('#cropmarks-bleed-mm')?.addEventListener('input', e => {
       const bleedMm = parseFloat((e.target as HTMLInputElement).value) || 0;
       CropMarks.writeConfig(pageEl, { bleedMm });
+      CropMarks.renderLiveOverlay(pageEl);
     });
 
     // Standard toggle track/thumb animation for this tab's own ct-fi checkbox.

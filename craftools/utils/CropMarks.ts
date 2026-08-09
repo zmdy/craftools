@@ -333,6 +333,100 @@ export class CropMarks {
     return { html, totalWidthPx: totalW, totalHeightPx: totalH, marginPx };
   }
 
+  // ── Live on-canvas preview (PageTool.ts) ─────────────────────────────────
+  //
+  // `.craftools-page` has `overflow:hidden` (craftools.css) so it can clip
+  // element content that's dragged/resized past the page edge -- that
+  // rules out drawing marks/bleed OUTSIDE the page box the way every export
+  // pipeline above does (would just get clipped, and restructuring every
+  // page into an extra wrapper div to allow overflow would ripple through
+  // every piece of code that assumes `.craftools-page` is a direct child of
+  // `#pages-wrapper`: StateSerializer.reconcile's sibling-order diffing,
+  // SortableJS page-reordering, the footer thumbnail strip, drag-drop,
+  // etc.). So this is a deliberately-approximate INSET preview instead: a
+  // dashed bleed boundary and small inward-pointing corner/edge marks, both
+  // fully inside the trim rect, close enough to the edge to read as "marks
+  // roughly here" without claiming pixel-accuracy against the real
+  // (canvas-enlarging) export geometry above.
+
+  private static readonly LIVE_GUIDE_INSET = 8;
+  private static readonly LIVE_GUIDE_LEN   = 14;
+
+  static buildLiveOverlaySvg(trimW: number, trimH: number, config: CropMarksConfig, color = '#ef4444'): string {
+    if (!config.enabled && config.bleedMm <= 0) return '';
+    const parts: string[] = [];
+
+    if (config.bleedMm > 0) {
+      const maxInset = Math.min(trimW, trimH) * 0.25;
+      const bleedPx = Math.min(CropMarks.mmToPx(config.bleedMm), maxInset);
+      parts.push(
+        `<rect x="${bleedPx}" y="${bleedPx}" width="${Math.max(0, trimW - bleedPx * 2)}" height="${Math.max(0, trimH - bleedPx * 2)}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="5 4" opacity="0.6"/>`
+      );
+    }
+
+    if (config.enabled) {
+      const inset = CropMarks.LIVE_GUIDE_INSET;
+      const len   = CropMarks.LIVE_GUIDE_LEN;
+      // dx/dy here point INWARD (opposite sign convention from
+      // buildGeometry()'s export-time outward marks) since these previews
+      // have to stay inside the trim rect.
+      type Pos = { x: number; y: number; dx: -1 | 0 | 1; dy: -1 | 0 | 1 };
+      const positions: Pos[] = [
+        { x: 0,       y: 0,      dx: 1,  dy: 1  },
+        { x: trimW,   y: 0,      dx: -1, dy: 1  },
+        { x: 0,       y: trimH,  dx: 1,  dy: -1 },
+        { x: trimW,   y: trimH,  dx: -1, dy: -1 },
+      ];
+      if (config.count === 6) {
+        positions.push({ x: trimW / 2, y: 0,     dx: 0, dy: 1  });
+        positions.push({ x: trimW / 2, y: trimH, dx: 0, dy: -1 });
+      }
+
+      for (const p of positions) {
+        if (config.style === 'standard') {
+          if (p.dx !== 0) parts.push(`<line x1="${p.x + p.dx * inset}" y1="${p.y}" x2="${p.x + p.dx * (inset + len)}" y2="${p.y}" stroke="${color}" stroke-width="1.5"/>`);
+          if (p.dy !== 0) parts.push(`<line x1="${p.x}" y1="${p.y + p.dy * inset}" x2="${p.x}" y2="${p.y + p.dy * (inset + len)}" stroke="${color}" stroke-width="1.5"/>`);
+        } else {
+          const cx = p.x + p.dx * (inset + len / 2);
+          const cy = p.y + p.dy * (inset + len / 2);
+          const arm = len * 0.6;
+          parts.push(`<line x1="${cx - arm / 2}" y1="${cy}" x2="${cx + arm / 2}" y2="${cy}" stroke="${color}" stroke-width="1.5"/>`);
+          parts.push(`<line x1="${cx}" y1="${cy - arm / 2}" x2="${cx}" y2="${cy + arm / 2}" stroke="${color}" stroke-width="1.5"/>`);
+          if (config.style === 'circle') parts.push(`<circle cx="${cx}" cy="${cy}" r="${arm * 0.35}" fill="none" stroke="${color}" stroke-width="1.5"/>`);
+        }
+      }
+    }
+
+    if (!parts.length) return '';
+    return `<svg class="ct-crop-marks-live-svg" width="${trimW}" height="${trimH}" viewBox="0 0 ${trimW} ${trimH}" style="position:absolute; inset:0; pointer-events:none;">${parts.join('')}</svg>`;
+  }
+
+  /** Creates/updates/removes the live on-canvas overlay for one page.
+   *  Idempotent -- safe to call repeatedly (page load, undo/redo restore,
+   *  dimension edits, or right after `writeConfig()`). */
+  static renderLiveOverlay(pageEl: HTMLElement): void {
+    const config = CropMarks.readConfig(pageEl);
+    const existing = pageEl.querySelector<HTMLElement>(':scope > .ct-crop-marks-live-wrap');
+
+    const trimWpx = CropMarks.cssLengthToPx(pageEl.style.width || '800px');
+    const trimHpx = CropMarks.cssLengthToPx(pageEl.style.minHeight || '600px');
+    const svg = (!trimWpx || !trimHpx) ? '' : CropMarks.buildLiveOverlaySvg(trimWpx, trimHpx, config);
+
+    if (!svg) {
+      existing?.remove();
+      return;
+    }
+
+    let overlay = existing;
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'ct-crop-marks-live-wrap';
+      overlay.style.cssText = 'position:absolute; inset:0; pointer-events:none; z-index:6;';
+      pageEl.appendChild(overlay);
+    }
+    overlay.innerHTML = svg;
+  }
+
   // ── pdf-lib applier (PdfVectorExport.ts) ─────────────────────────────────
 
   /**
