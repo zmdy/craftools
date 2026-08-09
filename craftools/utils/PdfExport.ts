@@ -8,6 +8,7 @@
 import { Notify }       from './Notify.js';
 import { I18n }         from '../settings/Translations.js';
 import { SYSTEM_FONTS } from './FontList.js';
+import { CropMarks }    from './CropMarks.js';
 import './PdfExport_Translations.js';
 
 /** Always loaded regardless of what the document actually uses -- CalendarRenderer.ts,
@@ -57,7 +58,21 @@ export class PdfExport {
     }
 
     const pageSizes     = pages.map(p => this._parsePageSize(p));
-    const css           = this._buildCSS(pageSizes);
+    // Crop-marks/bleed can enlarge a page's OUTPUT canvas beyond its
+    // authored (trim) size -- @page's paper size needs to match that
+    // enlarged size, so _buildCSS() is fed the effective (post-bleed)
+    // sizes rather than the raw trim sizes. `wrapHtmlWithBleed()` is
+    // called here with an empty innerHtml just to read back the sizing
+    // math (same helper _serializePage() below uses for real, with the
+    // actual content); its own internal config read is deterministic off
+    // `pageEl.dataset`, so both calls agree.
+    const effectiveSizes = pages.map((p, i) => {
+      const size = pageSizes[i];
+      const probe = CropMarks.wrapHtmlWithBleed('', size.width, size.height, size.background, p);
+      if (probe.marginPx <= 0) return size;
+      return { width: `${probe.totalWidthPx}px`, height: `${probe.totalHeightPx}px`, background: size.background };
+    });
+    const css           = this._buildCSS(effectiveSizes);
     const pagesHtml     = pages.map((page, i) => this._serializePage(page, pageSizes[i])).join('\n');
     const usedFonts     = this._collectUsedFonts(pages);
     const usedFontFaces = this._collectUsedFontFaces(pages);
@@ -365,9 +380,21 @@ ${pageRules}
 
     clone.querySelectorAll<HTMLElement>('craftools-element').forEach(el => this._flattenElement(el));
 
+    const inner = clone.innerHTML;
+
+    // Crop marks / bleed -- see CropMarks.ts's doc comment for the model.
+    // No-op (returns `inner` unchanged, marginPx: 0) when this page has
+    // neither enabled.
+    const wrap = CropMarks.wrapHtmlWithBleed(inner, size.width, size.height, size.background, pageEl);
+    if (wrap.marginPx > 0) {
+      const effWidth  = `${wrap.totalWidthPx}px`;
+      const effHeight = `${wrap.totalHeightPx}px`;
+      const pageClass = `ct${this._sizeKey(effWidth, effHeight)}`;
+      return `<div class="print-page print-page-${pageClass}" style="width:${effWidth}; min-height:${effHeight};">${wrap.html}</div>`;
+    }
+
     const pageClass = `ct${this._sizeKey(size.width, size.height)}`;
     const bgStyle   = size.background ? `background: ${size.background};` : '';
-    const inner     = clone.innerHTML;
 
     return `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${inner}</div>`;
   }

@@ -22,6 +22,7 @@ I18n.addTranslations('exportTool', {
     backToHub: 'Voltar às Opções',
     projectTitlePrompt: 'Nome do Projeto',
     projectTitlePlaceholder: 'Digite o nome do seu projeto...',
+    pdfVectorCropMarksHint: 'Marcas de corte e sangria são configuradas por página, em Configurações da Página &gt; Marcas de Corte.',
   },
   'en': {
     title: 'Export & Save',
@@ -44,6 +45,7 @@ I18n.addTranslations('exportTool', {
     backToHub: 'Back to Options',
     projectTitlePrompt: 'Project Name',
     projectTitlePlaceholder: 'Type your project name...',
+    pdfVectorCropMarksHint: 'Crop marks and bleed are configured per page, in Page Settings &gt; Crop Marks.',
   },
   'es': {
     title: 'Exportar y Guardar',
@@ -66,5 +68,6 @@ I18n.addTranslations('exportTool', {
     backToHub: 'Volver a Opciones',
     projectTitlePrompt: 'Nombre del Proyecto',
     projectTitlePlaceholder: 'Escribe el nombre de tu proyecto...',
+    pdfVectorCropMarksHint: 'Las marcas de corte y el sangrado se configuran por página, en Configuración de Página &gt; Marcas de Corte.',
   },
 });

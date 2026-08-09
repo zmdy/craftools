@@ -6,6 +6,7 @@ import { Notify } from './Notify.js';
 import { I18n }   from '../settings/Translations.js';
 import './ImageExport_Translations.js';
 import { ExportNormalizer } from './ExportNormalizer.js';
+import { CropMarks } from './CropMarks.js';
 // Vendored via npm (previously loaded on first use from a cdnjs CDN <script>
 // injected at runtime, see _loadHtml2Canvas() below pre-migration) -- Vite
 // bundles it into dist/assets/*.js on build, so PNG/JPG export no longer
@@ -76,7 +77,25 @@ export class ImageExport {
                   // Normalize images, object-fit, auto-enhancement and text styles
                   await ExportNormalizer.normalizePage(pageClone);
 
-                  const canvas = await html2canvas(pageClone, {
+                  // Crop marks / bleed -- see CropMarks.ts's doc comment.
+                  // Re-wraps the (already normalized) page markup in a
+                  // larger bled canvas with an overlay <svg> of marks, then
+                  // re-injects it into `stage` so html2canvas captures the
+                  // enlarged canvas instead of just the trim-sized page.
+                  // No-op (captureTarget stays `pageClone`) when this page
+                  // has neither crop marks nor bleed configured.
+                  const trimWidthCss  = pageClone.style.width;
+                  const trimHeightCss = pageClone.style.height;
+                  const bgColor = origPage.style.background || origPage.style.backgroundColor || '#ffffff';
+                  const bleedWrap = CropMarks.wrapHtmlWithBleed(pageClone.outerHTML, trimWidthCss, trimHeightCss, bgColor, origPage);
+
+                  let captureTarget: HTMLElement = pageClone;
+                  if (bleedWrap.marginPx > 0) {
+                      stage.innerHTML = bleedWrap.html;
+                      captureTarget = stage.firstElementChild as HTMLElement;
+                  }
+
+                  const canvas = await html2canvas(captureTarget, {
                       scale:           opts.scale,
                       useCORS:         true,
                       allowTaint:      true,

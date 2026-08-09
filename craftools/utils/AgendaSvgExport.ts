@@ -93,6 +93,7 @@ import dmMonoMediumUrl          from '../../assets/fonts/DMMono-Medium.woff?url'
 // this in sync automatically if that fallback stack ever changes.
 import { loadFontCatalog } from './ApiDataLoader.ts';
 import { PdfExport } from './PdfExport.js';
+import { CropMarks } from './CropMarks.js';
 
 const fontFamilyKey = (primary: string): string => withEmojiFallback(primary).replace(/['"]/g, '');
 
@@ -318,6 +319,7 @@ export class AgendaSvgExport {
             async (_from: any, to: any) => to,
           );
           this._drawBorderOverlays(svg, clippedBorders);
+          this._applyCropMarksToSvg(svg, el, size);
           if (merge) {
             rendered.push(svg);
           } else {
@@ -690,6 +692,35 @@ export class AgendaSvgExport {
     }
 
     return descriptors;
+  }
+
+  /**
+   * Crop marks / bleed for the standalone SVG export path (this file's own
+   * `print()`, batch-rendered from `AgendaExport.buildFlattenedOutputPages()`
+   * clones). Deliberately NOT applied inside `pageToSvg()` itself --
+   * `PdfVectorExport.ts` calls that method expecting PURE trim-sized
+   * content with no added margin (it does its own bleed/crop-marks via
+   * pdf-lib afterwards), so baking this in there would double up / corrupt
+   * that pipeline's own geometry math. `el`'s dataset (crop-marks config)
+   * survives `buildFlattenedOutputPages()`'s cloning the same way every
+   * other per-page dataset flag already does (e.g. `agendaRepeatTrigger`).
+   * No-ops when the page has neither crop marks nor bleed configured, or
+   * its size is percentage-based (bleed in mm has no meaningful pixel size
+   * to convert against there).
+   */
+  private static _applyCropMarksToSvg(svg: SVGSVGElement, pageEl: HTMLElement, size: { width: string; height: string; background: string }): void {
+    const config = CropMarks.readConfig(pageEl);
+    const percent = CropMarks.isPercentLength(size.width) || CropMarks.isPercentLength(size.height);
+    const bleedPx = percent ? 0 : CropMarks.mmToPx(config.bleedMm);
+    const marginPx = CropMarks.computeMargin(config, bleedPx);
+    if (marginPx <= 0) return;
+
+    const trimWpx = CropMarks.cssLengthToPx(size.width);
+    const trimHpx = CropMarks.cssLengthToPx(size.height);
+    if (!trimWpx || !trimHpx) return;
+
+    CropMarks.wrapSvgForBleed(svg, trimWpx, trimHpx, marginPx, size.background || '#ffffff');
+    CropMarks.appendSvgOverlay(svg, trimWpx, trimHpx, config, marginPx, marginPx);
   }
 
   /**

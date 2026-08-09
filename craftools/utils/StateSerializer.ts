@@ -27,6 +27,15 @@ export interface PageState {
   id: string;
   cssText: string;
   elements: ElementState[];
+  /**
+   * Flat snapshot of the page element's own `dataset` (crop-marks/bleed
+   * config -- CropMarks.ts's `cropMarksEnabled`/`cropMarksStyle`/
+   * `cropMarksCount`/`bleedMm` keys -- plus any other future page-level
+   * dataset flags). Mirrors `ElementState.dataset`'s exact shape/handling
+   * so undo/redo and `.craftools` project export/import round-trip
+   * page-level config the same way they already do for elements.
+   */
+  dataset: Record<string, string>;
 }
 
 export interface EditorState {
@@ -52,10 +61,17 @@ export class StateSerializer {
         pageHtmlEl.dataset.ctId = 'page-' + Math.random().toString(36).substring(2, 9);
       }
       
+      const pageDataset: Record<string, string> = {};
+      for (const [key, val] of Object.entries(pageHtmlEl.dataset)) {
+        if (key === 'ctId') continue; // ctId has its own dedicated `id` field, kept out of the generic bag
+        if (val !== undefined) pageDataset[key] = val;
+      }
+
       const pageState: PageState = {
         id: pageHtmlEl.dataset.ctId,
         cssText: pageHtmlEl.style.cssText,
-        elements: []
+        elements: [],
+        dataset: pageDataset,
       };
       
       pageHtmlEl.querySelectorAll('craftools-element').forEach((el: Element) => {
@@ -212,6 +228,18 @@ export class StateSerializer {
       if (!pageEl.id) pageEl.id = effectiveId;
 
       pageEl.style.cssText = pageState.cssText;
+
+      // Restore page-level dataset (crop-marks/bleed config etc.) -- same
+      // clear-then-assign pattern as element dataset restore below.
+      const targetPageDataset = pageState.dataset ?? {};
+      Object.keys(pageEl.dataset).forEach(key => {
+        if (key === 'ctId') return;
+        if (!(key in targetPageDataset)) delete pageEl!.dataset[key];
+      });
+      for (const [key, val] of Object.entries(targetPageDataset)) {
+        pageEl.dataset[key] = val;
+      }
+
       newPages.push(pageEl);
       
       const existingEls = new Map<string, HTMLElement>();

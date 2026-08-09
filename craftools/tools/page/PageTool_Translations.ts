@@ -27,7 +27,19 @@ I18n.addTranslations('pageTool', {
         paperExtras: "Extras",
         paperLineGradientMode: "Modo do gradiente",
         paperLineGradientPerLine: "Linha por linha (mesmo gradiente em cada linha)",
-        paperLineGradientPerPage: "Referente à página (progride da 1ª à última linha)"
+        paperLineGradientPerPage: "Referente à página (progride da 1ª à última linha)",
+
+        cropMarksTab: "Marcas de Corte",
+        cropMarksEnable: "Ativar marcas de corte",
+        cropMarksStyle: "Modelo da marca",
+        cropMarksStyleStandard: "Padrão",
+        cropMarksStyleCross: "Cruz",
+        cropMarksStyleCircle: "Círculo",
+        cropMarksCount: "Quantidade de marcas",
+        cropMarksCount4: "4 marcas",
+        cropMarksCount6: "6 marcas",
+        bleedLabel: "Sangria",
+        bleedHint: "A sangria acrescenta uma margem extra ao redor da página na hora de exportar (PDF, SVG, imagem e .craftools), preenchida com o fundo da página. As marcas de corte, quando ativadas, são desenhadas logo fora do limite real da página, dentro dessa margem."
     },
     "en": {
         title: "Page Settings",
@@ -55,7 +67,19 @@ I18n.addTranslations('pageTool', {
         paperExtras: "Extras",
         paperLineGradientMode: "Gradient mode",
         paperLineGradientPerLine: "Per line (same gradient repeated on every line)",
-        paperLineGradientPerPage: "Per page (progresses from the first to the last line)"
+        paperLineGradientPerPage: "Per page (progresses from the first to the last line)",
+
+        cropMarksTab: "Crop Marks",
+        cropMarksEnable: "Enable crop marks",
+        cropMarksStyle: "Mark style",
+        cropMarksStyleStandard: "Standard",
+        cropMarksStyleCross: "Cross",
+        cropMarksStyleCircle: "Circle",
+        cropMarksCount: "Number of marks",
+        cropMarksCount4: "4 marks",
+        cropMarksCount6: "6 marks",
+        bleedLabel: "Bleed",
+        bleedHint: "Bleed adds an extra margin around the page on export (PDF, SVG, image and .craftools), filled with the page's own background. Crop marks, when enabled, are drawn just outside the page's real edge, inside that margin."
     },
     "es": {
         title: "Configuración de Página",
@@ -83,6 +107,18 @@ I18n.addTranslations('pageTool', {
         paperExtras: "Extras",
         paperLineGradientMode: "Modo del degradado",
         paperLineGradientPerLine: "Línea por línea (mismo degradado en cada línea)",
-        paperLineGradientPerPage: "Referente a la página (progresa de la 1ª a la última línea)"
+        paperLineGradientPerPage: "Referente a la página (progresa de la 1ª a la última línea)",
+
+        cropMarksTab: "Marcas de Corte",
+        cropMarksEnable: "Activar marcas de corte",
+        cropMarksStyle: "Modelo de la marca",
+        cropMarksStyleStandard: "Estándar",
+        cropMarksStyleCross: "Cruz",
+        cropMarksStyleCircle: "Círculo",
+        cropMarksCount: "Cantidad de marcas",
+        cropMarksCount4: "4 marcas",
+        cropMarksCount6: "6 marcas",
+        bleedLabel: "Sangrado",
+        bleedHint: "El sangrado agrega un margen extra alrededor de la página al exportar (PDF, SVG, imagen y .craftools), relleno con el fondo de la página. Las marcas de corte, cuando están activadas, se dibujan justo fuera del límite real de la página, dentro de ese margen."
     }
 });

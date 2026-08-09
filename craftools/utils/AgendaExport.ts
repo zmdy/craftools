@@ -1,6 +1,7 @@
 import { Notify }           from './Notify.js';
 import { I18n }             from '../settings/Translations.js';
 import { PdfExport }        from './PdfExport.js';
+import { CropMarks }        from './CropMarks.js';
 import { VariableEngine, type VariableBinding, type ResolveContext, type ApiCache } from './VariableEngine.js';
 import { QrCode }           from './QrCode.js';
 import { BarcodeGenerator } from './BarcodeGenerator.js';
@@ -155,7 +156,6 @@ export class AgendaExport {
       const outputPageNumber = planIdx + 1;
       const size    = PdfExport._parsePageSize(page);
       const origEls = [...page.querySelectorAll<CraftoolsEl>('craftools-element')];
-      pageSizes.push(size);
 
       const clone = page.cloneNode(true) as HTMLElement;
       clone.querySelectorAll(UI_STRIP_SELECTORS).forEach(n => n.remove());
@@ -215,11 +215,30 @@ export class AgendaExport {
       PdfExport._collectUsedFonts([clone]).forEach(f => usedFonts.add(f));
       PdfExport._collectUsedFontFaces([clone]).forEach(f => usedFontFacesByKey.set(`${f.family}|${f.weight}|${f.style}`, f));
 
-      const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
-      const bgStyle   = size.background ? `background: ${size.background};` : '';
-      pagesHtmlParts.push(
-        `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${clone.innerHTML}</div>`
-      );
+      // Crop marks / bleed -- see CropMarks.ts's doc comment for the model.
+      // Config is read off `page` (the ORIGINAL, un-cloned template page),
+      // same as every other per-page dataset flag this loop already reads
+      // (e.g. `page.dataset['agendaAlternate']` above) -- every repetition
+      // instance of a given page shares that page's own crop-marks/bleed
+      // config. No-op (returns `clone.innerHTML` unchanged) when this page
+      // has neither enabled.
+      const wrap = CropMarks.wrapHtmlWithBleed(clone.innerHTML, size.width, size.height, size.background, page);
+      if (wrap.marginPx > 0) {
+        const effWidth  = `${wrap.totalWidthPx}px`;
+        const effHeight = `${wrap.totalHeightPx}px`;
+        pageSizes.push({ width: effWidth, height: effHeight, background: size.background });
+        const pageClass = `ct${PdfExport._sizeKey(effWidth, effHeight)}`;
+        pagesHtmlParts.push(
+          `<div class="print-page print-page-${pageClass}" style="width:${effWidth}; min-height:${effHeight};">${wrap.html}</div>`
+        );
+      } else {
+        pageSizes.push(size);
+        const pageClass = `ct${PdfExport._sizeKey(size.width, size.height)}`;
+        const bgStyle   = size.background ? `background: ${size.background};` : '';
+        pagesHtmlParts.push(
+          `<div class="print-page print-page-${pageClass}" style="width:${size.width}; min-height:${size.height}; ${bgStyle}">${clone.innerHTML}</div>`
+        );
+      }
     });
 
     const css      = PdfExport._buildCSS(pageSizes);

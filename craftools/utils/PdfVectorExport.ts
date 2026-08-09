@@ -3,13 +3,12 @@ import { svg2pdf } from 'svg2pdf.js';
 import { PDFDocument, rgb, PDFName, PDFString } from 'pdf-lib';
 import { AgendaSvgExport } from './AgendaSvgExport.js';
 import { PdfExport, type PageSize } from './PdfExport.js';
+import { CropMarks } from './CropMarks.js';
 import { Notify } from './Notify.js';
 import { I18n } from '../settings/Translations.js';
 
 export interface PdfVectorOptions {
   filename?: string;
-  bleedMm?: number;
-  cropMarks?: boolean;
   cmykOutputIntent?: boolean;
 }
 
@@ -35,22 +34,30 @@ export class PdfVectorExport {
       throw new Error('Nenhuma página encontrada para exportação');
     }
 
-    const bleedMm = options.bleedMm ?? 0;
-    const cropMarks = options.cropMarks ?? false;
     const cmykIntent = options.cmykOutputIntent ?? true;
-    const bleedPt = (bleedMm / 25.4) * 72;
-    const cropMarkLengthPt = 14; // Length of crop mark lines
-    const cropMarkOffsetPt = 4;  // Distance between crop mark and trim box
+    // Length/offset here are CropMarks.ts's own GAP/LEN constants converted
+    // px(~96dpi) -> pt(72dpi), so a page that ALSO gets crop marks drawn by
+    // the HTML/SVG-based export pipelines (PdfExport.ts, ImageExport.ts,
+    // AgendaSvgExport.ts) looks the same physical size here.
+    const cropMarkLengthPt = CropMarks.LEN * (72 / 96);
+    const cropMarkOffsetPt = CropMarks.GAP * (72 / 96);
 
     const masterPdf = await PDFDocument.create();
 
-    // Loop through each page in the document
+    // Loop through each page in the document -- crop-marks/bleed config is
+    // read per page off `pageEl.dataset` (CropMarks.ts, set via the "Marcas
+    // de Corte" tab in Page Settings), NOT a single document-wide toggle,
+    // so different pages in the same export can have different bleed/marks.
     for (let i = 0; i < pages.length; i++) {
       const pageEl = pages[i];
       const pageSize: PageSize = PdfExport._parsePageSize(pageEl);
+      const config = CropMarks.readConfig(pageEl);
+      const cropMarks = config.enabled;
+      const bleedMm = config.bleedMm;
 
       const trimW = PdfVectorExport._parseDimensionPt(pageSize.width, 595.28);
       const trimH = PdfVectorExport._parseDimensionPt(pageSize.height, 841.89);
+      const bleedPt = (bleedMm / 25.4) * 72;
 
       // Calculate total page bounds including bleed and crop mark margins if enabled
       const marginPt = cropMarks ? (bleedPt + cropMarkLengthPt + cropMarkOffsetPt) : bleedPt;
@@ -101,35 +108,13 @@ export class PdfVectorExport {
         );
       }
 
-      // Step 6: Draw professional vector Crop Marks if requested
+      // Step 6: Draw professional vector Crop Marks if requested -- style
+      // (standard/cross/circle) and count (4/6) come from this page's own
+      // CropMarks config, same geometry generator every other export
+      // pipeline uses (CropMarks.buildGeometry()), just re-projected into
+      // pdf-lib's bottom-up pt coordinate space.
       if (cropMarks) {
-        const drawCropLine = (x1: number, y1: number, x2: number, y2: number) => {
-          newPage.drawLine({
-            start: { x: x1, y: y1 },
-            end: { x: x2, y: y2 },
-            thickness: 0.5,
-            color: rgb(0, 0, 0),
-          });
-        };
-
-        const o = cropMarkOffsetPt;
-        const l = cropMarkLengthPt;
-
-        // Bottom-Left corner
-        drawCropLine(trimLeft - o - l, trimBottom, trimLeft - o, trimBottom);
-        drawCropLine(trimLeft, trimBottom - o - l, trimLeft, trimBottom - o);
-
-        // Top-Left corner
-        drawCropLine(trimLeft - o - l, trimTop, trimLeft - o, trimTop);
-        drawCropLine(trimLeft, trimTop + o, trimLeft, trimTop + o + l);
-
-        // Bottom-Right corner
-        drawCropLine(trimRight + o, trimBottom, trimRight + o + l, trimBottom);
-        drawCropLine(trimRight, trimBottom - o - l, trimRight, trimBottom - o);
-
-        // Top-Right corner
-        drawCropLine(trimRight + o, trimTop, trimRight + o + l, trimTop);
-        drawCropLine(trimRight, trimTop + o, trimRight, trimTop + o + l);
+        CropMarks.drawPdfLibMarks(newPage, trimLeft, trimBottom, trimRight, trimTop, config, rgb(0, 0, 0));
       }
     }
 

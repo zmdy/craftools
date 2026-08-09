@@ -5,6 +5,7 @@ import { renderColorPicker, cssFromValue, parseCssBackground, normalizeValue, ty
 import { PaperTool, PAPER_TYPES, PAPER_SIZES, THEMES, PaperThemes, type PaperMeta } from '../paper/PaperTool.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
 import { MobileToolbar } from '../../utils/MobileToolbar.js';
+import { CropMarks, type CropMarksConfig, type CropMarksStyle } from '../../utils/CropMarks.js';
 import './PageTool_Translations.js';
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -447,12 +448,19 @@ export class PageTool {
           const paperMeta = existingPaperEl ? (existingPaperEl as HTMLElement & { _craftoolsMeta?: PaperMeta })._craftoolsMeta ?? null : null;
           const htmlPaper = PageTool._renderPaperTabHtml(paperMeta, existingPaperEl);
 
+          // "Marcas de Corte" -- crop marks + bleed, stored directly on this
+          // page's own dataset (CropMarks.ts). Unlike "Papel personalizado"
+          // this has no separate underlying element -- it's a pure
+          // page-property tab, config read/written straight off `pageEl`.
+          const htmlCropMarks = PageTool._renderCropMarksTabHtml(CropMarks.readConfig(pageEl));
+
           PanelUI.withStatePreservation(panelBody, () => {
             panelBody.innerHTML =
-              PanelUI.accordion('page-tamanho', 'straighten', I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
-              PanelUI.accordion('page-fundo',   'palette',    I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
-              PanelUI.accordion('page-papel',   'description',I18n.t('pageTool.customPaperTab') || 'Custom Paper',  htmlPaper) +
-              PanelUI.accordion('page-acoes',   'warning',    I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
+              PanelUI.accordion('page-tamanho',    'straighten',  I18n.t('common.sectionTamanho') || 'Size & Position', htmlSize, { open: true }) +
+              PanelUI.accordion('page-fundo',      'palette',     I18n.t('pageTool.background')   || 'Background',      htmlBackground) +
+              PanelUI.accordion('page-papel',      'description', I18n.t('pageTool.customPaperTab') || 'Custom Paper',  htmlPaper) +
+              PanelUI.accordion('page-cropmarks',  'content_cut', I18n.t('pageTool.cropMarksTab') || 'Crop Marks',      htmlCropMarks) +
+              PanelUI.accordion('page-acoes',      'warning',     I18n.t('pageTool.actions')       || 'Actions',         htmlActions);
           });
 
           // BaseTool.renderPropertiesPanel() tracks which element #panel-body
@@ -469,6 +477,7 @@ export class PageTool {
 
           PanelUI.bindAccordions(panelBody);
           PageTool._bindPaperTab(panelBody, editor, pageEl);
+          PageTool._bindCropMarksTab(panelBody, pageEl);
         }
 
         let activeUnit = currentUnit;
@@ -951,6 +960,109 @@ export class PageTool {
 
     // Wire standard toggle track/thumb animation for every ct-fi checkbox in the
     // paper tab (extras toggles + the main enable toggle).
+    wrap.querySelectorAll<HTMLInputElement>('input.ct-fi').forEach(input => {
+      input.addEventListener('change', () => {
+        const track = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+        const thumb = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+        if (track) track.style.background = input.checked ? 'var(--accent, #3b82f6)' : 'var(--border, #e4e4e7)';
+        if (thumb) thumb.style.transform   = input.checked ? 'translateX(14px)' : 'translateX(0)';
+      });
+    });
+  }
+
+  // ── "Marcas de Corte" (crop marks + bleed) tab ──────────────────────────
+  //
+  // Pure page-property tab -- no underlying element the way "Papel
+  // personalizado" has one (PaperTool's element). Config lives directly on
+  // `pageEl.dataset` via CropMarks.readConfig()/writeConfig(); rendering
+  // and export pipelines (PdfExport.ts, ImageExport.ts, AgendaSvgExport.ts,
+  // PdfVectorExport.ts) read it back off that same page element (or its
+  // clones, which inherit dataset) at export time.
+
+  private static readonly _CROP_MARKS_STYLES: Array<{ value: CropMarksStyle; labelKey: string }> = [
+    { value: 'standard', labelKey: 'cropMarksStyleStandard' },
+    { value: 'cross',    labelKey: 'cropMarksStyleCross' },
+    { value: 'circle',   labelKey: 'cropMarksStyleCircle' },
+  ];
+
+  private static _renderCropMarksTabHtml(config: CropMarksConfig): string {
+    return `
+      ${PageTool._toggleRowHtml('cropmarks-enable-chk', I18n.t('pageTool.cropMarksEnable'), config.enabled)}
+      <div id="cropmarks-fields-wrap" style="${config.enabled ? '' : 'display:none;'} margin-top:8px;">
+        <div class="ct-field ct-field--block">
+          <span class="craftools-label">${I18n.t('pageTool.cropMarksStyle')}</span>
+          <div class="ct-pill-group" id="cropmarks-style-group" style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
+            ${PageTool._CROP_MARKS_STYLES.map(s => `
+              <button type="button" class="craftools-topbtn cropmarks-style-btn" data-style="${s.value}" style="flex:1; justify-content:center; min-width:70px; ${config.style === s.value ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t(`pageTool.${s.labelKey}`)}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="ct-field ct-field--block" style="margin-top:8px;">
+          <span class="craftools-label">${I18n.t('pageTool.cropMarksCount')}</span>
+          <div class="ct-pill-group" id="cropmarks-count-group" style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" class="craftools-topbtn cropmarks-count-btn" data-count="4" style="flex:1; justify-content:center; ${config.count === 4 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount4')}</button>
+            <button type="button" class="craftools-topbtn cropmarks-count-btn" data-count="6" style="flex:1; justify-content:center; ${config.count === 6 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount6')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+        <span class="craftools-label">${I18n.t('pageTool.bleedLabel')}</span>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+          <input type="number" class="craftools-input" id="cropmarks-bleed-mm" style="width:80px;" value="${config.bleedMm}" min="0" max="50" step="0.5">
+          <span style="color:var(--text-muted); font-size:11px;">mm</span>
+        </div>
+        <p style="margin:6px 0 0 0; font-size:10px; color:var(--text-muted); line-height:1.4;">${I18n.t('pageTool.bleedHint')}</p>
+      </div>
+    `;
+  }
+
+  private static _bindCropMarksTab(panelBody: HTMLElement, pageEl: HTMLElement): void {
+    const wrap = panelBody.querySelector<HTMLElement>('[data-accordion-id="page-cropmarks"] .ct-accordion-content') ?? panelBody;
+
+    const rerender = (): void => {
+      const target = panelBody.querySelector<HTMLElement>('[data-accordion-id="page-cropmarks"] .ct-accordion-content');
+      if (target) target.innerHTML = PageTool._renderCropMarksTabHtml(CropMarks.readConfig(pageEl));
+      PageTool._bindCropMarksTab(panelBody, pageEl);
+    };
+
+    const enableChk = wrap.querySelector<HTMLInputElement>('#cropmarks-enable-chk');
+    if (enableChk) {
+      enableChk.onchange = () => {
+        CropMarks.writeConfig(pageEl, { enabled: enableChk.checked });
+        rerender();
+      };
+    }
+
+    wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-style-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const style = (btn.getAttribute('data-style') as CropMarksStyle) || 'standard';
+        CropMarks.writeConfig(pageEl, { style });
+        wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-style-btn').forEach(b => {
+          const active = b === btn;
+          b.style.background = active ? 'var(--accent, #3b82f6)' : '';
+          b.style.color      = active ? '#fff' : '';
+        });
+      });
+    });
+
+    wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-count-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const count = btn.getAttribute('data-count') === '6' ? 6 : 4;
+        CropMarks.writeConfig(pageEl, { count });
+        wrap.querySelectorAll<HTMLButtonElement>('.cropmarks-count-btn').forEach(b => {
+          const active = b === btn;
+          b.style.background = active ? 'var(--accent, #3b82f6)' : '';
+          b.style.color      = active ? '#fff' : '';
+        });
+      });
+    });
+
+    wrap.querySelector<HTMLInputElement>('#cropmarks-bleed-mm')?.addEventListener('input', e => {
+      const bleedMm = parseFloat((e.target as HTMLInputElement).value) || 0;
+      CropMarks.writeConfig(pageEl, { bleedMm });
+    });
+
+    // Standard toggle track/thumb animation for this tab's own ct-fi checkbox.
     wrap.querySelectorAll<HTMLInputElement>('input.ct-fi').forEach(input => {
       input.addEventListener('change', () => {
         const track = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
