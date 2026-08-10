@@ -1843,7 +1843,6 @@ export class VariablePanel {
                     const hlLinked      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-linked');
                     const hlBgEl        = container.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
                     const hlTextEl      = container.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
-                    const hlBorderStyle = container.querySelector<HTMLSelectElement>('#var-minical-highlight-borderstyle');
                     const hlBorderWidth = container.querySelector<HTMLInputElement>('#var-minical-highlight-borderwidth');
                     const hlBorderColorEl = container.querySelector<HTMLElement>('#var-minical-highlight-bordercolor-picker');
                     const hlRadius      = container.querySelector<HTMLInputElement>('#var-minical-highlight-radius');
@@ -1861,7 +1860,11 @@ export class VariablePanel {
                         notify();
                     };
                     if (hlLinked) hlLinked.onchange = () => { binding!.miniCalendarHighlightLinkedTo = hlLinked.value; notify(); };
-                    if (hlBorderStyle) hlBorderStyle.onchange = () => { binding!.miniCalendarHighlightBorderStyle = hlBorderStyle.value;               notify(); };
+                    // Border style renders as a pill group (see
+                    // _miniCalendarConfig's 'var-minical-highlight-borderstyle-btn'
+                    // group), not a <select> -- must bind via _bindPillGroup like
+                    // every other pill group, not a querySelector<HTMLSelectElement>.
+                    this._bindPillGroup(container, 'var-minical-highlight-borderstyle-btn', v => { binding!.miniCalendarHighlightBorderStyle = v; }, notify);
                     if (hlBorderWidth) hlBorderWidth.oninput  = () => { binding!.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
                     if (hlRadius)      hlRadius.oninput       = () => { binding!.miniCalendarHighlightBorderRadius = parseInt(hlRadius.value, 10);     notify(); };
 
