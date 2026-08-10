@@ -761,19 +761,12 @@ export class AlbumTool {
       const albumClearBtn = panelBody.querySelector<HTMLButtonElement>('#album-clear-btn');
       if (albumClearBtn) {
         albumClearBtn.addEventListener('click', () => {
-          // A multi-photo album that doesn't fit on one page spills onto
-          // extra pages via Craftools_LayoutGrid.render() (utils/LayoutGrid.ts),
-          // which calls PageTool.addNewPage() and tags EVERY page it fills
-          // (including the first) with a `.craftools-grid-container
-          // [data-grid-source="album"]` marker. Clearing only `pageEl` (the
-          // page the wizard happened to be opened on) left album content
-          // behind on any of those other auto-added pages -- find every page
-          // carrying that marker, not just this one.
+          // Clearing only `pageEl` (the page the wizard happened to be
+          // opened on) left album content behind on any other auto-added
+          // pages the album spilled onto -- see _findAlbumPages()'s doc
+          // comment for why every page needs to be found, not just this one.
           const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper');
-          const albumPages = pagesWrapper
-            ? [...pagesWrapper.querySelectorAll<HTMLElement>('.craftools-page')]
-              .filter(p => p === pageEl || p.querySelector('.craftools-grid-container[data-grid-source="album"]'))
-            : [pageEl];
+          const albumPages = AlbumTool._findAlbumPages(editor, pageEl);
 
           albumPages.forEach(page => {
             // Extra pages the album itself created hold nothing but its
@@ -878,11 +871,18 @@ export class AlbumTool {
       }
 
       // ── Bind: Marcas de Corte (grid-aligned crop marks) ──────────────
+      // Every album page (see _findAlbumPages()'s doc comment) gets the
+      // SAME config written to its own dataset -- CropMarks config lives
+      // per-page, so without this only `pageEl` (the one page the wizard
+      // happened to be opened on) would ever show marks, leaving every
+      // other page the album spilled onto unmarked.
       const cmEnableBtn = panelBody.querySelector<HTMLButtonElement>('.album-cropmarks-enable-btn');
       if (cmEnableBtn) {
         cmEnableBtn.addEventListener('click', () => {
-          CropMarks.writeAlbumConfig(pageEl, { enabled: !cmConfig.enabled });
-          CropMarks.renderLiveGridOverlay(pageEl);
+          AlbumTool._findAlbumPages(editor, pageEl).forEach(page => {
+            CropMarks.writeAlbumConfig(page, { enabled: !cmConfig.enabled });
+            CropMarks.renderLiveGridOverlay(page);
+          });
           renderPanel();
         });
       }
@@ -890,8 +890,10 @@ export class AlbumTool {
       panelBody.querySelectorAll<HTMLButtonElement>('.album-cropmarks-style-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const style = (btn.getAttribute('data-style') as CropMarksStyle) || 'standard';
-          CropMarks.writeAlbumConfig(pageEl, { style });
-          CropMarks.renderLiveGridOverlay(pageEl);
+          AlbumTool._findAlbumPages(editor, pageEl).forEach(page => {
+            CropMarks.writeAlbumConfig(page, { style });
+            CropMarks.renderLiveGridOverlay(page);
+          });
           renderPanel();
         });
       });
@@ -900,8 +902,10 @@ export class AlbumTool {
         btn.addEventListener('click', () => {
           const countAttr = btn.getAttribute('data-count');
           const count = countAttr === '8' ? 8 : countAttr === '6' ? 6 : 4;
-          CropMarks.writeAlbumConfig(pageEl, { count });
-          CropMarks.renderLiveGridOverlay(pageEl);
+          AlbumTool._findAlbumPages(editor, pageEl).forEach(page => {
+            CropMarks.writeAlbumConfig(page, { count });
+            CropMarks.renderLiveGridOverlay(page);
+          });
           renderPanel();
         });
       });
@@ -910,8 +914,10 @@ export class AlbumTool {
       if (cmBleedInput) {
         cmBleedInput.addEventListener('input', e => {
           const bleedMm = parseFloat((e.target as HTMLInputElement).value) || 0;
-          CropMarks.writeAlbumConfig(pageEl, { bleedMm });
-          CropMarks.renderLiveGridOverlay(pageEl);
+          AlbumTool._findAlbumPages(editor, pageEl).forEach(page => {
+            CropMarks.writeAlbumConfig(page, { bleedMm });
+            CropMarks.renderLiveGridOverlay(page);
+          });
         });
       }
 
@@ -919,10 +925,18 @@ export class AlbumTool {
       PanelUI.bindAccordions(panelBody);
 
       // Refresh the on-canvas grid-marks preview every time the panel
-      // re-renders (page load, undo/redo restore, or right after any of
-      // the writeAlbumConfig() calls above) -- mirrors PageTool.ts's own
-      // CropMarks.renderLiveOverlay() call in attachPageEvents().
-      CropMarks.renderLiveGridOverlay(pageEl);
+      // re-renders (page load, undo/redo restore, right after any of the
+      // writeAlbumConfig() calls above, or right after a "Gerar Álbum"/
+      // "Gerar Novamente" run that just created new sibling pages) --
+      // mirrors PageTool.ts's own CropMarks.renderLiveOverlay() call in
+      // attachPageEvents(). Re-propagates `pageEl`'s own config to every
+      // sibling album page on EVERY render (not just on an explicit
+      // control interaction), so freshly-generated extra pages that never
+      // went through the handlers above still end up in sync.
+      AlbumTool._findAlbumPages(editor, pageEl).forEach(page => {
+        if (page !== pageEl) CropMarks.writeAlbumConfig(page, cmConfig);
+        CropMarks.renderLiveGridOverlay(page);
+      });
     };
 
     // ── Open panel immediately (before gridSizes API resolves) ────────────
@@ -965,6 +979,28 @@ export class AlbumTool {
     { value: 'cross',    labelKey: 'cropMarksStyleCross' },
     { value: 'circle',   labelKey: 'cropMarksStyleCircle' },
   ];
+
+  /**
+   * A multi-photo album that doesn't fit on one page spills onto extra
+   * pages via `Craftools_LayoutGrid.render()` (utils/LayoutGrid.ts), which
+   * calls `PageTool.addNewPage()` and tags EVERY page it fills (including
+   * the first) with a `.craftools-grid-container[data-grid-source="album"]`
+   * marker. `pageEl` is only ever the ONE page the wizard panel happens to
+   * be open on -- anything scoped to just `pageEl` (crop-marks config, the
+   * old "Apagar Álbum" behavior before it was fixed the same way) silently
+   * misses every other page the same album spans. Finds all of them.
+   *
+   * Caveat (pre-existing, not introduced here): the marker isn't scoped to
+   * a single "Generate Album" run, so two independent albums coexisting in
+   * the same document would both match here. Matches the existing
+   * `#album-clear-btn` handler's own tradeoff.
+   */
+  private static _findAlbumPages(editor: HTMLElement, pageEl: HTMLElement): HTMLElement[] {
+    const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper');
+    if (!pagesWrapper) return [pageEl];
+    return [...pagesWrapper.querySelectorAll<HTMLElement>('.craftools-page')]
+      .filter(p => p === pageEl || p.querySelector('.craftools-grid-container[data-grid-source="album"]'));
+  }
 
   // ── Helpers: build a locked ImageTool element for a grid cell ────────────
   static _buildCellElement(editor: HTMLElement, src: string, pl: number, pt: number, cw: number, ch: number, unit = 'px', autoEnhance = false): HTMLElement {
