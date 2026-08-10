@@ -391,6 +391,68 @@ export class CalendarRenderer {
   }
 
   /**
+   * Grid column count per supported multi-month count -- single source of
+   * truth shared by every "show N months at once" surface in the app
+   * (MiniCalendarTool.ts's own element, and Variable Content's miniCalendar
+   * binding via `buildMultiMonthHtml()` below), so their layouts can never
+   * drift out of sync. Row count is always `count / cols` (every entry here
+   * was chosen to divide evenly). 12/16/20 mirror CalendarTool.ts's (the
+   * full-page Calendar generator) own GRID_PRESETS shapes (`grid12`:
+   * 3x4, `grid20`: 4x5) for a consistent "yearly poster" look across tools.
+   */
+  static readonly MULTI_MONTH_COLS: Record<string, number> = {
+      '1': 1, '2': 2, '3': 3, '6': 3, '12': 3, '16': 4, '20': 4,
+  };
+
+  /**
+   * Lays `count` months out as an HTML string, in a CSS grid filling its
+   * container (`width:100%; height:100%`) -- the shared building block
+   * behind both MiniCalendarTool.ts's `_buildMultiCard()` (which wraps this
+   * in a real DOM element via `buildMultiMonthElement()` below) and
+   * VariableEngine.ts's `_formatMiniCalendar()` (which uses the HTML string
+   * directly, same as every other format function in that file).
+   *
+   * Explicit `grid-template-rows: repeat(rows, 1fr)` (rather than leaving
+   * rows `auto`) matters here: each card's own root is styled
+   * `width:100%; height:100%` (buildCardHtml() above), and a percentage
+   * height on a grid item only resolves against a track with a DEFINITE
+   * size -- an `auto` row sized off its own 100%-height content is circular
+   * and collapses unpredictably. `1fr` against the wrap's own (definite,
+   * from its container) height avoids that.
+   *
+   * `singleMonthMode` freezes every card on `startYear`/`startMonth`
+   * instead of advancing -- mirrors CalendarTool.ts's 'repetido1' fill mode
+   * for the full-page Calendar generator. `count <= 1` just returns a
+   * single plain `buildCardHtml()` call (no grid wrapper needed).
+   */
+  static buildMultiMonthHtml(startYear: number, startMonth: number, count: number, options: CalendarOptions = {}, singleMonthMode = false): string {
+      if (count <= 1) return this.buildCardHtml(startYear, startMonth, options);
+
+      const cols = this.MULTI_MONTH_COLS[String(count)] ?? count;
+      const rows = Math.max(1, Math.ceil(count / cols));
+
+      let y = startYear;
+      let m = startMonth;
+      const cards: string[] = [];
+      for (let i = 0; i < count; i++) {
+          cards.push(`<div style="min-width:0; min-height:0;">${this.buildCardHtml(y, m, options)}</div>`);
+          if (!singleMonthMode) {
+              m++;
+              if (m > 12) { m = 1; y++; }
+          }
+      }
+
+      return `<div class="mini-cal-multi-grid mini-cal-root" style="display:grid; grid-template-columns:repeat(${cols}, 1fr); grid-template-rows:repeat(${rows}, 1fr); gap:6px; width:100%; height:100%; box-sizing:border-box; user-select:none;">${cards.join('')}</div>`;
+  }
+
+  /** Element-returning twin of `buildMultiMonthHtml()` -- same relationship `buildCardElement()` has to `buildCardHtml()`. */
+  static buildMultiMonthElement(startYear: number, startMonth: number, count: number, options: CalendarOptions = {}, singleMonthMode = false): HTMLElement {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = this.buildMultiMonthHtml(startYear, startMonth, count, options, singleMonthMode);
+      return wrapper.firstElementChild as HTMLElement;
+  }
+
+  /**
    * CSS `border-radius` shorthand order is TL TR BR BL -- see
    * RadiusCorners's own doc comment for why that ordering matters here.
    * Returns '' (no declaration) when every corner is 0/unset, so callers

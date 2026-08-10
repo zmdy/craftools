@@ -954,6 +954,24 @@ export class VariablePanel {
                 <input type="month" id="var-minical-monthyear" class="craftools-input"
                     value="${String(b.year ?? new Date().getFullYear()).padStart(4, '0')}-${String(b.month ?? (new Date().getMonth() + 1)).padStart(2, '0')}">
             </div>
+            ${this._pillGroup(I18n.t('variablePanel.miniCalendarTypeLabel'), 'var-minical-calendartype-btn', [
+                ['1',  I18n.t('miniCalendarTool.calendarType1')],
+                ['2',  I18n.t('miniCalendarTool.calendarType2')],
+                ['3',  I18n.t('miniCalendarTool.calendarType3')],
+                ['6',  I18n.t('miniCalendarTool.calendarType6')],
+                ['12', I18n.t('miniCalendarTool.calendarType12')],
+                ['16', I18n.t('miniCalendarTool.calendarType16')],
+                ['20', I18n.t('miniCalendarTool.calendarType20')],
+            ], b.calendarType ?? '1')}
+            <div class="ct-field" id="var-minical-singlemonth-wrap" style="margin-top:6px; display:${(b.calendarType ?? '1') !== '1' ? '' : 'none'};">
+                <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
+                    <input type="checkbox" id="var-minical-singlemonth" class="ct-fi" style="display:none;" ${b.singleMonthMode ? 'checked' : ''}>
+                    <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.singleMonthMode ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+                        <span class="ct-toggle-thumb" style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); transform:${b.singleMonthMode ? 'translateX(14px)' : 'translateX(0)'};"></span>
+                    </span>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarSingleMonthToggle')}</span>
+                </label>
+            </div>
             ${this._pillGroup(I18n.t('variablePanel.miniCalendarDisplayModeLabel'), 'var-minical-displaymode-btn', [
                 ['weekdays',    I18n.t('miniCalendarTool.modeWeekdays')],
                 ['calendar',    I18n.t('miniCalendarTool.modeCalendar')],
@@ -1721,6 +1739,23 @@ export class VariablePanel {
                     };
                     if (displayModeSel) displayModeSel.onchange = () => { binding!.displayMode = displayModeSel.value;                       notify(); };
 
+                    // How many months this binding renders at once -- see
+                    // MiniCalendarMeta.calendarType's own doc comment
+                    // (MiniCalendarTool.ts) for the concept; here it's just
+                    // another resolved-per-repetition binding field. Uses
+                    // the REAL working `_bindPillGroup()` pattern (like
+                    // 'image'/'imageLayout' below), unlike `modeSel`/
+                    // `displayModeSel` just above -- those query `<select>`
+                    // elements that don't actually exist (`_pillGroup()`
+                    // renders buttons, not a `<select>`), a pre-existing
+                    // dead-code bug this new field deliberately doesn't
+                    // repeat.
+                    this._bindPillGroup(container, 'var-minical-calendartype-btn', v => {
+                        binding!.calendarType = v;
+                        const singleWrap = container.querySelector<HTMLElement>('#var-minical-singlemonth-wrap');
+                        if (singleWrap) singleWrap.style.display = v !== '1' ? '' : 'none';
+                    }, notify);
+
                     // Standard toggle-switch visual update (track background +
                     // thumb translateX) -- same pattern as fields/toggle.field.ts's
                     // own bind(), just scoped to the specific <label> each
@@ -1738,6 +1773,19 @@ export class VariablePanel {
                     if (weekSundaySel) weekSundaySel.onchange = () => {
                         binding!.weekStartSunday = weekSundaySel.checked;
                         _paintToggle(weekSundaySel);
+                        notify();
+                    };
+
+                    // Only meaningful (and only visible -- see the
+                    // calendartype pill binding above) when calendarType
+                    // isn't '1'. true = every month card freezes on the
+                    // Month/Year field's value instead of advancing
+                    // sequentially -- mirrors MiniCalendarTool.ts's own
+                    // singleMonthMode meta field.
+                    const singleMonthSel = container.querySelector<HTMLInputElement>('#var-minical-singlemonth');
+                    if (singleMonthSel) singleMonthSel.onchange = () => {
+                        binding!.singleMonthMode = singleMonthSel.checked;
+                        _paintToggle(singleMonthSel);
                         notify();
                     };
 

@@ -21,6 +21,19 @@ import { EMOJI_FONT_STACK } from './EmojiFont.js';
  */
 type MiniCalendarPick = {
     year: number; month: number; displayMode: string; weekStart: 'sunday' | 'monday';
+    /**
+     * How many months to render ('1' default = the original single-card
+     * behavior, unchanged). > 1 lays that many CalendarRenderer cards out
+     * in a grid via CalendarRenderer.buildMultiMonthHtml() -- same feature/
+     * layout table (CalendarRenderer.MULTI_MONTH_COLS) as MiniCalendarTool.ts's
+     * own standalone element, just resolved fresh per repetition here
+     * instead of being a fixed per-element setting.
+     */
+    calendarType?: string;
+    /** Only meaningful when calendarType !== '1' -- true freezes every card
+     *  on `year`/`month` instead of advancing sequentially. Mirrors
+     *  MiniCalendarTool.ts's own singleMonthMode meta field. */
+    singleMonthMode?: boolean;
     highlight?: { enabled: boolean; day?: number; bg?: string; textColor?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; borderStyle?: string };
     /**
      * Theme colors (header/day background+text), same concept/shape as
@@ -219,6 +232,22 @@ export interface VariableBinding {
     year?:         number;
     month?:        number;
     displayMode?:  string;
+    /**
+     * How many months this binding renders at once -- '1' (default, single
+     * card, all pre-existing behavior unchanged) | '2' | '3' | '6' | '12' |
+     * '16' | '20'. Same concept/values as MiniCalendarTool.ts's own
+     * `calendarType` meta field, just resolved fresh per repetition in
+     * `_pickMiniCalendar()` below instead of being a fixed element setting.
+     */
+    calendarType?: string;
+    /**
+     * Only meaningful (and only shown in the panel) when calendarType !== '1'.
+     * true = every card in the grid shows the SAME month/year (`year`/
+     * `month`, post sequential-advance/link resolution) -- mirrors
+     * MiniCalendarTool.ts's own singleMonthMode meta field. false/default =
+     * cards show SEQUENTIAL months starting from that resolved month/year.
+     */
+    singleMonthMode?: boolean;
     /** true (default) = week starts Sunday; false = Monday. Same concept as MiniCalendarTool.ts's weekStartSunday meta field / DAYS_BOX's daysBoxStartSunday. */
     weekStartSunday?: boolean;
     /**
@@ -1641,14 +1670,19 @@ export class VariableEngine {
         // persist -- CalendarRenderer.mergeTheme() falls back to its own defaults
         // for anything left undefined.
         const theme = b.miniCalendarTheme;
-        return { year, month, displayMode, weekStart, highlight, theme };
+        const calendarType = (b.calendarType && b.calendarType in CalendarRenderer.MULTI_MONTH_COLS) ? b.calendarType : '1';
+        return { year, month, displayMode, weekStart, calendarType, singleMonthMode: b.singleMonthMode === true, highlight, theme };
     }
 
     private static _formatMiniCalendar(pick: MiniCalendarPick): string {
         const parts = MINI_CALENDAR_PARTS[pick.displayMode] ?? MINI_CALENDAR_PARTS.complete1;
+        const count = parseInt(pick.calendarType ?? '1', 10) || 1;
+        const options = { parts, theme: pick.theme, highlight: pick.highlight, weekStart: pick.weekStart };
         // CalendarRenderer stays JS — any type here is acceptable
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        return CalendarRenderer.buildCardHtml(pick.year, pick.month, { parts, theme: pick.theme, highlight: pick.highlight, weekStart: pick.weekStart }) as string;
+        return count > 1
+            ? CalendarRenderer.buildMultiMonthHtml(pick.year, pick.month, count, options, pick.singleMonthMode === true) as string
+            : CalendarRenderer.buildCardHtml(pick.year, pick.month, options) as string;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

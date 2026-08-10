@@ -63,19 +63,20 @@ const getMeta = (el: HTMLElement): Partial<MiniCalendarMeta> =>
 // types/PropertySchema.ts) -- these already exist in
 // MiniCalendarTool_Translations.ts (used by the legacy panel/VariablePanel's
 // miniCalendar config), just weren't wired up here yet.
-// Matches CalendarTool.ts's own 12-per-sheet grid shape (3 cols x 4 rows)
-// for calendarType '12', and keeps every other count in a single row --
-// simple, predictable layouts rather than trying to auto-balance an
-// arbitrary aspect ratio. Only calendarType values with an entry here are
-// offered in CALENDAR_TYPE_OPTIONS below, so this table is exhaustive.
-const CALENDAR_TYPE_COLS: Record<string, number> = { '1': 1, '2': 2, '3': 3, '6': 3, '12': 3 };
-
+// Layout (columns per month count) comes from CalendarRenderer's own
+// MULTI_MONTH_COLS -- shared with Variable Content's miniCalendar binding
+// (VariableEngine.ts's _formatMiniCalendar()) so both surfaces lay a given
+// month count out identically. Only values with an entry there are valid
+// here too -- see _calendarType() below -- so CALENDAR_TYPE_OPTIONS must
+// stay in sync with that table's keys.
 const CALENDAR_TYPE_OPTIONS = [
   { value: '1',  label: '1 month',   i18nKey: 'miniCalendarTool.calendarType1' },
   { value: '2',  label: '2 months',  i18nKey: 'miniCalendarTool.calendarType2' },
   { value: '3',  label: '3 months',  i18nKey: 'miniCalendarTool.calendarType3' },
   { value: '6',  label: '6 months',  i18nKey: 'miniCalendarTool.calendarType6' },
   { value: '12', label: '12 months', i18nKey: 'miniCalendarTool.calendarType12' },
+  { value: '16', label: '16 months', i18nKey: 'miniCalendarTool.calendarType16' },
+  { value: '20', label: '20 months', i18nKey: 'miniCalendarTool.calendarType20' },
 ];
 
 const DISPLAY_MODES = [
@@ -140,10 +141,10 @@ export class MiniCalendarTool extends BaseTool {
     };
   }
 
-  /** Normalizes meta.calendarType to one of CALENDAR_TYPE_COLS' known keys, defaulting to '1'. */
+  /** Normalizes meta.calendarType to one of CalendarRenderer.MULTI_MONTH_COLS' known keys, defaulting to '1'. */
   private static _calendarType(meta: MiniCalendarMeta): string {
     const t = meta.calendarType ?? '1';
-    return t in CALENDAR_TYPE_COLS ? t : '1';
+    return t in CalendarRenderer.MULTI_MONTH_COLS ? t : '1';
   }
 
   private static _monthCount(meta: MiniCalendarMeta): number {
@@ -166,40 +167,22 @@ export class MiniCalendarTool extends BaseTool {
   }
 
   /**
-   * Lays `count` month cards out in a CSS grid filling the element -- cols
-   * from CALENDAR_TYPE_COLS, rows = count / cols (always exact, since every
-   * entry in that table was chosen to divide evenly). Explicit
-   * `grid-template-rows: repeat(rows, 1fr)` (rather than leaving rows
-   * `auto`) is required here: each card's own root element is styled
-   * `width:100%; height:100%` (CalendarRenderer.ts), and a percentage
-   * height on a grid item only resolves against a track with a DEFINITE
-   * size -- an `auto` row sized off its own 100%-height content is
-   * circular and collapses unpredictably. `1fr` against the wrap's own
-   * (definite, from the element's resize box) height avoids that.
-   *
-   * `singleMonthMode` freezes every card on meta.year/meta.month instead of
-   * advancing -- mirrors CalendarTool.ts's 'repetido1' fill mode for the
-   * full-page Calendar generator.
+   * Lays `count` month cards out in a CSS grid filling the element --
+   * delegates entirely to CalendarRenderer.buildMultiMonthElement() (its own
+   * doc comment covers the cols/rows layout and the 1fr-row sizing
+   * rationale), which is the SAME grid-building code Variable Content's
+   * miniCalendar binding uses (VariableEngine.ts's _formatMiniCalendar()),
+   * so both surfaces render an identical layout for a given month count.
    */
   private static _buildMultiCard(meta: MiniCalendarMeta, count: number): HTMLElement {
-    const cols = CALENDAR_TYPE_COLS[String(count)] ?? count;
-    const rows = Math.max(1, Math.ceil(count / cols));
-    const single = meta.singleMonthMode === true;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'mini-cal-multi-grid mini-cal-root';
-    wrap.style.cssText = `display:grid; grid-template-columns:repeat(${cols}, 1fr); grid-template-rows:repeat(${rows}, 1fr); gap:6px; width:100%; height:100%; box-sizing:border-box; user-select:none;`;
-
-    let y = meta.year ?? now.getFullYear();
-    let m = meta.month ?? (now.getMonth() + 1);
-    for (let i = 0; i < count; i++) {
-      wrap.appendChild(MiniCalendarTool._buildSingleCard(y, m, meta));
-      if (!single) {
-        m++;
-        if (m > 12) { m = 1; y++; }
-      }
-    }
-    return wrap;
+    const y = meta.year ?? now.getFullYear();
+    const m = meta.month ?? (now.getMonth() + 1);
+    return CalendarRenderer.buildMultiMonthElement(y, m, count, {
+      theme: meta.theme,
+      parts: MiniCalendarTool._currentParts(meta.displayMode),
+      highlight: MiniCalendarTool._resolveHighlight(meta),
+      weekStart: meta.weekStartSunday === false ? 'monday' : 'sunday',
+    }, meta.singleMonthMode === true);
   }
 
   private static _buildCard(meta: MiniCalendarMeta): HTMLElement {
