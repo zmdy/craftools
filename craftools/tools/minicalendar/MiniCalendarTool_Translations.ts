@@ -7,6 +7,13 @@ I18n.addTranslations('miniCalendarTool', {
     "pt-br": {
         panelTitle: "Mini Calendário",
         content: "Conteúdo",
+        calendarTypeLabel: "Tipo de calendário",
+        calendarType1: "Mês único",
+        calendarType2: "2 meses",
+        calendarType3: "3 meses",
+        calendarType6: "6 meses",
+        calendarType12: "12 meses",
+        singleMonthMode: "Exibir mês único",
         displayModeLabel: "O que exibir",
         monthYearLabel: "Mês / Ano",
 
@@ -45,6 +52,13 @@ I18n.addTranslations('miniCalendarTool', {
     "en": {
         panelTitle: "Mini Calendar",
         content: "Content",
+        calendarTypeLabel: "Calendar type",
+        calendarType1: "Single month",
+        calendarType2: "2 months",
+        calendarType3: "3 months",
+        calendarType6: "6 months",
+        calendarType12: "12 months",
+        singleMonthMode: "Show single month",
         displayModeLabel: "What to show",
         monthYearLabel: "Month / Year",
 
@@ -83,6 +97,13 @@ I18n.addTranslations('miniCalendarTool', {
     "es": {
         panelTitle: "Mini Calendario",
         content: "Contenido",
+        calendarTypeLabel: "Tipo de calendario",
+        calendarType1: "Mes único",
+        calendarType2: "2 meses",
+        calendarType3: "3 meses",
+        calendarType6: "6 meses",
+        calendarType12: "12 meses",
+        singleMonthMode: "Mostrar mes único",
         displayModeLabel: "Qué mostrar",
         monthYearLabel: "Mes / Año",
 

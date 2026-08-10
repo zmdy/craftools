@@ -14,6 +14,24 @@ import type { PropertySchema } from '../../types/PropertySchema';
 import './MiniCalendarTool_Translations.js';
 
 interface MiniCalendarMeta {
+  /**
+   * How many months this element renders, as a string (matches the
+   * 'select' field's own value type) -- '1' (default, single card, all
+   * pre-existing behavior unchanged) | '2' | '3' | '6' | '12'. > 1 lays out
+   * that many CalendarRenderer cards in a grid inside the same element
+   * (see _buildMultiCard()), all sharing this meta's theme/displayMode/
+   * weekStartSunday/highlight settings -- only the month/year shown in each
+   * card differs.
+   */
+  calendarType?: string;
+  /**
+   * Only meaningful (and only shown in the panel) when calendarType !== '1'.
+   * true = every card in the grid shows the SAME month/year (meta.year/
+   * meta.month) -- mirrors CalendarTool.ts's (the full-page "Calendário"
+   * generator) 'repetido1' fill mode. false/default = cards show
+   * SEQUENTIAL months starting from meta.year/meta.month.
+   */
+  singleMonthMode?: boolean;
   displayMode: string;
   year:        number;
   month:       number;
@@ -45,6 +63,21 @@ const getMeta = (el: HTMLElement): Partial<MiniCalendarMeta> =>
 // types/PropertySchema.ts) -- these already exist in
 // MiniCalendarTool_Translations.ts (used by the legacy panel/VariablePanel's
 // miniCalendar config), just weren't wired up here yet.
+// Matches CalendarTool.ts's own 12-per-sheet grid shape (3 cols x 4 rows)
+// for calendarType '12', and keeps every other count in a single row --
+// simple, predictable layouts rather than trying to auto-balance an
+// arbitrary aspect ratio. Only calendarType values with an entry here are
+// offered in CALENDAR_TYPE_OPTIONS below, so this table is exhaustive.
+const CALENDAR_TYPE_COLS: Record<string, number> = { '1': 1, '2': 2, '3': 3, '6': 3, '12': 3 };
+
+const CALENDAR_TYPE_OPTIONS = [
+  { value: '1',  label: '1 month',   i18nKey: 'miniCalendarTool.calendarType1' },
+  { value: '2',  label: '2 months',  i18nKey: 'miniCalendarTool.calendarType2' },
+  { value: '3',  label: '3 months',  i18nKey: 'miniCalendarTool.calendarType3' },
+  { value: '6',  label: '6 months',  i18nKey: 'miniCalendarTool.calendarType6' },
+  { value: '12', label: '12 months', i18nKey: 'miniCalendarTool.calendarType12' },
+];
+
 const DISPLAY_MODES = [
   { value: 'weekdays',  label: 'Days table only (with holidays marked)', i18nKey: 'miniCalendarTool.modeWeekdays' },
   { value: 'calendar',  label: 'Calendar (header + days table)',         i18nKey: 'miniCalendarTool.modeCalendar' },
@@ -78,6 +111,8 @@ export class MiniCalendarTool extends BaseTool {
    */
   public static getDefaultMeta(): MiniCalendarMeta {
     return {
+      calendarType: '1',
+      singleMonthMode: false,
       displayMode: 'complete1',
       year: now.getFullYear(),
       month: now.getMonth() + 1,
@@ -105,8 +140,22 @@ export class MiniCalendarTool extends BaseTool {
     };
   }
 
-  private static _buildCard(meta: MiniCalendarMeta): HTMLElement {
-    const card = CalendarRenderer.buildCardElement(meta.year, meta.month, {
+  /** Normalizes meta.calendarType to one of CALENDAR_TYPE_COLS' known keys, defaulting to '1'. */
+  private static _calendarType(meta: MiniCalendarMeta): string {
+    const t = meta.calendarType ?? '1';
+    return t in CALENDAR_TYPE_COLS ? t : '1';
+  }
+
+  private static _monthCount(meta: MiniCalendarMeta): number {
+    return parseInt(MiniCalendarTool._calendarType(meta), 10) || 1;
+  }
+
+  /** Builds a single CalendarRenderer card for one specific year/month,
+   *  using every OTHER display setting (theme/displayMode/weekStart/
+   *  highlight) from `meta` -- shared identically by every card when
+   *  calendarType > 1 renders several of these into a grid. */
+  private static _buildSingleCard(year: number, month: number, meta: MiniCalendarMeta): HTMLElement {
+    const card = CalendarRenderer.buildCardElement(year, month, {
       theme: meta.theme,
       parts: MiniCalendarTool._currentParts(meta.displayMode),
       highlight: MiniCalendarTool._resolveHighlight(meta),
@@ -114,6 +163,53 @@ export class MiniCalendarTool extends BaseTool {
     });
     card.style.userSelect = 'none';
     return card;
+  }
+
+  /**
+   * Lays `count` month cards out in a CSS grid filling the element -- cols
+   * from CALENDAR_TYPE_COLS, rows = count / cols (always exact, since every
+   * entry in that table was chosen to divide evenly). Explicit
+   * `grid-template-rows: repeat(rows, 1fr)` (rather than leaving rows
+   * `auto`) is required here: each card's own root element is styled
+   * `width:100%; height:100%` (CalendarRenderer.ts), and a percentage
+   * height on a grid item only resolves against a track with a DEFINITE
+   * size -- an `auto` row sized off its own 100%-height content is
+   * circular and collapses unpredictably. `1fr` against the wrap's own
+   * (definite, from the element's resize box) height avoids that.
+   *
+   * `singleMonthMode` freezes every card on meta.year/meta.month instead of
+   * advancing -- mirrors CalendarTool.ts's 'repetido1' fill mode for the
+   * full-page Calendar generator.
+   */
+  private static _buildMultiCard(meta: MiniCalendarMeta, count: number): HTMLElement {
+    const cols = CALENDAR_TYPE_COLS[String(count)] ?? count;
+    const rows = Math.max(1, Math.ceil(count / cols));
+    const single = meta.singleMonthMode === true;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'mini-cal-multi-grid mini-cal-root';
+    wrap.style.cssText = `display:grid; grid-template-columns:repeat(${cols}, 1fr); grid-template-rows:repeat(${rows}, 1fr); gap:6px; width:100%; height:100%; box-sizing:border-box; user-select:none;`;
+
+    let y = meta.year ?? now.getFullYear();
+    let m = meta.month ?? (now.getMonth() + 1);
+    for (let i = 0; i < count; i++) {
+      wrap.appendChild(MiniCalendarTool._buildSingleCard(y, m, meta));
+      if (!single) {
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+    }
+    return wrap;
+  }
+
+  private static _buildCard(meta: MiniCalendarMeta): HTMLElement {
+    const count = MiniCalendarTool._monthCount(meta);
+    if (count <= 1) {
+      const card = MiniCalendarTool._buildSingleCard(meta.year, meta.month, meta);
+      card.classList.add('mini-cal-root');
+      return card;
+    }
+    return MiniCalendarTool._buildMultiCard(meta, count);
   }
 
   /**
@@ -132,9 +228,11 @@ export class MiniCalendarTool extends BaseTool {
    * meant the very FIRST property edit (display mode, year, month, any
    * theme color) silently made the element permanently undraggable and
    * handle-less, indistinguishable from being locked, for the rest of the
-   * session. Now finds and replaces only the previous `.cal-month-card`
-   * (CalendarRenderer.ts's buildCardElement() root) in place, leaving
-   * Element.ts's own structure untouched.
+   * session. Now finds and replaces only the previous `.mini-cal-root`
+   * (either a single `.cal-month-card`, CalendarRenderer.ts's
+   * buildCardElement() root, or a multi-month `.mini-cal-multi-grid`
+   * wrapping several of them -- see _buildCard()'s doc comment) in place,
+   * leaving Element.ts's own structure untouched.
    */
   public static _regenerate(element: HTMLElement): void {
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta; contentArea?: HTMLElement };
@@ -145,7 +243,7 @@ export class MiniCalendarTool extends BaseTool {
     // of `element` itself (see createElement() above) -- same fallback
     // pattern ImageTool.ts uses for its own pre/post-connection <img> host.
     const host = e.contentArea ?? element;
-    const oldCard = host.querySelector<HTMLElement>('.cal-month-card');
+    const oldCard = host.querySelector<HTMLElement>('.mini-cal-root');
     const freshCard = MiniCalendarTool._buildCard(meta);
     if (oldCard) {
       oldCard.replaceWith(freshCard);
@@ -185,6 +283,8 @@ export class MiniCalendarTool extends BaseTool {
     const meta = getMeta(element);
     const existing = PropertyRenderer._readState(element);
     const patch: Record<string, unknown> = {};
+    if (!('calendarType' in existing)) patch.calendarType = meta.calendarType ?? '1';
+    if (!('singleMonthMode' in existing)) patch.singleMonthMode = meta.singleMonthMode ?? false;
     if (!('displayMode' in existing)) patch.displayMode = meta.displayMode ?? 'complete1';
     // Single native <input type="month"> field -- see types/PropertySchema.ts's
     // MonthField doc comment. Formatted from meta.year/meta.month (still kept
@@ -223,6 +323,14 @@ export class MiniCalendarTool extends BaseTool {
         icon: 'calendar_month',
         defaultOpen: true,
         fields: [
+          { type: 'select', key: 'calendarType',    label: 'Calendar type',                        i18nKey: 'miniCalendarTool.calendarTypeLabel', options: CALENDAR_TYPE_OPTIONS },
+          // Only meaningful (and only shown) when more than one month is on
+          // screen -- with calendarType '1' there's nothing to freeze on a
+          // single shared month, so the toggle would be dead UI.
+          {
+            type: 'toggle', key: 'singleMonthMode', label: 'Show single month', i18nKey: 'miniCalendarTool.singleMonthMode',
+            hidden: (el) => PropertyRenderer._readState(el).calendarType === '1',
+          },
           { type: 'select', key: 'displayMode',    label: 'Display',                              i18nKey: 'miniCalendarTool.displayModeLabel', options: DISPLAY_MODES },
           { type: 'month',  key: 'monthYear',       label: 'Month / Year',                         i18nKey: 'miniCalendarTool.monthYearLabel' },
           { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)',  i18nKey: 'miniCalendarTool.weekStartSunday' },
@@ -308,7 +416,7 @@ export class MiniCalendarTool extends BaseTool {
         const m = parseInt(mStr, 10);
         if (!isNaN(y)) e._craftoolsMeta.year = y;
         if (!isNaN(m)) e._craftoolsMeta.month = m;
-      } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource') {
+      } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource' || key === 'calendarType' || key === 'singleMonthMode') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
       } else if (themePath) {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
