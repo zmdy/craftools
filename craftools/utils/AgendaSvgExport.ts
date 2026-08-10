@@ -226,6 +226,21 @@ export class AgendaSvgExport {
         async (_from: any, to: any) => to,
       );
       this._drawBorderOverlays(svg, clippedBorders);
+
+      // Album grid-aligned crop marks -- unlike page-level marks/bleed
+      // (deliberately NOT baked in here, see this method's own callers and
+      // _applyCropMarksToSvg()'s doc comment for why), grid marks live
+      // INSIDE the trim content area regardless of caller, so it's safe to
+      // bake them directly into this pure trim-sized output -- they'll flow
+      // "for free" into PdfVectorExport.ts too, since it renders off this
+      // same method. No-op if the album crop-marks feature is off for this
+      // page or it has no `.craftools-grid-container`.
+      const trimWpx = CropMarks.cssLengthToPx(size.width);
+      const trimHpx = CropMarks.cssLengthToPx(size.height);
+      if (trimWpx && trimHpx) {
+        CropMarks.appendGridMarksSvgOverlay(svg, pageEl, trimWpx, trimHpx);
+      }
+
       return svg;
     } finally {
       stage.remove();
@@ -713,14 +728,22 @@ export class AgendaSvgExport {
     const percent = CropMarks.isPercentLength(size.width) || CropMarks.isPercentLength(size.height);
     const bleedPx = percent ? 0 : CropMarks.mmToPx(config.bleedMm);
     const marginPx = CropMarks.computeMargin(config, bleedPx);
-    if (marginPx <= 0) return;
 
     const trimWpx = CropMarks.cssLengthToPx(size.width);
     const trimHpx = CropMarks.cssLengthToPx(size.height);
     if (!trimWpx || !trimHpx) return;
 
-    CropMarks.wrapSvgForBleed(svg, trimWpx, trimHpx, marginPx, size.background || '#ffffff');
-    CropMarks.appendSvgOverlay(svg, trimWpx, trimHpx, config, marginPx, marginPx);
+    if (marginPx > 0) {
+      CropMarks.wrapSvgForBleed(svg, trimWpx, trimHpx, marginPx, size.background || '#ffffff');
+      CropMarks.appendSvgOverlay(svg, trimWpx, trimHpx, config, marginPx, marginPx);
+    }
+
+    // Album grid-aligned marks are independent of page-level bleed/marks --
+    // applied regardless of `marginPx`, offset by that same margin (0 if no
+    // page-level bleed was applied above) so they land in the same
+    // coordinate frame as the page's own (possibly re-origined) content.
+    const gridOrigin = marginPx > 0 ? marginPx : 0;
+    CropMarks.appendGridMarksSvgOverlay(svg, pageEl, trimWpx, trimHpx, gridOrigin, gridOrigin);
   }
 
   /**

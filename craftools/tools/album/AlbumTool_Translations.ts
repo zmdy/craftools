@@ -46,7 +46,12 @@ I18n.addTranslations('albumTool', {
         smartFitHelp: "Rotaciona a foto automaticamente se a proporção (retrato/paisagem) for diferente do slot da grade.",
         generateAgain: "Gerar Novamente",
         generateAlbum: "Gerar Álbum",
-        clearAlbum: "Apagar Álbum"
+        clearAlbum: "Apagar Álbum",
+
+        cropMarksTab: "Marcas de Corte",
+        cropMarksEnable: "Ativar marcas de corte",
+        cropMarksNoGridHint: "Configure aqui antes de gerar o álbum -- as marcas aparecerão automaticamente assim que a grade de fotos for criada.",
+        cropMarksBleedHint: "A sangria afasta as marcas ainda mais da borda da grade, dentro da margem já existente entre a grade e a página. Diferente da sangria da página, ela não aumenta o tamanho do arquivo exportado -- só funciona se houver espaço suficiente entre a grade e a borda da página."
     },
     "en": {
         panelTitle: "Album Generator",
@@ -93,7 +98,12 @@ I18n.addTranslations('albumTool', {
         smartFitHelp: "Automatically rotates the photo if its orientation (portrait/landscape) differs from the grid slot.",
         generateAgain: "Generate Again",
         generateAlbum: "Generate Album",
-        clearAlbum: "Clear Album"
+        clearAlbum: "Clear Album",
+
+        cropMarksTab: "Crop Marks",
+        cropMarksEnable: "Enable crop marks",
+        cropMarksNoGridHint: "Set this up before generating the album -- marks will appear automatically once the photo grid is created.",
+        cropMarksBleedHint: "Bleed pushes the marks further from the grid's edge, within the margin already existing between the grid and the page. Unlike page-level bleed, it doesn't enlarge the exported file -- it only works if there's enough room between the grid and the page edge."
     },
     "es": {
         panelTitle: "Generador de Álbum",
@@ -140,6 +150,11 @@ I18n.addTranslations('albumTool', {
         smartFitHelp: "Rota la foto automáticamente si la proporción (retrato/paisaje) es diferente a la de la celda de la cuadrícula.",
         generateAgain: "Generar de Nuevo",
         generateAlbum: "Generar Álbum",
-        clearAlbum: "Borrar Álbum"
+        clearAlbum: "Borrar Álbum",
+
+        cropMarksTab: "Marcas de Corte",
+        cropMarksEnable: "Activar marcas de corte",
+        cropMarksNoGridHint: "Configure esto antes de generar el álbum -- las marcas aparecerán automáticamente en cuanto se cree la cuadrícula de fotos.",
+        cropMarksBleedHint: "El sangrado aleja las marcas aún más del borde de la cuadrícula, dentro del margen que ya existe entre la cuadrícula y la página. A diferencia del sangrado de página, no aumenta el tamaño del archivo exportado -- solo funciona si hay espacio suficiente entre la cuadrícula y el borde de la página."
     }
 });

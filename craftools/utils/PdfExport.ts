@@ -380,6 +380,12 @@ ${pageRules}
 
     clone.querySelectorAll<HTMLElement>('craftools-element').forEach(el => this._flattenElement(el));
 
+    // Album grid-aligned crop marks (independent of the page-level ones
+    // below) -- appends an overlay <svg> directly onto `clone`, so it must
+    // run before `clone.innerHTML` is captured. No-op if this page has no
+    // `.craftools-grid-container` or the feature is off.
+    CropMarks.applyGridMarksToClone(pageEl, clone, size.width, size.height);
+
     const inner = clone.innerHTML;
 
     // Crop marks / bleed -- see CropMarks.ts's doc comment for the model.

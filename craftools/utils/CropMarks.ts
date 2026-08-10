@@ -58,6 +58,7 @@ export interface MarkGeometry {
   lines:   MarkSegment[];
   circles: MarkCircle[];
 }
+export interface GridRect { left: number; top: number; width: number; height: number; }
 
 const DEFAULT_CONFIG: CropMarksConfig = { enabled: false, style: 'standard', count: 4, bleedMm: 0 };
 
@@ -91,6 +92,37 @@ export class CropMarks {
 
   static defaultConfig(): CropMarksConfig {
     return { ...DEFAULT_CONFIG };
+  }
+
+  // ── Album grid config (AlbumWizard.ts's "Marcas de Corte" tab) ───────────
+  //
+  // Same 4 fields, same UI, but scoped to the Album's photo grid
+  // (`.craftools-grid-container`) instead of the whole page -- Album has no
+  // dedicated outer element of its own (LayoutGrid.ts appends the grid
+  // container directly as a page child), so this config lives on the PAGE's
+  // dataset too, under an `album`-prefixed key set, completely independent
+  // of the page-level `cropMarks*`/`bleedMm` keys above. A page can have
+  // both its own page-level marks/bleed AND separate album-grid-aligned
+  // marks/bleed at the same time.
+
+  static readAlbumConfig(pageEl: HTMLElement): CropMarksConfig {
+    const ds = pageEl.dataset;
+    const style = ds.albumCropMarksStyle;
+    return {
+      enabled: ds.albumCropMarksEnabled === 'true',
+      style:   (style === 'cross' || style === 'circle') ? style : 'standard',
+      count:   ds.albumCropMarksCount === '8' ? 8 : ds.albumCropMarksCount === '6' ? 6 : 4,
+      bleedMm: parseFloat(ds.albumBleedMm ?? '0') || 0,
+    };
+  }
+
+  static writeAlbumConfig(pageEl: HTMLElement, patch: Partial<CropMarksConfig>): CropMarksConfig {
+    const next: CropMarksConfig = { ...CropMarks.readAlbumConfig(pageEl), ...patch };
+    pageEl.dataset.albumCropMarksEnabled = String(next.enabled);
+    pageEl.dataset.albumCropMarksStyle   = next.style;
+    pageEl.dataset.albumCropMarksCount   = String(next.count);
+    pageEl.dataset.albumBleedMm          = String(next.bleedMm);
+    return next;
   }
 
   // ── Unit conversion ──────────────────────────────────────────────────────
@@ -183,6 +215,200 @@ export class CropMarks {
     }
 
     return { lines, circles };
+  }
+
+  // ── Album grid geometry (AlbumWizard.ts's grid-aligned marks) ────────────
+  //
+  // Unlike page-level marks/bleed (which enlarge the export canvas), grid
+  // marks are drawn INSIDE the page's own trim box, in whatever margin
+  // already exists between `.craftools-grid-container`'s CSS insets and the
+  // page edge (typical album templates already reserve that margin). This
+  // keeps the page's authored/exported size completely untouched for the
+  // Album tool -- "bleed" here just pushes the marks further from the grid
+  // edge (a virtual, larger trim rect centered on the real grid rect),
+  // mirroring the *visual* effect of page-level bleed without any of its
+  // canvas-resizing machinery.
+
+  /** Grid container's rect, in px, relative to its page's trim box
+   *  (0,0 = trim top-left) -- read from the grid's own inline CSS insets
+   *  (`top`/`right`/`bottom`/`left`, as set by `LayoutGrid.ts`). Works for
+   *  both live, attached grid elements AND detached export-pipeline clones,
+   *  since it never depends on layout (`offsetLeft`/`offsetWidth`). Returns
+   *  null if the insets don't resolve to a positive-area rect. */
+  static computeGridRect(gridEl: HTMLElement, trimWpx: number, trimHpx: number): GridRect | null {
+    const left   = CropMarks.cssLengthToPx(gridEl.style.left);
+    const top    = CropMarks.cssLengthToPx(gridEl.style.top);
+    const right  = CropMarks.cssLengthToPx(gridEl.style.right);
+    const bottom = CropMarks.cssLengthToPx(gridEl.style.bottom);
+    const width  = trimWpx - left - right;
+    const height = trimHpx - top - bottom;
+    if (!(width > 0) || !(height > 0)) return null;
+    return { left, top, width, height };
+  }
+
+  /** Builds mark geometry for a grid rect, plus the (originX, originY)
+   *  offset (relative to the grid rect's own top-left) that geometry needs
+   *  to be translated by to land in the page's trim-box coordinate frame.
+   *  `bleedMm` inflates a virtual rect centered on the real grid rect
+   *  before generating geometry, so marks end up `bleedPx` further out from
+   *  the grid's real edge than they otherwise would -- same visual effect
+   *  as page-level bleed, without resizing anything. */
+  static buildGridMarksGeometry(gridRect: GridRect, config: CropMarksConfig): { geo: MarkGeometry; originX: number; originY: number } {
+    if (!config.enabled) {
+      return { geo: { lines: [], circles: [] }, originX: gridRect.left, originY: gridRect.top };
+    }
+    const bleedPx = CropMarks.mmToPx(config.bleedMm);
+    const virtualW = gridRect.width + bleedPx * 2;
+    const virtualH = gridRect.height + bleedPx * 2;
+    const geo = CropMarks.buildGeometry(virtualW, virtualH, config);
+    return { geo, originX: gridRect.left - bleedPx, originY: gridRect.top - bleedPx };
+  }
+
+  /** HTML-pipeline applier (PdfExport.ts, ImageExport.ts, AgendaExport.ts).
+   *  Appends a grid-marks `<svg>` overlay as the last child of `pageClone`
+   *  (a live clone that still has its `.craftools-grid-container` child
+   *  with intact inline insets), sized to the page's own trim box so it
+   *  lands correctly whether or not `pageClone.innerHTML`/`.outerHTML` then
+   *  gets passed through `wrapHtmlWithBleed()`. Must be called BEFORE that
+   *  HTML is captured as a string. No-op if disabled/misconfigured. */
+  static applyGridMarksToClone(
+    pageEl: HTMLElement,
+    pageClone: HTMLElement,
+    trimWCss: string,
+    trimHCss: string,
+    color = '#000000',
+  ): void {
+    const config = CropMarks.readAlbumConfig(pageEl);
+    if (!config.enabled) return;
+    const gridEl = pageClone.querySelector<HTMLElement>(':scope > .craftools-grid-container');
+    if (!gridEl) return;
+    const trimWpx = CropMarks.cssLengthToPx(trimWCss);
+    const trimHpx = CropMarks.cssLengthToPx(trimHCss);
+    if (!trimWpx || !trimHpx) return;
+    const rect = CropMarks.computeGridRect(gridEl, trimWpx, trimHpx);
+    if (!rect) return;
+    const { geo, originX, originY } = CropMarks.buildGridMarksGeometry(rect, config);
+    if (!geo.lines.length && !geo.circles.length) return;
+
+    const lines = geo.lines.map(l =>
+      `<line x1="${l.x1 + originX}" y1="${l.y1 + originY}" x2="${l.x2 + originX}" y2="${l.y2 + originY}" stroke="${color}" stroke-width="1"/>`
+    ).join('');
+    const circles = geo.circles.map(c =>
+      `<circle cx="${c.cx + originX}" cy="${c.cy + originY}" r="${c.r}" fill="none" stroke="${color}" stroke-width="1"/>`
+    ).join('');
+
+    const overlay = `<svg class="ct-grid-crop-marks-overlay" width="${trimWpx}" height="${trimHpx}" viewBox="0 0 ${trimWpx} ${trimHpx}" style="position:absolute; left:0; top:0; pointer-events:none;">${lines}${circles}</svg>`;
+    pageClone.insertAdjacentHTML('beforeend', overlay);
+  }
+
+  /** SVG-pipeline applier (AgendaSvgExport.ts's `pageToSvg()` AND its own
+   *  `print()` loop). Reads the grid's insets from `pageEl` (the live
+   *  source page, not the converted SVG) and appends a `<g>` of grid-marks
+   *  geometry directly onto an already-built `svg` root, in the same
+   *  trim-box coordinate frame `pageToSvg()`'s own content occupies
+   *  (optionally offset by `originX`/`originY` for callers that have
+   *  already applied their own margin translation, e.g. page-level bleed's
+   *  `wrapSvgForBleed()`). */
+  static appendGridMarksSvgOverlay(
+    svg: SVGSVGElement,
+    pageEl: HTMLElement,
+    trimW: number,
+    trimH: number,
+    originX = 0,
+    originY = 0,
+    color = '#000000',
+  ): void {
+    const config = CropMarks.readAlbumConfig(pageEl);
+    if (!config.enabled) return;
+    const gridEl = pageEl.querySelector<HTMLElement>(':scope > .craftools-grid-container');
+    if (!gridEl) return;
+    const rect = CropMarks.computeGridRect(gridEl, trimW, trimH);
+    if (!rect) return;
+    const { geo, originX: gx, originY: gy } = CropMarks.buildGridMarksGeometry(rect, config);
+    if (!geo.lines.length && !geo.circles.length) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'ct-grid-crop-marks');
+    g.setAttribute('transform', `translate(${originX + gx},${originY + gy})`);
+
+    for (const l of geo.lines) {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(l.x1));
+      line.setAttribute('y1', String(l.y1));
+      line.setAttribute('x2', String(l.x2));
+      line.setAttribute('y2', String(l.y2));
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '1');
+      g.appendChild(line);
+    }
+    for (const c of geo.circles) {
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', String(c.cx));
+      circle.setAttribute('cy', String(c.cy));
+      circle.setAttribute('r', String(c.r));
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', color);
+      circle.setAttribute('stroke-width', '1');
+      g.appendChild(circle);
+    }
+
+    svg.appendChild(g);
+  }
+
+  /** Live on-canvas preview for grid-aligned marks (AlbumWizard.ts). Unlike
+   *  `renderLiveOverlay()` (page-level, forced inward by `overflow:hidden`),
+   *  `.craftools-grid-container` is NOT itself a clipping boundary -- only
+   *  the page is -- so these marks are drawn genuinely OUTWARD from the
+   *  grid rect, same direction/geometry as export time, just approximated
+   *  with the live `buildGeometry()` output directly (no separate
+   *  "inward" variant needed). They'll only get visibly clipped if the
+   *  template's own grid margin is too small to hold them -- expected,
+   *  matches how the marks would also get clipped/collide at export time if
+   *  the album has no room for them. Uses a distinct color from page-level
+   *  live marks so both can be told apart if a page has both enabled. */
+  static renderLiveGridOverlay(pageEl: HTMLElement): void {
+    const config = CropMarks.readAlbumConfig(pageEl);
+    const existing = pageEl.querySelector<HTMLElement>(':scope > .ct-grid-crop-marks-live-wrap');
+    const gridEl = pageEl.querySelector<HTMLElement>(':scope > .craftools-grid-container');
+
+    const trimWpx = CropMarks.cssLengthToPx(pageEl.style.width || '800px');
+    const trimHpx = CropMarks.cssLengthToPx(pageEl.style.minHeight || '600px');
+
+    if (!config.enabled || !gridEl || !trimWpx || !trimHpx) {
+      existing?.remove();
+      return;
+    }
+
+    const rect = CropMarks.computeGridRect(gridEl, trimWpx, trimHpx);
+    if (!rect) {
+      existing?.remove();
+      return;
+    }
+
+    const { geo, originX, originY } = CropMarks.buildGridMarksGeometry(rect, config);
+    if (!geo.lines.length && !geo.circles.length) {
+      existing?.remove();
+      return;
+    }
+
+    const color = '#3b82f6';
+    const lines = geo.lines.map(l =>
+      `<line x1="${l.x1 + originX}" y1="${l.y1 + originY}" x2="${l.x2 + originX}" y2="${l.y2 + originY}" stroke="${color}" stroke-width="1.5"/>`
+    ).join('');
+    const circles = geo.circles.map(c =>
+      `<circle cx="${c.cx + originX}" cy="${c.cy + originY}" r="${c.r}" fill="none" stroke="${color}" stroke-width="1.5"/>`
+    ).join('');
+    const svg = `<svg class="ct-grid-crop-marks-live-svg" width="${trimWpx}" height="${trimHpx}" viewBox="0 0 ${trimWpx} ${trimHpx}" style="position:absolute; inset:0; pointer-events:none;">${lines}${circles}</svg>`;
+
+    let overlay = existing;
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'ct-grid-crop-marks-live-wrap';
+      overlay.style.cssText = 'position:absolute; inset:0; pointer-events:none; z-index:6;';
+      pageEl.appendChild(overlay);
+    }
+    overlay.innerHTML = svg;
   }
 
   // ── SVG appliers (AgendaSvgExport.ts) ────────────────────────────────────

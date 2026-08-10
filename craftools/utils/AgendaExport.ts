@@ -216,6 +216,12 @@ export class AgendaExport {
       PdfExport._collectUsedFonts([clone]).forEach(f => usedFonts.add(f));
       PdfExport._collectUsedFontFaces([clone]).forEach(f => usedFontFacesByKey.set(`${f.family}|${f.weight}|${f.style}`, f));
 
+      // Album grid-aligned crop marks (independent of the page-level ones
+      // below) -- must run BEFORE `clone.innerHTML` is captured, since it
+      // appends an overlay <svg> directly onto `clone`'s own DOM. No-op if
+      // this page has no `.craftools-grid-container` or the feature is off.
+      CropMarks.applyGridMarksToClone(page, clone, size.width, size.height);
+
       // Crop marks / bleed -- see CropMarks.ts's doc comment for the model.
       // Config is read off `page` (the ORIGINAL, un-cloned template page),
       // same as every other per-page dataset flag this loop already reads

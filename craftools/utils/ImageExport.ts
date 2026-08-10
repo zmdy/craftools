@@ -77,6 +77,14 @@ export class ImageExport {
                   // Normalize images, object-fit, auto-enhancement and text styles
                   await ExportNormalizer.normalizePage(pageClone);
 
+                  // Album grid-aligned crop marks (independent of the
+                  // page-level ones below) -- appends an overlay <svg>
+                  // directly onto `pageClone`, so it must run before
+                  // `pageClone.outerHTML` is captured just below. No-op if
+                  // this page has no `.craftools-grid-container` or the
+                  // feature is off.
+                  CropMarks.applyGridMarksToClone(origPage, pageClone, pageClone.style.width, pageClone.style.height);
+
                   // Crop marks / bleed -- see CropMarks.ts's doc comment.
                   // Re-wraps the (already normalized) page markup in a
                   // larger bled canvas with an overlay <svg> of marks, then

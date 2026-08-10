@@ -47,6 +47,7 @@ import { GeneratorTool } from '../generator/GeneratorTool.js';
 import { PanelUI } from '../../utils/PanelUI.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG.js';
+import { CropMarks, type CropMarksConfig, type CropMarksStyle } from '../../utils/CropMarks.js';
 import './AlbumTool_Translations.js';
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -446,6 +447,11 @@ export class AlbumTool {
       // Detect existing grid configuration on page
       const existingGrid = pageEl.querySelector<HTMLElement>('.craftools-grid-container');
 
+      // Crop marks aligned to the photo grid -- config lives on `pageEl.dataset`
+      // (see CropMarks.ts's readAlbumConfig()/writeAlbumConfig() doc comment),
+      // independent of the page-level "Marcas de Corte" tab in Page Settings.
+      const cmConfig = CropMarks.readAlbumConfig(pageEl);
+
       // Generate button — validation per mode
       const canGenerate = !!selectedTemplate &&
         (selectedMode === 'album' ? photos.length > 0 : cardPhoto !== null);
@@ -544,11 +550,57 @@ export class AlbumTool {
                 </div>
             `;
 
+      // Same 4 options as Page Settings' "Marcas de Corte" tab (enable,
+      // style, count, bleed), but scoped to the photo grid
+      // (`.craftools-grid-container`) instead of the whole page -- marks
+      // track the grid's own rect, whatever size/position it ends up at,
+      // rather than the page's fixed size. See CropMarks.ts's "Album grid
+      // config" section for the full model.
+      const htmlCropMarks = `
+                <div class="ct-field ct-field--block">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span class="craftools-label" style="margin:0;">${I18n.t('albumTool.cropMarksEnable')}</span>
+                        <button class="craftools-pill album-cropmarks-enable-btn ${cmConfig.enabled ? 'active' : ''}" style="display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:14px;">content_cut</span>
+                            ${cmConfig.enabled ? I18n.t('albumTool.enabled') : I18n.t('albumTool.disabled')}
+                        </button>
+                    </div>
+                    ${!existingGrid ? `<p style="margin:0 0 10px 0; font-size:10px; color:var(--text-muted); line-height:1.4;">${I18n.t('albumTool.cropMarksNoGridHint')}</p>` : ''}
+                    ${cmConfig.enabled ? `
+                    <div class="ct-field ct-field--block">
+                        <span class="craftools-label">${I18n.t('pageTool.cropMarksStyle')}</span>
+                        <div class="ct-pill-group" id="album-cropmarks-style-group" style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
+                            ${AlbumTool._CROP_MARKS_STYLES.map(s => `
+                                <button type="button" class="craftools-topbtn album-cropmarks-style-btn" data-style="${s.value}" style="flex:1; justify-content:center; min-width:70px; ${cmConfig.style === s.value ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t(`pageTool.${s.labelKey}`)}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="ct-field ct-field--block" style="margin-top:8px;">
+                        <span class="craftools-label">${I18n.t('pageTool.cropMarksCount')}</span>
+                        <div class="ct-pill-group" id="album-cropmarks-count-group" style="display:flex; gap:6px; margin-top:4px;">
+                            <button type="button" class="craftools-topbtn album-cropmarks-count-btn" data-count="4" style="flex:1; justify-content:center; ${cmConfig.count === 4 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount4')}</button>
+                            <button type="button" class="craftools-topbtn album-cropmarks-count-btn" data-count="6" style="flex:1; justify-content:center; ${cmConfig.count === 6 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount6')}</button>
+                            <button type="button" class="craftools-topbtn album-cropmarks-count-btn" data-count="8" style="flex:1; justify-content:center; ${cmConfig.count === 8 ? 'background:var(--accent, #3b82f6); color:#fff;' : ''}">${I18n.t('pageTool.cropMarksCount8')}</button>
+                        </div>
+                    </div>
+                    <div class="ct-field ct-field--block" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border, #e4e4e7);">
+                        <span class="craftools-label">${I18n.t('pageTool.bleedLabel')}</span>
+                        <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                            <input type="number" class="craftools-input" id="album-cropmarks-bleed-mm" style="width:80px;" value="${cmConfig.bleedMm}" min="0" max="50" step="0.5">
+                            <span style="color:var(--text-muted); font-size:11px;">mm</span>
+                        </div>
+                        <p style="margin:6px 0 0 0; font-size:10px; color:var(--text-muted); line-height:1.4;">${I18n.t('albumTool.cropMarksBleedHint')}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
       // Determine which accordion should be open based on step completion
       // (wizard-step UX: guide the user to the next relevant section).
       let openTamanho = true;
       let openConteudo = false;
       let openConfigs = false;
+      let openCropMarks = false;
       let openAcoes = false;
 
       if (selectedTemplate) {
@@ -566,6 +618,7 @@ export class AlbumTool {
           PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
           PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
           PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
+          PanelUI.accordion('album-cropmarks', 'content_cut', I18n.t('albumTool.cropMarksTab') || 'Marcas de Corte', htmlCropMarks, { open: openCropMarks }) +
           PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
       });
 
@@ -824,8 +877,52 @@ export class AlbumTool {
         });
       }
 
+      // ── Bind: Marcas de Corte (grid-aligned crop marks) ──────────────
+      const cmEnableBtn = panelBody.querySelector<HTMLButtonElement>('.album-cropmarks-enable-btn');
+      if (cmEnableBtn) {
+        cmEnableBtn.addEventListener('click', () => {
+          CropMarks.writeAlbumConfig(pageEl, { enabled: !cmConfig.enabled });
+          CropMarks.renderLiveGridOverlay(pageEl);
+          renderPanel();
+        });
+      }
+
+      panelBody.querySelectorAll<HTMLButtonElement>('.album-cropmarks-style-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const style = (btn.getAttribute('data-style') as CropMarksStyle) || 'standard';
+          CropMarks.writeAlbumConfig(pageEl, { style });
+          CropMarks.renderLiveGridOverlay(pageEl);
+          renderPanel();
+        });
+      });
+
+      panelBody.querySelectorAll<HTMLButtonElement>('.album-cropmarks-count-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const countAttr = btn.getAttribute('data-count');
+          const count = countAttr === '8' ? 8 : countAttr === '6' ? 6 : 4;
+          CropMarks.writeAlbumConfig(pageEl, { count });
+          CropMarks.renderLiveGridOverlay(pageEl);
+          renderPanel();
+        });
+      });
+
+      const cmBleedInput = panelBody.querySelector<HTMLInputElement>('#album-cropmarks-bleed-mm');
+      if (cmBleedInput) {
+        cmBleedInput.addEventListener('input', e => {
+          const bleedMm = parseFloat((e.target as HTMLInputElement).value) || 0;
+          CropMarks.writeAlbumConfig(pageEl, { bleedMm });
+          CropMarks.renderLiveGridOverlay(pageEl);
+        });
+      }
+
       // Bind accordion toggles at the very end so dynamic accordions like "Forma" are also bound
       PanelUI.bindAccordions(panelBody);
+
+      // Refresh the on-canvas grid-marks preview every time the panel
+      // re-renders (page load, undo/redo restore, or right after any of
+      // the writeAlbumConfig() calls above) -- mirrors PageTool.ts's own
+      // CropMarks.renderLiveOverlay() call in attachPageEvents().
+      CropMarks.renderLiveGridOverlay(pageEl);
     };
 
     // ── Open panel immediately (before gridSizes API resolves) ────────────
@@ -858,6 +955,16 @@ export class AlbumTool {
       renderPanel();
     });
   }
+
+  // ── Marcas de Corte tab -- style pill options (reuses PageTool.ts's own
+  // pageTool.cropMarksStyle* i18n keys since the copy is identical; only
+  // the enable/hint copy below is Album-specific, under the albumTool
+  // namespace). ──────────────────────────────────────────────────────────
+  private static readonly _CROP_MARKS_STYLES: Array<{ value: CropMarksStyle; labelKey: string }> = [
+    { value: 'standard', labelKey: 'cropMarksStyleStandard' },
+    { value: 'cross',    labelKey: 'cropMarksStyleCross' },
+    { value: 'circle',   labelKey: 'cropMarksStyleCircle' },
+  ];
 
   // ── Helpers: build a locked ImageTool element for a grid cell ────────────
   static _buildCellElement(editor: HTMLElement, src: string, pl: number, pt: number, cw: number, ch: number, unit = 'px', autoEnhance = false): HTMLElement {
