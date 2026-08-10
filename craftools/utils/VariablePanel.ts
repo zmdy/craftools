@@ -1721,10 +1721,7 @@ export class VariablePanel {
                     break;
                 }
                 case 'miniCalendar': {
-                    const modeSel        = container.querySelector<HTMLSelectElement>('#var-minical-mode');
                     const monthYearInput = container.querySelector<HTMLInputElement>('#var-minical-monthyear');
-                    const displayModeSel = container.querySelector<HTMLSelectElement>('#var-minical-displaymode');
-                    if (modeSel)        modeSel.onchange        = () => { binding!.mode        = modeSel.value;                              notify(); };
                     if (monthYearInput) monthYearInput.onchange = () => {
                         // Native <input type="month"> -- "YYYY-MM", split back
                         // into the two separate year/month numbers the
@@ -1737,19 +1734,23 @@ export class VariablePanel {
                         if (!isNaN(m)) binding!.month = m;
                         notify();
                     };
-                    if (displayModeSel) displayModeSel.onchange = () => { binding!.displayMode = displayModeSel.value;                       notify(); };
+
+                    // 'mode' and 'displayMode' were previously bound via
+                    // `#var-minical-mode`/`#var-minical-displaymode`
+                    // `<select>` queries that never matched anything --
+                    // `_pillGroup()` (used by both fields above) renders
+                    // `<button>`s, not a `<select>`, so those onchange
+                    // handlers silently never fired and neither pill group
+                    // did anything when clicked. Fixed to use the same real
+                    // `_bindPillGroup()` pattern every other pill group in
+                    // this file (and calendarType just below) already uses.
+                    this._bindPillGroup(container, 'var-minical-mode-btn', v => { binding!.mode = v; }, notify);
+                    this._bindPillGroup(container, 'var-minical-displaymode-btn', v => { binding!.displayMode = v; }, notify);
 
                     // How many months this binding renders at once -- see
                     // MiniCalendarMeta.calendarType's own doc comment
                     // (MiniCalendarTool.ts) for the concept; here it's just
-                    // another resolved-per-repetition binding field. Uses
-                    // the REAL working `_bindPillGroup()` pattern (like
-                    // 'image'/'imageLayout' below), unlike `modeSel`/
-                    // `displayModeSel` just above -- those query `<select>`
-                    // elements that don't actually exist (`_pillGroup()`
-                    // renders buttons, not a `<select>`), a pre-existing
-                    // dead-code bug this new field deliberately doesn't
-                    // repeat.
+                    // another resolved-per-repetition binding field.
                     this._bindPillGroup(container, 'var-minical-calendartype-btn', v => {
                         binding!.calendarType = v;
                         const singleWrap = container.querySelector<HTMLElement>('#var-minical-singlemonth-wrap');
