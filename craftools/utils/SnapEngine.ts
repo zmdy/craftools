@@ -60,6 +60,16 @@ export type AlignDirection =
   | 'left' | 'center-h' | 'right'
   | 'top'  | 'center-v' | 'bottom';
 
+export type MultiAlignDir =
+  | 'left'
+  | 'center-h'
+  | 'right'
+  | 'top'
+  | 'center-v'
+  | 'bottom'
+  | 'distribute-h'
+  | 'distribute-v';
+
 interface SnapGuide {
   type: 'v' | 'h';
   pct: number;
@@ -289,6 +299,141 @@ export class SnapEngine {
     element.dispatchEvent(
       new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }),
     );
+  }
+
+  /**
+   * Aligns or distributes a group of multi-selected elements relative to each other.
+   * @param elements - The list of multi-selected elements.
+   * @param action   - One of the MultiAlignDir literals.
+   */
+  static alignGroup(elements: HTMLElement[], action: MultiAlignDir | string): void {
+    if (elements.length < 2) return;
+
+    // Filter valid CraftoolsSnapTarget elements
+    const targets = elements.filter(el => 'px' in el && 'py' in el) as unknown as CraftoolsSnapTarget[];
+    if (targets.length < 2) return;
+
+    // Compute bounding box and geometry for each element in virtual pixels
+    const items = targets.map(el => {
+      const vX = el.px * (el.unitX === 'mm' ? MM_PX : 1);
+      const vY = el.py * (el.unitY === 'mm' ? MM_PX : 1);
+      const vW = el.pw * (el.unitW === 'mm' ? MM_PX : 1);
+      const vH = el.ph * (el.unitH === 'mm' ? MM_PX : 1);
+      return { el, vX, vY, vW, vH, right: vX + vW, bottom: vY + vH };
+    });
+
+    const minX = Math.min(...items.map(i => i.vX));
+    const maxX = Math.max(...items.map(i => i.right));
+    const minY = Math.min(...items.map(i => i.vY));
+    const maxY = Math.max(...items.map(i => i.bottom));
+    const groupW = maxX - minX;
+    const groupH = maxY - minY;
+
+    switch (action) {
+      case 'left':
+        items.forEach(item => {
+          item.el.px = minX / (item.el.unitX === 'mm' ? MM_PX : 1);
+        });
+        break;
+
+      case 'center-h': {
+        const centerX = minX + groupW / 2;
+        items.forEach(item => {
+          const newVX = centerX - item.vW / 2;
+          item.el.px = newVX / (item.el.unitX === 'mm' ? MM_PX : 1);
+        });
+        break;
+      }
+
+      case 'right':
+        items.forEach(item => {
+          const newVX = maxX - item.vW;
+          item.el.px = newVX / (item.el.unitX === 'mm' ? MM_PX : 1);
+        });
+        break;
+
+      case 'top':
+        items.forEach(item => {
+          item.el.py = minY / (item.el.unitY === 'mm' ? MM_PX : 1);
+        });
+        break;
+
+      case 'center-v': {
+        const centerY = minY + groupH / 2;
+        items.forEach(item => {
+          const newVY = centerY - item.vH / 2;
+          item.el.py = newVY / (item.el.unitY === 'mm' ? MM_PX : 1);
+        });
+        break;
+      }
+
+      case 'bottom':
+        items.forEach(item => {
+          const newVY = maxY - item.vH;
+          item.el.py = newVY / (item.el.unitY === 'mm' ? MM_PX : 1);
+        });
+        break;
+
+      case 'distribute-h': {
+        const sorted = [...items].sort((a, b) => a.vX - b.vX);
+        const count = sorted.length;
+        const totalW = sorted.reduce((sum, item) => sum + item.vW, 0);
+        const totalGap = groupW - totalW;
+
+        if (totalGap >= 0 && count > 2) {
+          const gap = totalGap / (count - 1);
+          let currentX = minX;
+          sorted.forEach(item => {
+            item.el.px = currentX / (item.el.unitX === 'mm' ? MM_PX : 1);
+            currentX += item.vW + gap;
+          });
+        } else {
+          const firstCenter = sorted[0].vX + sorted[0].vW / 2;
+          const lastCenter = sorted[count - 1].vX + sorted[count - 1].vW / 2;
+          const centerStep = (lastCenter - firstCenter) / (count - 1);
+          sorted.forEach((item, idx) => {
+            const targetCenter = firstCenter + idx * centerStep;
+            const newVX = targetCenter - item.vW / 2;
+            item.el.px = newVX / (item.el.unitX === 'mm' ? MM_PX : 1);
+          });
+        }
+        break;
+      }
+
+      case 'distribute-v': {
+        const sorted = [...items].sort((a, b) => a.vY - b.vY);
+        const count = sorted.length;
+        const totalH = sorted.reduce((sum, item) => sum + item.vH, 0);
+        const totalGap = groupH - totalH;
+
+        if (totalGap >= 0 && count > 2) {
+          const gap = totalGap / (count - 1);
+          let currentY = minY;
+          sorted.forEach(item => {
+            item.el.py = currentY / (item.el.unitY === 'mm' ? MM_PX : 1);
+            currentY += item.vH + gap;
+          });
+        } else {
+          const firstCenter = sorted[0].vY + sorted[0].vH / 2;
+          const lastCenter = sorted[count - 1].vY + sorted[count - 1].vH / 2;
+          const centerStep = (lastCenter - firstCenter) / (count - 1);
+          sorted.forEach((item, idx) => {
+            const targetCenter = firstCenter + idx * centerStep;
+            const newVY = targetCenter - item.vH / 2;
+            item.el.py = newVY / (item.el.unitY === 'mm' ? MM_PX : 1);
+          });
+        }
+        break;
+      }
+    }
+
+    // Apply transform and dispatch change event for each modified element
+    targets.forEach(el => {
+      el._applyTransform();
+      el.dispatchEvent(
+        new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: el } }),
+      );
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────

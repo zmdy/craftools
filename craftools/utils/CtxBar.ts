@@ -6,6 +6,7 @@ import { I18n } from "../settings/Translations.js";
 import { AppSettings } from "./AppSettings.js";
 import { PropertyRenderer } from "./PropertyRenderer.js";
 import { SelectionManager } from "./SelectionManager.js";
+import { SnapEngine } from "./SnapEngine.js";
 
 export interface CtxOption {
   icon:    string;
@@ -597,65 +598,87 @@ export class CtxBar {
       this.el.innerHTML  = '';
 
       // Pinned-top style with system default orange accent
-      this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:5px 12px; border-radius:12px; background:var(--bg-shell, #fff); border:2px solid var(--accent, #f97316); box-shadow:0 4px 16px rgba(249,115,22,0.2); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
+      this.el.style.cssText = 'position:fixed; z-index:1090; display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:6px 14px; border-radius:12px; background:var(--bg-shell, #fff); border:2px solid var(--accent, #f97316); box-shadow:0 4px 16px rgba(249,115,22,0.2); pointer-events:auto; max-width:min(94vw, 900px); top:56px; left:50%; transform:translateX(-50%);';
       this.el.classList.remove('hidden');
 
       const row = document.createElement('div');
       row.className = 'craftools-ctxbar-row';
-      row.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; justify-content:center; gap:6px; width:100%; box-sizing:border-box;';
+      row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; width:100%; box-sizing:border-box;';
 
-      // Count badge with system orange pill styling & icon
+      // 1. Count badge
       const badge = document.createElement('span');
       badge.style.cssText = 'font-size:12px; font-weight:700; color:var(--accent, #f97316); background:rgba(249,115,22,0.12); padding:3px 10px; border-radius:12px; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px;';
-      badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; color:var(--accent, #f97316);">select_all</span> ${elements.length} elementos selecionados`;
+      badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; color:var(--accent, #f97316);">select_all</span> ${elements.length} selecionados`;
       row.appendChild(badge);
 
-      // Separator
       row.appendChild(this.createSeparator());
 
-      // Delete All button
-      row.appendChild(this.createButton('delete_sweep', 'Excluir seleção', () => {
-          const toDelete = [...elements];
-          toDelete.forEach(el => {
-              if (el.getAttribute('data-locked') !== 'true') {
-                  el.querySelector<HTMLElement>('.del-handle')?.click();
-              }
-          });
-          SelectionManager.clear();
-          this.hide();
-      }, 'danger'));
+      // 2. Alignment Group (Horizontal & Vertical)
+      const alignBtns = [
+        this.createButton('align_horizontal_left', 'Alinhar à esquerda', () => SnapEngine.alignGroup(elements, 'left')),
+        this.createButton('align_horizontal_center', 'Centralizar horizontalmente', () => SnapEngine.alignGroup(elements, 'center-h')),
+        this.createButton('align_horizontal_right', 'Alinhar à direita', () => SnapEngine.alignGroup(elements, 'right')),
+        this.createButton('align_vertical_top', 'Alinhar ao topo', () => SnapEngine.alignGroup(elements, 'top')),
+        this.createButton('align_vertical_center', 'Centralizar verticalmente', () => SnapEngine.alignGroup(elements, 'center-v')),
+        this.createButton('align_vertical_bottom', 'Alinhar à base', () => SnapEngine.alignGroup(elements, 'bottom')),
+      ];
+      row.appendChild(this.createGroup(alignBtns));
 
-      // Duplicate All button
-      row.appendChild(this.createButton('content_copy', 'Duplicar seleção', async () => {
-          const OFFSET = 20;
-          for (const el of elements) {
-              const clone = el.cloneNode(true) as HTMLElement & {
-                  _craftoolsMeta?: unknown;
-                  _craftoolsAutoResize?: boolean;
-                  _craftoolsVariable?: unknown;
-                  px?: number;
-                  py?: number;
-              };
-              const srcX = parseFloat(el.getAttribute('x') || '0') || 0;
-              const srcY = parseFloat(el.getAttribute('y') || '0') || 0;
-              clone.setAttribute('x', String(srcX + OFFSET));
-              clone.setAttribute('y', String(srcY + OFFSET));
-              clone.removeAttribute('data-linked-id');
-              clone.removeAttribute('data-locked');
+      row.appendChild(this.createSeparator());
 
-              if ((el as any)._craftoolsMeta) clone._craftoolsMeta = JSON.parse(JSON.stringify((el as any)._craftoolsMeta));
-              if ((el as any)._craftoolsAutoResize !== undefined) clone._craftoolsAutoResize = (el as any)._craftoolsAutoResize;
-              if ((el as any)._craftoolsVariable) clone._craftoolsVariable = JSON.parse(JSON.stringify((el as any)._craftoolsVariable));
+      // 3. Distribution Group (Horizontal & Vertical)
+      const distBtns = [
+        this.createButton('distribute_horizontal', 'Distribuir horizontalmente', () => SnapEngine.alignGroup(elements, 'distribute-h')),
+        this.createButton('distribute_vertical', 'Distribuir verticalmente', () => SnapEngine.alignGroup(elements, 'distribute-v')),
+      ];
+      row.appendChild(this.createGroup(distBtns));
 
-              const page = el.closest('.craftools-page');
-              if (page) {
-                  page.appendChild(clone);
-                  clone.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: clone } }));
-              }
-          }
-          SelectionManager.clear();
-          this.hide();
-      }));
+      row.appendChild(this.createSeparator());
+
+      // 4. Actions Group (Duplicate & Delete)
+      const actionBtns = [
+        this.createButton('content_copy', 'Duplicar seleção', async () => {
+            const OFFSET = 20;
+            for (const el of elements) {
+                const clone = el.cloneNode(true) as HTMLElement & {
+                    _craftoolsMeta?: unknown;
+                    _craftoolsAutoResize?: boolean;
+                    _craftoolsVariable?: unknown;
+                    px?: number;
+                    py?: number;
+                };
+                const srcX = parseFloat(el.getAttribute('x') || '0') || 0;
+                const srcY = parseFloat(el.getAttribute('y') || '0') || 0;
+                clone.setAttribute('x', String(srcX + OFFSET));
+                clone.setAttribute('y', String(srcY + OFFSET));
+                clone.removeAttribute('data-linked-id');
+                clone.removeAttribute('data-locked');
+
+                if ((el as any)._craftoolsMeta) clone._craftoolsMeta = JSON.parse(JSON.stringify((el as any)._craftoolsMeta));
+                if ((el as any)._craftoolsAutoResize !== undefined) clone._craftoolsAutoResize = (el as any)._craftoolsAutoResize;
+                if ((el as any)._craftoolsVariable) clone._craftoolsVariable = JSON.parse(JSON.stringify((el as any)._craftoolsVariable));
+
+                const page = el.closest('.craftools-page');
+                if (page) {
+                    page.appendChild(clone);
+                    clone.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: clone } }));
+                }
+            }
+            SelectionManager.clear();
+            this.hide();
+        }),
+        this.createButton('delete_sweep', 'Excluir seleção', () => {
+            const toDelete = [...elements];
+            toDelete.forEach(el => {
+                if (el.getAttribute('data-locked') !== 'true') {
+                    el.querySelector<HTMLElement>('.del-handle')?.click();
+                }
+            });
+            SelectionManager.clear();
+            this.hide();
+        }, 'danger'),
+      ];
+      row.appendChild(this.createGroup(actionBtns));
 
       this.el.appendChild(row);
   }
