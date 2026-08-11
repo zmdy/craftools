@@ -348,6 +348,31 @@ export class AgendaExportTool {
     // comment: a purely forward link that never loops back doesn't need one).
     const closingIds = AgendaPlan.closingPageIds(pages);
 
+    // Ids of pages that are the FIRST page of some loop's body (loop[0] in
+    // describe()'s grouping -- the page a closer's "voltar para" points at).
+    // Reported as confusing: with a 2-page cycle (Página 1 = month header,
+    // Página 2 = days, closes back to Página 1), BOTH pages showed their own
+    // independent "quantas vezes esta página repete" number field, which
+    // reads as two competing repeat controls even though only the closer's
+    // separate "repetir esse bloco/ciclo" field should govern how many times
+    // the pair as a whole repeats. Per the user's own call, a loop-start
+    // page's own per-page count is locked to 1x (appears once per cycle
+    // pass) and shown disabled -- the cycle-count field on the closing page
+    // is the only thing left that controls repetition. Self-healing: forces
+    // `data-agenda-repeat` to '1' right here on every render (not just in
+    // the "continuar com" select's change handler below) so a page that
+    // became a loop-start any other way (loading a saved .craftools project,
+    // re-pointing a DIFFERENT page's "continuar com" here) still locks
+    // correctly without needing a fresh interaction to trigger it.
+    const loopStartIds = new Set<string>();
+    AgendaPlan.describe(pages).forEach(g => {
+      if (g.kind === 'chain' && g.loop.length) {
+        const startPage = g.loop[0].page;
+        loopStartIds.add(startPage.id);
+        if (startPage.dataset.agendaRepeat !== '1') startPage.dataset.agendaRepeat = '1';
+      }
+    });
+
     // Whether chaining/looping is even possible right now (needs at least
     // 2 repeat-enabled pages) -- gates the general explanation box below
     // so it doesn't clutter the by-far-most-common case of a single
@@ -377,6 +402,14 @@ export class AgendaExportTool {
       const dateBinding   = AgendaExportTool._findLeadingDateBinding(page);
       const repeatTrigger = (page.dataset.agendaRepeatTrigger ?? '') as DateRepeatTrigger | '';
 
+      // This page is the FIRST page of some other page's closed loop --
+      // its own per-page count is locked to 1x and shown disabled (see
+      // loopStartIds's doc comment above): the closing page's own "repetir
+      // este ciclo" field is the only control left that governs how many
+      // times the pair/block repeats.
+      const isLoopStart = loopStartIds.has(page.id);
+      const repeatLocked = repeatTrigger !== '' || isLoopStart;
+
       // Any OTHER repeat-enabled page not already targeted by someone else
       // can be picked here -- a page AFTER this one extends the chain
       // forward ("continuar com"), a page BEFORE it closes it into a loop
@@ -405,7 +438,7 @@ export class AgendaExportTool {
           </label>
           <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px; margin-left:24px;">${boundCount} ${a('variablesFoundSuffix')}</span>
           <div class="agenda-page-repeat-count-wrap" data-page-id="${page.id}" style="margin-top:8px; margin-left:24px; ${checked ? '' : 'display:none;'}">
-            ${dateBinding ? `
+            ${dateBinding && !isLoopStart ? `
               <span class="craftools-label">${a('repeatModeLabel')}</span>
               <select class="craftools-select agenda-page-repeat-trigger-select" data-page-id="${page.id}" style="width:100%; margin-bottom:8px;">
                 <option value="">${a('repeatModeManualOption')}</option>
@@ -417,8 +450,9 @@ export class AgendaExportTool {
               </select>
             ` : ''}
             <span class="craftools-label">${a('repeatCountLabel')}</span>
-            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" ${repeatTrigger ? 'disabled' : ''} style="width:100%; margin-bottom:${repeatTrigger ? '2' : '8'}px; ${repeatTrigger ? 'opacity:.65; cursor:not-allowed;' : ''}">
+            <input type="number" class="craftools-input agenda-page-repeat-input" data-page-id="${page.id}" min="1" max="2000" value="${checked ? repeatCount : 30}" ${repeatLocked ? 'disabled' : ''} style="width:100%; margin-bottom:${repeatLocked ? '2' : '8'}px; ${repeatLocked ? 'opacity:.65; cursor:not-allowed;' : ''}">
             ${repeatTrigger ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:8px;">${a('repeatModeComputedHint').replace('{n}', String(repeatCount))}</span>` : ''}
+            ${isLoopStart ? `<span style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:8px;">${a('repeatLoopStartLockedHint')}</span>` : ''}
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
               <input type="checkbox" class="agenda-page-alternate-check" data-page-id="${page.id}" ${alternate ? 'checked' : ''}>
               <span style="font-size:11px;">${a('alternateToggle')}</span>
