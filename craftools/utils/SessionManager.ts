@@ -179,7 +179,9 @@ class _SessionManager {
     }
 
     this._beforeunloadHandler = (e: BeforeUnloadEvent) => {
-      if (!this._sessionActive && !this._dirty) return;
+      // Only block navigation if there are actual unsaved changes.
+      // Merely having an active session (no edits) should not trigger the browser dialog.
+      if (!this._dirty) return;
       // Save before the tab closes (handles abrupt closures)
       this.saveNow();
       // Show the browser's native "leave page?" dialog
