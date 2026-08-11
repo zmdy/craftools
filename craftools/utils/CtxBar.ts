@@ -97,10 +97,10 @@ export class CtxBar {
       const btn = document.createElement('button');
       btn.className = `craftools-ctx-btn ${extraClass}`;
       btn.title = label;
-      btn.style.cssText = 'display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background 0.1s, color 0.1s;';
+      btn.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background 0.1s, color 0.1s; overflow:hidden; flex-shrink:0;';
 
       btn.addEventListener('mouseover', () => {
-          if(extraClass === 'danger') {
+          if (extraClass === 'danger') {
               btn.style.background = 'rgba(239,68,68,0.1)';
               btn.style.color = '#ef4444';
           } else {
@@ -115,7 +115,7 @@ export class CtxBar {
 
       const icon = document.createElement('span');
       icon.className = 'material-symbols-outlined';
-      icon.style.cssText = 'font-size:18px; line-height:1;';
+      icon.style.cssText = 'font-size:18px; line-height:1; overflow:hidden; flex-shrink:0;';
       icon.textContent = iconName;
 
       btn.appendChild(icon);
@@ -579,64 +579,6 @@ export class CtxBar {
       this._detachListeners();
       this.activeElement = null;
       this._lastOptions  = [];
-  }
-
-  createButton(iconName: string, label: string, onClick: () => void, extraClass: string = ''): HTMLButtonElement {
-      const btn = document.createElement('button');
-      btn.className = `craftools-ctx-btn ${extraClass}`;
-      btn.title = label;
-      btn.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer; transition:background 0.1s, color 0.1s; overflow:hidden; flex-shrink:0;';
-
-      btn.addEventListener('mouseover', () => {
-          if (extraClass === 'danger') {
-              btn.style.background = 'rgba(239,68,68,0.1)';
-              btn.style.color = '#ef4444';
-          } else {
-              btn.style.background = 'var(--bg-input)';
-              btn.style.color = btn.classList.contains('active') ? 'var(--accent, #f97316)' : 'var(--text-primary)';
-          }
-      });
-      btn.addEventListener('mouseout', () => {
-          btn.style.background = 'transparent';
-          btn.style.color = btn.classList.contains('active') ? 'var(--accent, #f97316)' : 'var(--text-secondary)';
-      });
-
-      const icon = document.createElement('span');
-      icon.className = 'material-symbols-outlined';
-      icon.style.cssText = 'font-size:18px; line-height:1; overflow:hidden; flex-shrink:0;';
-      icon.textContent = iconName;
-
-      btn.appendChild(icon);
-
-      btn.addEventListener('mousedown', (e: MouseEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onClick();
-      });
-
-      return btn;
-  }
-
-  /** Toggles a button's "active" styling (accent-orange icon, per CtxOption.isActive). */
-  private _setButtonActive(btn: HTMLButtonElement, active: boolean): void {
-      btn.classList.toggle('active', active);
-      btn.style.color = active ? 'var(--accent, #f97316)' : 'var(--text-secondary)';
-  }
-
-  createSeparator(): HTMLDivElement {
-      const sep = document.createElement('div');
-      sep.className = 'craftools-ctx-sep';
-      sep.style.cssText = 'width:1px; height:18px; background:var(--border); margin:0 2px; flex-shrink:0;';
-      return sep;
-  }
-
-  private createGroup(elements: HTMLElement[]): HTMLElement {
-      if (elements.length === 1) return elements[0];
-      const group = document.createElement('div');
-      group.className = 'craftools-ctxbar-group';
-      group.style.cssText = 'display:flex; flex-wrap:nowrap; align-items:center; gap:2px; flex-shrink:0;';
-      elements.forEach(el => group.appendChild(el));
-      return group;
   }
 
   /**
