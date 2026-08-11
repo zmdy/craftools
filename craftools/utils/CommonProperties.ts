@@ -519,12 +519,12 @@ export class CommonProperties {
                 <button id="ct-copy-styles" class="craftools-pill" type="button"
                     title="${I18n.t('common.copyStyles') || 'Copiar estilos'}">
                     <span class="material-symbols-outlined" style="font-size:13px;">content_copy</span>
-                    <span>${I18n.t('common.copy') || 'Copiar'}</span>
+                    <span>${I18n.t('common.copyStyles') || 'Copiar estilos'}</span>
                 </button>
                 <button id="ct-paste-styles" class="craftools-pill" type="button"
                     title="${I18n.t('common.pasteStyles') || 'Colar estilos'}">
                     <span class="material-symbols-outlined" style="font-size:13px;">content_paste</span>
-                    <span>${I18n.t('common.paste') || 'Colar'}</span>
+                    <span>${I18n.t('common.pasteStyles') || 'Colar estilos'}</span>
                 </button>
                 <button id="ct-toggle-lock" class="craftools-pill ${isLocked ? 'active' : ''}" type="button" title="${lockTitle}">
                     <span class="material-symbols-outlined" style="font-size:13px;">${isLocked ? 'lock' : 'lock_open'}</span>

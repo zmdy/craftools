@@ -601,13 +601,13 @@ export abstract class BaseTool {
       bar = document.createElement('div');
       bar.className = 'ct-copypaste-bar';
       bar.innerHTML = `
-        <button type="button" class="craftools-pill" data-ct-bar="copy">
+        <button type="button" class="craftools-pill" data-ct-bar="copy" title="${tr('common.copyStyles', 'Copiar estilos')}">
           <span class="material-symbols-outlined" style="font-size:13px;">content_copy</span>
-          <span>${tr('common.copy', 'Copiar')}</span>
+          <span>${tr('common.copyStyles', 'Copiar estilos')}</span>
         </button>
-        <button type="button" class="craftools-pill" data-ct-bar="paste">
+        <button type="button" class="craftools-pill" data-ct-bar="paste" title="${tr('common.pasteStyles', 'Colar estilos')}">
           <span class="material-symbols-outlined" style="font-size:13px;">content_paste</span>
-          <span>${tr('common.paste', 'Colar')}</span>
+          <span>${tr('common.pasteStyles', 'Colar estilos')}</span>
         </button>
         <button type="button" class="craftools-pill" data-ct-bar="lock">
           <span class="material-symbols-outlined" style="font-size:13px;">lock_open</span>
