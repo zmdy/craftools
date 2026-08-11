@@ -18,6 +18,7 @@ import {
   LetteringGenerator, defaultLetteringMeta, defaultLetteringBackground,
   type LetteringMeta, type LetteringBackground,
 } from '../../utils/LetteringGenerator';
+import { renderLetteringFontPoolField } from '../../utils/LetteringFontPoolField';
 import { I18n } from '../../settings/Translations.js';
 import './LetteringTool_Translations.js';
 import type { PropertySchema } from '../../types/PropertySchema';
@@ -124,7 +125,7 @@ export class LetteringTool extends BaseTool {
     const keys: (keyof LetteringMeta)[] = [
       'text', 'splitMode', 'arrangement', 'fontSize', 'letterSpacing', 'lineSpacing', 'textAlign',
       'bounceIntensity', 'rotationIntensity', 'skewIntensity', 'sizeIntensity', 'opacityIntensity',
-      'fontMode', 'font', 'color', 'colorRandom',
+      'fontMode', 'font', 'fontPool', 'color', 'colorRandom',
       'curveRadius', 'curveSpread',
       'repeatCount', 'repeatSpacing', 'repeatVariation',
     ];
@@ -217,6 +218,14 @@ export class LetteringTool extends BaseTool {
             ),
           },
           { type: 'font-select', key: 'font', label: s('font'), i18nKey: 'letteringTool.font', hidden: fontMode !== 'single' },
+          {
+            type: 'custom', key: 'fontPool', label: s('fontPool'), i18nKey: 'letteringTool.fontPool', hidden: fontMode !== 'random',
+            render: (el, onChange) => renderLetteringFontPoolField(
+              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
+              onChange as (v: string[]) => void,
+              { selectAll: s('fontPoolSelectAll'), clearAll: s('fontPoolClearAll'), hint: s('fontPoolHint') },
+            ),
+          },
           { type: 'color-picker', key: 'color', label: s('color'), i18nKey: 'letteringTool.color', hidden: colorRandom },
           { type: 'toggle', key: 'colorRandom', label: s('colorRandom'), i18nKey: 'letteringTool.colorRandom' },
           { type: 'color-picker', key: 'colorPalette0', label: `${s('colorPalette')} 1`, hidden: !colorRandom },

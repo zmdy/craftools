@@ -38,6 +38,10 @@ I18n.addTranslations('letteringTool', {
         fontModeSingle: "Única",
         fontModeRandom: "Aleatória por letra",
         font: "Fonte",
+        fontPool: "Quais fontes usar",
+        fontPoolSelectAll: "Marcar todas",
+        fontPoolClearAll: "Limpar seleção",
+        fontPoolHint: "Se nenhuma fonte estiver marcada, o sorteio usa todo o catálogo (comportamento padrão). Marque fontes específicas para restringir o sorteio a só elas.",
 
         color: "Cor",
         colorRandom: "Cor aleatória por letra",
@@ -98,6 +102,10 @@ I18n.addTranslations('letteringTool', {
         fontModeSingle: "Single",
         fontModeRandom: "Random per letter",
         font: "Font",
+        fontPool: "Which fonts to use",
+        fontPoolSelectAll: "Select all",
+        fontPoolClearAll: "Clear selection",
+        fontPoolHint: "If no font is checked, the picker draws from the whole catalog (default behavior). Check specific fonts to restrict the random draw to just those.",
 
         color: "Color",
         colorRandom: "Random color per letter",
@@ -158,6 +166,10 @@ I18n.addTranslations('letteringTool', {
         fontModeSingle: "Única",
         fontModeRandom: "Aleatoria por letra",
         font: "Fuente",
+        fontPool: "Qué fuentes usar",
+        fontPoolSelectAll: "Marcar todas",
+        fontPoolClearAll: "Limpiar selección",
+        fontPoolHint: "Si no hay ninguna fuente marcada, el sorteo usa todo el catálogo (comportamiento por defecto). Marca fuentes específicas para restringir el sorteo solo a ellas.",
 
         color: "Color",
         colorRandom: "Color aleatorio por letra",

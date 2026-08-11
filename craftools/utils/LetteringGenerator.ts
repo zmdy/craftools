@@ -80,6 +80,11 @@ export interface LetteringMeta {
 
   fontMode: 'single' | 'random';
   font: string;
+  /** Subset of FontList.ts's FONTS (+ any saved local fonts) the 'random'
+   *  fontMode draws from -- empty means "no restriction, draw from every
+   *  font in the catalog" (the original, only-ever behavior before this
+   *  field existed), so old/untouched metas keep working unchanged. */
+  fontPool: string[];
 
   color: string;
   colorRandom: boolean;
@@ -149,6 +154,7 @@ export function defaultLetteringMeta(): LetteringMeta {
 
     fontMode: 'random',
     font: 'DM Sans',
+    fontPool: [],
 
     color: '#18181b',
     colorRandom: false,
@@ -229,7 +235,11 @@ export class LetteringGenerator {
     const skewRandom     = (rng() * 2 - 1) * meta.skewIntensity * 20;
     const scaleRandom    = 1 + (rng() * 2 - 1) * meta.sizeIntensity * 0.5;
     const opacityRandom  = 1 - rng() * meta.opacityIntensity * 0.7;
-    const fontPick       = FONTS.length ? FONTS[Math.floor(rng() * FONTS.length)] : meta.font;
+    // Empty fontPool (the default -- see LetteringMeta.fontPool's doc
+    // comment) means "no restriction", so this falls back to the full
+    // catalog exactly like before this field existed.
+    const fontChoices    = meta.fontPool && meta.fontPool.length ? meta.fontPool : FONTS;
+    const fontPick       = fontChoices.length ? fontChoices[Math.floor(rng() * fontChoices.length)] : meta.font;
     const colorPick      = meta.colorPalette.length
       ? meta.colorPalette[Math.floor(rng() * meta.colorPalette.length)]
       : meta.color;

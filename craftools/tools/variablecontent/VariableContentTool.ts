@@ -15,6 +15,7 @@ import { VariableEngine, type VariableBinding } from '../../utils/VariableEngine
 import type { PropertySchema } from '../../types/PropertySchema';
 import { FONTS, loadCraftoolsFonts, loadGoogleFonts, getSavedLocalFonts } from '../../utils/FontList.js';
 import { LetteringGenerator, defaultLetteringMeta } from '../../utils/LetteringGenerator';
+import { renderLetteringFontPoolField } from '../../utils/LetteringFontPoolField';
 import '../../components/CtFontSelect.js';
 // Registers the 'variableContentTool.*' i18n keys used by I18n.t() calls
 // below (placeholder text) -- without this side-effect import the keys are
@@ -125,6 +126,7 @@ export class VariableContentTool extends BaseTool {
     if (!('sizeIntensity' in existing)) patch.sizeIntensity = 0;
     if (!('opacityIntensity' in existing)) patch.opacityIntensity = 0;
     if (!('fontMode' in existing)) patch.fontMode = 'random';
+    if (!('fontPool' in existing)) patch.fontPool = [];
     if (!('colorRandom' in existing)) patch.colorRandom = false;
     if (!('letteringSeed' in existing)) patch.letteringSeed = 1001;
 
@@ -221,6 +223,7 @@ export class VariableContentTool extends BaseTool {
               sizeIntensity: Number(state.sizeIntensity ?? 0),
               opacityIntensity: Number(state.opacityIntensity ?? 0),
               fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
+              fontPool: Array.isArray(state.fontPool) ? state.fontPool as string[] : [],
               colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
               font: fontVal,
               fontSize: Number(state.fontSize ?? currentFontSize),
@@ -747,6 +750,26 @@ export class VariableContentTool extends BaseTool {
               ]
             ),
           },
+          {
+            type: 'custom',
+            key: 'fontPool',
+            label: 'Quais fontes usar',
+            hidden: (el: HTMLElement) => {
+              const v = PropertyRenderer._readState(el).useLettering;
+              const on = v === true || v === 'true' || v === 1 || v === '1';
+              const fontMode = PropertyRenderer._readState(el).fontMode === 'single' ? 'single' : 'random';
+              return !on || fontMode !== 'random';
+            },
+            render: (el: HTMLElement, onChange: (v: unknown) => void) => renderLetteringFontPoolField(
+              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
+              onChange as (v: string[]) => void,
+              {
+                selectAll: 'Marcar todas',
+                clearAll: 'Limpar seleção',
+                hint: 'Se nenhuma fonte estiver marcada, o sorteio usa todo o catálogo. Marque fontes específicas para restringir o sorteio a só elas.',
+              },
+            ),
+          },
           { type: 'toggle', key: 'colorRandom', label: 'Cores Aleatórias', hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); } },
           {
             type: 'custom',
@@ -854,7 +877,7 @@ export class VariableContentTool extends BaseTool {
     // effect -- same as every other lettering-affecting field below.
     const LETTERING_KEYS = new Set([
       'useLettering', 'splitMode', 'bounceIntensity', 'rotationIntensity',
-      'skewIntensity', 'sizeIntensity', 'opacityIntensity', 'fontMode',
+      'skewIntensity', 'sizeIntensity', 'opacityIntensity', 'fontMode', 'fontPool',
       'colorRandom', 'letteringReroll', 'letteringSeed', 'fontSize', 'font',
     ]);
 

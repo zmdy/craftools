@@ -765,6 +765,7 @@ export class AgendaExport {
             sizeIntensity: Number(state.sizeIntensity ?? 0),
             opacityIntensity: Number(state.opacityIntensity ?? 0),
             fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
+            fontPool: Array.isArray(state.fontPool) ? state.fontPool as string[] : [],
             colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
             font: fontVal,
             fontSize: Number(state.fontSize ?? currentFontSize),
