@@ -53,14 +53,14 @@ export class UIErrorBoundary {
         <div style="font-size: 11px; margin-bottom: 18px; line-height: 1.4;">
           Ocorreu uma oscilação ao carregar os módulos da ferramenta <strong>${toolName}</strong>.
         </div>
-        <button id="ui-boundary-retry-btn" class="craftools-topbtn" style="width: 100%; justify-content: center; background: var(--accent, #f97316); color: #ffffff; border: none; margin-bottom: 8px;">
+        <button id="ui-boundary-retry-btn" class="craftools-topbtn" style="width: 100%; justify-content: center; background: var(--accent, #f97316); color: #ffffff; border: none; margin-bottom: 14px;">
           <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
           Tentar Novamente
         </button>
-        <button id="ui-boundary-reload-btn" class="craftools-pill" style="width: 100%; justify-content: center; gap: 6px; padding: 8px;">
-          <span class="material-symbols-outlined" style="font-size: 15px;">cached</span>
-          Recarregar Aplicação
-        </button>
+        <p style="font-size: 11px; color: var(--text-muted, #71717a); margin: 0;">
+          Se o problema persistir,
+          <a id="ui-boundary-reload-link" href="#" style="color: var(--text-muted, #71717a); text-decoration: underline; cursor: pointer;">recarregue a página</a>.
+        </p>
       </div>
     `;
 
@@ -72,9 +72,10 @@ export class UIErrorBoundary {
       });
     }
 
-    const reloadBtn = panelBody.querySelector<HTMLButtonElement>('#ui-boundary-reload-btn');
-    if (reloadBtn) {
-      reloadBtn.addEventListener('click', () => {
+    const reloadLink = panelBody.querySelector<HTMLAnchorElement>('#ui-boundary-reload-link');
+    if (reloadLink) {
+      reloadLink.addEventListener('click', (e) => {
+        e.preventDefault();
         window.location.reload();
       });
     }
