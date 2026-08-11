@@ -601,18 +601,12 @@ export class CtxBar {
           btn.style.color = btn.classList.contains('active') ? 'var(--accent, #f97316)' : 'var(--text-secondary)';
       });
 
-      if (iconName.trim().startsWith('<svg')) {
-          const iconSpan = document.createElement('span');
-          iconSpan.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; font-size:16px; line-height:1; overflow:hidden; flex-shrink:0;';
-          iconSpan.innerHTML = iconName;
-          btn.appendChild(iconSpan);
-      } else {
-          const icon = document.createElement('span');
-          icon.className = 'material-symbols-outlined';
-          icon.style.cssText = 'font-size:18px; line-height:1; overflow:hidden; flex-shrink:0;';
-          icon.textContent = iconName;
-          btn.appendChild(icon);
-      }
+      const icon = document.createElement('span');
+      icon.className = 'material-symbols-outlined';
+      icon.style.cssText = 'font-size:18px; line-height:1; overflow:hidden; flex-shrink:0;';
+      icon.textContent = iconName;
+
+      btn.appendChild(icon);
 
       btn.addEventListener('mousedown', (e: MouseEvent) => {
           e.preventDefault();
@@ -674,25 +668,14 @@ export class CtxBar {
 
       row.appendChild(this.createSeparator());
 
-      const SVG = {
-        alignLeft: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22V2h2v20H4zm4-15h12v3H8V7zm0 7h8v3H8v-3z"/></svg>`,
-        alignCenterH: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v5h6v3h-6v4h4v3h-4v5h-2v-5H7v-3h4v-4H5V7h6V2z"/></svg>`,
-        alignRight: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2v20h2V2h-2zm-12 5h10v3H6V7zm4 7h6v3h-6v-3z"/></svg>`,
-        alignTop: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 4h20v2H2V4zm5 4v12h3V8H7zm7 0v8h3V8h-3z"/></svg>`,
-        alignCenterV: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 11h5V5h3v6h4V7h3v4h5v2h-5v4h-3v-4h-4v6H7v-6H2v-2z"/></svg>`,
-        alignBottom: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 18h20v2H2v-2zm5-12v10h3V6H7zm7 4v6h3v-6h-3z"/></svg>`,
-        distributeH: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22V2h2v20H4zm14 0V2h2v20h-2zm-7-15h2v10h-2V7z"/></svg>`,
-        distributeV: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 4h20v2H2V4zm0 14h20v2H2v-2zm5-7h10v2H7v-2z"/></svg>`,
-      };
-
       // 2. Alignment Group (Horizontal & Vertical)
       const alignBtns = [
-        this.createButton(SVG.alignLeft, 'Alinhar à esquerda', () => SnapEngine.alignGroup(elements, 'left')),
-        this.createButton(SVG.alignCenterH, 'Centralizar horizontalmente', () => SnapEngine.alignGroup(elements, 'center-h')),
-        this.createButton(SVG.alignRight, 'Alinhar à direita', () => SnapEngine.alignGroup(elements, 'right')),
-        this.createButton(SVG.alignTop, 'Alinhar ao topo', () => SnapEngine.alignGroup(elements, 'top')),
-        this.createButton(SVG.alignCenterV, 'Centralizar verticalmente', () => SnapEngine.alignGroup(elements, 'center-v')),
-        this.createButton(SVG.alignBottom, 'Alinhar à base', () => SnapEngine.alignGroup(elements, 'bottom')),
+        this.createButton('align_horizontal_left', 'Alinhar à esquerda', () => SnapEngine.alignGroup(elements, 'left')),
+        this.createButton('align_horizontal_center', 'Centralizar horizontalmente', () => SnapEngine.alignGroup(elements, 'center-h')),
+        this.createButton('align_horizontal_right', 'Alinhar à direita', () => SnapEngine.alignGroup(elements, 'right')),
+        this.createButton('align_vertical_top', 'Alinhar ao topo', () => SnapEngine.alignGroup(elements, 'top')),
+        this.createButton('align_vertical_center', 'Centralizar verticalmente', () => SnapEngine.alignGroup(elements, 'center-v')),
+        this.createButton('align_vertical_bottom', 'Alinhar à base', () => SnapEngine.alignGroup(elements, 'bottom')),
       ];
       row.appendChild(this.createGroup(alignBtns));
 
@@ -700,8 +683,8 @@ export class CtxBar {
 
       // 3. Distribution Group (Horizontal & Vertical)
       const distBtns = [
-        this.createButton(SVG.distributeH, 'Distribuir horizontalmente', () => SnapEngine.alignGroup(elements, 'distribute-h')),
-        this.createButton(SVG.distributeV, 'Distribuir verticalmente', () => SnapEngine.alignGroup(elements, 'distribute-v')),
+        this.createButton('space_bar', 'Distribuir horizontalmente', () => SnapEngine.alignGroup(elements, 'distribute-h')),
+        this.createButton('format_line_spacing', 'Distribuir verticalmente', () => SnapEngine.alignGroup(elements, 'distribute-v')),
       ];
       row.appendChild(this.createGroup(distBtns));
 
