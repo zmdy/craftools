@@ -606,7 +606,7 @@ export class ImageTool extends BaseTool {
   private static _renderEnhancePanel(element: HTMLElement, _onChange: (v: unknown) => void): HTMLElement {
     const meta = getMeta(element);
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex; flex-direction:column; gap:0;';
+    wrap.style.cssText = 'display:flex; flex-direction:column; width:100%;';
 
     const GROUPS = [
       { key: 'global',    label: 'Ajustes Globais' },
@@ -618,18 +618,31 @@ export class ImageTool extends BaseTool {
     type GroupKey = typeof GROUPS[number]['key'];
     let activeGroup: GroupKey = 'global';
 
-    // ── Toggle row ──
-    const toggleWrap = document.createElement('label');
-    toggleWrap.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:4px 0 12px;';
+    // ── Toggle row (styled like standard system .ct-field toggle) ──
+    const toggleWrap = document.createElement('div');
+    toggleWrap.className = 'ct-field';
+    toggleWrap.style.cssText = 'padding: 4px 12px; margin-bottom: 0; min-height: 34px;';
     toggleWrap.innerHTML = `
-      <span style="font-size:12px; font-weight:600; color:var(--text-primary);">Melhorar Qualidade de Imagem</span>
-      <input type="checkbox" id="img-enhance-toggle" style="accent-color:var(--accent,#f97316); width:16px; height:16px; cursor:pointer;" ${meta.autoEnhance ? 'checked' : ''}>
+      <div class="craftools-label" style="min-width:unset; max-width:unset; flex:1; text-transform:none; font-size:11px; font-weight:600; color:var(--text-primary);">Melhorar Qualidade de Imagem</div>
+      <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px; margin-left:auto;">
+        <input type="checkbox" id="img-enhance-toggle" class="ct-fi" style="display:none;" ${meta.autoEnhance ? 'checked' : ''}>
+        <span class="ct-toggle-track" style="
+          width:32px; height:18px; border-radius:99px;
+          background:${meta.autoEnhance ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
+          <span class="ct-toggle-thumb" style="
+            position:absolute; top:2px; left:2px;
+            width:14px; height:14px; border-radius:50%;
+            background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+            transform:${meta.autoEnhance ? 'translateX(14px)' : 'translateX(0)'};">
+          </span>
+        </span>
+      </label>
     `;
     wrap.appendChild(toggleWrap);
 
     // ── Content area (shown only when toggle is active) ──
     const content = document.createElement('div');
-    content.style.display = meta.autoEnhance ? 'block' : 'none';
+    content.style.cssText = `padding: 4px 12px 10px; display: ${meta.autoEnhance ? 'flex' : 'none'}; flex-direction: column; gap: 8px;`;
     wrap.appendChild(content);
 
     const buildContent = (): void => {
@@ -637,19 +650,16 @@ export class ImageTool extends BaseTool {
 
       // Read current profile from AppSettings
       const profile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
-      const P = profile ?? { brightness: 0, contrast: 0, saturation: 0,
-        shadows: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
-        midtones: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
-        highlights: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 } };
+      const P = profile ?? ImageEnhancer.defaultProfile();
 
       // ── 4 group navigation buttons ──
       const navWrap = document.createElement('div');
-      navWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px;';
+      navWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;';
       GROUPS.forEach(g => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'craftools-pill' + (g.key === activeGroup ? ' active' : '');
-        btn.style.cssText = 'flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:6px 4px;';
+        btn.style.cssText = 'flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;';
         btn.textContent = g.label;
         btn.addEventListener('click', () => {
           activeGroup = g.key;
@@ -659,24 +669,24 @@ export class ImageTool extends BaseTool {
       });
       content.appendChild(navWrap);
 
-      // ── Sliders helper ──
+      // ── Sliders helper (styled like system slider fields) ──
       const addSlider = (label: string, valueGetter: () => number, valueSetter: (v: number) => void, min: number, max: number): void => {
         const row = document.createElement('div');
-        row.style.cssText = 'margin-bottom:10px;';
+        row.className = 'ct-field';
+        row.style.cssText = 'padding: 0; min-height: unset;';
         const curVal = valueGetter();
         row.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span style="font-size:11px; color:var(--text-secondary);">${label}</span>
-            <span class="img-enh-val" style="font-size:11px; font-weight:600; color:var(--accent,#f97316);">${curVal}</span>
+          <div class="craftools-label" style="min-width:unset; max-width:unset; flex:1; text-transform:none;">${label}</div>
+          <div class="ct-field-row" style="flex:1;">
+            <input type="range" class="ct-fi craftools-slider" style="flex:1;" min="${min}" max="${max}" step="1" value="${curVal}">
+            <span class="ct-val-badge ct-slider-badge">${curVal}</span>
           </div>
-          <input type="range" min="${min}" max="${max}" step="1" value="${curVal}"
-            style="width:100%; accent-color:var(--accent,#f97316);">
         `;
-        const valEl = row.querySelector<HTMLElement>('.img-enh-val')!;
+        const badge = row.querySelector<HTMLElement>('.ct-slider-badge')!;
         const input = row.querySelector<HTMLInputElement>('input')!;
         input.addEventListener('input', () => {
           const v = Number(input.value);
-          valEl.textContent = String(v);
+          badge.textContent = String(v);
           valueSetter(v);
           const newProfile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
           AppSettings.set({ autoEnhanceProfile: newProfile });
@@ -704,7 +714,7 @@ export class ImageTool extends BaseTool {
       resetBtn.style.cssText = 'width:100%; justify-content:center; margin-top:4px; font-size:11px;';
       resetBtn.textContent = 'Restaurar padrões';
       resetBtn.addEventListener('click', () => {
-        AppSettings.set({ autoEnhanceProfile: { ...ImageEnhancer.defaultProfile() } });
+        AppSettings.set({ autoEnhanceProfile: ImageEnhancer.defaultProfile() });
         document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
         buildContent();
       });
@@ -713,12 +723,19 @@ export class ImageTool extends BaseTool {
 
     // ── Toggle handler ──
     const chk = wrap.querySelector<HTMLInputElement>('#img-enhance-toggle')!;
+    const track = wrap.querySelector<HTMLElement>('.ct-toggle-track')!;
+    const thumb = wrap.querySelector<HTMLElement>('.ct-toggle-thumb')!;
+
     chk.addEventListener('change', () => {
       type MetaEl = HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement };
       const metaEl = element as MetaEl;
       if (!metaEl._craftoolsMeta) metaEl._craftoolsMeta = ImageTool.getDefaultMeta();
       metaEl._craftoolsMeta!.autoEnhance = chk.checked;
-      content.style.display = chk.checked ? 'block' : 'none';
+
+      track.style.background = chk.checked ? 'var(--accent)' : 'var(--border)';
+      thumb.style.transform  = chk.checked ? 'translateX(14px)' : 'translateX(0)';
+      content.style.display  = chk.checked ? 'flex' : 'none';
+
       if (chk.checked) buildContent();
       ImageTool._processAutoEnhance(metaEl);
     });
