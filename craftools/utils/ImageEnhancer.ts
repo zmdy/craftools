@@ -243,6 +243,15 @@ export class ImageEnhancer {
     return resultUrl;
   }
 
+  /** Returns a fresh copy of DEFAULT_ENHANCE_PROFILE. */
+  static defaultProfile(): EnhanceProfile {
+    return { ...DEFAULT_ENHANCE_PROFILE,
+      shadows:    { ...DEFAULT_ENHANCE_PROFILE.shadows },
+      midtones:   { ...DEFAULT_ENHANCE_PROFILE.midtones },
+      highlights: { ...DEFAULT_ENHANCE_PROFILE.highlights },
+    };
+  }
+
   /** Clears the processed image cache */
   static clearCache(): void {
     this._cache.clear();

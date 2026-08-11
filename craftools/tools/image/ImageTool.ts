@@ -378,7 +378,21 @@ export class ImageTool extends BaseTool {
         icon: 'photo_camera',
         fields: [
           { type: 'image-upload', key: 'src', label: 'Switch photo', i18nKey: 'imageTool.switchPhoto' },
-          { type: 'toggle', key: 'autoEnhance', label: 'Melhorar Qualidade da Imagem', i18nKey: 'imageTool.autoEnhance' },
+        ],
+      },
+      {
+        section: 'Qualidade',
+        i18nKey: 'imageTool.sectionQuality',
+        icon: 'auto_fix_high',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'custom',
+            key: 'autoEnhance',
+            label: '',
+            render: (element: HTMLElement, onChange: (value: unknown) => void) =>
+              ImageTool._renderEnhancePanel(element, onChange),
+          },
         ],
       },
       {
@@ -582,6 +596,135 @@ export class ImageTool extends BaseTool {
       meta.src = meta.originalSrc;
       img.src = meta.originalSrc;
     }
+  }
+
+  /**
+   * Renders the custom "Melhorar Qualidade" panel inside the Qualidade section.
+   * Shows a toggle; when active, shows 4 group navigation buttons and sliders
+   * for the selected group (Ajustes Globais / Sombras / Realces / Tons Médios).
+   */
+  private static _renderEnhancePanel(element: HTMLElement, _onChange: (v: unknown) => void): HTMLElement {
+    const meta = getMeta(element);
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex; flex-direction:column; gap:0;';
+
+    const GROUPS = [
+      { key: 'global',    label: 'Ajustes Globais' },
+      { key: 'shadows',   label: 'Sombras' },
+      { key: 'highlights',label: 'Realces' },
+      { key: 'midtones',  label: 'Tons Médios' },
+    ] as const;
+
+    type GroupKey = typeof GROUPS[number]['key'];
+    let activeGroup: GroupKey = 'global';
+
+    // ── Toggle row ──
+    const toggleWrap = document.createElement('label');
+    toggleWrap.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:4px 0 12px;';
+    toggleWrap.innerHTML = `
+      <span style="font-size:12px; font-weight:600; color:var(--text-primary);">Melhorar Qualidade de Imagem</span>
+      <input type="checkbox" id="img-enhance-toggle" style="accent-color:var(--accent,#f97316); width:16px; height:16px; cursor:pointer;" ${meta.autoEnhance ? 'checked' : ''}>
+    `;
+    wrap.appendChild(toggleWrap);
+
+    // ── Content area (shown only when toggle is active) ──
+    const content = document.createElement('div');
+    content.style.display = meta.autoEnhance ? 'block' : 'none';
+    wrap.appendChild(content);
+
+    const buildContent = (): void => {
+      content.innerHTML = '';
+
+      // Read current profile from AppSettings
+      const profile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
+      const P = profile ?? { brightness: 0, contrast: 0, saturation: 0,
+        shadows: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
+        midtones: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
+        highlights: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 } };
+
+      // ── 4 group navigation buttons ──
+      const navWrap = document.createElement('div');
+      navWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px;';
+      GROUPS.forEach(g => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'craftools-pill' + (g.key === activeGroup ? ' active' : '');
+        btn.style.cssText = 'flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:6px 4px;';
+        btn.textContent = g.label;
+        btn.addEventListener('click', () => {
+          activeGroup = g.key;
+          buildContent();
+        });
+        navWrap.appendChild(btn);
+      });
+      content.appendChild(navWrap);
+
+      // ── Sliders helper ──
+      const addSlider = (label: string, valueGetter: () => number, valueSetter: (v: number) => void, min: number, max: number): void => {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:10px;';
+        const curVal = valueGetter();
+        row.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:11px; color:var(--text-secondary);">${label}</span>
+            <span class="img-enh-val" style="font-size:11px; font-weight:600; color:var(--accent,#f97316);">${curVal}</span>
+          </div>
+          <input type="range" min="${min}" max="${max}" step="1" value="${curVal}"
+            style="width:100%; accent-color:var(--accent,#f97316);">
+        `;
+        const valEl = row.querySelector<HTMLElement>('.img-enh-val')!;
+        const input = row.querySelector<HTMLInputElement>('input')!;
+        input.addEventListener('input', () => {
+          const v = Number(input.value);
+          valEl.textContent = String(v);
+          valueSetter(v);
+          const newProfile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
+          AppSettings.set({ autoEnhanceProfile: newProfile });
+          document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
+        });
+        content.appendChild(row);
+      };
+
+      // ── Sliders for active group ──
+      if (activeGroup === 'global') {
+        addSlider('Brilho',    () => P.brightness,  v => { P.brightness = v; },  -100, 100);
+        addSlider('Contraste', () => P.contrast,    v => { P.contrast = v; },    -100, 100);
+        addSlider('Saturação', () => P.saturation,  v => { P.saturation = v; },  -100, 100);
+      } else {
+        const zone = activeGroup === 'shadows' ? P.shadows : activeGroup === 'highlights' ? P.highlights : P.midtones;
+        addSlider('Ciano – Vermelho', () => zone.cyanRed,      v => { zone.cyanRed = v; },      -50, 50);
+        addSlider('Magenta – Verde',  () => zone.magentaGreen, v => { zone.magentaGreen = v; }, -50, 50);
+        addSlider('Amarelo – Azul',   () => zone.yellowBlue,   v => { zone.yellowBlue = v; },   -50, 50);
+      }
+
+      // ── Reset button ──
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'craftools-pill';
+      resetBtn.style.cssText = 'width:100%; justify-content:center; margin-top:4px; font-size:11px;';
+      resetBtn.textContent = 'Restaurar padrões';
+      resetBtn.addEventListener('click', () => {
+        AppSettings.set({ autoEnhanceProfile: { ...ImageEnhancer.defaultProfile() } });
+        document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
+        buildContent();
+      });
+      content.appendChild(resetBtn);
+    };
+
+    // ── Toggle handler ──
+    const chk = wrap.querySelector<HTMLInputElement>('#img-enhance-toggle')!;
+    chk.addEventListener('change', () => {
+      type MetaEl = HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement };
+      const metaEl = element as MetaEl;
+      if (!metaEl._craftoolsMeta) metaEl._craftoolsMeta = ImageTool.getDefaultMeta();
+      metaEl._craftoolsMeta!.autoEnhance = chk.checked;
+      content.style.display = chk.checked ? 'block' : 'none';
+      if (chk.checked) buildContent();
+      ImageTool._processAutoEnhance(metaEl);
+    });
+
+    if (meta.autoEnhance) buildContent();
+    return wrap;
   }
 }
 
