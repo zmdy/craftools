@@ -121,7 +121,7 @@ export class SettingsTool {
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
             <label class="craftools-topbtn" style="padding:6px 12px; font-size:11px; gap:6px; cursor:pointer;">
               <span class="material-symbols-outlined" style="font-size:16px;">upload_file</span>
-              Adicionar Referência(s)
+              Adicionar Refer&ecirc;ncia(s)
               <input type="file" id="set-enhance-upload" accept="image/*" multiple style="display:none;">
             </label>
             ${refs.length ? `
@@ -136,24 +136,44 @@ export class SettingsTool {
             ${refs.map((url, idx) => `
               <div style="position:relative; width:48px; height:48px; border-radius:6px; overflow:hidden; border:1px solid var(--border,#374151);">
                 <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
-                <button type="button" class="set-enhance-del-ref" data-idx="${idx}" style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,0.7); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px;">×</button>
+                <button type="button" class="set-enhance-del-ref" data-idx="${idx}" style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,0.7); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px;">&times;</button>
               </div>
             `).join('')}
           </div>
         </div>
 
-        <!-- Global Tone Controls -->
-        <div style="border-top:1px dashed var(--border,#374151); padding-top:10px; display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">Ajustes Globais</div>
+        <!-- 4 Group Navigation Buttons -->
+        <div style="display:flex; flex-wrap:wrap; gap:4px;" id="set-enhance-group-nav">
+          <button type="button" class="craftools-pill set-enhance-group-btn active" data-group="global"    style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Ajustes Globais</button>
+          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="shadows"   style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Sombras</button>
+          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="highlights" style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Realces</button>
+          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="midtones"  style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Tons M&eacute;dios</button>
+        </div>
+
+        <!-- Per-group slider panels (only one visible at a time) -->
+        <div id="set-enhance-group-global" class="set-enhance-group-panel" style="display:flex; flex-direction:column; gap:8px;">
           ${SettingsTool._renderSliderField('brightness', s('fieldBrightness'), profile.brightness, -100, 100)}
           ${SettingsTool._renderSliderField('contrast', s('fieldContrast'), profile.contrast, -100, 100)}
           ${SettingsTool._renderSliderField('saturation', s('fieldSaturation'), profile.saturation, -100, 100)}
         </div>
+        <div id="set-enhance-group-shadows" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+          ${SettingsTool._renderSliderField('shadows.cyanRed',      'Ciano &ndash; Vermelho', profile.shadows.cyanRed,      -50, 50)}
+          ${SettingsTool._renderSliderField('shadows.magentaGreen', 'Magenta &ndash; Verde',  profile.shadows.magentaGreen, -50, 50)}
+          ${SettingsTool._renderSliderField('shadows.yellowBlue',   'Amarelo &ndash; Azul',   profile.shadows.yellowBlue,   -50, 50)}
+        </div>
+        <div id="set-enhance-group-highlights" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+          ${SettingsTool._renderSliderField('highlights.cyanRed',      'Ciano &ndash; Vermelho', profile.highlights.cyanRed,      -50, 50)}
+          ${SettingsTool._renderSliderField('highlights.magentaGreen', 'Magenta &ndash; Verde',  profile.highlights.magentaGreen, -50, 50)}
+          ${SettingsTool._renderSliderField('highlights.yellowBlue',   'Amarelo &ndash; Azul',   profile.highlights.yellowBlue,   -50, 50)}
+        </div>
+        <div id="set-enhance-group-midtones" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+          ${SettingsTool._renderSliderField('midtones.cyanRed',      'Ciano &ndash; Vermelho', profile.midtones.cyanRed,      -50, 50)}
+          ${SettingsTool._renderSliderField('midtones.magentaGreen', 'Magenta &ndash; Verde',  profile.midtones.magentaGreen, -50, 50)}
+          ${SettingsTool._renderSliderField('midtones.yellowBlue',   'Amarelo &ndash; Azul',   profile.midtones.yellowBlue,   -50, 50)}
+        </div>
 
-        <!-- 3-Zone Color Balance: Shadows, Midtones, Highlights -->
-        ${SettingsTool._renderZoneSliders('shadows', s('fieldShadows'), profile.shadows)}
-        ${SettingsTool._renderZoneSliders('midtones', s('fieldMidtones'), profile.midtones)}
-        ${SettingsTool._renderZoneSliders('highlights', s('fieldHighlights'), profile.highlights)}
+        <!-- Reset button -->
+        <button type="button" id="set-enhance-reset" class="craftools-pill" style="width:100%; justify-content:center; font-size:11px;">Restaurar padr&otilde;es</button>
       </div>
     `;
 
@@ -190,6 +210,35 @@ export class SettingsTool {
   }
 
   private static _bindEnhanceSectionEvents(sectionEl: HTMLElement, panelBody: HTMLElement): void {
+    // ── Group navigation buttons ──────────────────────────────────────────────
+    const groupNav = sectionEl.querySelector<HTMLElement>('#set-enhance-group-nav');
+    if (groupNav) {
+      const groupBtns  = sectionEl.querySelectorAll<HTMLButtonElement>('.set-enhance-group-btn');
+      const groupPanels = sectionEl.querySelectorAll<HTMLElement>('.set-enhance-group-panel');
+      groupBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          groupBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const target = btn.dataset.group;
+          groupPanels.forEach(p => {
+            p.style.display = p.id === `set-enhance-group-${target}` ? 'flex' : 'none';
+          });
+        });
+      });
+    }
+
+    // Reset button
+    const resetBtn = sectionEl.querySelector<HTMLButtonElement>('#set-enhance-reset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        AppSettings.set({ autoEnhanceProfile: ImageEnhancer.defaultProfile() });
+        ImageEnhancer.clearCache();
+        document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
+        SettingsTool._render(panelBody);
+        Notify.toast('Perfil de melhoria de imagem restaurado para o padrão.', 'info');
+      });
+    }
+
     // File upload
     const uploadInput = sectionEl.querySelector<HTMLInputElement>('#set-enhance-upload');
     if (uploadInput) {
