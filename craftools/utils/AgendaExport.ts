@@ -722,7 +722,58 @@ export class AgendaExport {
     if (toolType === 'variablecontent') {
       const ce = (cloneEl.querySelector('.ct-content') || cloneEl.querySelector('div[contenteditable]') || [...cloneEl.children].find(c => !c.classList.contains('ct-bg-layer') && !c.classList.contains('craftools-ctrlbar') && !c.classList.contains('craftools-sidebar-overlay'))) as HTMLElement | null;
       if (ce) {
-        if (binding.type === 'emojiKitchen') {
+        // Lettering: VariableContentTool.ts's _applyVariablePreview()
+        // (the ONLY place that normally builds this markup) never runs
+        // during Agenda export/preview -- both just clone the live page
+        // DOM and overwrite each bound element's content with the
+        // resolved value directly, which used to always mean
+        // `ce.textContent = resolved` even for an element already
+        // rendering per-letter lettering spans in the editor. That wiped
+        // the lettering markup and fell back to plain text in the
+        // container's default (non-lettering) font. Mirror
+        // VariableContentTool.ts's own lettering branch here instead,
+        // reading state off `origEl` (the real dataset/ctState source --
+        // `cloneEl` is just a DOM copy) so exported/previewed pages keep
+        // the same lettering rendering the live canvas shows.
+        //
+        // Priority order below MUST mirror _applyVariablePreview()'s own
+        // if/else-if chain exactly: that function checks useLettering
+        // FIRST (excluding only emojiKitchen/image/miniCalendar, NOT an
+        // HTML-producing date format like MOON_PHASE/ZODIAC/SEASON icon
+        // mode or DAYS_BOX), THEN emojiKitchen, THEN the other HTML
+        // formats, THEN plain text. This used to check
+        // miniCalendar/image/htmlDate BEFORE useLettering, so a lettering-
+        // enabled 'date' binding using one of those HTML formats silently
+        // fell into the raw-markup branch below and never rendered as
+        // lettering in export/preview even though the exact same binding
+        // correctly rendered as lettering on the live canvas.
+        const state = PropertyRenderer._readState(origEl);
+        const rawUseLettering = state.useLettering;
+        const useLettering = rawUseLettering === true || rawUseLettering === 'true' || rawUseLettering === 1 || rawUseLettering === '1';
+
+        if (useLettering && resolved && binding.type !== 'emojiKitchen' && binding.type !== 'image' && binding.type !== 'miniCalendar') {
+          const plainText = String(resolved).replace(/<[^>]*>/g, '').trim() || String(resolved);
+          const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
+          const currentFontSize = parseFloat(ce.style.fontSize) || parseFloat(cloneEl.style.fontSize) || 24;
+          const letteringMeta = {
+            ...defaultLetteringMeta(),
+            text: plainText,
+            splitMode: (state.splitMode === 'word' ? 'word' : 'letter') as 'word' | 'letter',
+            bounceIntensity: Number(state.bounceIntensity ?? 0.4),
+            rotationIntensity: Number(state.rotationIntensity ?? 0.25),
+            skewIntensity: Number(state.skewIntensity ?? 0),
+            sizeIntensity: Number(state.sizeIntensity ?? 0),
+            opacityIntensity: Number(state.opacityIntensity ?? 0),
+            fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
+            colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
+            font: fontVal,
+            fontSize: Number(state.fontSize ?? currentFontSize),
+            color: typeof state.color === 'string' ? state.color : '#18181b',
+            seed: Number(state.letteringSeed ?? 1001),
+          };
+          ce.style.whiteSpace = 'normal';
+          ce.innerHTML = LetteringGenerator.buildMarkup(letteringMeta);
+        } else if (binding.type === 'emojiKitchen') {
           ce.innerHTML = resolved
             ? `<img src="${this._escAttr(resolved)}" style="max-width:100%; max-height:100%; display:block; margin:0 auto; object-fit:contain;">`
             : '';
@@ -736,48 +787,7 @@ export class AgendaExport {
           // is the same story: an <img> and/or a caption <div>.
           ce.innerHTML = resolved || '';
         } else {
-          // Lettering: VariableContentTool.ts's _applyVariablePreview()
-          // (the ONLY place that normally builds this markup) never runs
-          // during Agenda export/preview -- both just clone the live page
-          // DOM and overwrite each bound element's content with the
-          // resolved value directly, which used to always mean
-          // `ce.textContent = resolved` even for an element already
-          // rendering per-letter lettering spans in the editor. That wiped
-          // the lettering markup and fell back to plain text in the
-          // container's default (non-lettering) font. Mirror
-          // VariableContentTool.ts's own lettering branch here instead,
-          // reading state off `origEl` (the real dataset/ctState source --
-          // `cloneEl` is just a DOM copy) so exported/previewed pages keep
-          // the same lettering rendering the live canvas shows.
-          const state = PropertyRenderer._readState(origEl);
-          const rawUseLettering = state.useLettering;
-          const useLettering = rawUseLettering === true || rawUseLettering === 'true' || rawUseLettering === 1 || rawUseLettering === '1';
-
-          if (useLettering && resolved) {
-            const plainText = String(resolved).replace(/<[^>]*>/g, '').trim() || String(resolved);
-            const fontVal = String(state.font ?? 'DM Sans').replace(/['"]/g, '').split(',')[0].trim();
-            const currentFontSize = parseFloat(ce.style.fontSize) || parseFloat(cloneEl.style.fontSize) || 24;
-            const letteringMeta = {
-              ...defaultLetteringMeta(),
-              text: plainText,
-              splitMode: (state.splitMode === 'word' ? 'word' : 'letter') as 'word' | 'letter',
-              bounceIntensity: Number(state.bounceIntensity ?? 0.4),
-              rotationIntensity: Number(state.rotationIntensity ?? 0.25),
-              skewIntensity: Number(state.skewIntensity ?? 0),
-              sizeIntensity: Number(state.sizeIntensity ?? 0),
-              opacityIntensity: Number(state.opacityIntensity ?? 0),
-              fontMode: (state.fontMode === 'single' ? 'single' : 'random') as 'random' | 'single',
-              colorRandom: state.colorRandom === true || state.colorRandom === 'true' || state.colorRandom === 1 || state.colorRandom === '1',
-              font: fontVal,
-              fontSize: Number(state.fontSize ?? currentFontSize),
-              color: typeof state.color === 'string' ? state.color : '#18181b',
-              seed: Number(state.letteringSeed ?? 1001),
-            };
-            ce.style.whiteSpace = 'normal';
-            ce.innerHTML = LetteringGenerator.buildMarkup(letteringMeta);
-          } else {
-            ce.textContent = resolved;
-          }
+          ce.textContent = resolved;
         }
       }
       return;
