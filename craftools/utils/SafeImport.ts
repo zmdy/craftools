@@ -57,16 +57,10 @@ export class SafeImport {
       }
     }
 
-    // Retries exhausted. Check if error is a chunk 404 / module fetch error.
-    const isChunkError = this._isChunkFetchError(lastError);
-
-    if (isChunkError) {
-      console.error(`[SafeImport] Persistent chunk load error for ${name}. Showing graceful recovery overlay.`);
-      // Show overlay and attempt a silent cache-busted re-import.
-      // If the re-import succeeds, the overlay dismisses itself automatically.
-      const recovered = await this._showRecoveryOverlayAndRetry(importFn, name);
-      if (recovered !== null) return recovered as T;
-    }
+    // Retries exhausted. Show recovery overlay for persistent import failure.
+    console.error(`[SafeImport] Persistent module load error for ${name}. Showing graceful recovery overlay.`);
+    const recovered = await this._showRecoveryOverlayAndRetry(importFn, name);
+    if (recovered !== null) return recovered as T;
 
     if (options.fallback) {
       try {
@@ -151,11 +145,11 @@ export class SafeImport {
           </span>
         </div>
         <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">
-          Reconectando sistema\u2026
+          Reconectando sistema…
         </div>
         <div id="ct-rec-body-text" style="font-size: 13px; color: var(--text-secondary, #a1a1aa); line-height: 1.5; margin-bottom: 20px;">
-          O sistema foi atualizado enquanto voc\u00ea trabalhava.<br>
-          Tentando recuperar automaticamente\u2026
+          O sistema foi atualizado enquanto você trabalhava.<br>
+          Tentando recuperar automaticamente…
         </div>
         <div id="ct-rec-action" style="display: none;">
           <button id="ct-rec-reload-btn" style="
@@ -170,7 +164,7 @@ export class SafeImport {
             Salvar e Atualizar Agora
           </button>
           <p style="font-size: 11px; color: var(--text-muted, #71717a); margin-top: 10px; margin-bottom: 0;">
-            Seu trabalho ser\u00e1 salvo antes de atualizar.
+            Seu trabalho será salvo antes de atualizar.
           </p>
         </div>
       </div>
@@ -200,7 +194,7 @@ export class SafeImport {
     }
     const bodyText = this._recoveryOverlay.querySelector<HTMLElement>('#ct-rec-body-text');
     if (bodyText) {
-      bodyText.innerHTML = 'N\u00e3o foi poss\u00edvel recuperar automaticamente.<br>Atualize a p\u00e1gina para continuar.';
+      bodyText.innerHTML = 'Não foi possível recuperar automaticamente.<br>Atualize a página para continuar.';
     }
     const action = this._recoveryOverlay.querySelector<HTMLElement>('#ct-rec-action');
     if (action) action.style.display = 'block';
@@ -238,11 +232,17 @@ export class SafeImport {
       console.warn('[SafeImport] Could not save draft before reload:', saveErr);
     }
     await this._purgeSwCache();
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+    } catch { /* ignore */ }
     window.location.reload();
   }
 
   /**
-   * Clears all SW caches and unregisters service workers.
+   * Clears CacheStorage caches (does NOT unregister SW mid-session).
    */
   private static async _purgeSwCache(): Promise<void> {
     try {
@@ -250,24 +250,20 @@ export class SafeImport {
         const cacheKeys = await caches.keys();
         await Promise.all(cacheKeys.map(key => caches.delete(key)));
       }
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
-      }
     } catch (swErr) {
       console.warn('[SafeImport] Error purging SW cache:', swErr);
     }
   }
 
   /**
-   * Checks if an error is a dynamic chunk import failure (404, Failed to fetch, ChunkLoadError).
+   * Checks if an error is a dynamic chunk import failure.
    */
   private static _isChunkFetchError(err: unknown): boolean {
     if (!err) return false;
     const msg = String(err && typeof err === 'object' && 'message' in err ? err.message : err).toLowerCase();
     return (
-      msg.includes('failed to fetch dynamically imported module') ||
-      msg.includes('error loading dynamically imported module') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('imported module') ||
       msg.includes('loading chunk') ||
       msg.includes('chunkloaderror') ||
       msg.includes('404')

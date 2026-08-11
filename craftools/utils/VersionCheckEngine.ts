@@ -76,12 +76,6 @@ export class VersionCheckEngine {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
       }
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
-      }
     } catch (e) {
       console.warn('[VersionCheckEngine] Cache auto-clean failed:', e);
     }
