@@ -88,6 +88,9 @@ export class VersionCheckEngine {
   }
 
   private static _promptUserForUpdate(_newVersion: string): void {
+    // Proactively purge SW cache so that when the user reopens the app,
+    // fresh assets are fetched and chunk-load errors are avoided.
+    void this.autoCleanCache();
     Notify.toast('Nova atualização do Craftool Studio disponível! As alterações serão aplicadas na próxima inicialização.', 'info');
   }
 }
