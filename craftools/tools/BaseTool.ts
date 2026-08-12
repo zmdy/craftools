@@ -20,6 +20,7 @@ import type { CraftoolsSnapTarget } from '../utils/SnapEngine';
 import { Notify } from '../utils/Notify.js';
 import { tr } from '../utils/i18nLabel';
 import { normalizeValue, cssFromValue, cssFromGradient, DEFAULT_VALUE } from '../utils/ColorPickerUI.js';
+import { pageAlignSection } from '../utils/CommonSchema';
 
 // Shape of the clipboard payload copied by the style bar. Kept loose
 // (unknown meta) since `_craftoolsMeta`'s shape varies per tool.
@@ -422,6 +423,51 @@ export abstract class BaseTool {
     return true;
   }
 
+  // ── Page alignment (auto-included, CommonSchema.ts's pageAlignSection()) ────
+
+  /**
+   * Whether this tool's elements should get the "Align on page" accordion
+   * (pageAlignSection()) for free. Default: true for every BaseTool subclass.
+   *
+   * Override to return `false` for a tool whose elements genuinely can't be
+   * snapped to the page edges/center (there are currently none among the
+   * standard tools -- PageTool.ts doesn't extend BaseTool at all, so it never
+   * goes through this codepath in the first place).
+   */
+  protected static _supportsPageAlign(_element: HTMLElement): boolean {
+    return true;
+  }
+
+  /**
+   * Appends pageAlignSection() to `schema` unless the tool already added its
+   * own copy or opted out via `_supportsPageAlign()`.
+   *
+   * Why this exists: in the legacy CommonProperties.js system, BOTH the
+   * Copy/Paste/Lock style bar AND the "Alinhar na página" 6-button grid were
+   * automatically appended to every tool's panel by a single shared
+   * renderCommonProperties() wrapper. During the migration to
+   * BaseTool.ts/CommonSchema.ts, the style bar stayed automatic (see
+   * `_renderStyleBar()`, called unconditionally by `renderPropertiesPanel()`
+   * below), but "Align on page" was left as an opt-in schema section
+   * (`pageAlignSection()`) that each tool's own `getPropertySchema()` has to
+   * remember to import and include. Most tools never got that call added
+   * during/after the migration, so their panels silently lost the tab even
+   * though BaseTool's default `_applyProperty()` still handles the
+   * 'pageAlign' key correctly (SnapEngine.align()) -- the click logic was
+   * always there, only the button was missing. Folding it in here restores
+   * the old "automatic for every tool" behavior without touching every
+   * individual tool file, and de-dupes against TextTool.ts (and any other
+   * tool) that already includes `pageAlignSection()` explicitly.
+   */
+  private static _withPageAlign(schema: PropertySchema, element: HTMLElement): PropertySchema {
+    if (!this._supportsPageAlign(element)) return schema;
+    const alreadyIncluded = (schema as Array<{ i18nKey?: string }>).some(
+      section => section.i18nKey === 'common.align',
+    );
+    if (alreadyIncluded) return schema;
+    return [...schema, pageAlignSection()] as PropertySchema;
+  }
+
   // ── Rendering (do NOT override) ─────────────────────────────────────────────
 
   /**
@@ -460,7 +506,7 @@ export abstract class BaseTool {
 
     // Prime dataset.ctState from existing DOM/meta state (first render only).
     this._syncFromDOM(element);
-    const schema = this.getPropertySchema(element);
+    const schema = this._withPageAlign(this.getPropertySchema(element), element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
       // Tags every 'craftools-state-change' this triggers as panel-
       // originated (see PropertyRenderer.runFromPanel()'s doc comment) --
