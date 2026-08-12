@@ -177,7 +177,13 @@ export class Craftools {
 
   private _checkSessionRecovery(): void {
     const session = SessionManager.getSavedSession();
-    if (!session?.html) return;
+    // SessionManager.saveNow() has written the lightweight `state` format
+    // (StateSerializer) for a while now and no longer populates `html` --
+    // this check was never updated after that migration, so `session.html`
+    // is always undefined and the recovery prompt never fired again, even
+    // though autosave itself was writing valid sessions to localStorage the
+    // whole time. `restoreSession()` below already accepts either shape.
+    if (!session?.html && !session?.state) return;
 
     const ts        = new Date(session.timestamp);
     const localeMap: Record<string, string> = { 'pt-br': 'pt-BR', 'es': 'es-ES', 'en': 'en-US' };
@@ -263,7 +269,7 @@ export class Craftools {
       this._renderComponent();
       setTimeout(() => {
         const pagesWrapper = document.querySelector<HTMLElement>('#pages-wrapper');
-        if (pagesWrapper && session.html) {
+        if (pagesWrapper && (session.html || session.state)) {
           SessionManager.restoreSession(session, pagesWrapper);
           const editor = document.querySelector('craftools-editor') as HTMLElement & {
             _reattachAllPageEvents?: (w: HTMLElement) => void;
