@@ -405,6 +405,20 @@ export const alignSection = (): Section => ({
  * no persisted value, each click just re-runs the alignment calculation
  * against the element's current size (see BaseTool.ts's default
  * _applyProperty(), which special-cases the 'pageAlign' key).
+ *
+ * Also carries the "Bloquear elemento" toggle -- moved here from the sticky
+ * Copy/Paste bar (BaseTool.ts's old hand-rolled `_renderStyleBar()` pill
+ * button) so locking uses the same schema-driven `type: 'toggle'` component
+ * every other on/off property already uses, instead of a bespoke button.
+ * State-backed like a normal field (`_applyLocked()`/`_syncLockState()` in
+ * BaseTool.ts are its onChange handler and initial-value primer), reading
+ * from and writing to the same `data-locked` attribute Element.ts's
+ * `_syncLockUI()` and Editor.ts's keyboard shortcuts already check --
+ * moving the control didn't change what "locked" means or where it lives on
+ * the element, only where the UI for it is. `hidden` keeps it off Album
+ * grid-cell images, whose lock is structural (pins the photo inside its
+ * cell) rather than a user preference -- see BaseTool.ts's old comment on
+ * `isAlbumCellImage` for why toggling that one off would break the layout.
  */
 export const pageAlignSection = (): Section => ({
   section: 'Align on page',
@@ -414,6 +428,13 @@ export const pageAlignSection = (): Section => ({
   defaultOpen: false,
   fields: [
     { type: 'page-align', key: 'pageAlign' },
+    {
+      type: 'toggle',
+      key: 'locked',
+      label: 'Bloquear elemento',
+      i18nKey: 'common.lockElement',
+      hidden: (el) => el.getAttribute('data-craftool') === 'image' && !!el.closest('.craftools-grid-cell'),
+    },
   ],
 });
 
