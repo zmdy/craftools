@@ -656,6 +656,14 @@ export class VariableContentTool extends BaseTool {
   }
 
   static getPropertySchema(_element: HTMLElement): PropertySchema {
+    // Read once up front (mirrors LetteringTool.ts's getPropertySchema) so
+    // the "Fonts" section below can be conditionally included based on
+    // live useLettering/fontMode state, the same way Curve/Repeat are
+    // conditionally included there.
+    const _state = PropertyRenderer._readState(_element);
+    const _useLettering = _state.useLettering === true || _state.useLettering === 'true' || _state.useLettering === 1 || _state.useLettering === '1';
+    const _fontMode = _state.fontMode === 'single' ? 'single' : 'random';
+    const showFontPoolSection = _useLettering && _fontMode === 'random';
     // First and open by default: unlike Barcode/QRCode (where the variable
     // binding is a secondary option alongside their own content config),
     // this tool's entire purpose IS the bound variable -- matches
@@ -750,26 +758,6 @@ export class VariableContentTool extends BaseTool {
               ]
             ),
           },
-          {
-            type: 'custom',
-            key: 'fontPool',
-            label: 'Quais fontes usar',
-            hidden: (el: HTMLElement) => {
-              const v = PropertyRenderer._readState(el).useLettering;
-              const on = v === true || v === 'true' || v === 1 || v === '1';
-              const fontMode = PropertyRenderer._readState(el).fontMode === 'single' ? 'single' : 'random';
-              return !on || fontMode !== 'random';
-            },
-            render: (el: HTMLElement, onChange: (v: unknown) => void) => renderLetteringFontPoolField(
-              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
-              onChange as (v: string[]) => void,
-              {
-                selectAll: 'Marcar todas',
-                clearAll: 'Limpar seleção',
-                hint: 'Se nenhuma fonte estiver marcada, o sorteio usa todo o catálogo. Marque fontes específicas para restringir o sorteio a só elas.',
-              },
-            ),
-          },
           { type: 'toggle', key: 'colorRandom', label: 'Cores Aleatórias', hidden: (el: HTMLElement) => { const v = PropertyRenderer._readState(el).useLettering; return !(v === true || v === 'true' || v === 1 || v === '1'); } },
           {
             type: 'custom',
@@ -780,6 +768,29 @@ export class VariableContentTool extends BaseTool {
           },
         ],
       },
+      ...(showFontPoolSection ? [{
+        section: 'Fonts',
+        i18nKey: 'variableContentTool.sectionFonts',
+        icon: 'font_download',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'custom' as const,
+            key: 'fontPool',
+            label: 'Quais fontes usar',
+            i18nKey: 'variableContentTool.fontPool',
+            render: (el: HTMLElement, onChange: (v: unknown) => void) => renderLetteringFontPoolField(
+              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
+              onChange as (v: string[]) => void,
+              {
+                selectAll: 'Marcar todas',
+                clearAll: 'Limpar seleção',
+                hint: 'Se nenhuma fonte estiver marcada, o sorteio usa todo o catálogo. Marque fontes específicas para restringir o sorteio a só elas.',
+              },
+            ),
+          },
+        ],
+      }] : []),
       borderSection(),
       radiusSection(),
       contentAlignSection(),

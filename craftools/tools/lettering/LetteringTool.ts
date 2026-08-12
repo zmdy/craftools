@@ -218,14 +218,6 @@ export class LetteringTool extends BaseTool {
             ),
           },
           { type: 'font-select', key: 'font', label: s('font'), i18nKey: 'letteringTool.font', hidden: fontMode !== 'single' },
-          {
-            type: 'custom', key: 'fontPool', label: s('fontPool'), i18nKey: 'letteringTool.fontPool', hidden: fontMode !== 'random',
-            render: (el, onChange) => renderLetteringFontPoolField(
-              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
-              onChange as (v: string[]) => void,
-              { selectAll: s('fontPoolSelectAll'), clearAll: s('fontPoolClearAll'), hint: s('fontPoolHint') },
-            ),
-          },
           { type: 'color-picker', key: 'color', label: s('color'), i18nKey: 'letteringTool.color', hidden: colorRandom },
           { type: 'toggle', key: 'colorRandom', label: s('colorRandom'), i18nKey: 'letteringTool.colorRandom' },
           { type: 'color-picker', key: 'colorPalette0', label: `${s('colorPalette')} 1`, hidden: !colorRandom },
@@ -238,6 +230,22 @@ export class LetteringTool extends BaseTool {
           },
         ],
       },
+      ...(fontMode === 'random' ? [{
+        section: 'Fonts',
+        i18nKey: 'letteringTool.sectionFonts',
+        icon: 'font_download',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'custom' as const, key: 'fontPool', label: s('fontPool'), i18nKey: 'letteringTool.fontPool',
+            render: (el: HTMLElement, onChange: (v: unknown) => void) => renderLetteringFontPoolField(
+              () => { const v = PropertyRenderer._readState(el).fontPool; return Array.isArray(v) ? v as string[] : []; },
+              onChange as (v: string[]) => void,
+              { selectAll: s('fontPoolSelectAll'), clearAll: s('fontPoolClearAll'), hint: s('fontPoolHint') },
+            ),
+          },
+        ],
+      }] : []),
       ...(isCurveLike ? [{
         section: 'Curve',
         i18nKey: 'letteringTool.sectionCurve',
