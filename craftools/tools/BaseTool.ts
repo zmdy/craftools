@@ -20,6 +20,7 @@ import type { CraftoolsSnapTarget } from '../utils/SnapEngine';
 import { Notify } from '../utils/Notify.js';
 import { tr } from '../utils/i18nLabel';
 import { normalizeValue, cssFromValue, cssFromGradient, DEFAULT_VALUE } from '../utils/ColorPickerUI.js';
+import { pageAlignSection } from '../utils/CommonSchema';
 
 // Shape of the clipboard payload copied by the style bar. Kept loose
 // (unknown meta) since `_craftoolsMeta`'s shape varies per tool.
@@ -337,6 +338,47 @@ export abstract class BaseTool {
     return true;
   }
 
+  // ── Lock (CommonSchema.ts's pageAlignSection() 'locked' toggle) ────────────
+
+  /**
+   * Applies the 'locked' key from pageAlignSection()'s toggle field --
+   * called from `_applyProperty()` the same way as `_applyBackground()`/
+   * `_applyBorder()`/etc. (returns `true` when it handled the key).
+   *
+   * `data-locked` (not `dataset.ctState`) stays the actual source of truth,
+   * same as before this was a schema field: Element.ts's `_syncLockUI()` and
+   * Editor.ts's keyboard-shortcut guards both read the attribute directly,
+   * and PaperTool.ts's background element is created with it already set to
+   * 'true'. `PropertyRenderer.applyChange()` mirrors the value into
+   * `dataset.ctState` too, purely so the toggle field itself renders the
+   * correct initial position (see `_syncLockState()` below).
+   */
+  protected static _applyLocked(element: HTMLElement, key: string, value: unknown): boolean {
+    if (key !== 'locked') return false;
+
+    const nowLocked = !!value;
+    PropertyRenderer.applyChange(element, key, nowLocked);
+    element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+    (element as unknown as { _syncLockUI?: () => void })._syncLockUI?.();
+    element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
+    return true;
+  }
+
+  /**
+   * Primes the 'locked' key in `dataset.ctState` from the element's current
+   * `data-locked` attribute -- called unconditionally from
+   * `renderPropertiesPanel()` below (like `_syncFromDOM()`), so every tool's
+   * lock toggle shows the right initial position without each tool having
+   * to remember to prime it itself. Only writes if not already present --
+   * same "safe to call repeatedly" contract as `_syncBackgroundState()`/
+   * `_syncBorderState()`.
+   */
+  private static _syncLockState(element: HTMLElement): void {
+    const state = this._readState(element);
+    if ('locked' in state) return;
+    element.dataset.ctState = JSON.stringify({ ...state, locked: element.getAttribute('data-locked') === 'true' });
+  }
+
   // ── Text color (solid-or-gradient, CommonSchema-free -- see each tool's own 'color' field) ──
 
   /**
@@ -422,6 +464,51 @@ export abstract class BaseTool {
     return true;
   }
 
+  // ── Page alignment (auto-included, CommonSchema.ts's pageAlignSection()) ────
+
+  /**
+   * Whether this tool's elements should get the "Align on page" accordion
+   * (pageAlignSection()) for free. Default: true for every BaseTool subclass.
+   *
+   * Override to return `false` for a tool whose elements genuinely can't be
+   * snapped to the page edges/center (there are currently none among the
+   * standard tools -- PageTool.ts doesn't extend BaseTool at all, so it never
+   * goes through this codepath in the first place).
+   */
+  protected static _supportsPageAlign(_element: HTMLElement): boolean {
+    return true;
+  }
+
+  /**
+   * Appends pageAlignSection() to `schema` unless the tool already added its
+   * own copy or opted out via `_supportsPageAlign()`.
+   *
+   * Why this exists: in the legacy CommonProperties.js system, BOTH the
+   * Copy/Paste/Lock style bar AND the "Alinhar na página" 6-button grid were
+   * automatically appended to every tool's panel by a single shared
+   * renderCommonProperties() wrapper. During the migration to
+   * BaseTool.ts/CommonSchema.ts, the style bar stayed automatic (see
+   * `_renderStyleBar()`, called unconditionally by `renderPropertiesPanel()`
+   * below), but "Align on page" was left as an opt-in schema section
+   * (`pageAlignSection()`) that each tool's own `getPropertySchema()` has to
+   * remember to import and include. Most tools never got that call added
+   * during/after the migration, so their panels silently lost the tab even
+   * though BaseTool's default `_applyProperty()` still handles the
+   * 'pageAlign' key correctly (SnapEngine.align()) -- the click logic was
+   * always there, only the button was missing. Folding it in here restores
+   * the old "automatic for every tool" behavior without touching every
+   * individual tool file, and de-dupes against TextTool.ts (and any other
+   * tool) that already includes `pageAlignSection()` explicitly.
+   */
+  private static _withPageAlign(schema: PropertySchema, element: HTMLElement): PropertySchema {
+    if (!this._supportsPageAlign(element)) return schema;
+    const alreadyIncluded = (schema as Array<{ i18nKey?: string }>).some(
+      section => section.i18nKey === 'common.align',
+    );
+    if (alreadyIncluded) return schema;
+    return [...schema, pageAlignSection()] as PropertySchema;
+  }
+
   // ── Rendering (do NOT override) ─────────────────────────────────────────────
 
   /**
@@ -453,14 +540,17 @@ export abstract class BaseTool {
       tracked._ctRenderedElement = element;
     }
 
-    // Sticky Copy/Paste/Lock bar, always rendered above the accordions --
+    // Sticky Copy/Paste bar, always rendered above the accordions --
     // matches the legacy CommonProperties.renderEstiloBar() bar every
-    // .js tool got automatically via renderCommonProperties().
+    // .js tool got automatically via renderCommonProperties(). The Lock
+    // control that used to live in this same bar now renders inside the
+    // "Align on page" accordion instead (see _withPageAlign() above).
     this._renderStyleBar(container, element);
 
     // Prime dataset.ctState from existing DOM/meta state (first render only).
     this._syncFromDOM(element);
-    const schema = this.getPropertySchema(element);
+    this._syncLockState(element);
+    const schema = this._withPageAlign(this.getPropertySchema(element), element);
     PropertyRenderer.render(container, schema, element, (key, value) => {
       // Tags every 'craftools-state-change' this triggers as panel-
       // originated (see PropertyRenderer.runFromPanel()'s doc comment) --
@@ -558,6 +648,7 @@ export abstract class BaseTool {
     if (this._applyRadius(element, key, value)) return;
     if (this._applyPadding(element, key, value)) return;
     if (this._applyMargin(element, key, value)) return;
+    if (this._applyLocked(element, key, value)) return;
 
     if (key === 'pageAlign') {
       SnapEngine.align(element as unknown as CraftoolsSnapTarget, value as string);
@@ -580,13 +671,20 @@ export abstract class BaseTool {
     return PropertyRenderer._readState(element);
   }
 
-  // ── Style bar (Copy/Paste/Lock) ──────────────────────────────────────────────
+  // ── Style bar (Copy/Paste) ────────────────────────────────────────────────
 
   /**
-   * Renders (or updates) the sticky Copy/Paste/Lock bar at the very top of
+   * Renders (or updates) the sticky Copy/Paste bar at the very top of
    * the panel container -- a faithful port of CommonProperties.js's
    * renderEstiloBar(). Not an accordion section: always visible, above
    * everything getPropertySchema() returns.
+   *
+   * The Lock button that used to live in this same bar (third pill, "Bloquear")
+   * has moved into the "Align on page" accordion as a standard `type: 'toggle'`
+   * field -- see pageAlignSection() in CommonSchema.ts and
+   * `_applyLocked()`/`_syncLockState()` above for where its logic now lives.
+   * The old "don't offer this for Album grid-cell images" exclusion moved
+   * with it, as that field's `hidden` condition.
    *
    * `container` is reused by Editor.ts across element selections (it's
    * never cleared), so the bar itself is only created once, but its
@@ -608,40 +706,18 @@ export abstract class BaseTool {
         <button type="button" class="craftools-pill" data-ct-bar="paste" title="${tr('common.pasteStyles', 'Colar estilos')}">
           <span class="material-symbols-outlined" style="font-size:13px;">content_paste</span>
           <span>${tr('common.pasteStyles', 'Colar estilos')}</span>
-        </button>
-        <button type="button" class="craftools-pill" data-ct-bar="lock">
-          <span class="material-symbols-outlined" style="font-size:13px;">lock_open</span>
-          <span></span>
         </button>`;
       container.insertBefore(bar, container.firstChild);
     }
 
     const rawCopy  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="copy"]')!;
     const rawPaste = bar.querySelector<HTMLButtonElement>('[data-ct-bar="paste"]')!;
-    const rawLock  = bar.querySelector<HTMLButtonElement>('[data-ct-bar="lock"]')!;
 
     // Strip any listeners left over from a previous selection.
     const btnCopy  = rawCopy.cloneNode(true) as HTMLButtonElement;
     const btnPaste = rawPaste.cloneNode(true) as HTMLButtonElement;
-    const btnLock  = rawLock.cloneNode(true) as HTMLButtonElement;
     rawCopy.replaceWith(btnCopy);
     rawPaste.replaceWith(btnPaste);
-    rawLock.replaceWith(btnLock);
-
-    // Album grid-cell images (AlbumWizard.ts's business-card/grid layouts)
-    // are deliberately created with data-locked="true" -- locking is what
-    // keeps the photo pinned inside its cell; ImageTransform.ts's own
-    // pan/zoom/rotate "adjust" mode (double-click) works independently of
-    // it. Unlocking one from this generic style bar lets it be dragged/
-    // resized/deleted out of the grid like a normal element, breaking the
-    // album layout -- so the button simply isn't offered for these images
-    // at all, rather than relying on the user to never press it.
-    const isAlbumCellImage = element.getAttribute('data-craftool') === 'image'
-      && !!element.closest('.craftools-grid-cell');
-    btnLock.style.display = isAlbumCellImage ? 'none' : '';
-    if (!isAlbumCellImage) {
-      this._updateLockButton(btnLock, element.getAttribute('data-locked') === 'true');
-    }
 
     const target = this._getStyleTarget(element);
 
@@ -698,28 +774,6 @@ export abstract class BaseTool {
         element.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
       }, 50);
     });
-
-    if (!isAlbumCellImage) {
-      btnLock.addEventListener('click', () => {
-        const nowLocked = element.getAttribute('data-locked') !== 'true';
-        element.setAttribute('data-locked', nowLocked ? 'true' : 'false');
-        (element as unknown as { _syncLockUI?: () => void })._syncLockUI?.();
-        this._updateLockButton(btnLock, nowLocked);
-        element.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element } }));
-      });
-    }
-  }
-
-  /** Paints the lock button's icon/label/active-state/title for the given locked state. */
-  private static _updateLockButton(btn: HTMLButtonElement, isLocked: boolean): void {
-    btn.classList.toggle('active', isLocked);
-    const icon  = btn.querySelector('.material-symbols-outlined');
-    if (icon) icon.textContent = isLocked ? 'lock' : 'lock_open';
-    const label = btn.querySelector('span:last-child');
-    if (label) label.textContent = isLocked ? tr('common.locked', 'Bloqueado') : tr('common.lock', 'Bloquear');
-    btn.title = isLocked
-      ? tr('common.unlockElement', 'Desbloquear elemento')
-      : tr('common.lockElement', 'Bloquear elemento (impede mover/redimensionar)');
   }
 
   // ── ToolRegistry integration ────────────────────────────────────────────────
