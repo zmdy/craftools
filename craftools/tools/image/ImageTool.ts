@@ -628,9 +628,19 @@ export class ImageTool extends BaseTool {
    * own 'load' event since `naturalWidth`/`naturalHeight` aren't available
    * until the browser has decoded it, which for a just-uploaded photo may
    * not have happened yet by the time this panel first renders.
+   *
+   * Also repaints live as the element is resized (drag handles, typed W/H
+   * in Size & Position, snap-to-grid) or its zoom/fit-mode changes (Transform
+   * section, ctx-bar, or mouse-wheel zoom on the canvas) -- 'custom' fields
+   * only ever call `render()` ONCE at creation (see custom.field.ts's doc
+   * comment: PropertyRenderer's value-diffed re-render path is a no-op for
+   * this field type since there's no `printQualityInfo` state key to diff
+   * against), so without its own listeners this panel would show whatever
+   * DPI happened to be true at the moment the accordion was first opened.
    */
   private static _renderPrintQualityPanel(element: HTMLElement): HTMLElement {
     const wrap = document.createElement('div');
+    wrap.className = 'ct-field ct-field--block';
     wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
 
     const paint = (): void => {
@@ -681,18 +691,25 @@ export class ImageTool extends BaseTool {
             <span style="font-size:11px; color:var(--text-muted);">${LEVEL_LABEL[level]}</span>
           </div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--text-muted);">
-          <div style="display:flex; justify-content:space-between;"><span>Resolução original</span><span style="color:var(--text, #111);">${img.naturalWidth} × ${img.naturalHeight} px</span></div>
-          <div style="display:flex; justify-content:space-between;"><span>Tamanho atual de impressão</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(widthIn)} × ${ImageQuality.formatCm(heightIn)}</span></div>
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:11px; color:var(--text-muted);">
+          <div style="display:flex; justify-content:space-between; gap:8px;"><span style="flex:1 1 auto;">Resolução original</span><span style="flex:0 0 auto; text-align:right; white-space:nowrap; color:var(--text, #111);">${img.naturalWidth} × ${img.naturalHeight} px</span></div>
+          <div style="display:flex; justify-content:space-between; gap:8px;"><span style="flex:1 1 auto;">Tamanho atual de impressão</span><span style="flex:0 0 auto; text-align:right; white-space:nowrap; color:var(--text, #111);">${ImageQuality.formatCm(widthIn)} × ${ImageQuality.formatCm(heightIn)}</span></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7); font-size:11px; color:var(--text-muted);">
-          <div style="display:flex; justify-content:space-between;"><span>Tamanho máx. recomendado (300 DPI)</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(max300.widthIn)} × ${ImageQuality.formatCm(max300.heightIn)}</span></div>
-          <div style="display:flex; justify-content:space-between;"><span>Tamanho máx. aceitável (150 DPI)</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(max150.widthIn)} × ${ImageQuality.formatCm(max150.heightIn)}</span></div>
+        <div style="display:flex; flex-direction:column; gap:6px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7); font-size:11px; color:var(--text-muted);">
+          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. recomendado (300 DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(max300.widthIn)} × ${ImageQuality.formatCm(max300.heightIn)}</span></div>
+          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. aceitável (150 DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(max150.widthIn)} × ${ImageQuality.formatCm(max150.heightIn)}</span></div>
         </div>
       `;
     };
 
     paint();
+
+    const ro = new ResizeObserver(() => paint());
+    ro.observe(element);
+    const repaint = (): void => paint();
+    element.addEventListener('craftools-element-change', repaint);
+    element.addEventListener('craftools-state-change', repaint);
+
     return wrap;
   }
 
