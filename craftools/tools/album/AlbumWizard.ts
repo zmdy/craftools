@@ -48,6 +48,7 @@ import { PanelUI } from '../../utils/PanelUI.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { AlbumPreviewSVG } from '../../utils/AlbumPreviewSVG.js';
 import { CropMarks, type CropMarksConfig, type CropMarksStyle } from '../../utils/CropMarks.js';
+import * as ImageQuality from '../../utils/ImageQuality.js';
 import './AlbumTool_Translations.js';
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -63,6 +64,46 @@ function _rgbToHex(rgb: string): string {
   if (!parts) return rgb;
   const hex = (x: string) => ('0' + parseInt(x).toString(16)).slice(-2);
   return '#' + hex(parts[0]) + hex(parts[1]) + hex(parts[2]);
+}
+
+/**
+ * Flat list of individual-photo slot sizes (in the template's own physical
+ * unit -- same unit as the page's `sizeUnit`, mm in every built-in
+ * GridSizes.ts entry) for ONE full pass through the template's layout, in
+ * the same left-to-right/top-to-bottom order photos are expected to fill
+ * cells (mirrors `calcPerPage()`'s own counting logic just above/below this
+ * function, so the two stay consistent).
+ *
+ * A "cell" can itself be a mini sub-grid of `cellLines` x `cellColumns`
+ * stacked photos (e.g. a 3-photo vertical strip) -- each individual photo
+ * then only gets `cellHeight/cellLines` (or `/cellColumns`) of the outer
+ * cell's physical size, not the whole thing. Used only for the Qualidade
+ * tab's DPI estimate, which doesn't need pixel-perfect fidelity with the
+ * actual grid-building code (Craftools_LayoutGrid) -- just a good-enough
+ * approximation of "how big will each photo actually end up on paper".
+ */
+function _photoSlotSizesMm(template: AlbumTemplate): Array<{ w: number; h: number }> {
+  const oneCell = (cw: number, ch: number, lines?: number, cols?: number): { w: number; h: number } => ({
+    w: cw / (cols || 1),
+    h: ch / (lines || 1),
+  });
+
+  if (template.type === 'promo_kit' && Array.isArray(template.cellSlots) && template.cellSlots.length) {
+    const out: Array<{ w: number; h: number }> = [];
+    template.cellSlots.forEach((slot: CellSlot & { cellWidth?: number; cellHeight?: number }) => {
+      const cw = typeof slot.cellWidth === 'number' ? slot.cellWidth : template.cellWidth;
+      const ch = typeof slot.cellHeight === 'number' ? slot.cellHeight : template.cellHeight;
+      const single = oneCell(cw, ch, slot.cellLines, slot.cellColumns);
+      const itemsPerUnit = (slot.cellLines || slot.cellColumns) ? (slot.cellLines || 1) * (slot.cellColumns || 1) : 1;
+      const total = (slot.cellCount || 0) * itemsPerUnit;
+      for (let i = 0; i < total; i++) out.push(single);
+    });
+    return out;
+  }
+
+  // Regular grid: every cell is the same size (possibly itself a
+  // cellLines x cellColumns sub-grid of stacked photos).
+  return [oneCell(template.cellWidth, template.cellHeight, template.cellLines, template.cellColumns)];
 }
 
 // ── Loose domain types ───────────────────────────────────────────────────────
@@ -137,6 +178,12 @@ export class AlbumTool {
     let cardManualQty = 1;
     let smartFit = false; // Auto rotate mismatched aspect ratios
     let autoEnhanceAll = false; // Auto enhance image quality for all album photos
+
+    // Qualidade tab: object URLs created for the photo thumbnails/DPI probe
+    // images, tracked so they can be revoked on the next render instead of
+    // leaking one per photo per re-render (renderPanel() runs on every
+    // state change, e.g. every checkbox toggle elsewhere in the wizard).
+    let qualityObjectUrls: string[] = [];
 
     // Load sizes from global settings
     let availableSizes: PageSize[];
@@ -487,6 +534,40 @@ export class AlbumTool {
                 ${step4Html}
             ` : `<div style="padding:10px; font-size:11px; color:var(--text-muted); text-align:center;">Selecione um layout primeiro.</div>`;
 
+      // ── Qualidade tab (DPI per photo vs its slot in the chosen layout) ──
+      // Revoke object URLs from the previous render before creating new
+      // ones -- renderPanel() re-runs on every state change elsewhere in
+      // the wizard (template pick, checkbox toggles, etc.), so without this
+      // each re-render would leak one blob URL per photo.
+      qualityObjectUrls.forEach(u => URL.revokeObjectURL(u));
+      qualityObjectUrls = [];
+
+      const _buildQualityCard = (file: File, idx: number): string => {
+        const url = URL.createObjectURL(file);
+        qualityObjectUrls.push(url);
+        return `
+                <div class="album-quality-card" style="display:flex; gap:10px; padding:8px; border-radius:8px; border:1px solid var(--border, #374151); align-items:center;">
+                    <img class="album-quality-thumb" data-qidx="${idx}" src="${url}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; flex-shrink:0; background:#000;">
+                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">
+                        <span style="font-size:11px; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>
+                        <span class="album-quality-dpi" data-qidx="${idx}" style="font-size:11px; color:var(--text-muted);">${I18n.t('albumTool.qualityCalculating') || 'Calculando qualidade...'}</span>
+                    </div>
+                </div>`;
+      };
+
+      let htmlQualidade: string;
+      if (!selectedTemplate) {
+        htmlQualidade = `<div style="padding:10px; font-size:11px; color:var(--text-muted); text-align:center;">${I18n.t('albumTool.qualityNeedsTemplate') || 'Selecione um layout primeiro.'}</div>`;
+      } else if (selectedMode === 'album') {
+        htmlQualidade = photos.length
+          ? `<div style="display:flex; flex-direction:column; gap:6px;">${photos.map((f, i) => _buildQualityCard(f, i)).join('')}</div>`
+          : `<div style="padding:10px; font-size:11px; color:var(--text-muted); text-align:center;">${I18n.t('albumTool.qualityNeedsPhotos') || 'Selecione as fotos para ver a qualidade de impressão de cada uma.'}</div>`;
+      } else {
+        htmlQualidade = cardPhoto
+          ? `<div style="display:flex; flex-direction:column; gap:6px;">${_buildQualityCard(cardPhoto, 0)}</div>`
+          : `<div style="padding:10px; font-size:11px; color:var(--text-muted); text-align:center;">${I18n.t('albumTool.qualityNeedsCardPhoto') || 'Selecione a foto do cartão para ver a qualidade de impressão.'}</div>`;
+      }
+
       const htmlConfigs = `
                 <div class="ct-field ct-field--block">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -617,10 +698,56 @@ export class AlbumTool {
         panelBody.innerHTML =
           PanelUI.accordion('album-tamanho', 'straighten', I18n.t('albumTool.sizeAndLayout') || 'Tamanho & Layout', htmlTamanhoLayout, { open: openTamanho }) +
           PanelUI.accordion('album-conteudo', 'imagesmode', I18n.t('albumTool.content') || 'Conteúdo', htmlConteudo, { open: openConteudo }) +
+          PanelUI.accordion('album-qualidade', 'high_quality', I18n.t('albumTool.qualityTab') || 'Qualidade', htmlQualidade, { open: false }) +
           PanelUI.accordion('album-configs', 'settings', I18n.t('albumTool.settings') || 'Configurações', htmlConfigs, { open: openConfigs }) +
           PanelUI.accordion('album-cropmarks', 'content_cut', I18n.t('albumTool.cropMarksTab') || 'Marcas de Corte', htmlCropMarks, { open: openCropMarks }) +
           PanelUI.accordion('album-acoes', 'play_arrow', I18n.t('albumTool.actions') || 'Ações', htmlAcoes, { open: openAcoes });
       });
+
+      // ── Qualidade tab: async DPI enrichment ─────────────────────────
+      // `naturalWidth`/`naturalHeight` aren't known synchronously from a
+      // File, so the cards above render with a "Calculando..." placeholder
+      // and get patched in place here once each photo decodes. Reuses the
+      // thumbnail's own blob URL (already created above) instead of
+      // creating a second one per photo.
+      (() => {
+        const badges = panelBody.querySelectorAll<HTMLElement>('.album-quality-dpi[data-qidx]');
+        if (!badges.length || !selectedTemplate) return;
+        const sourceFiles: File[] = selectedMode === 'album' ? photos : (cardPhoto ? [cardPhoto] : []);
+        const slots = _photoSlotSizesMm(selectedTemplate);
+        const unit = selectedSize?.sizeUnit || 'mm';
+        const toIn = (v: number) => unit === 'cm' ? ImageQuality.cmToInches(v) : ImageQuality.mmToInches(v);
+
+        const LEVEL_LABEL: Record<string, string> = {
+          excellent: I18n.t('albumTool.qualityExcellent') || 'Excelente',
+          good:      I18n.t('albumTool.qualityGood') || 'Boa qualidade',
+          fair:      I18n.t('albumTool.qualityFair') || 'Aceitável (foto grande / vista de longe)',
+          poor:      I18n.t('albumTool.qualityPoor') || 'Baixa qualidade — pode sair borrada',
+        };
+        const LEVEL_ICON: Record<string, string> = {
+          excellent: 'check_circle', good: 'check_circle', fair: 'warning', poor: 'error',
+        };
+
+        badges.forEach(badge => {
+          const idx = Number(badge.getAttribute('data-qidx'));
+          const file = sourceFiles[idx];
+          const thumb = panelBody.querySelector<HTMLImageElement>(`.album-quality-thumb[data-qidx="${idx}"]`);
+          const slot = slots.length ? slots[idx % slots.length] : null;
+          if (!file || !thumb || !slot) return;
+
+          const probe = new Image();
+          probe.onload = () => {
+            const dpi = ImageQuality.computeEffectiveDpi(probe.naturalWidth, probe.naturalHeight, toIn(slot.w), toIn(slot.h), 'cover', 1);
+            const level = ImageQuality.classifyDpi(dpi);
+            const color = ImageQuality.dpiLevelColor(level);
+            badge.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px; font-weight:600; color:${color};"><span class="material-symbols-outlined" style="font-size:14px;">${LEVEL_ICON[level]}</span>${Math.round(dpi)} DPI · ${LEVEL_LABEL[level]}</span>`;
+          };
+          probe.onerror = () => {
+            badge.textContent = I18n.t('albumTool.qualityReadError') || 'Não foi possível ler a imagem';
+          };
+          probe.src = thumb.src;
+        });
+      })();
 
       // ── Bind: Step 1 — Size ────────────────────────────────────────
       panelBody.querySelectorAll<HTMLButtonElement>('.size-btn').forEach(btn => {
