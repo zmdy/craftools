@@ -15,6 +15,7 @@ import { ImageFilters } from './ImageFilters.js';
 import { ImageTransform } from './ImageTransform.js';
 import { ImageEnhancer } from '../../utils/ImageEnhancer.js';
 import { AppSettings } from '../../utils/AppSettings.js';
+import * as ImageQuality from '../../utils/ImageQuality.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // Filter keys that map to CSS filter functions
@@ -381,6 +382,22 @@ export class ImageTool extends BaseTool {
         ],
       },
       {
+        // Distinct from "Qualidade" (auto-enhance/appearance) below --
+        // this one is about print resolution (DPI), not photo appearance.
+        section: 'Qualidade de Impressão',
+        i18nKey: 'imageTool.sectionPrintQuality',
+        icon: 'high_quality',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'custom',
+            key: 'printQualityInfo',
+            label: '',
+            render: (element: HTMLElement) => ImageTool._renderPrintQualityPanel(element),
+          },
+        ],
+      },
+      {
         section: 'Qualidade',
         i18nKey: 'imageTool.sectionQuality',
         icon: 'auto_fix_high',
@@ -596,6 +613,87 @@ export class ImageTool extends BaseTool {
       meta.src = meta.originalSrc;
       img.src = meta.originalSrc;
     }
+  }
+
+  /**
+   * Renders the "Qualidade de Impressão" panel: effective DPI of the photo
+   * as currently placed on the page (native resolution vs the element's own
+   * on-page size, accounting for fit mode + zoom -- see ImageQuality.ts's
+   * `computeEffectiveDpi()` doc comment for the math), a good/bad indicator,
+   * and the largest this specific photo could be printed at 300/150 DPI
+   * (a property of the source image alone, independent of its current size
+   * on the page).
+   *
+   * Purely informational (no onChange) -- repaints itself on the image's
+   * own 'load' event since `naturalWidth`/`naturalHeight` aren't available
+   * until the browser has decoded it, which for a just-uploaded photo may
+   * not have happened yet by the time this panel first renders.
+   */
+  private static _renderPrintQualityPanel(element: HTMLElement): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
+
+    const paint = (): void => {
+      wrap.innerHTML = '';
+      const contentEl = (element as HTMLElement & { contentArea?: HTMLElement }).contentArea ?? element;
+      const img = contentEl.querySelector<HTMLImageElement>('img');
+      const meta = getMeta(element);
+
+      if (!img || !img.src) {
+        wrap.innerHTML = `<p style="font-size:11px; color:var(--text-muted); margin:0;">Selecione uma foto para ver a qualidade de impressão.</p>`;
+        return;
+      }
+
+      if (!img.complete || !img.naturalWidth) {
+        wrap.innerHTML = `<p style="font-size:11px; color:var(--text-muted); margin:0;">Carregando informações da imagem...</p>`;
+        img.addEventListener('load', paint, { once: true });
+        return;
+      }
+
+      const { widthIn, heightIn } = ImageQuality.elementSizeToInches(element);
+      const fitMode: ImageQuality.FitMode = meta.objectFit === 'contain' ? 'contain' : meta.objectFit === 'fill' ? 'fill' : 'cover';
+      const zoom = meta.zoom || 1;
+      const dpi = ImageQuality.computeEffectiveDpi(img.naturalWidth, img.naturalHeight, widthIn, heightIn, fitMode, zoom);
+      const level = ImageQuality.classifyDpi(dpi);
+      const color = ImageQuality.dpiLevelColor(level);
+
+      const LEVEL_LABEL: Record<ImageQuality.DpiLevel, string> = {
+        excellent: 'Excelente para impressão',
+        good:      'Boa para impressão',
+        fair:      'Aceitável (impressão grande / vista à distância)',
+        poor:      'Baixa qualidade — pode ficar borrada ou pixelizada',
+      };
+      const LEVEL_ICON: Record<ImageQuality.DpiLevel, string> = {
+        excellent: 'check_circle',
+        good:      'check_circle',
+        fair:      'warning',
+        poor:      'error',
+      };
+
+      const max300 = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, 300);
+      const max150 = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, 150);
+
+      wrap.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; background:${color}1a; border:1px solid ${color}40;">
+          <span class="material-symbols-outlined" style="font-size:28px; color:${color};">${LEVEL_ICON[level]}</span>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-size:18px; font-weight:600; color:${color};">${Math.round(dpi)} DPI</span>
+            <span style="font-size:11px; color:var(--text-muted);">${LEVEL_LABEL[level]}</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--text-muted);">
+          <div style="display:flex; justify-content:space-between;"><span>Resolução original</span><span style="color:var(--text, #111);">${img.naturalWidth} × ${img.naturalHeight} px</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Tamanho atual de impressão</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(widthIn)} × ${ImageQuality.formatCm(heightIn)}</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7); font-size:11px; color:var(--text-muted);">
+          <div style="display:flex; justify-content:space-between;"><span>Tamanho máx. recomendado (300 DPI)</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(max300.widthIn)} × ${ImageQuality.formatCm(max300.heightIn)}</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Tamanho máx. aceitável (150 DPI)</span><span style="color:var(--text, #111);">${ImageQuality.formatCm(max150.widthIn)} × ${ImageQuality.formatCm(max150.heightIn)}</span></div>
+        </div>
+      `;
+    };
+
+    paint();
+    return wrap;
   }
 
   /**
