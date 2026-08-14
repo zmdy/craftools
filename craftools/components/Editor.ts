@@ -1325,7 +1325,7 @@ export class Craftools_Editor extends HTMLElement {
     });
 
     // ── Centralized Export Hub ─────────────────────────────────────────────
-    document.querySelectorAll('#pdf-btn, #export-btn, #pwa-sidebar-export').forEach(btn => {
+    document.querySelectorAll('#pdf-btn, #export-btn, #pwa-sidebar-export, #pwa-header-export-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
         closeSidebar();
