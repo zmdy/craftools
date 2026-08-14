@@ -664,7 +664,14 @@ export class ImageTool extends BaseTool {
       const fitMode: ImageQuality.FitMode = meta.objectFit === 'contain' ? 'contain' : meta.objectFit === 'fill' ? 'fill' : 'cover';
       const zoom = meta.zoom || 1;
       const dpi = ImageQuality.computeEffectiveDpi(img.naturalWidth, img.naturalHeight, widthIn, heightIn, fitMode, zoom);
-      const level = ImageQuality.classifyDpi(dpi);
+      // Read fresh on every paint (rather than once at field-creation time)
+      // so a threshold change made in Configurações > Aprimoramento de
+      // Imagens is reflected the next time this panel repaints (element
+      // resize/state-change) without needing its own extra listener --
+      // there's no realistic scenario where both panels are open at once
+      // anyway (single #panel-body).
+      const thresholds = AppSettings.get('dpiQualityThresholds');
+      const level = ImageQuality.classifyDpi(dpi, thresholds);
       const color = ImageQuality.dpiLevelColor(level);
 
       const LEVEL_LABEL: Record<ImageQuality.DpiLevel, string> = {
@@ -680,8 +687,8 @@ export class ImageTool extends BaseTool {
         poor:      'error',
       };
 
-      const max300 = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, 300);
-      const max150 = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, 150);
+      const maxRecommended = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, thresholds.excellent);
+      const maxAcceptable  = ImageQuality.maxPrintSizeAtDpi(img.naturalWidth, img.naturalHeight, thresholds.fair);
 
       wrap.innerHTML = `
         <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; background:${color}1a; border:1px solid ${color}40;">
@@ -696,8 +703,8 @@ export class ImageTool extends BaseTool {
           <div style="display:flex; justify-content:space-between; gap:8px;"><span style="flex:1 1 auto;">Tamanho atual de impressão</span><span style="flex:0 0 auto; text-align:right; white-space:nowrap; color:var(--text, #111);">${ImageQuality.formatCm(widthIn)} × ${ImageQuality.formatCm(heightIn)}</span></div>
         </div>
         <div style="display:flex; flex-direction:column; gap:6px; padding-top:8px; border-top:1px dashed var(--border, #e4e4e7); font-size:11px; color:var(--text-muted);">
-          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. recomendado (300 DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(max300.widthIn)} × ${ImageQuality.formatCm(max300.heightIn)}</span></div>
-          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. aceitável (150 DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(max150.widthIn)} × ${ImageQuality.formatCm(max150.heightIn)}</span></div>
+          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. recomendado (${thresholds.excellent} DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(maxRecommended.widthIn)} × ${ImageQuality.formatCm(maxRecommended.heightIn)}</span></div>
+          <div style="display:flex; flex-direction:column; gap:1px;"><span>Tamanho máx. aceitável (${thresholds.fair} DPI)</span><span style="color:var(--text, #111); font-weight:600;">${ImageQuality.formatCm(maxAcceptable.widthIn)} × ${ImageQuality.formatCm(maxAcceptable.heightIn)}</span></div>
         </div>
       `;
     };

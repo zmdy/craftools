@@ -23,20 +23,42 @@ export type FitMode = 'cover' | 'contain' | 'fill';
 
 export type DpiLevel = 'excellent' | 'good' | 'fair' | 'poor';
 
-/** Print-quality DPI thresholds. 300 is the traditional "ideal" print
- *  target; 150 is the commonly-cited floor for large prints viewed from a
- *  normal (non-close-up) distance (posters, album pages) -- below that,
- *  pixelation becomes visible even at arm's length. */
-export const DPI_THRESHOLDS: Record<Exclude<DpiLevel, 'poor'>, number> = {
-  excellent: 300,
-  good: 200,
+/**
+ * The four DPI boundaries a photo is classified against. `fair`/`good`/
+ * `excellent` are the actual bucketing boundaries used by classifyDpi();
+ * `poor` is the configured floor for the bottom tier -- kept alongside the
+ * other three (rather than an implicit "anything below fair" catch-all) so
+ * every tier has an explicit, user-configurable reference DPI that can also
+ * be surfaced in the UI (e.g. a "tamanho mín. utilizável" hint), even though
+ * it doesn't change classifyDpi()'s branching on its own (there's no fifth
+ * "below poor" tier -- see SettingsTool.ts's "Definir Qualidade de Imagem"
+ * section, which is what actually lets a user configure these).
+ */
+export interface DpiThresholds {
+  poor: number;
+  fair: number;
+  good: number;
+  excellent: number;
+}
+
+/** Default thresholds, based on typical print-viewing-distance guidance
+ *  (see e.g. https://framky.com/en-gb/blog/dpi-photo-printing-how-much-you-need):
+ *  96 is roughly the eye's resolving power at ~1m (normal wall-gallery
+ *  viewing distance) -- below that, pixelation is visible even from across
+ *  the room; 150 is the commonly-cited floor for prints viewed at arm's
+ *  length; 200 is a comfortable middle ground; 300 is the traditional
+ *  "ideal"/premium print target (album-in-hand distance, ~25-30cm). */
+export const DEFAULT_DPI_THRESHOLDS: DpiThresholds = {
+  poor: 96,
   fair: 150,
+  good: 200,
+  excellent: 300,
 };
 
-export function classifyDpi(dpi: number): DpiLevel {
-  if (dpi >= DPI_THRESHOLDS.excellent) return 'excellent';
-  if (dpi >= DPI_THRESHOLDS.good) return 'good';
-  if (dpi >= DPI_THRESHOLDS.fair) return 'fair';
+export function classifyDpi(dpi: number, thresholds: DpiThresholds = DEFAULT_DPI_THRESHOLDS): DpiLevel {
+  if (dpi >= thresholds.excellent) return 'excellent';
+  if (dpi >= thresholds.good) return 'good';
+  if (dpi >= thresholds.fair) return 'fair';
   return 'poor';
 }
 

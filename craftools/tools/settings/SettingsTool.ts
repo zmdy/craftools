@@ -110,11 +110,27 @@ export class SettingsTool {
     const cur = AppSettings.getAll();
     const profile = cur.autoEnhanceProfile;
     const refs = cur.autoEnhanceReferences || [];
+    const dpiThresholds = cur.dpiQualityThresholds;
 
     const bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Definir Qualidade de Imagem: DPI thresholds used by the Image/Album
+             tools' print-quality tabs (ImageQuality.ts's classifyDpi()) -->
+        <div class="craftools-field" style="display:flex; flex-direction:column; gap:8px;">
+          <label style="font-size:11px; font-weight:600; color:var(--text-secondary); display:block;">
+            ${s('fieldDpiQuality')}
+          </label>
+          <p style="font-size:10px; color:var(--text-secondary); margin:0;">${s('fieldDpiQualityHelp')}</p>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${SettingsTool._renderDpiSelect('poor', s('dpiLevelPoor'), dpiThresholds.poor)}
+            ${SettingsTool._renderDpiSelect('fair', s('dpiLevelFair'), dpiThresholds.fair)}
+            ${SettingsTool._renderDpiSelect('good', s('dpiLevelGood'), dpiThresholds.good)}
+            ${SettingsTool._renderDpiSelect('excellent', s('dpiLevelExcellent'), dpiThresholds.excellent)}
+          </div>
+        </div>
+
         <!-- Upload Reference Button & Thumbnails -->
-        <div class="craftools-field">
+        <div class="craftools-field" style="border-top:1px dashed var(--border,#374151); padding-top:12px;">
           <label style="font-size:11px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">
             ${s('fieldUploadReference')}
           </label>
@@ -186,6 +202,24 @@ export class SettingsTool {
     SettingsTool._bindEnhanceSectionEvents(sectionEl, panelBody);
   }
 
+  /** DPI options a user can assign to each of the 4 quality tiers -- matches
+   *  the values requested for the "Definir Qualidade de Imagem" selects. */
+  private static readonly DPI_OPTIONS = [96, 150, 200, 300, 600];
+
+  private static _renderDpiSelect(level: 'poor' | 'fair' | 'good' | 'excellent', label: string, value: number): string {
+    const options = SettingsTool.DPI_OPTIONS.map(dpi =>
+      `<option value="${dpi}" ${dpi === value ? 'selected' : ''}>${dpi} DPI</option>`
+    ).join('');
+    return `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span style="font-size:11px; color:var(--text-secondary);">${label}</span>
+        <select class="set-dpi-threshold-select" data-level="${level}" style="font-size:11px; padding:5px 8px; border-radius:6px; border:1px solid var(--border,#374151); background:var(--bg-input,#f4f4f5); color:var(--text-primary,#18181b);">
+          ${options}
+        </select>
+      </div>
+    `;
+  }
+
   private static _renderSliderField(key: string, label: string, value: number, min = -100, max = 100): string {
     return `
       <div class="craftools-field" style="display:flex; flex-direction:column; gap:4px;">
@@ -210,6 +244,16 @@ export class SettingsTool {
   }
 
   private static _bindEnhanceSectionEvents(sectionEl: HTMLElement, panelBody: HTMLElement): void {
+    // ── DPI quality thresholds ──────────────────────────────────────────────
+    sectionEl.querySelectorAll<HTMLSelectElement>('.set-dpi-threshold-select').forEach(select => {
+      select.addEventListener('change', () => {
+        const level = select.dataset.level as 'poor' | 'fair' | 'good' | 'excellent';
+        const value = parseInt(select.value, 10);
+        const cur = AppSettings.getAll();
+        AppSettings.set({ dpiQualityThresholds: { ...cur.dpiQualityThresholds, [level]: value } });
+      });
+    });
+
     // ── Group navigation buttons ──────────────────────────────────────────────
     const groupNav = sectionEl.querySelector<HTMLElement>('#set-enhance-group-nav');
     if (groupNav) {

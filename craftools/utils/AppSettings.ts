@@ -15,6 +15,7 @@
  */
 
 import { DEFAULT_ENHANCE_PROFILE, type EnhanceProfile } from './ImageEnhancer.js';
+import { DEFAULT_DPI_THRESHOLDS, type DpiThresholds } from './ImageQuality.js';
 
 export type WeekStart = 'sunday' | 'monday';
 
@@ -47,6 +48,12 @@ export interface AppSettingsData {
   // Image Auto-Enhancer Profile & Reference Data
   autoEnhanceProfile: EnhanceProfile;
   autoEnhanceReferences: string[];
+
+  // DPI thresholds used to classify a photo's print quality (Image tool's
+  // "Qualidade de Impressão" tab, Album tool's "Qualidade" tab) -- see
+  // ImageQuality.ts's classifyDpi(). Configured from the "Aprimoramento de
+  // Imagens" settings section's "Definir Qualidade de Imagem" subsection.
+  dpiQualityThresholds: DpiThresholds;
 }
 
 const STORAGE_KEY = 'craftools-app-settings';
@@ -64,6 +71,7 @@ const DEFAULTS: AppSettingsData = {
   allowMultipleAccordions: true,
   autoEnhanceProfile: { ...DEFAULT_ENHANCE_PROFILE },
   autoEnhanceReferences: [],
+  dpiQualityThresholds: { ...DEFAULT_DPI_THRESHOLDS },
 };
 
 class _AppSettings {

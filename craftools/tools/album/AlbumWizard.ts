@@ -717,6 +717,7 @@ export class AlbumTool {
         const slots = _photoSlotSizesMm(selectedTemplate);
         const unit = selectedSize?.sizeUnit || 'mm';
         const toIn = (v: number) => unit === 'cm' ? ImageQuality.cmToInches(v) : ImageQuality.mmToInches(v);
+        const thresholds = AppSettings.get('dpiQualityThresholds');
 
         const LEVEL_LABEL: Record<string, string> = {
           excellent: I18n.t('albumTool.qualityExcellent') || 'Excelente',
@@ -738,7 +739,7 @@ export class AlbumTool {
           const probe = new Image();
           probe.onload = () => {
             const dpi = ImageQuality.computeEffectiveDpi(probe.naturalWidth, probe.naturalHeight, toIn(slot.w), toIn(slot.h), 'cover', 1);
-            const level = ImageQuality.classifyDpi(dpi);
+            const level = ImageQuality.classifyDpi(dpi, thresholds);
             const color = ImageQuality.dpiLevelColor(level);
             badge.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px; font-weight:600; color:${color};"><span class="material-symbols-outlined" style="font-size:14px;">${LEVEL_ICON[level]}</span>${Math.round(dpi)} DPI · ${LEVEL_LABEL[level]}</span>`;
           };

@@ -46,6 +46,13 @@ I18n.addTranslations('settingsTool', {
         fieldMagentaGreen: "Magenta - Verde",
         fieldYellowBlue: "Amarelo - Azul",
 
+        fieldDpiQuality: "Definir Qualidade de Imagem",
+        fieldDpiQualityHelp: "Define os valores de DPI (pontos por polegada) usados para calcular a qualidade de impressão das imagens nas ferramentas de Imagem e Álbum.",
+        dpiLevelPoor: "Baixa Qualidade",
+        dpiLevelFair: "Qualidade Aceitável",
+        dpiLevelGood: "Alta Qualidade",
+        dpiLevelExcellent: "Qualidade Muito Alta",
+
         resetButton: "Restaurar padrões"
     },
     "en": {
@@ -77,6 +84,26 @@ I18n.addTranslations('settingsTool', {
         sectionIcons: "Icons",
         fieldIconPack: "Default icon library",
 
+        sectionImageEnhance: "Automatic Image Enhancement",
+        fieldUploadReference: "Reference Images for Color Learning",
+        btnAnalyze: "Analyze Reference(s)",
+        fieldBrightness: "Brightness",
+        fieldContrast: "Contrast",
+        fieldSaturation: "Saturation",
+        fieldShadows: "Shadows (Dark Tones)",
+        fieldMidtones: "Midtones",
+        fieldHighlights: "Highlights (Light Tones)",
+        fieldCyanRed: "Cyan - Red",
+        fieldMagentaGreen: "Magenta - Green",
+        fieldYellowBlue: "Yellow - Blue",
+
+        fieldDpiQuality: "Set Image Quality",
+        fieldDpiQualityHelp: "Sets the DPI (dots per inch) values used to calculate print quality for images in the Image and Album tools.",
+        dpiLevelPoor: "Low Quality",
+        dpiLevelFair: "Acceptable Quality",
+        dpiLevelGood: "High Quality",
+        dpiLevelExcellent: "Very High Quality",
+
         resetButton: "Reset to defaults"
     },
     "es": {
@@ -107,6 +134,26 @@ I18n.addTranslations('settingsTool', {
 
         sectionIcons: "Íconos",
         fieldIconPack: "Biblioteca de íconos predeterminada",
+
+        sectionImageEnhance: "Mejora Automática de Imágenes",
+        fieldUploadReference: "Imágenes de Referencia para Aprendizaje de Color",
+        btnAnalyze: "Analizar Referencia(s)",
+        fieldBrightness: "Brillo",
+        fieldContrast: "Contraste",
+        fieldSaturation: "Saturación",
+        fieldShadows: "Sombras (Tonos Oscuros)",
+        fieldMidtones: "Tonos Medios",
+        fieldHighlights: "Realces (Tonos Claros)",
+        fieldCyanRed: "Cian - Rojo",
+        fieldMagentaGreen: "Magenta - Verde",
+        fieldYellowBlue: "Amarillo - Azul",
+
+        fieldDpiQuality: "Definir Calidad de Imagen",
+        fieldDpiQualityHelp: "Define los valores de DPI (puntos por pulgada) usados para calcular la calidad de impresión de las imágenes en las herramientas de Imagen y Álbum.",
+        dpiLevelPoor: "Baja Calidad",
+        dpiLevelFair: "Calidad Aceptable",
+        dpiLevelGood: "Alta Calidad",
+        dpiLevelExcellent: "Calidad Muy Alta",
 
         resetButton: "Restaurar valores predeterminados"
     }
