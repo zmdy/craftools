@@ -851,6 +851,35 @@
             color: var(--text-primary, #18181b) !important;
         }
 
+        /* Header "Exportar & Salvar" button -- unlike the round icon-only
+           .box-icon buttons, this one also carries a text label, so it gets
+           its own pill shape in the app's accent color to stand out as the
+           primary header action. */
+        .header-content .header-export-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 35px;
+            padding: 0 14px;
+            border-radius: 20px;
+            background: var(--accent, #f97316);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+        .header-content .header-export-btn:hover {
+            opacity: 0.88;
+            color: #fff;
+        }
+        .header-content .header-export-btn .material-symbols-outlined {
+            font-size: 18px;
+        }
+
         /* "..." overflow menu (mobile only) -- groups history/theme/language
            behind a single trigger so the mobile header only shows the brand
            icon + zoom controls up front. Desktop: the menu wrapper is
@@ -898,6 +927,10 @@
             }
             .pwa-header-more-menu .pwa-lang-select {
                 width: 100%;
+            }
+            .pwa-header-more-menu .header-export-btn {
+                width: 100%;
+                justify-content: center;
             }
             [data-theme="dark"] .pwa-header-more-menu {
                 background: #18181b;
@@ -1129,8 +1162,9 @@
                             <option value="en">EN-US</option>
                             <option value="es">ES-ES</option>
                         </select>
-                        <a href="#" id="pwa-header-export-btn" class="box-icon" style="text-decoration:none;" title="Exportar & Salvar" data-i18n-title="exportTool.title">
-                            <span class="material-symbols-outlined">ios_share</span>
+                        <a href="#" id="pwa-header-export-btn" class="header-export-btn" style="text-decoration:none;" title="Exportar & Salvar" data-i18n-title="exportTool.title">
+                            <span class="material-symbols-outlined">download</span>
+                            <span data-i18n="exportTool.title">Exportar & Salvar</span>
                         </a>
                     </div>
                     <button type="button" id="pwa-header-more-btn" class="box-icon pwa-header-more-btn" title="Mais opções" data-i18n-title="editor.moreOptions" aria-haspopup="true" aria-expanded="false">
@@ -1170,7 +1204,7 @@
                         <li class="ct-sec-label" style="padding: 12px 15px 5px; font-size: 10px; font-weight: 700; color: var(--text, #71717a); text-transform: uppercase; letter-spacing: 0.5px;"><span data-i18n="editor.sectionPagesFiles">Páginas e Arquivos</span></li>
                         <li><a href="#" id="pwa-sidebar-newpage"><span class="material-symbols-outlined">note_add</span> <span data-i18n="editor.newPageSidebar">Nova Página</span></a></li>
                         <li><a href="#" id="pwa-sidebar-generator" draggable="true" data-tool="generator"><span class="material-symbols-outlined">dashboard_customize</span> <span data-i18n="editor.generator">Gerador</span></a></li>
-                        <li><a href="#" id="pwa-sidebar-export" data-tool="export"><span class="material-symbols-outlined">ios_share</span> <span data-i18n="exportTool.title">Exportar & Salvar</span></a></li>
+                        <li><a href="#" id="pwa-sidebar-export" data-tool="export"><span class="material-symbols-outlined">download</span> <span data-i18n="exportTool.title">Exportar & Salvar</span></a></li>
                         <li><a href="#" id="pwa-sidebar-import-project"><span class="material-symbols-outlined">upload</span> <span data-i18n="editor.importProject">Importar Projeto (.craftools)</span></a></li>
                         <input type="file" id="project-import-file" accept=".craftools" style="display:none;">
 

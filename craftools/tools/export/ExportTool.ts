@@ -216,7 +216,7 @@ export class ExportTool extends BaseTool {
 ToolRegistry.register({
   key: 'export',
   label: 'editor.export',
-  icon: 'ios_share',
+  icon: 'download',
   tool: ExportTool,
   draggable: false,
   showInFooterNav: false,
