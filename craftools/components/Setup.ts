@@ -21,8 +21,15 @@ interface SampleEntry {
   meta: ProjectMeta;
 }
 
-/** How many sample cards renderHome() shows before requiring "Ver mais". */
-const SAMPLES_PAGE_SIZE = 6;
+/**
+ * How many sample cards renderHome() shows before requiring "Ver mais".
+ * Combined with the always-shown "Criar projeto novo" tile, this is what
+ * fills out the initial 3-per-row grid (see #samples-grid's
+ * grid-template-columns below): 4 sample cards + 1 "Criar projeto novo"
+ * tile = 5 grid cells (rows of 3 + 2), plus the "Ver mais" button in its
+ * own row underneath when there are more samples to reveal.
+ */
+const SAMPLES_PAGE_SIZE = 4;
 
 /**
  * Setup.ts — Initial screen shown when the app boots with no active/
@@ -94,7 +101,7 @@ export class Craftools_Setup extends HTMLElement {
                 <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
                 <input type="text" id="sample-search-input" placeholder="${I18n.t('setup.searchPlaceholder')}" style="width: 100%; padding: 9px 12px 9px 34px; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 13px; box-sizing: border-box;">
             </div>` : ''}
-            <div id="samples-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">
+            <div id="samples-grid" class="samples-grid" style="display: grid; gap: 16px; margin-top: 20px;">
                 ${sampleUrls.length ? `<p id="samples-loading" style="grid-column: 1 / -1; color: var(--text-muted); font-size: 12px;">${I18n.t('setup.loadingSamples')}</p>` : ''}
             </div>
             <div id="samples-load-more-wrap" style="margin-top: 18px;"></div>
@@ -102,6 +109,13 @@ export class Craftools_Setup extends HTMLElement {
     </div>
     <style>
         .media-btn:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: var(--shadow-lg) !important; }
+        /* Max 3 items per row on the sample-projects grid (down from the
+           previous auto-fit/minmax layout, which allowed 4+ on wide
+           screens) -- narrower viewports still degrade to 2/1 columns so
+           cards don't get squeezed unreadably thin. */
+        .samples-grid { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 700px) { .samples-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 440px) { .samples-grid { grid-template-columns: 1fr; } }
         .sample-thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center; }
         .sample-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         #sample-search-input:focus { outline: none; border-color: var(--accent); }
@@ -190,7 +204,7 @@ export class Craftools_Setup extends HTMLElement {
     const filtered = q
       ? this._samples.filter(s =>
           s.meta.title.toLowerCase().includes(q) ||
-          (s.meta.description ?? '').toLowerCase().includes(q))
+          Craftools_Setup._localizedDescription(s.meta).toLowerCase().includes(q))
       : this._samples;
 
     const visible = filtered.slice(0, this._visibleCount);
@@ -219,7 +233,10 @@ export class Craftools_Setup extends HTMLElement {
               : `<span class="material-symbols-outlined" style="font-size: 32px; color: var(--text-muted);">image</span>`}
           </div>
           <h3 style="margin: 0; font-size: 15px; font-weight: 600;">${Craftools_Setup._escapeHtml(sample.meta.title)}</h3>
-          ${sample.meta.description ? `<p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: left;">${Craftools_Setup._escapeHtml(sample.meta.description)}</p>` : ''}
+          ${(() => {
+            const desc = Craftools_Setup._localizedDescription(sample.meta);
+            return desc ? `<p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: left;">${Craftools_Setup._escapeHtml(desc)}</p>` : '';
+          })()}
         `;
         card.addEventListener('click', (e: Event) => {
           e.preventDefault();
@@ -294,6 +311,24 @@ export class Craftools_Setup extends HTMLElement {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Resolves a sample's `meta.description` to the string matching
+   * `I18n.currentLang`. Mirrors ProjectSerializer.getLocalizedDescription()
+   * (fallback order: current lang -> 'pt-br' -> first available -> '') but
+   * is reimplemented locally rather than imported, since ProjectSerializer
+   * is only ever dynamic-imported in this file (it drags in html2canvas +
+   * the gzip/crypto path, which the setup screen shouldn't pay for just to
+   * render sample cards). Handles the legacy plain-string `description`
+   * shape too, for any .craftools file not yet migrated to per-locale
+   * descriptions.
+   */
+  private static _localizedDescription(meta: ProjectMeta): string {
+    const description = meta.description;
+    if (!description) return '';
+    if (typeof description === 'string') return description;
+    return description[I18n.currentLang] ?? description['pt-br'] ?? Object.values(description)[0] ?? '';
   }
 
   renderMediaTypes(): void {

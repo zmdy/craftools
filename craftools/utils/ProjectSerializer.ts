@@ -10,16 +10,34 @@ export interface ProjectMeta {
   title: string;
   /**
    * Optional short blurb shown under the title/thumbnail in the sample-
-   * projects gallery on the setup screen (Setup.ts's renderHome()). Not
-   * collected from regular users on export (ExportTool.ts's "project" action
-   * only prompts for a title) -- populated by hand for the bundled
-   * assets/samples/*.craftools files, and left undefined for everything else.
+   * projects gallery on the setup screen (Setup.ts's renderHome()), and
+   * editable in the "Informações do projeto" tab. Not collected from
+   * regular users on export (ExportTool.ts's "project" action only prompts
+   * for a title) -- populated by hand for the bundled assets/samples/
+   * *.craftools files, and left undefined for everything else.
+   *
+   * Keyed by I18n locale code ('pt-br' | 'en' | 'es', matching
+   * I18n.currentLang) so each sample/project can carry a description per
+   * language -- e.g. { 'pt-br': '...', 'en': '...', 'es': '...' }. A given
+   * project doesn't need an entry for every locale; use
+   * ProjectSerializer.getLocalizedDescription() to read the right one with
+   * fallback. Older .craftools files may still store a single plain string
+   * here (pre-multi-language format) -- getLocalizedDescription() and
+   * readMeta()/importProject() handle that shape too, so nothing already
+   * written breaks.
    */
-  description?: string;
+  description?: Record<string, string> | string;
   created_at: string;
   updated_at: string;
   author: string;
   thumbnail: string; // base64 PNG thumbnail (small)
+  /**
+   * Free-form catch-all field ("demais informações" in the "Informações do
+   * projeto" tab -- ProjectInfoTool.ts) for anything that doesn't warrant
+   * its own ProjectMeta field. Optional, left undefined for every project
+   * that hasn't set it (including all pre-existing .craftools files).
+   */
+  notes?: string;
 }
 
 export interface ProjectContainer {
@@ -39,6 +57,20 @@ declare global {
 }
 
 export class ProjectSerializer {
+
+  /**
+   * The full `meta` block of the most recently importProject()-ed
+   * .craftools file (set at the top of importProject(), below, right after
+   * the container is parsed). ProjectMetaStore.ts reads this right after
+   * calling importProject() to populate the "Informações do projeto" tab's
+   * in-memory state (title/description/author/notes) -- importProject()
+   * itself only returns the title string (kept as-is for its existing
+   * callers), so this is the only way to get the rest of the block without
+   * a second decompress pass. Only meaningful immediately after an
+   * importProject() call; not reset between imports, so don't read it
+   * without having just called importProject() first.
+   */
+  static lastImportedMeta: ProjectMeta | null = null;
 
   /**
    * Helper to calculate SHA-256 of an ArrayBuffer in hex format using Web Crypto API.
@@ -77,14 +109,31 @@ export class ProjectSerializer {
   /**
    * Serializes the pages and bundles all base64 images into a single .craftools Gzip Blob.
    */
-  static async exportProject(pagesWrapper: HTMLElement, title: string, description?: string): Promise<Blob> {
+  static async exportProject(
+    pagesWrapper: HTMLElement,
+    title: string,
+    options?: {
+      description?: Record<string, string>;
+      author?: string;
+      notes?: string;
+      /**
+       * Pre-supplied thumbnail data URI (from the "Informações do projeto"
+       * tab's manual upload -- ProjectMetaStore.ts). When set, skips the
+       * html2canvas auto-capture below entirely, so a user-chosen thumbnail
+       * always wins over the auto-generated one.
+       */
+      thumbnail?: string;
+    }
+  ): Promise<Blob> {
     // 1. Serialize editor state
     const editorState = StateSerializer.serialize(pagesWrapper);
 
-    // 2. Generate small PNG thumbnail of the first page using html2canvas
-    let thumbnail = '';
+    // 2. Use the manually-set thumbnail if the "Informações do projeto" tab
+    // provided one; otherwise generate a small PNG thumbnail of the first
+    // page using html2canvas, same as before this option existed.
+    let thumbnail = options?.thumbnail || '';
     const firstPage = pagesWrapper.querySelector('.craftools-page') as HTMLElement;
-    if (firstPage) {
+    if (!thumbnail && firstPage) {
       try {
         const canvas = await html2canvas(firstPage, {
           scale: 0.15, // Low scale for small file size
@@ -154,11 +203,12 @@ export class ProjectSerializer {
       mode: 'embedded',
       meta: {
         title: title || 'Sem título',
-        description: description || undefined,
+        description: options?.description && Object.keys(options.description).length ? options.description : undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        author: 'local-user',
-        thumbnail
+        author: options?.author || 'local-user',
+        thumbnail,
+        notes: options?.notes || undefined
       },
       pages: JSON.parse(pagesJsonStr),
       assets
@@ -188,6 +238,23 @@ export class ProjectSerializer {
   }
 
   /**
+   * Resolves `meta.description` to a single display string for `lang`
+   * (normally `I18n.currentLang`). Handles all three shapes the field can
+   * be in: the current per-locale `Record<string, string>`, a legacy plain
+   * `string` (pre-multi-language .craftools files), or `undefined`.
+   *
+   * Fallback order when `lang` has no entry: `'pt-br'` (the project's
+   * primary authoring language), then whichever locale happens to be first
+   * in the object, then `''`.
+   */
+  static getLocalizedDescription(meta: Pick<ProjectMeta, 'description'>, lang: string): string {
+    const description = meta.description;
+    if (!description) return '';
+    if (typeof description === 'string') return description;
+    return description[lang] ?? description['pt-br'] ?? Object.values(description)[0] ?? '';
+  }
+
+  /**
    * Decompresses the .craftools Gzip Blob, hydrates asset references, and reconciles the DOM.
    */
   static async importProject(pagesWrapper: HTMLElement, fileBlob: Blob): Promise<string> {
@@ -199,6 +266,7 @@ export class ProjectSerializer {
     if (container.version !== 1) {
       throw new Error(`Unsupported project version: ${container.version}`);
     }
+    this.lastImportedMeta = container.meta;
 
     let pagesJsonStr = JSON.stringify(container.pages);
 
