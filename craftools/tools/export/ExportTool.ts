@@ -2,6 +2,7 @@ import { BaseTool } from '../BaseTool.js';
 import { ToolRegistry } from '../../utils/ToolRegistry.js';
 import { I18n } from '../../settings/Translations.js';
 import { Notify } from '../../utils/Notify.js';
+import { ProjectMetaStore } from '../../utils/ProjectMetaStore.js';
 import type { PropertySchema } from '../../types/PropertySchema.js';
 import './ExportTool_Translations.js';
 
@@ -168,17 +169,30 @@ export class ExportTool extends BaseTool {
             break;
           }
           case 'project': {
-            const defaultTitle = 'Projeto CrafTools';
+            // Pre-fill the rename prompt with whatever the "Informações do
+            // projeto" tab (ProjectInfoTool.ts) already has, instead of
+            // always starting from the generic default -- title is still
+            // asked here rather than silently reused, so a quick rename at
+            // export time keeps working exactly like before this tab
+            // existed.
+            const meta = ProjectMetaStore.get();
+            const defaultTitle = meta.title || 'Projeto CrafTools';
             const title = window.prompt(t('projectTitlePrompt'), defaultTitle);
             if (title === null) return;
 
             const finalTitle = title.trim() || defaultTitle;
+            ProjectMetaStore.update({ title: finalTitle });
             const pagesWrapper = editor.querySelector<HTMLElement>('#pages-wrapper')!;
             const dismiss = Notify.toast(I18n.t('editor.generating') || 'Gerando...', 'info', 60_000);
 
             try {
               const { ProjectSerializer } = await import('../../utils/ProjectSerializer.js');
-              const blob = await ProjectSerializer.exportProject(pagesWrapper, finalTitle);
+              const blob = await ProjectSerializer.exportProject(pagesWrapper, finalTitle, {
+                description: meta.description,
+                author: meta.author || undefined,
+                notes: meta.notes || undefined,
+                thumbnail: meta.thumbnail || undefined,
+              });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;

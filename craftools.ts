@@ -35,7 +35,12 @@ import { StandardSidebarUI } from './craftools/ui/StandardSidebarUI';
 import type { BaseTool }     from './craftools/tools/BaseTool';
 import type { BaseUI }       from './craftools/ui/BaseUI';
 
-export const VERSION = '0.1.0';
+// Re-exported from Version.ts, the actual source of truth -- see that
+// file's header comment for why it was split out (so panel-only tools like
+// ProjectInfoTool.ts can read the version without importing this whole
+// entry-point module). Kept as a named export here too so any existing
+// `import { VERSION } from './craftools.js'` keeps working unchanged.
+export { VERSION } from './craftools/utils/Version.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -141,6 +146,18 @@ export class Craftools {
 
       if (detail.sampleBlob) {
         this._loadSampleProject(detail.sampleBlob);
+      } else {
+        // Manual setup wizard (media+size, no sample) -- a brand-new
+        // project, so the "Informações do projeto" tab (ProjectInfoTool.ts)
+        // should start blank rather than carrying over whatever a
+        // previously-open project/sample had left in ProjectMetaStore.
+        // Dynamic import: ProjectMetaStore itself is lightweight, but
+        // keeping every non-essential module out of this file's static
+        // import graph matches the existing pattern here (see
+        // _loadSampleProject()'s own dynamic ProjectSerializer import).
+        import('./craftools/utils/ProjectMetaStore.js').then(({ ProjectMetaStore }) => {
+          ProjectMetaStore.reset();
+        });
       }
     });
 
@@ -236,6 +253,15 @@ export class Craftools {
       try {
         const { ProjectSerializer } = await import('./craftools/utils/ProjectSerializer.js');
         await ProjectSerializer.importProject(pagesWrapper, blob);
+
+        // Populate the "Informações do projeto" tab's in-memory state
+        // (title/description/author/notes) from the sample's own meta
+        // block -- ProjectSerializer.lastImportedMeta was just set by the
+        // importProject() call above.
+        if (ProjectSerializer.lastImportedMeta) {
+          const { ProjectMetaStore } = await import('./craftools/utils/ProjectMetaStore.js');
+          ProjectMetaStore.setFromMeta(ProjectSerializer.lastImportedMeta);
+        }
 
         const editor = document.querySelector('craftools-editor') as HTMLElement & {
           _reattachAllPageEvents?: (w: HTMLElement) => void;

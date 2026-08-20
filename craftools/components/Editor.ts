@@ -122,6 +122,8 @@ const PANEL_SETUP_MAP: Record<string, () => Promise<PanelSetupFn>> = {
   settings: () => safeImport(() => import('../tools/settings/SettingsTool.js').then((m: any) => UIErrorBoundary.wrap('Configurações', m.SettingsTool.setup.bind(m.SettingsTool))), { moduleName: 'SettingsTool' }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export:   () => safeImport(() => import('../tools/export/ExportTool.js').then((m: any) => UIErrorBoundary.wrap('Exportar', m.ExportTool.setup.bind(m.ExportTool))), { moduleName: 'ExportTool' }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  projectinfo: () => safeImport(() => import('../tools/projectinfo/ProjectInfoTool.js').then((m: any) => UIErrorBoundary.wrap('Informações do projeto', m.ProjectInfoTool.setup.bind(m.ProjectInfoTool))), { moduleName: 'ProjectInfoTool' }),
 };
 
 // ── Editor custom element ──────────────────────────────────────────────────────
@@ -1193,7 +1195,7 @@ export class Craftools_Editor extends HTMLElement {
         'image', 'qrcode', 'barcode', 'minicalendar', 'emojikitchen',
       ]);
       const SIDEBAR_CLICK_TOOLS = new Set([
-        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings', 'export', 'line',
+        'generator', 'agenda', 'calendar', 'album', 'imageslicer', 'settings', 'export', 'line', 'projectinfo',
         ...ELEMENT_CREATOR_TOOLS,
       ]);
       if (SIDEBAR_CLICK_TOOLS.has(tool)) {
@@ -1353,7 +1355,16 @@ export class Craftools_Editor extends HTMLElement {
       try {
         const { ProjectSerializer } = await import('../utils/ProjectSerializer.js');
         const importedTitle = await ProjectSerializer.importProject(projPagesWrapper, file);
-        
+
+        // Populate the "Informações do projeto" tab's in-memory state from
+        // the just-imported file's meta block (title/description/author/
+        // notes) -- mirrors craftools.ts's _loadSampleProject() doing the
+        // same for the sample-gallery import path.
+        if (ProjectSerializer.lastImportedMeta) {
+          const { ProjectMetaStore } = await import('../utils/ProjectMetaStore.js');
+          ProjectMetaStore.setFromMeta(ProjectSerializer.lastImportedMeta);
+        }
+
         // Re-attach page events to all new pages in projPagesWrapper
         this._reattachAllPageEvents(projPagesWrapper);
 

@@ -73,7 +73,26 @@ export const Translations: Record<string, TranslationDict> = {
             noToolsFound: "Nenhuma ferramenta encontrada",
             imageSlicer: "Fatiador de Imagem",
             curvedText: "Texto em Curva",
-            stamp: "Carimbo / Selo"
+            stamp: "Carimbo / Selo",
+            projectInfoTool: "Informações do projeto"
+        },
+        projectInfoTool: {
+            panelTitle: "Informações do projeto",
+            fieldTitle: "Nome do projeto",
+            fieldTitlePlaceholder: "Digite o nome do projeto",
+            fieldThumbnail: "Thumbnail",
+            fieldThumbnailUpload: "Alterar imagem",
+            fieldThumbnailClear: "Remover e usar automática",
+            fieldThumbnailHint: "Se não definida, uma miniatura é gerada automaticamente a partir da primeira página ao exportar.",
+            fieldDescription: "Descrição",
+            fieldDescriptionHint: "Preencha em um ou mais idiomas. O sistema exibe a descrição no idioma atual, com PT-BR como alternativa.",
+            fieldDescriptionPlaceholder: "Breve descrição do projeto...",
+            fieldAuthor: "Autor",
+            fieldAuthorPlaceholder: "Nome do autor",
+            fieldVersion: "Versão do sistema",
+            fieldVersionHint: "Preenchida automaticamente com a versão atual do CrafTools.",
+            fieldNotes: "Demais informações",
+            fieldNotesPlaceholder: "Observações, créditos, notas adicionais..."
         },
         mediaTypes: {
             paper: "Artes impressas",
@@ -250,7 +269,26 @@ export const Translations: Record<string, TranslationDict> = {
             noToolsFound: "No tools found",
             imageSlicer: "Image Slicer",
             curvedText: "Curved Text",
-            stamp: "Stamp / Seal"
+            stamp: "Stamp / Seal",
+            projectInfoTool: "Project Info"
+        },
+        projectInfoTool: {
+            panelTitle: "Project Info",
+            fieldTitle: "Project name",
+            fieldTitlePlaceholder: "Enter the project name",
+            fieldThumbnail: "Thumbnail",
+            fieldThumbnailUpload: "Change image",
+            fieldThumbnailClear: "Remove and use automatic",
+            fieldThumbnailHint: "If not set, a thumbnail is auto-generated from the first page on export.",
+            fieldDescription: "Description",
+            fieldDescriptionHint: "Fill in one or more languages. The description shown matches the current language, falling back to PT-BR.",
+            fieldDescriptionPlaceholder: "Short project description...",
+            fieldAuthor: "Author",
+            fieldAuthorPlaceholder: "Author name",
+            fieldVersion: "System version",
+            fieldVersionHint: "Automatically filled with the current CrafTools version.",
+            fieldNotes: "Other information",
+            fieldNotesPlaceholder: "Notes, credits, additional info..."
         },
         mediaTypes: {
             paper: "Printed Arts",
@@ -422,7 +460,26 @@ export const Translations: Record<string, TranslationDict> = {
             noToolsFound: "No se encontraron herramientas",
             imageSlicer: "Cortador de Imagen",
             curvedText: "Texto Curvo",
-            stamp: "Sello / Timbre"
+            stamp: "Sello / Timbre",
+            projectInfoTool: "Información del proyecto"
+        },
+        projectInfoTool: {
+            panelTitle: "Información del proyecto",
+            fieldTitle: "Nombre del proyecto",
+            fieldTitlePlaceholder: "Ingrese el nombre del proyecto",
+            fieldThumbnail: "Miniatura",
+            fieldThumbnailUpload: "Cambiar imagen",
+            fieldThumbnailClear: "Quitar y usar automática",
+            fieldThumbnailHint: "Si no se define, se genera automáticamente una miniatura a partir de la primera página al exportar.",
+            fieldDescription: "Descripción",
+            fieldDescriptionHint: "Complete en uno o más idiomas. El sistema muestra la descripción en el idioma actual, con PT-BR como alternativa.",
+            fieldDescriptionPlaceholder: "Breve descripción del proyecto...",
+            fieldAuthor: "Autor",
+            fieldAuthorPlaceholder: "Nombre del autor",
+            fieldVersion: "Versión del sistema",
+            fieldVersionHint: "Se completa automáticamente con la versión actual de CrafTools.",
+            fieldNotes: "Otra información",
+            fieldNotesPlaceholder: "Notas, créditos, información adicional..."
         },
         mediaTypes: {
             paper: "Artes impresas",
