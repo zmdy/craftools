@@ -21,6 +21,9 @@ interface SampleEntry {
   meta: ProjectMeta;
 }
 
+/** How many sample cards renderHome() shows before requiring "Ver mais". */
+const SAMPLES_PAGE_SIZE = 6;
+
 /**
  * Setup.ts — Initial screen shown when the app boots with no active/
  * recovered session: a home screen offering ready-made sample projects
@@ -42,6 +45,15 @@ export class Craftools_Setup extends HTMLElement {
   // production build mangles it, silently creating the wrong element.
   static readonly TAG_NAME = 'craftools-setup';
 
+  /** All samples successfully read so far (populated once by _loadSamples()). */
+  private _samples: SampleEntry[] = [];
+  /** False until _loadSamples() has resolved -- distinguishes "still fetching" from "fetched, zero readable samples" (both start with an empty _samples array). */
+  private _samplesLoaded = false;
+  /** Lowercased search box value; '' means "no filter". */
+  private _searchQuery = '';
+  /** How many of the (filtered) samples _renderSampleCards() currently shows. */
+  private _visibleCount = SAMPLES_PAGE_SIZE;
+
   constructor() { super(); }
 
   connectedCallback(): void {
@@ -58,6 +70,12 @@ export class Craftools_Setup extends HTMLElement {
    */
   renderHome(): void {
     const sampleUrls = Object.values(SAMPLE_PROJECT_URLS);
+    // Fresh entry into the home screen (first load, language switch, or
+    // "Voltar" from the media-type wizard) always starts from a clean
+    // slate -- an in-progress search/pagination state from a PRIOR visit
+    // shouldn't silently survive a re-render the user didn't ask to filter.
+    this._searchQuery   = '';
+    this._visibleCount  = SAMPLES_PAGE_SIZE;
 
     this.innerHTML = `
     <div class="craftools-app" style="padding: 40px 20px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
@@ -71,15 +89,28 @@ export class Craftools_Setup extends HTMLElement {
         <div style="background: var(--bg-shell); padding: 40px 20px; border-radius: 16px; box-shadow: var(--shadow-xl); width: 100%; max-width: 960px; text-align: center; margin: auto;">
             <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; font-family: 'DM Serif Display', serif;">${I18n.t('setup.title')}</h2>
             <p style="color: var(--text-secondary); font-size: 14px;">${I18n.t('setup.samplesSubtitle')}</p>
+            ${sampleUrls.length ? `
+            <div style="position: relative; max-width: 360px; margin: 20px auto 0;">
+                <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted); pointer-events: none;">search</span>
+                <input type="text" id="sample-search-input" placeholder="${I18n.t('setup.searchPlaceholder')}" style="width: 100%; padding: 9px 12px 9px 34px; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 13px; box-sizing: border-box;">
+            </div>` : ''}
             <div id="samples-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">
                 ${sampleUrls.length ? `<p id="samples-loading" style="grid-column: 1 / -1; color: var(--text-muted); font-size: 12px;">${I18n.t('setup.loadingSamples')}</p>` : ''}
             </div>
+            <div id="samples-load-more-wrap" style="margin-top: 18px;"></div>
         </div>
     </div>
     <style>
         .media-btn:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: var(--shadow-lg) !important; }
         .sample-thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center; }
         .sample-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        #sample-search-input:focus { outline: none; border-color: var(--accent); }
+        .samples-load-more-btn {
+            padding: 9px 20px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--bg-input); color: var(--text-primary); font-family: 'DM Sans', sans-serif;
+            font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+        }
+        .samples-load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
     </style>
     `;
 
@@ -89,43 +120,30 @@ export class Craftools_Setup extends HTMLElement {
         this.renderHome();
       });
 
-    this._renderCreateNewTile();
+    const searchInput = this.querySelector<HTMLInputElement>('#sample-search-input');
+    searchInput?.addEventListener('input', () => {
+      this._searchQuery  = searchInput.value.trim().toLowerCase();
+      this._visibleCount = SAMPLES_PAGE_SIZE; // a new search always restarts pagination
+      this._renderSampleCards();
+    });
+
+    this._renderSampleCards();
 
     if (sampleUrls.length) {
       this._loadSamples(sampleUrls);
     }
   }
 
-  /** Appends the trailing "Criar projeto novo" tile to #samples-grid. */
-  private _renderCreateNewTile(): void {
-    const grid = this.querySelector('#samples-grid');
-    if (!grid) return;
-
-    const tile = document.createElement('a');
-    tile.href = '#';
-    tile.className = 'media-btn create-new-project-btn';
-    tile.style.cssText = 'background: var(--bg-panel); border: 1.5px dashed var(--border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow); justify-content: center;';
-    tile.innerHTML = `
-      <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent);">add_circle</span>
-      <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${I18n.t('setup.createNew')}</h3>
-      <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${I18n.t('setup.createNewDesc')}</p>
-    `;
-    tile.addEventListener('click', (e: Event) => {
-      e.preventDefault();
-      this.renderMediaTypes();
-    });
-    grid.appendChild(tile);
-  }
-
   /**
    * Fetches + decompresses each sample's `meta` block (title, description,
-   * thumbnail) in parallel via ProjectSerializer.readMeta(), then renders
-   * one card per successfully-read sample, inserted before the "Criar
-   * projeto novo" tile. Kept as a dynamic import (like every other
-   * heavy/optional module in this codebase, e.g. ExportTool.ts's export
-   * actions) so the gzip/crypto decompression path never loads for users
-   * who never see a sample (assets/samples/ empty) or go straight to
-   * "Criar projeto novo".
+   * thumbnail) in parallel via ProjectSerializer.readMeta(), stores the
+   * successful ones on `this._samples`, then re-renders the grid. Kept as a
+   * dynamic import (like every other heavy/optional module in this
+   * codebase, e.g. ExportTool.ts's export actions) so the gzip/crypto
+   * decompression path never loads for users who never see a sample
+   * (assets/samples/ empty) or go straight to "Criar projeto novo". Each
+   * sample is read independently (try/catch per URL) so one corrupted/
+   * unreadable file can't blank out the others.
    */
   private async _loadSamples(urls: string[]): Promise<void> {
     const { ProjectSerializer } = await import('../utils/ProjectSerializer.js');
@@ -143,41 +161,108 @@ export class Craftools_Setup extends HTMLElement {
       }
     }));
 
+    if (!this.querySelector('#samples-grid')) return; // user already navigated away (e.g. clicked "Criar projeto novo")
+
+    this._samples = results.filter((s): s is SampleEntry => s !== null);
+    this._samplesLoaded = true;
+    this._renderSampleCards();
+  }
+
+  /**
+   * Rebuilds #samples-grid + the "Ver mais" button from current state
+   * (`this._samples`, `this._searchQuery`, `this._visibleCount`). Cheap
+   * enough to fully re-render on every keystroke/click rather than
+   * diffing -- at most a couple dozen sample cards in practice, and this
+   * only ever runs from user input (typing in the search box, clicking
+   * "Ver mais"), never on a timer/animation frame.
+   *
+   * The "Criar projeto novo" tile is NOT part of the paginated/filterable
+   * set -- it's always rendered last in the grid regardless of search text
+   * or how many sample cards are currently visible, so it's never more than
+   * one click away.
+   */
+  private _renderSampleCards(): void {
     const grid = this.querySelector('#samples-grid');
-    if (!grid) return; // user already navigated away (e.g. clicked "Criar projeto novo")
+    const loadMoreWrap = this.querySelector('#samples-load-more-wrap');
+    if (!grid) return;
 
-    this.querySelector('#samples-loading')?.remove();
+    const q = this._searchQuery;
+    const filtered = q
+      ? this._samples.filter(s =>
+          s.meta.title.toLowerCase().includes(q) ||
+          (s.meta.description ?? '').toLowerCase().includes(q))
+      : this._samples;
 
-    const samples = results.filter((s): s is SampleEntry => s !== null);
-    // Insert sample cards before the trailing "Criar projeto novo" tile so
-    // it always stays last, regardless of how many samples resolved.
-    const createNewTile = grid.querySelector('.create-new-project-btn');
+    const visible = filtered.slice(0, this._visibleCount);
 
-    samples.forEach(sample => {
-      const card = document.createElement('a');
-      card.href = '#';
-      card.className = 'media-btn';
-      card.style.cssText = 'background: var(--bg-panel); border: 1px solid var(--border); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow);';
-      card.innerHTML = `
-        <div class="sample-thumb">
-          ${sample.meta.thumbnail
-            ? `<img src="${sample.meta.thumbnail}" alt="">`
-            : `<span class="material-symbols-outlined" style="font-size: 32px; color: var(--text-muted);">image</span>`}
-        </div>
-        <h3 style="margin: 0; font-size: 15px; font-weight: 600;">${Craftools_Setup._escapeHtml(sample.meta.title)}</h3>
-        ${sample.meta.description ? `<p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: left;">${Craftools_Setup._escapeHtml(sample.meta.description)}</p>` : ''}
-      `;
-      card.addEventListener('click', (e: Event) => {
-        e.preventDefault();
-        this._loadSample(sample);
-      });
+    grid.innerHTML = '';
 
-      if (createNewTile) {
-        grid.insertBefore(card, createNewTile);
-      } else {
+    if (!this._samplesLoaded && Object.keys(SAMPLE_PROJECT_URLS).length) {
+      // Still loading (first call, before _loadSamples() resolves).
+      grid.innerHTML = `<p id="samples-loading" style="grid-column: 1 / -1; color: var(--text-muted); font-size: 12px;">${I18n.t('setup.loadingSamples')}</p>`;
+    } else if (q && this._samples.length && !filtered.length) {
+      // Only shown when there IS a search term filtering out otherwise-
+      // present samples -- if every sample simply failed to load (or none
+      // are bundled at all), there's no search to blame, so this stays
+      // silent and just the "Criar projeto novo" tile below shows.
+      grid.innerHTML = `<p style="grid-column: 1 / -1; color: var(--text-muted); font-size: 12px;">${I18n.t('setup.noSamplesFound')}</p>`;
+    } else {
+      visible.forEach(sample => {
+        const card = document.createElement('a');
+        card.href = '#';
+        card.className = 'media-btn';
+        card.style.cssText = 'background: var(--bg-panel); border: 1px solid var(--border); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow);';
+        card.innerHTML = `
+          <div class="sample-thumb">
+            ${sample.meta.thumbnail
+              ? `<img src="${sample.meta.thumbnail}" alt="">`
+              : `<span class="material-symbols-outlined" style="font-size: 32px; color: var(--text-muted);">image</span>`}
+          </div>
+          <h3 style="margin: 0; font-size: 15px; font-weight: 600;">${Craftools_Setup._escapeHtml(sample.meta.title)}</h3>
+          ${sample.meta.description ? `<p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: left;">${Craftools_Setup._escapeHtml(sample.meta.description)}</p>` : ''}
+        `;
+        card.addEventListener('click', (e: Event) => {
+          e.preventDefault();
+          this._loadSample(sample);
+        });
         grid.appendChild(card);
-      }
+      });
+    }
+
+    // "Criar projeto novo" -- always last, always present, never paginated.
+    const tile = document.createElement('a');
+    tile.href = '#';
+    tile.className = 'media-btn create-new-project-btn';
+    tile.style.cssText = 'background: var(--bg-panel); border: 1.5px dashed var(--border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: var(--text-primary); transition: all 0.2s; box-shadow: var(--shadow); justify-content: center;';
+    tile.innerHTML = `
+      <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent);">add_circle</span>
+      <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${I18n.t('setup.createNew')}</h3>
+      <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center;">${I18n.t('setup.createNewDesc')}</p>
+    `;
+    tile.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      this.renderMediaTypes();
     });
+    grid.appendChild(tile);
+
+    // "Ver mais" -- lives OUTSIDE the grid (its own row below), so it never
+    // becomes a grid cell competing for a column with the sample/create-new
+    // tiles. Reveals SAMPLES_PAGE_SIZE more filtered samples per click;
+    // removed once every filtered sample is visible.
+    if (loadMoreWrap) {
+      loadMoreWrap.innerHTML = '';
+      if (filtered.length > visible.length) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'samples-load-more-btn';
+        btn.textContent = I18n.t('setup.loadMore');
+        btn.addEventListener('click', () => {
+          this._visibleCount += SAMPLES_PAGE_SIZE;
+          this._renderSampleCards();
+        });
+        loadMoreWrap.appendChild(btn);
+      }
+    }
   }
 
   /**
