@@ -8,6 +8,14 @@ export interface ProjectAsset {
 
 export interface ProjectMeta {
   title: string;
+  /**
+   * Optional short blurb shown under the title/thumbnail in the sample-
+   * projects gallery on the setup screen (Setup.ts's renderHome()). Not
+   * collected from regular users on export (ExportTool.ts's "project" action
+   * only prompts for a title) -- populated by hand for the bundled
+   * assets/samples/*.craftools files, and left undefined for everything else.
+   */
+  description?: string;
   created_at: string;
   updated_at: string;
   author: string;
@@ -69,7 +77,7 @@ export class ProjectSerializer {
   /**
    * Serializes the pages and bundles all base64 images into a single .craftools Gzip Blob.
    */
-  static async exportProject(pagesWrapper: HTMLElement, title: string): Promise<Blob> {
+  static async exportProject(pagesWrapper: HTMLElement, title: string, description?: string): Promise<Blob> {
     // 1. Serialize editor state
     const editorState = StateSerializer.serialize(pagesWrapper);
 
@@ -146,6 +154,7 @@ export class ProjectSerializer {
       mode: 'embedded',
       meta: {
         title: title || 'Sem título',
+        description: description || undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         author: 'local-user',
@@ -158,6 +167,24 @@ export class ProjectSerializer {
     // 6. Gzip compress the JSON string
     const finalJsonStr = JSON.stringify(container);
     return this._compress(finalJsonStr);
+  }
+
+  /**
+   * Reads just the `meta` block (title, description, thumbnail) of a
+   * .craftools Gzip Blob without touching the DOM or hydrating any page/
+   * asset data. Used by Setup.ts's sample-projects gallery to preview each
+   * bundled assets/samples/*.craftools file (thumbnail + description) before
+   * the user picks one to load -- at that point there's no #pages-wrapper
+   * yet (the editor screen hasn't been mounted), so importProject() (which
+   * requires one) can't be used here.
+   */
+  static async readMeta(fileBlob: Blob): Promise<ProjectMeta> {
+    const decompressedStr = await this._decompress(fileBlob);
+    const container = JSON.parse(decompressedStr) as ProjectContainer;
+    if (container.version !== 1) {
+      throw new Error(`Unsupported project version: ${container.version}`);
+    }
+    return container.meta;
   }
 
   /**

@@ -108,17 +108,40 @@ export class Craftools {
     this._renderComponent();
 
     // Navigation events
+    //
+    // Two distinct shapes share this one event (both dispatched by
+    // Setup.ts): the size-wizard's `{ media, size }` (renderSizes()'s
+    // "media-btn" click) and the sample-projects gallery's `{ sampleBlob }`
+    // (renderHome()'s _loadSample()) -- a sample has no media/size
+    // selection of its own (every page's real size lives inside its own
+    // .craftools content, restored by ProjectSerializer.importProject()
+    // below), so `sampleBlob` and `media`/`size` are mutually exclusive in
+    // practice, but the handler doesn't assume that: it always does the
+    // common screen-swap first, then layers the sample import on top if
+    // present.
     this.wrapper.addEventListener('craftools-start', (e: Event) => {
       const detail = (e as CustomEvent).detail as {
-        media: { sizes: Array<{ name: string; size: string; sizeUnit: string }> };
-        size: unknown;
+        media?: { sizes: Array<{ name: string; size: string; sizeUnit: string }> };
+        size?: unknown;
+        sampleBlob?: Blob;
       };
       this.activeMedia = detail.media;
       this.activeSize  = detail.size as any;
-      (window as Window & { craftoolsSize?: unknown }).craftoolsSize = detail.size as any;
+      (window as Window & { craftoolsSize?: unknown }).craftoolsSize = detail.sampleBlob
+        // Same fallback _checkSessionRecovery() below uses for a restored
+        // session with no media/size context of its own -- Editor.render()
+        // only reads `.size`/`.sizeUnit` to size the transient placeholder
+        // page it creates before ProjectSerializer.importProject() below
+        // reconciles the real, sample-provided page sizes over it.
+        ? ({ size: '*', sizeUnit: 'px', key: 'sample' } as any)
+        : (detail.size as any);
       this.screen = Craftools_Editor;
       HistoryManager.clear();
       this._renderComponent();
+
+      if (detail.sampleBlob) {
+        this._loadSampleProject(detail.sampleBlob);
+      }
     });
 
     this._checkSessionRecovery();
@@ -171,6 +194,125 @@ export class Craftools {
     // instead, which minification does not touch (see Setup.ts/Editor.ts).
     const el = document.createElement(this.screen.TAG_NAME);
     this._setWrapperContent(el);
+  }
+
+  // ── Private — sample-project loading ─────────────────────────────────────────
+
+  /**
+   * Hydrates a freshly-mounted Craftools_Editor with a sample project
+   * (Setup.ts's renderHome() gallery). Mirrors _checkSessionRecovery()'s own
+   * "restore" branch below and Editor.ts's `#project-import-file` handler
+   * (its own manual "Importar Projeto" flow) -- same
+   * ProjectSerializer.importProject() call, same _reattachAllPageEvents()
+   * + HistoryManager.snapshot() follow-up, just triggered from the setup
+   * screen instead of an in-editor file picker.
+   *
+   * Blocks interaction (see _showSampleLoadingOverlay()) for the whole
+   * import instead of just rendering the editor and letting
+   * ProjectSerializer.importProject() run in the background: the Editor
+   * mounts with a transient 100%-sized placeholder page (the same '*'
+   * fallback _checkSessionRecovery()'s "restore" button uses) until the
+   * real, sample-provided page is reconciled in -- a user who clicked
+   * "Nova Página" (PageTool.addNewPage(), which clones whatever the CURRENT
+   * last page is) during that window got a clone of the still-placeholder
+   * page instead of the real one, which -- being percentage-sized inside a
+   * flex column with no fixed height of its own -- visually collapses to
+   * no defined size, and (being effectively 0×0) also swallows clicks
+   * meant to open Page Settings/the page-nav footer strip.
+   */
+  private _loadSampleProject(blob: Blob): void {
+    const overlay = this._showSampleLoadingOverlay();
+
+    // _renderComponent() above synchronously appends <craftools-editor> to
+    // the DOM, and its connectedCallback()/render() build #pages-wrapper
+    // synchronously too -- but the same defensive setTimeout()
+    // _checkSessionRecovery()'s "restore" button uses is kept here rather
+    // than assumed, so a future change to that render path (e.g. an async
+    // step) can't silently turn this into a no-op.
+    setTimeout(async () => {
+      const pagesWrapper = document.querySelector<HTMLElement>('#pages-wrapper');
+      if (!pagesWrapper) { overlay.remove(); return; }
+
+      try {
+        const { ProjectSerializer } = await import('./craftools/utils/ProjectSerializer.js');
+        await ProjectSerializer.importProject(pagesWrapper, blob);
+
+        const editor = document.querySelector('craftools-editor') as HTMLElement & {
+          _reattachAllPageEvents?: (w: HTMLElement) => void;
+        };
+        editor?._reattachAllPageEvents?.(pagesWrapper);
+
+        // Sync window.craftoolsSize to the sample's REAL first-page size,
+        // read straight off the just-reconciled DOM the same way
+        // PageTool.openPageSettings() itself parses "current size"
+        // (`pageEl.style.width` / `.minHeight`) -- SessionManager.
+        // restoreSession() does the equivalent for a restored autosave via
+        // its own persisted `sizeConfig`. Without this, craftoolsSize would
+        // stay pinned at the '*' placeholder forever even after real,
+        // correctly-sized content replaced the placeholder page, leaving
+        // anything that reads it later (e.g. a future page-add/size-preset
+        // path) looking at stale data.
+        const firstPage = pagesWrapper.querySelector<HTMLElement>('.craftools-page');
+        if (firstPage) {
+          const widthRaw  = firstPage.style.width || '';
+          const heightRaw = firstPage.style.minHeight || '';
+          const unitMatch = widthRaw.match(/[a-z%]+$/i);
+          const unit = unitMatch ? unitMatch[0] : 'px';
+          const w = parseFloat(widthRaw);
+          const h = parseFloat(heightRaw);
+          if (!Number.isNaN(w) && !Number.isNaN(h)) {
+            (window as Window & { craftoolsSize?: unknown }).craftoolsSize =
+              { size: `${w},${h}`, sizeUnit: unit, key: 'sample' } as any;
+          }
+        }
+
+        HistoryManager.snapshot(pagesWrapper);
+        SessionManager.markDirty();
+      } catch (err) {
+        console.error('[Craftools] Failed to load sample project:', err);
+        const { Notify } = await import('./craftools/utils/Notify.js');
+        Notify.toast(I18n.t('setup.sampleLoadError'), 'error');
+      } finally {
+        overlay.remove();
+      }
+    }, 150);
+  }
+
+  /**
+   * Full-viewport, non-dismissable overlay shown for the duration of
+   * _loadSampleProject()'s import -- see that method's header comment for
+   * why blocking interaction (not just showing a spinner alongside a
+   * clickable editor) matters here. Appended to `document.body` (like
+   * _checkSessionRecovery()'s overlay below) rather than `this.wrapper`, so
+   * it survives `_setWrapperContent()` clearing/replacing the wrapper's
+   * contents on the screen swap that already happened just before this is
+   * called.
+   */
+  private _showSampleLoadingOverlay(): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.id = 'craftools-sample-loading-overlay';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px;
+      font-family: 'DM Sans', sans-serif;
+    `;
+    overlay.innerHTML = `
+      <style>
+        @keyframes ct-sample-spin { to { transform: rotate(360deg); } }
+        #craftools-sample-loading-overlay .ct-spinner {
+          width: 40px; height: 40px; border-radius: 50%;
+          border: 3px solid rgba(255,255,255,0.25);
+          border-top-color: #f97316;
+          animation: ct-sample-spin 0.7s linear infinite;
+        }
+      </style>
+      <div class="ct-spinner"></div>
+      <p style="color:#fff; font-size:13px; margin:0;">${I18n.t('setup.loadingSample')}</p>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
   }
 
   // ── Private — session recovery ───────────────────────────────────────────────
