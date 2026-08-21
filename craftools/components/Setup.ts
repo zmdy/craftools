@@ -25,11 +25,11 @@ interface SampleEntry {
  * How many sample cards renderHome() shows before requiring "Ver mais".
  * Combined with the always-shown "Criar projeto novo" tile, this is what
  * fills out the initial 3-per-row grid (see #samples-grid's
- * grid-template-columns below): 4 sample cards + 1 "Criar projeto novo"
- * tile = 5 grid cells (rows of 3 + 2), plus the "Ver mais" button in its
- * own row underneath when there are more samples to reveal.
+ * grid-template-columns below): 5 sample cards + 1 "Criar projeto novo"
+ * tile = 6 grid cells (2 full rows of 3), plus the "Ver mais" button in
+ * its own row underneath when there are more samples to reveal.
  */
-const SAMPLES_PAGE_SIZE = 4;
+const SAMPLES_PAGE_SIZE = 5;
 
 /**
  * Setup.ts — Initial screen shown when the app boots with no active/
