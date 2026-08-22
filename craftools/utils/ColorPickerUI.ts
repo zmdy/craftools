@@ -27,6 +27,8 @@
 
 import { tr } from './i18nLabel';
 import './ColorPickerUI_Translations.js';
+import { generateHarmonies } from './ColorHarmony.js';
+import { UserPalettes, SYSTEM_PALETTES, type CustomPalette, type PaletteItem } from './UserPalettes.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -327,6 +329,123 @@ function gradientEditorHtml(g: GradientValue): string {
     </div>`;
 }
 
+// ── Palettes (suggestions + system + custom saved) ─────────────────────────────
+//
+// "Paletas": a collapsible section appended below every picker instance
+// (solid AND gradient mode, both allowGradient states) showing three groups:
+//  - Sugestões: harmony palettes (complementar/análoga/tríade/monocromática)
+//    generated live from `value.solid` via ColorHarmony.ts -- kept from the
+//    CURRENT solid even while in gradient mode, since that's the last solid
+//    the user actually picked and switching mode doesn't discard it (see
+//    normalizeValue()/repaint()'s mode-switch handling above).
+//  - Paletas do sistema: SYSTEM_PALETTES (UserPalettes.ts), curated, fixed.
+//  - Minhas paletas: UserPalettes.load(), user-saved, deletable.
+// Every swatch (solid or gradient) picks that value on click, same as the
+// preset swatches above. Saving a harmony group or the current value into a
+// brand-new custom palette goes through a small inline "name it" flow (see
+// pendingSaveHtml()) instead of a blocking prompt() dialog.
+
+function escAttr(val: string): string {
+  return val.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function paletteItemButtonHtml(item: PaletteItem, current: ColorPickerValue): string {
+  if (item.type === 'solid') {
+    const active = current.mode === 'solid' && swatchesEqual(current.solid, item.color);
+    return `<button type="button" class="ct-color-swatch-btn${active ? ' active' : ''}" data-action="pick-color" data-color="${item.color}" style="background:${item.color};" title="${item.color}"></button>`;
+  }
+  const active = current.mode === 'gradient' && gradientsEqual(current.gradient, item.gradient);
+  return `<button type="button" class="ct-gradient-swatch-btn${active ? ' active' : ''}" data-action="pick-palette-gradient" data-gradient="${escAttr(JSON.stringify(item.gradient))}" style="background:${cssFromGradient(item.gradient)};"></button>`;
+}
+
+function harmonySectionHtml(value: ColorPickerValue): string {
+  const groups = generateHarmonies(value.solid);
+  return groups.map(g => `
+    <div class="ct-palette-group">
+      <div class="ct-palette-group-head">
+        <span class="ct-sublabel">${tr(`colorPicker.${g.labelKey}`, g.kind)}</span>
+        <button type="button" class="ct-palette-icon-btn" data-action="save-group" data-kind="${g.kind}" title="${tr('colorPicker.palettesSaveGroup', 'Save this combination')}">
+          <span class="material-symbols-outlined">bookmark_add</span>
+        </button>
+      </div>
+      <div class="ct-color-palette">
+        ${g.colors.map(color => paletteItemButtonHtml({ type: 'solid', color }, value)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function paletteListHtml(palettes: CustomPalette[], value: ColorPickerValue, opts: { deletable: boolean }): string {
+  if (!palettes.length) {
+    return `<span style="font-size:11px; color:var(--text-muted); padding:2px 0;">${tr('colorPicker.palettesEmpty', 'No saved palettes yet')}</span>`;
+  }
+  return palettes.map(p => `
+    <div class="ct-palette-group">
+      <div class="ct-palette-group-head">
+        <span class="ct-sublabel">${p.name}</span>
+        ${opts.deletable ? `
+          <button type="button" class="ct-palette-icon-btn" data-action="delete-palette" data-id="${p._id}" title="${tr('colorPicker.palettesDelete', 'Delete palette')}">
+            <span class="material-symbols-outlined">delete</span>
+          </button>` : ''}
+      </div>
+      <div class="ct-color-palette">
+        ${p.items.map(item => paletteItemButtonHtml(item, value)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function pendingSaveHtml(pending: { items: PaletteItem[]; label: string } | null, value: ColorPickerValue): string {
+  if (!pending) return '';
+  return `
+    <div class="ct-palette-group ct-palette-pending-save">
+      <span class="ct-sublabel">${tr('colorPicker.palettesSaveAs', 'Save as new palette')}: ${pending.label}</span>
+      <div class="ct-color-palette">
+        ${pending.items.map(item => paletteItemButtonHtml(item, value)).join('')}
+      </div>
+      <div class="ct-field-row" style="gap:6px; margin-top:2px;">
+        <input type="text" class="craftools-input ct-palette-save-name-input" placeholder="${tr('colorPicker.palettesNamePlaceholder', 'Palette name')}" style="flex:1;">
+        <button type="button" class="craftools-pill" data-action="confirm-save-palette">${tr('colorPicker.palettesSaveConfirm', 'Save')}</button>
+        <button type="button" class="craftools-pill" data-action="cancel-save-palette">${tr('colorPicker.palettesCancel', 'Cancel')}</button>
+      </div>
+    </div>
+  `;
+}
+
+function palettesSectionHtml(
+  value: ColorPickerValue,
+  expanded: boolean,
+  pending: { items: PaletteItem[]; label: string } | null,
+): string {
+  const body = expanded ? `
+    <div class="ct-palettes-body">
+      ${pendingSaveHtml(pending, value)}
+      <span class="ct-sublabel">${tr('colorPicker.palettesSuggestions', 'Suggestions')}</span>
+      ${harmonySectionHtml(value)}
+      <span class="ct-sublabel">${tr('colorPicker.palettesSystem', 'System palettes')}</span>
+      ${paletteListHtml(SYSTEM_PALETTES, value, { deletable: false })}
+      <div class="ct-palette-group-head" style="margin-top:4px;">
+        <span class="ct-sublabel">${tr('colorPicker.palettesUser', 'My palettes')}</span>
+        <button type="button" class="ct-palette-icon-btn" data-action="save-current" title="${tr('colorPicker.palettesSaveCurrent', 'Save current color/gradient as a new palette')}">
+          <span class="material-symbols-outlined">add</span>
+        </button>
+      </div>
+      ${paletteListHtml(UserPalettes.load(), value, { deletable: true })}
+    </div>
+  ` : '';
+
+  return `
+    <div class="ct-palettes-section">
+      <button type="button" class="ct-palettes-toggle${expanded ? ' expanded' : ''}" data-action="toggle-palettes">
+        <span class="material-symbols-outlined">palette</span>
+        ${tr('colorPicker.palettesToggle', 'Palettes')}
+        <span class="material-symbols-outlined ct-palettes-chevron">expand_more</span>
+      </button>
+      ${body}
+    </div>
+  `;
+}
+
 function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: boolean, defaultSolid?: string): void {
   const modeHtml = allowGradient ? `
     <div class="ct-field-row" style="gap:4px; margin-bottom:8px;">
@@ -338,7 +457,10 @@ function paint(container: HTMLElement, value: ColorPickerValue, allowGradient: b
     ? gradientPaletteHtml(value) + gradientEditorHtml(value.gradient)
     : paletteHtml(value, defaultSolid);
 
-  container.innerHTML = `<div class="ct-color-picker">${modeHtml}${bodyHtml}</div>`;
+  const c = container as BoundContainer;
+  const palettesHtml = palettesSectionHtml(value, c._ctPalettesExpanded ?? false, c._ctPendingSave ?? null);
+
+  container.innerHTML = `<div class="ct-color-picker">${modeHtml}${bodyHtml}${palettesHtml}</div>`;
 }
 
 interface BoundContainer extends HTMLElement {
@@ -347,6 +469,10 @@ interface BoundContainer extends HTMLElement {
   _ctColorAllowGradient?: boolean;
   _ctColorDefaultSolid?: string;
   _ctColorBound?: boolean;
+  /** "Paletas" collapsible section state -- see palettesSectionHtml(). */
+  _ctPalettesExpanded?: boolean;
+  /** Pending "save as new palette" inline flow -- see pendingSaveHtml(). */
+  _ctPendingSave?: { items: PaletteItem[]; label: string } | null;
 }
 
 function repaint(container: BoundContainer, next: ColorPickerValue, opts: { silent?: boolean } = {}): void {
@@ -385,6 +511,49 @@ function bindDelegatedEvents(container: BoundContainer): void {
     } else if (action === 'add-stop') {
       const stops = [...current.gradient.stops, '#ffffff'];
       repaint(container, { ...current, gradient: { ...current.gradient, stops } });
+
+    // ── Palettes section ────────────────────────────────────────────────
+    } else if (action === 'pick-palette-gradient') {
+      try {
+        const gradient = JSON.parse(target.dataset.gradient!) as GradientValue;
+        repaint(container, { ...current, mode: 'gradient', gradient });
+      } catch { /* malformed data-gradient -- ignore the click */ }
+    } else if (action === 'toggle-palettes') {
+      container._ctPalettesExpanded = !container._ctPalettesExpanded;
+      repaint(container, current, { silent: true });
+    } else if (action === 'save-group') {
+      const kind = target.dataset.kind;
+      const group = generateHarmonies(current.solid).find(g => g.kind === kind);
+      if (group) {
+        container._ctPendingSave = {
+          items: group.colors.map((color): PaletteItem => ({ type: 'solid', color })),
+          label: tr(`colorPicker.${group.labelKey}`, group.kind),
+        };
+        repaint(container, current, { silent: true });
+      }
+    } else if (action === 'save-current') {
+      container._ctPendingSave = {
+        items: [current.mode === 'gradient'
+          ? { type: 'gradient', gradient: current.gradient }
+          : { type: 'solid', color: current.solid }],
+        label: tr('colorPicker.palettesCurrentValue', 'Current color'),
+      };
+      repaint(container, current, { silent: true });
+    } else if (action === 'confirm-save-palette') {
+      const pending = container._ctPendingSave;
+      if (pending) {
+        const nameInput = container.querySelector<HTMLInputElement>('.ct-palette-save-name-input');
+        const name = (nameInput?.value ?? '').trim() || tr('colorPicker.palettesDefaultName', 'My palette');
+        UserPalettes.create(name, pending.items);
+        container._ctPendingSave = null;
+        repaint(container, current, { silent: true });
+      }
+    } else if (action === 'cancel-save-palette') {
+      container._ctPendingSave = null;
+      repaint(container, current, { silent: true });
+    } else if (action === 'delete-palette') {
+      UserPalettes.delete(target.dataset.id!);
+      repaint(container, current, { silent: true });
     }
   });
 

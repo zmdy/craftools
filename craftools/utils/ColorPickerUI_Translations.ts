@@ -9,7 +9,28 @@ I18n.addTranslations('colorPicker', {
         radial: "Radial",
         colors: "Cores",
         addColor: "Adicionar cor",
-        removeColor: "Remover cor"
+        removeColor: "Remover cor",
+
+        // Paletas (sugestões + sistema + salvas pelo usuário) -- ColorPickerUI.ts's palettesSectionHtml()
+        palettesToggle: "Paletas",
+        palettesSuggestions: "Sugestões",
+        palettesSystem: "Paletas do sistema",
+        palettesUser: "Minhas paletas",
+        palettesEmpty: "Nenhuma paleta salva ainda",
+        palettesSaveCurrent: "Salvar cor/gradiente atual como nova paleta",
+        palettesSaveGroup: "Salvar esta combinação",
+        palettesSaveAs: "Salvar como nova paleta",
+        palettesNamePlaceholder: "Nome da paleta",
+        palettesSaveConfirm: "Salvar",
+        palettesCancel: "Cancelar",
+        palettesDelete: "Excluir paleta",
+        palettesDefaultName: "Minha paleta",
+        palettesCurrentValue: "Cor atual",
+
+        harmonyComplementary: "Complementar",
+        harmonyAnalogous: "Análoga",
+        harmonyTriadic: "Tríade",
+        harmonyMonochromatic: "Monocromática"
     },
     "en": {
         color: "Color",
@@ -19,7 +40,27 @@ I18n.addTranslations('colorPicker', {
         radial: "Radial",
         colors: "Colors",
         addColor: "Add color",
-        removeColor: "Remove color"
+        removeColor: "Remove color",
+
+        palettesToggle: "Palettes",
+        palettesSuggestions: "Suggestions",
+        palettesSystem: "System palettes",
+        palettesUser: "My palettes",
+        palettesEmpty: "No saved palettes yet",
+        palettesSaveCurrent: "Save current color/gradient as a new palette",
+        palettesSaveGroup: "Save this combination",
+        palettesSaveAs: "Save as new palette",
+        palettesNamePlaceholder: "Palette name",
+        palettesSaveConfirm: "Save",
+        palettesCancel: "Cancel",
+        palettesDelete: "Delete palette",
+        palettesDefaultName: "My palette",
+        palettesCurrentValue: "Current color",
+
+        harmonyComplementary: "Complementary",
+        harmonyAnalogous: "Analogous",
+        harmonyTriadic: "Triadic",
+        harmonyMonochromatic: "Monochromatic"
     },
     "es": {
         color: "Color",
@@ -29,6 +70,26 @@ I18n.addTranslations('colorPicker', {
         radial: "Radial",
         colors: "Colores",
         addColor: "Añadir color",
-        removeColor: "Eliminar color"
+        removeColor: "Eliminar color",
+
+        palettesToggle: "Paletas",
+        palettesSuggestions: "Sugerencias",
+        palettesSystem: "Paletas del sistema",
+        palettesUser: "Mis paletas",
+        palettesEmpty: "Aún no hay paletas guardadas",
+        palettesSaveCurrent: "Guardar color/degradado actual como nueva paleta",
+        palettesSaveGroup: "Guardar esta combinación",
+        palettesSaveAs: "Guardar como nueva paleta",
+        palettesNamePlaceholder: "Nombre de la paleta",
+        palettesSaveConfirm: "Guardar",
+        palettesCancel: "Cancelar",
+        palettesDelete: "Eliminar paleta",
+        palettesDefaultName: "Mi paleta",
+        palettesCurrentValue: "Color actual",
+
+        harmonyComplementary: "Complementario",
+        harmonyAnalogous: "Análogo",
+        harmonyTriadic: "Tríada",
+        harmonyMonochromatic: "Monocromático"
     }
 });

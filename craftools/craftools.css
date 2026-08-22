@@ -359,6 +359,38 @@ ct-font-select.craftools-select { display:block; width:100%; }
 }
 .ct-grad-stop-remove .material-symbols-outlined { font-size:10px; }
 
+/* "Paletas" collapsible section (suggestions + system + user-saved) --
+   utils/ColorPickerUI.ts's palettesSectionHtml(), appended below every
+   color/gradient picker instance in the app. */
+.ct-palettes-section { margin-top:8px; border-top:1px solid var(--border); padding-top:6px; }
+.ct-palettes-toggle {
+  display:flex; align-items:center; gap:6px; width:100%; padding:4px 2px;
+  border:none; background:transparent; color:var(--text-secondary);
+  font-size:11px; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer;
+}
+.ct-palettes-toggle:hover { color:var(--accent); }
+.ct-palettes-toggle .material-symbols-outlined:first-child { font-size:14px; }
+.ct-palettes-chevron { margin-left:auto; font-size:16px !important; transition:transform .15s; }
+.ct-palettes-toggle.expanded .ct-palettes-chevron { transform:rotate(180deg); }
+.ct-palettes-body { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+.ct-palettes-body .ct-sublabel { padding:4px 0 0; background:transparent; }
+.ct-palette-group { display:flex; flex-direction:column; gap:4px; margin-bottom:2px; }
+.ct-palette-group-head { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.ct-palette-icon-btn {
+  display:flex; align-items:center; justify-content:center; width:20px; height:20px;
+  border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+  border-radius:5px; padding:0; flex-shrink:0; transition:background .12s, color .12s;
+}
+.ct-palette-icon-btn:hover { background:var(--bg-input); color:var(--accent); }
+.ct-palette-icon-btn .material-symbols-outlined { font-size:15px; }
+.ct-palette-pending-save {
+  padding:8px; border-radius:8px; background:var(--bg-sidebar); border:1px dashed var(--accent);
+}
+
+/* Extract-palette-from-image panel (utils/ImagePaletteExtractor.ts) --
+   shared by ImageTool.ts and CellPanel.ts's album image mode. */
+.ct-extract-palette { gap:6px; }
+
 /* Pill buttons */
 .craftools-pill { padding:3px 8px; border-radius:99px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .12s; white-space:nowrap; }
 .craftools-pill:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-subtle); }

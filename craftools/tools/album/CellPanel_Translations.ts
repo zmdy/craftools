@@ -21,7 +21,8 @@ I18n.addTranslations('cellPanel', {
         positioning: "Posicionamento",
         fitCover: "Cobrir",
         fitContain: "Conter",
-        fitAuto: "Auto"
+        fitAuto: "Auto",
+        extractPalette: "Extrair paleta da imagem"
     },
     "en": {
         editCell: "Edit Cell",
@@ -43,7 +44,8 @@ I18n.addTranslations('cellPanel', {
         positioning: "Positioning",
         fitCover: "Cover",
         fitContain: "Contain",
-        fitAuto: "Auto"
+        fitAuto: "Auto",
+        extractPalette: "Extract palette from image"
     },
     "es": {
         editCell: "Editar Celda",
@@ -65,6 +67,7 @@ I18n.addTranslations('cellPanel', {
         positioning: "Posicionamiento",
         fitCover: "Cubrir",
         fitContain: "Contener",
-        fitAuto: "Auto"
+        fitAuto: "Auto",
+        extractPalette: "Extraer paleta de la imagen"
     }
 });

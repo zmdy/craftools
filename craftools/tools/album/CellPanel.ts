@@ -8,6 +8,7 @@ import { CellBackground, type CellState } from './CellBackground.js';
 import { ApiPicker }   from './ApiPicker.js';
 import { I18n }        from '../../settings/Translations.js';
 import { ImageTool }   from '../image/ImageTool.js';
+import { renderExtractPalettePanel } from '../../utils/ImagePaletteExtractor.js';
 import './CellPanel_Translations.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -536,6 +537,17 @@ function renderImageMode(
     });
     wrap.appendChild(opacWrap);
   }
+
+  // ── Extrair paleta da imagem ──────────────────────────────────────────────
+  // Same panel/module ImageTool.ts's "Paleta da Imagem" section uses --
+  // reads `selectedUrl` fresh via the getter each time it's clicked, so it
+  // always analyzes whatever photo is currently chosen (upload/API/switch),
+  // not whatever was current when this panel was first built.
+  const extractLabel = document.createElement('label');
+  extractLabel.style.cssText = 'font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-top:4px;';
+  extractLabel.textContent = I18n.t('cellPanel.extractPalette');
+  wrap.appendChild(extractLabel);
+  wrap.appendChild(renderExtractPalettePanel(() => selectedUrl || null));
 
   container.appendChild(wrap);
 }

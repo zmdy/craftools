@@ -16,6 +16,7 @@ import { ImageTransform } from './ImageTransform.js';
 import { ImageEnhancer } from '../../utils/ImageEnhancer.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import * as ImageQuality from '../../utils/ImageQuality.js';
+import { renderExtractPalettePanel } from '../../utils/ImagePaletteExtractor.js';
 import type { PropertySchema } from '../../types/PropertySchema';
 
 // Filter keys that map to CSS filter functions
@@ -379,6 +380,27 @@ export class ImageTool extends BaseTool {
         icon: 'photo_camera',
         fields: [
           { type: 'image-upload', key: 'src', label: 'Switch photo', i18nKey: 'imageTool.switchPhoto' },
+        ],
+      },
+      {
+        // "Extrair paleta da imagem" -- analyzes the current photo's pixels
+        // (ImagePaletteExtractor.ts, client-side canvas sampling, no
+        // network call) and lets the user save any subset of the result as
+        // a brand-new entry in "Minhas paletas", which then shows up in
+        // every color picker in the app (ColorPickerUI.ts's "Paletas"
+        // section) -- not just this tool.
+        section: 'Paleta da Imagem',
+        i18nKey: 'imageTool.sectionPalette',
+        icon: 'palette',
+        defaultOpen: false,
+        fields: [
+          {
+            type: 'custom',
+            key: 'extractPalette',
+            label: '',
+            render: (element: HTMLElement) =>
+              renderExtractPalettePanel(() => getMeta(element).src || null),
+          },
         ],
       },
       {
