@@ -268,7 +268,15 @@ export class SnapEngine {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Aligns the element to the page.
+   * Aligns the element to the page -- to the bleed boundary (see
+   * _getBleedInsetPx()) instead of the page's own trim edge when a bleed
+   * is configured, same rationale as _gatherTargets()'s live-drag snap
+   * targets above: it lines the element up with the guide the user
+   * actually sees on canvas, not the page's physical border. Every
+   * "align on page" control across every tool (BaseTool.ts's shared
+   * pageAlign property, CommonProperties.ts's compact align bar, etc.)
+   * goes through this one method, so this single change covers all of
+   * them.
    * @param element   - The craftools element to align.
    * @param direction - One of the AlignDirection literals.
    */
@@ -283,6 +291,11 @@ export class SnapEngine {
     const pageW = pageRect.width  / scale;
     const pageH = pageRect.height / scale;
 
+    // Bleed inset, virtual-px, 0 when no bleed is configured -- center-h/
+    // center-v need no adjustment for it (bleed is symmetric, so the page
+    // center is the same point either way).
+    const inset = this._getBleedInsetPx(page);
+
     // Element dimensions in virtual-px
     const elW = element.pw * (element.unitW === 'mm' ? MM_PX : 1);
     const elH = element.ph * (element.unitH === 'mm' ? MM_PX : 1);
@@ -292,12 +305,12 @@ export class SnapEngine {
     let targetY: number | null = null;
 
     switch (direction) {
-      case 'left':     targetX = 0;                  break;
-      case 'center-h': targetX = (pageW - elW) / 2;  break;
-      case 'right':    targetX = pageW - elW;         break;
-      case 'top':      targetY = 0;                   break;
-      case 'center-v': targetY = (pageH - elH) / 2;  break;
-      case 'bottom':   targetY = pageH - elH;         break;
+      case 'left':     targetX = inset;                     break;
+      case 'center-h': targetX = (pageW - elW) / 2;         break;
+      case 'right':    targetX = pageW - inset - elW;        break;
+      case 'top':      targetY = inset;                      break;
+      case 'center-v': targetY = (pageH - elH) / 2;         break;
+      case 'bottom':   targetY = pageH - inset - elH;        break;
     }
 
     // Convert back to element units and apply
