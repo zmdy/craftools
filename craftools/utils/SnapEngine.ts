@@ -7,6 +7,13 @@
  *   element's edges/center. If within THRESHOLD screen pixels, nudges the
  *   element position (px/py) to the exact snap position and shows a guide line.
  *
+ *   When the page has a bleed ("sangria") configured (CropMarks.ts,
+ *   Page Settings > Marcas de Corte), the page-edge targets are moved
+ *   inward to the same bleed boundary CropMarks.buildLiveOverlaySvg()
+ *   already draws as a dashed inset guide on the page -- so the snap area
+ *   matches the visible bleed line instead of the page's own trim edge.
+ *   See _getBleedInsetPx() below.
+ *
  * Alignment:
  *   Called from alignment buttons. Computes target px/py in element units
  *   based on page dimensions and element size, then applies and dispatches
@@ -17,6 +24,8 @@
  *   thin lines positioned as percentages of the page — so they scale correctly
  *   with any zoom level without extra math.
  */
+
+import { CropMarks } from './CropMarks.js';
 
 const SNAP_THRESHOLD = 4;  // screen pixels within which a snap activates
 const GUIDE_COLOR    = 'rgba(249,115,22,0.9)';
@@ -499,23 +508,32 @@ export class SnapEngine {
 
   /**
    * Screen-space snap candidates shared by snap() and snapResize(): the
-   * page's own left/right/h-center + top/bottom/v-center, plus every
-   * sibling `<craftools-element>`'s edges/center (the dragged/resized
-   * element itself excluded).
+   * page's own left/right/h-center + top/bottom/v-center (moved inward to
+   * the bleed boundary when one is configured -- see _getBleedInsetPx()),
+   * plus every sibling `<craftools-element>`'s edges/center (the
+   * dragged/resized element itself excluded).
    */
   private static _gatherTargets(
     element: CraftoolsSnapTarget,
     page: HTMLElement,
     pageRect: DOMRect,
   ): { xTargets: number[]; yTargets: number[] } {
+    // Virtual-px (page coordinate space at 1x zoom) inset, converted to a
+    // screen-px offset the same way align()/getMaxSize() already convert
+    // between those two spaces. 0 when the page has no bleed configured,
+    // so this is a no-op and xTargets/yTargets fall back to the page's own
+    // trim edges exactly as before.
+    const scale       = this._getScale(element);
+    const bleedInsetPx = this._getBleedInsetPx(page) * scale;
+
     const xTargets: number[] = [
-      pageRect.left,
-      pageRect.right,
+      pageRect.left  + bleedInsetPx,
+      pageRect.right - bleedInsetPx,
       (pageRect.left + pageRect.right) / 2,
     ];
     const yTargets: number[] = [
-      pageRect.top,
-      pageRect.bottom,
+      pageRect.top    + bleedInsetPx,
+      pageRect.bottom - bleedInsetPx,
       (pageRect.top + pageRect.bottom) / 2,
     ];
 
@@ -527,6 +545,36 @@ export class SnapEngine {
     });
 
     return { xTargets, yTargets };
+  }
+
+  /**
+   * Bleed inset, in virtual px (page coordinate space at 1x zoom) -- the
+   * same value CropMarks.buildLiveOverlaySvg() uses for its dashed inset
+   * bleed-boundary preview rect (`.craftools-page` clips overflow, so that
+   * guide is drawn INSET from the trim edge rather than outset past it the
+   * way the real export-time bleed canvas is). Reusing that exact formula
+   * (bleed mm capped at 25% of the page's shorter side) keeps the snap
+   * target aligned with the guide the user actually sees on canvas.
+   *
+   * Returns 0 (no inset -- snap targets stay at the trim edge) when the
+   * page has no bleed configured, or its size is percentage-based (bleed
+   * in mm has no meaningful pixel size against a responsive page, same
+   * carve-out CropMarks.ts's export pipelines already make).
+   */
+  private static _getBleedInsetPx(page: HTMLElement): number {
+    const config = CropMarks.readConfig(page);
+    if (config.bleedMm <= 0) return 0;
+
+    const trimWCss = page.style.width || '';
+    const trimHCss = page.style.minHeight || '';
+    if (CropMarks.isPercentLength(trimWCss) || CropMarks.isPercentLength(trimHCss)) return 0;
+
+    const trimWpx = CropMarks.cssLengthToPx(trimWCss || '800px');
+    const trimHpx = CropMarks.cssLengthToPx(trimHCss || '600px');
+    if (!trimWpx || !trimHpx) return 0;
+
+    const maxInset = Math.min(trimWpx, trimHpx) * 0.25;
+    return Math.min(CropMarks.mmToPx(config.bleedMm), maxInset);
   }
 
   /** Closest target to `pos` within SNAP_THRESHOLD screen px, or null if none qualify. */
