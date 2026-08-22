@@ -288,7 +288,19 @@ export class TextTool extends BaseTool {
     const isBold = (el: HTMLElement) => PropertyRenderer._readState(el).bold === true;
     const isItalic = (el: HTMLElement) => PropertyRenderer._readState(el).italic === true;
     const isUnderline = (el: HTMLElement) => PropertyRenderer._readState(el).underline === true;
-    
+
+    // Ctx-bar edits bypass the properties-panel onChange path (see
+    // BaseTool.renderPropertiesPanel(), which wraps _applyProperty +
+    // _syncLinkedClones together), so without this helper Business Card
+    // clones linked via data-linked-id never stayed in sync when the user
+    // tweaked font/size/bold/italic/underline/align/autoFit from the
+    // floating ctx-bar. Route every ctx-bar mutation through both calls so
+    // it propagates to linked clones exactly like panel edits already do.
+    const apply = (el: HTMLElement, key: string, value: unknown) => {
+      TextTool._applyProperty(el, key, value);
+      TextTool._syncLinkedClones(el, key, value);
+    };
+
     return [
       {
         render: (el: HTMLElement) => {
@@ -317,7 +329,7 @@ export class TextTool extends BaseTool {
           fontSelect.value = currentFont;
           
           fontSelect.addEventListener('change', (e: Event) => {
-            TextTool._applyProperty(el, 'font', (e.target as HTMLSelectElement).value);
+            apply(el, 'font', (e.target as HTMLSelectElement).value);
           });
           
           // Size selector
@@ -331,11 +343,11 @@ export class TextTool extends BaseTool {
           sizeInput.max = '500';
           
           sizeInput.addEventListener('change', (e: Event) => {
-            TextTool._applyProperty(el, 'fontSize', parseFloat((e.target as HTMLInputElement).value) || 24);
+            apply(el, 'fontSize', parseFloat((e.target as HTMLInputElement).value) || 24);
           });
           sizeInput.addEventListener('input', (e: Event) => {
              const val = parseFloat((e.target as HTMLInputElement).value);
-             if (val > 0) TextTool._applyProperty(el, 'fontSize', val);
+             if (val > 0) apply(el, 'fontSize', val);
           });
 
           wrapper.appendChild(fontSelect);
@@ -351,21 +363,21 @@ export class TextTool extends BaseTool {
         // ctx-bar's two lines.
         group: 'bius',
         isActive: isBold,
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'bold', !isBold(el))
+        command: (el: HTMLElement) => apply(el, 'bold', !isBold(el))
       },
       {
         icon: 'format_italic',
         label: 'Italic',
         group: 'bius',
         isActive: isItalic,
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'italic', !isItalic(el))
+        command: (el: HTMLElement) => apply(el, 'italic', !isItalic(el))
       },
       {
         icon: 'format_underlined',
         label: 'Underline',
         group: 'bius',
         isActive: isUnderline,
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'underline', !isUnderline(el))
+        command: (el: HTMLElement) => apply(el, 'underline', !isUnderline(el))
       },
       {
         icon: 'format_align_left',
@@ -373,7 +385,7 @@ export class TextTool extends BaseTool {
         // Grouped with Center/Right below -- see the 'bius' comment above.
         group: 'align',
         isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'left',
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'left')
+        command: (el: HTMLElement) => apply(el, 'textAlign', 'left')
       },
       {
         icon: 'format_align_center',
@@ -383,18 +395,18 @@ export class TextTool extends BaseTool {
           const state = PropertyRenderer._readState(el);
           return state.textAlign === 'center' || !state.textAlign;
         },
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'center')
+        command: (el: HTMLElement) => apply(el, 'textAlign', 'center')
       },
       {
         icon: 'format_align_right',
         label: 'Align Right',
         group: 'align',
         isActive: (el: HTMLElement) => PropertyRenderer._readState(el).textAlign === 'right',
-        command: (el: HTMLElement) => TextTool._applyProperty(el, 'textAlign', 'right')
+        command: (el: HTMLElement) => apply(el, 'textAlign', 'right')
       },
       this._autoFitCtxOption({
         isActive: isOn,
-        toggle:   (el: HTMLElement) => TextTool._applyProperty(el, 'autoFit', !isOn(el)),
+        toggle:   (el: HTMLElement) => apply(el, 'autoFit', !isOn(el)),
         label:    'Auto-fit to text',
       })
     ];

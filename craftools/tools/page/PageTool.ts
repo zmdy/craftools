@@ -196,7 +196,23 @@ export class PageTool {
         let dropY: number;
         const targetContainer: HTMLElement = pageEl;
 
-        const cellTarget = (e.target as HTMLElement).closest<HTMLElement>('.craftools-grid-cell');
+        // Dropped elements are never nested inside .craftools-grid-cell in
+        // the DOM -- they're always appended as siblings of the grid and
+        // just positioned (x/y) to line up visually with the cell. So once
+        // a cell already has an element in it, a 2nd+ drop landing on top
+        // of that existing element makes e.target resolve to the sibling
+        // element (not a descendant of the cell), and closest() walking up
+        // from it never reaches the cell -- silently skipping the Business
+        // Card cloning logic below. Fall back to a position-based hit test
+        // against every grid cell's rect so this still resolves correctly.
+        let cellTarget = (e.target as HTMLElement).closest<HTMLElement>('.craftools-grid-cell');
+        if (!cellTarget) {
+          const gridCells = Array.from(pageEl.querySelectorAll<HTMLElement>('.craftools-grid-cell'));
+          cellTarget = gridCells.find(cell => {
+            const r = cell.getBoundingClientRect();
+            return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+          }) || null;
+        }
 
         if (cellTarget && window.craftoolsAutoSnap !== false) {
           const cRect   = cellTarget.getBoundingClientRect();
