@@ -6,6 +6,7 @@ import { MoonPhases } from './MoonPhases.js';
 import { Seasons } from './Seasons.js';
 import { Zodiac } from './Zodiac.js';
 import { EMOJI_FONT_STACK } from './EmojiFont.js';
+import { I18n } from '../settings/Translations.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -183,16 +184,20 @@ export interface VariableBinding {
     calendarDisplay?: 'text' | 'icon' | 'emoji';
     /**
      * Which language the resolved date TEXT renders in (month/weekday
-     * names, the "Semana N de T" week-number phrase, and the
-     * season/moon-phase/zodiac-sign labels) -- completely independent of
-     * the app's own UI language (I18n/`window.craftoolsLang`), so a
-     * pt-BR-interface user can still print an agenda with English date
-     * labels, or vice versa. Same 3-value set as the app's own supported
-     * locales (see Editor.ts's `#lang-select`). Defaults to 'pt-br'
-     * (defaultBinding() below) since this whole engine was pt-BR-only
-     * hardcoded before this field existed -- an unset value on an older
-     * saved binding must keep resolving exactly as before, see
-     * _dateLocale().
+     * names -- including DAYS_BOX's weekday-initial letters, see the
+     * 'DAYS_BOX' case in _formatDate() -- the "Semana N de T" week-number
+     * phrase, and the season/moon-phase/zodiac-sign labels). Follows the
+     * app's own UI language (I18n/`window.craftoolsLang`) by default, so a
+     * fresh binding always speaks the system's language and keeps
+     * following it if the system language changes later -- set this field
+     * (via the panel's "Idioma da Data" pill) to PIN the binding to an
+     * explicit language that no longer tracks the system, e.g. to print
+     * English date labels from a pt-BR-interface session. Same 3-value set
+     * as the app's own supported locales (see Editor.ts's `#lang-select`).
+     * Deliberately left unset by defaultBinding() below (rather than
+     * writing an explicit snapshot of the current language) so the
+     * system-following behavior above actually applies -- see
+     * _dateLocale()'s own fallback.
      */
     dateLanguage?: 'pt-br' | 'en' | 'es';
     // sequenceNumber
@@ -481,7 +486,16 @@ export class VariableEngine {
                 specialDateRandomize: false,
                 hemisphere: 'south',
                 calendarDisplay: 'text',
-                dateLanguage: 'pt-br',
+                // Deliberately left unset (rather than hardcoding 'pt-br',
+                // what this used to do) -- an unset dateLanguage makes
+                // _dateLocale() resolve to the app's CURRENT UI language
+                // (I18n.currentLang) every time the binding is rendered,
+                // so a fresh box speaks the system's language out of the
+                // box AND keeps following it if the system language
+                // changes later. The panel's "Idioma da Data" pill still
+                // lets it be pinned to an explicit per-binding language
+                // that no longer tracks the system (see
+                // VariableBinding.dateLanguage's doc comment below).
             };
             case 'sequenceNumber': return { type, start: 1, step: 1, padding: 0, prefix: '', suffix: '', linkedTo: '' };
             case 'sequenceText':   return { type, values: '', loop: true, useCustomSeparator: false, separator: '', linkedTo: '' };
@@ -847,15 +861,14 @@ export class VariableEngine {
     /**
      * Per-language month/weekday vocabulary + "day de month[, year]"/"Week
      * N of T" phrasing, keyed by the same 3-locale set as the app's own UI
-     * language (I18n) but resolved INDEPENDENTLY of it -- see
-     * VariableBinding.dateLanguage's doc comment. This whole
-     * date-formatting engine hardcoded pt-BR literals unconditionally
-     * before this table existed; `_dateLocale()` defaults to 'pt-br' so a
-     * binding saved before this feature existed keeps resolving exactly as
-     * before. Word order/connector genuinely differs per language (English
-     * doesn't say "10 of April", it's "April 10") -- that's why
-     * DAY_MONTH_LONG/DAY_MONTH_YEAR_LONG call this table's `dayMonth()`/
-     * `dayMonthYear()` functions instead of a single shared template.
+     * language (I18n) -- see VariableBinding.dateLanguage's doc comment for
+     * how a binding picks one: the app's current UI language by default
+     * (`_dateLocale()`'s own fallback), pinned to an explicit language once
+     * the binding sets dateLanguage itself. Word order/connector genuinely
+     * differs per language (English doesn't say "10 of April", it's
+     * "April 10") -- that's why DAY_MONTH_LONG/DAY_MONTH_YEAR_LONG call
+     * this table's `dayMonth()`/`dayMonthYear()` functions instead of a
+     * single shared template.
      */
     private static readonly DATE_LOCALES: Record<'pt-br' | 'en' | 'es', {
         months: string[]; monthsAbbrev: string[];
@@ -897,7 +910,15 @@ export class VariableEngine {
     };
 
     private static _dateLocale(lang?: string): typeof VariableEngine.DATE_LOCALES['pt-br'] {
-        return this.DATE_LOCALES[(lang as 'pt-br' | 'en' | 'es')] ?? this.DATE_LOCALES['pt-br'];
+        // Falls back to the app's current UI language (I18n.currentLang)
+        // rather than a hardcoded 'pt-br' when the binding itself has no
+        // explicit dateLanguage -- covers projects saved before this field
+        // existed, and keeps every date format (including DAYS_BOX's
+        // weekday-initial letters, see the 'DAYS_BOX' case below) in sync
+        // with the system language for any binding the user hasn't
+        // explicitly overridden via the panel's "Idioma da Data" pill.
+        const resolved = (lang ?? I18n.currentLang) as 'pt-br' | 'en' | 'es';
+        return this.DATE_LOCALES[resolved] ?? this.DATE_LOCALES['pt-br'];
     }
 
     private static _formatDate(d: Date, b: VariableBinding, ctx: { repetitionIndex: number }, apiCache: ApiCache = {}): string {
@@ -959,10 +980,18 @@ export class VariableEngine {
                 const borderColor = b.daysBoxBorderColor || 'currentColor';
                 const borderCss   = borderStyle === 'none' ? 'none' : `${borderWidth}px ${borderStyle} ${borderColor}`;
 
-                // Construct the sequence of letters
+                // Construct the sequence of letters -- from the same
+                // per-language weekday-initial table _formatDate()/
+                // _formatCustomDate() already use for the 'w'/'ww' custom
+                // tokens (DATE_LOCALES[...].weekdaysFirst, keyed by
+                // b.dateLanguage, falling back to the system UI language
+                // -- see _dateLocale()), instead of the hardcoded pt-BR
+                // 'D'/'S'/'T'/'Q' initials this used to always render
+                // regardless of the binding's or the app's own language.
+                const loc = this._dateLocale(b.dateLanguage);
                 const letters = startSun
-                    ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-                    : ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+                    ? [...loc.weekdaysFirst]
+                    : [...loc.weekdaysFirst.slice(1), loc.weekdaysFirst[0]];
 
                 // Indices map to Date.getDay() (0 = Sunday, 1 = Monday, etc)
                 // If starting on Monday, index 0 is Monday (d.getDay() === 1), index 6 is Sunday (d.getDay() === 0).
