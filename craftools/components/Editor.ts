@@ -34,6 +34,7 @@ import { ToolRegistry } from '../utils/ToolRegistry';
 import { centerElementOnPage } from '../utils/ElementPlacement.js';
 import { AppSettings } from '../utils/AppSettings.js';
 import { SelectionManager } from '../utils/SelectionManager.js';
+import { SnapEngine, type CraftoolsSnapTarget } from '../utils/SnapEngine.js';
 import { Notify } from '../utils/Notify.js';
 import { safeImport } from '../utils/SafeImport.js';
 import { UIErrorBoundary } from '../utils/UIErrorBoundary.js';
@@ -159,6 +160,7 @@ export class Craftools_Editor extends HTMLElement {
 
   private _onHistoryChange?: (e: Event) => void;
   private _onKeydown?: (e: KeyboardEvent) => void;
+  private _onKeyup?: (e: KeyboardEvent) => void;
   private _onPageAdd?: (e: Event) => void;
   private _onPointerdown?: (e: PointerEvent) => void;
   // Keeps the ctx-bar and the properties panel in sync with each other --
@@ -234,6 +236,7 @@ export class Craftools_Editor extends HTMLElement {
   disconnectedCallback() {
     if (this._onHistoryChange) document.removeEventListener('craftools-history-change', this._onHistoryChange);
     if (this._onKeydown) document.removeEventListener('keydown', this._onKeydown);
+    if (this._onKeyup) document.removeEventListener('keyup', this._onKeyup);
     if (this._onPageAdd) document.removeEventListener('craftools-page-add', this._onPageAdd);
     if (this._onPointerdown) document.removeEventListener('pointerdown', this._onPointerdown, { capture: true });
     
@@ -456,12 +459,30 @@ export class Craftools_Editor extends HTMLElement {
           if (e.key === 'ArrowDown')  selected.py += step;
           if (e.key === 'ArrowLeft') selected.px -= step;
           if (e.key === 'ArrowRight') selected.px += step;
+          // Apply the nudged position first so getBoundingClientRect() is
+          // current before SnapEngine reads screen position for snap
+          // calculation, same pattern Element.ts's own pointer-drag handler
+          // uses -- this is what makes the alignment guide lines appear
+          // while nudging with the arrow keys, not just while dragging.
+          selected._applyTransform();
+          SnapEngine.snap(selected as unknown as CraftoolsSnapTarget); // may nudge px/py; re-applies transform below
           selected._applyTransform();
           selected.dispatchEvent(new CustomEvent('craftools-element-change', { bubbles: true, detail: { element: selected } }));
         }
       }
     };
     document.addEventListener('keydown', this._onKeydown);
+
+    // Arrow-key nudge shows the same snap guide lines as a mouse drag (see
+    // above), but there's no pointerup to clear them on -- clear as soon as
+    // the arrow key is released instead.
+    this._onKeyup = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const selected = document.querySelector<PositionedElement>('craftools-element.craftools-selected');
+        SnapEngine.clear(selected?.closest<HTMLElement>('.craftools-page') ?? null);
+      }
+    };
+    document.addEventListener('keyup', this._onKeyup);
 
     let actionDebounce: ReturnType<typeof setTimeout> | null = null;
     this.addEventListener('craftools-element-change', () => {
