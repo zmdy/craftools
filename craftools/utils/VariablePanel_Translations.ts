@@ -7,6 +7,9 @@ import { I18n } from "../settings/Translations.js";
 I18n.addTranslations('variablePanel', {
     "pt-br": {
         title: "Texto Variável",
+        tabGeneral: "Texto Variável",
+        tabDataSettings: "Configurações dos Dados",
+        dataSettingsEmpty: "Este tipo de variável não tem configurações adicionais.",
         typeLabel: "Tipo de variável",
         typeNone: "Nenhuma (conteúdo fixo)",
         typeDate: "Data",
@@ -110,7 +113,7 @@ I18n.addTranslations('variablePanel', {
         dateCustomLegend: "Clique nos botões acima para montar seu formato, ou digite os códigos diretamente: <b>d</b> = dia, <b>dd</b> = dia com zero, <b>m</b> = mês, <b>mm</b> = mês com zero, <b>mmm</b> = mês abreviado, <b>mmmm</b> = mês por extenso, <b>yy</b> = ano com 2 dígitos, <b>yyyy</b> = ano com 4 dígitos, <b>w</b> = 1ª letra do dia da semana, <b>ww</b> = dia da semana abreviado, <b>wwww</b> = dia da semana por extenso, <b>{dayofyear}</b> = dia do ano (ex: 10 de abril = 100), <b>{weeknumber}</b> = semana do ano (ex: Semana 32 de 52), <b>{season}</b> = estação do ano, <b>{moon}</b> = fase da lua, <b>{zodiac}</b> = signo do zodíaco, <b>{holiday}</b> = feriado/data comemorativa. Ex: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que não deve virar código), use colchetes: dd [de] mmmm.",
 
         dateLanguageLabel: "Idioma do texto",
-        dateLanguageHelp: "Idioma dos nomes de mês/dia da semana, semana do ano, estação, fase da lua e signo. Independente do idioma da interface do sistema.",
+        dateLanguageHelp: "Idioma dos nomes de mês/dia da semana (inclusive as letras das dayboxes), semana do ano, estação, fase da lua e signo. Por padrão acompanha o idioma do sistema; escolha uma opção aqui para fixar um idioma diferente para este texto.",
 
         seqNumberStartLabel: "Início",
         seqNumberStepLabel: "Passo",
@@ -225,6 +228,9 @@ I18n.addTranslations('variablePanel', {
     },
     "en": {
         title: "Variable Text",
+        tabGeneral: "Variable Text",
+        tabDataSettings: "Variable Data Settings",
+        dataSettingsEmpty: "This variable type has no additional settings.",
         typeLabel: "Variable type",
         typeNone: "None (fixed content)",
         typeDate: "Date",
@@ -328,7 +334,7 @@ I18n.addTranslations('variablePanel', {
         dateCustomLegend: "Click the buttons above to build your format, or type the tokens directly: <b>d</b> = day, <b>dd</b> = zero-padded day, <b>m</b> = month, <b>mm</b> = zero-padded month, <b>mmm</b> = abbreviated month, <b>mmmm</b> = full month name, <b>yy</b> = 2-digit year, <b>yyyy</b> = 4-digit year, <b>w</b> = weekday's 1st letter, <b>ww</b> = abbreviated weekday, <b>wwww</b> = full weekday name, <b>{dayofyear}</b> = day of the year (e.g. April 10 = 100), <b>{weeknumber}</b> = week of the year (e.g. \"Week 32 of 52\"), <b>{season}</b> = season, <b>{moon}</b> = moon phase, <b>{zodiac}</b> = zodiac sign, <b>{holiday}</b> = holiday/commemorative date. E.g.: dd/mm/yyyy → 21/07/2026. To include literal text (that shouldn't turn into a code), use square brackets: dd [de] mmmm.",
 
         dateLanguageLabel: "Text language",
-        dateLanguageHelp: "Language for month/weekday names, week of year, season, moon phase and zodiac sign. Independent of the system's interface language.",
+        dateLanguageHelp: "Language for month/weekday names (including the day-box letters), week of year, season, moon phase and zodiac sign. Follows the system's interface language by default; pick an option here to pin this text to a different language.",
 
         seqNumberStartLabel: "Start",
         seqNumberStepLabel: "Step",
@@ -443,6 +449,9 @@ I18n.addTranslations('variablePanel', {
     },
     "es": {
         title: "Texto Variable",
+        tabGeneral: "Texto Variable",
+        tabDataSettings: "Configuración de Datos",
+        dataSettingsEmpty: "Este tipo de variable no tiene configuraciones adicionales.",
         typeLabel: "Tipo de variable",
         typeNone: "Ninguna (contenido fijo)",
         typeDate: "Fecha",
@@ -546,7 +555,7 @@ I18n.addTranslations('variablePanel', {
         dateCustomLegend: "Haz clic en los botones de arriba para armar tu formato, o escribe los códigos directamente: <b>d</b> = día, <b>dd</b> = día con cero, <b>m</b> = mes, <b>mm</b> = mes con cero, <b>mmm</b> = mes abreviado, <b>mmmm</b> = mes completo, <b>yy</b> = año con 2 dígitos, <b>yyyy</b> = año con 4 dígitos, <b>w</b> = 1ª letra del día de la semana, <b>ww</b> = día de la semana abreviado, <b>wwww</b> = día de la semana completo, <b>{dayofyear}</b> = día del año (ej: 10 de abril = 100), <b>{weeknumber}</b> = semana del año (ej: \"Semana 32 de 52\"), <b>{season}</b> = estación del año, <b>{moon}</b> = fase lunar, <b>{zodiac}</b> = signo zodiacal, <b>{holiday}</b> = feriado/fecha conmemorativa. Ej: dd/mm/yyyy → 21/07/2026. Para incluir texto literal (que no debe convertirse en código), usa corchetes: dd [de] mmmm.",
 
         dateLanguageLabel: "Idioma del texto",
-        dateLanguageHelp: "Idioma de los nombres de mes/día de la semana, semana del año, estación, fase lunar y signo zodiacal. Independiente del idioma de la interfaz del sistema.",
+        dateLanguageHelp: "Idioma de los nombres de mes/día de la semana (incluidas las letras de las dayboxes), semana del año, estación, fase lunar y signo zodiacal. Por defecto sigue el idioma de la interfaz del sistema; elige una opción aquí para fijar un idioma diferente para este texto.",
 
         seqNumberStartLabel: "Inicio",
         seqNumberStepLabel: "Paso",

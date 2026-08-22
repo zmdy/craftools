@@ -43,6 +43,19 @@ export class VariablePanel {
      */
     static renderAccordionBody(binding: VariableBinding | null, element: VarElement | null, opts: { hideNoneOption?: boolean } = {}): string {
         const type = binding?.type ?? '';
+        const { general, specific } = this._renderConfig(binding, element);
+        // Two internal tabs INSIDE this one "Texto Variável" panel (not two
+        // separate accordion sections -- see bind()'s tab-switch wiring
+        // just below the type <select> binding): "Texto Variável" keeps the
+        // type picker + every type's basic/setup controls (interval, step,
+        // start date, text list, etc. -- whatever _xxxConfig() returns as
+        // `general`), "Configurações dos Dados" holds the deeper, format-
+        // specific controls each type has (DAYS_BOX's own styling, apiPhrase's
+        // collection/filter, miniCalendar's highlight styling, etc. --
+        // `specific`). A type with no such deeper settings (sequenceNumber,
+        // sequenceText, pageNumber, link, emoji, image -- `specific` is '')
+        // hides the second tab entirely rather than showing an empty one.
+        const hasSpecific = specific.trim() !== '';
         return `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.typeLabel')}</span>
@@ -60,7 +73,15 @@ export class VariablePanel {
                     <option value="image"           ${type === 'image'           ? 'selected' : ''}>${I18n.t('variablePanel.typeImage')}</option>
                 </select>
             </div>
-            <div id="var-config">${this._renderConfig(binding, element)}</div>
+            ${type ? `
+            <div class="ct-var-tabs" style="display:flex; gap:4px; padding:0 12px; margin-top:6px; ${hasSpecific ? '' : 'display:none;'}">
+                <button type="button" id="var-tab-btn-general" class="craftools-pill active" style="flex:1; text-align:center; justify-content:center;">${I18n.t('variablePanel.tabGeneral')}</button>
+                <button type="button" id="var-tab-btn-specific" class="craftools-pill" style="flex:1; text-align:center; justify-content:center;">${I18n.t('variablePanel.tabDataSettings')}</button>
+            </div>` : ''}
+            <div id="var-config">
+                <div id="var-tab-general">${general}</div>
+                <div id="var-tab-specific" style="display:none;">${hasSpecific ? specific : `<div class="ct-field" style="padding:10px 12px;"><span style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.dataSettingsEmpty')}</span></div>`}</div>
+            </div>
             <div class="ct-field" id="var-preview" style="${type ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.previewLabel')}</span>
                 <div id="var-preview-value" style="font-size:12px; padding:6px 9px; background:rgba(127,127,127,0.12); border-radius:6px; word-break:break-word; min-height:16px; font-family:${withEmojiFallback('DM Sans')};">${I18n.t('variablePanel.previewLoading')}</div>
@@ -68,21 +89,31 @@ export class VariablePanel {
         `;
     }
 
-    private static _renderConfig(binding: VariableBinding | null, element: VarElement | null): string {
-        if (!binding?.type) return '';
+    /**
+     * Splits one variable type's config markup into `general` (basic/setup
+     * controls -- rendered in the "Texto Variável" tab, together with the
+     * type <select> and the "Vincular a" link row) and `specific` (deeper,
+     * format-specific controls -- rendered in the "Configurações dos Dados"
+     * tab, see renderAccordionBody()). Only 'date'/'apiPhrase'/
+     * 'emojiKitchen'/'miniCalendar' have a meaningful `specific` bucket;
+     * every other type's entire config is `general` with `specific: ''`
+     * (renderAccordionBody() hides the second tab in that case).
+     */
+    private static _renderConfig(binding: VariableBinding | null, element: VarElement | null): { general: string; specific: string } {
+        if (!binding?.type) return { general: '', specific: '' };
         const linkRow = this._renderLinkRow(binding, element);
         switch (binding.type) {
-            case 'date':           return linkRow + this._dateConfig(binding);
-            case 'sequenceNumber': return linkRow + this._seqNumberConfig(binding);
-            case 'sequenceText':   return linkRow + this._seqTextConfig(binding);
-            case 'pageNumber':     return linkRow + this._pageNumberConfig(binding);
-            case 'link':           return linkRow + this._linkConfig(binding);
-            case 'emoji':          return linkRow + this._emojiConfig(binding);
-            case 'apiPhrase':      return linkRow + this._apiPhraseConfig(binding);
-            case 'emojiKitchen':   return linkRow + this._emojiKitchenConfig(binding);
-            case 'miniCalendar':   return linkRow + this._miniCalendarConfig(binding, element);
-            case 'image':          return linkRow + this._imageConfig(binding);
-            default:               return '';
+            case 'date':           { const c = this._dateConfig(binding);              return { general: linkRow + c.general, specific: c.specific }; }
+            case 'sequenceNumber': return { general: linkRow + this._seqNumberConfig(binding), specific: '' };
+            case 'sequenceText':   return { general: linkRow + this._seqTextConfig(binding),   specific: '' };
+            case 'pageNumber':     return { general: linkRow + this._pageNumberConfig(binding), specific: '' };
+            case 'link':           return { general: linkRow + this._linkConfig(binding),       specific: '' };
+            case 'emoji':          return { general: linkRow + this._emojiConfig(binding),      specific: '' };
+            case 'apiPhrase':      { const c = this._apiPhraseConfig(binding);          return { general: linkRow + c.general, specific: c.specific }; }
+            case 'emojiKitchen':   { const c = this._emojiKitchenConfig(binding);       return { general: linkRow + c.general, specific: c.specific }; }
+            case 'miniCalendar':   { const c = this._miniCalendarConfig(binding, element); return { general: linkRow + c.general, specific: c.specific }; }
+            case 'image':          return { general: linkRow + this._imageConfig(binding), specific: '' };
+            default:                return { general: '', specific: '' };
         }
     }
 
@@ -517,10 +548,10 @@ export class VariablePanel {
         });
     }
 
-    private static _dateConfig(b: VariableBinding): string {
+    private static _dateConfig(b: VariableBinding): { general: string; specific: string } {
         const customValue = b.format === 'CUSTOM' ? (b.customFormat ?? '') : this._legacyFormatToCustomToken(b.format);
         const hasToken = (t: string) => customValue.toLowerCase().includes(t.toLowerCase());
-        return `
+        const general = `
             <div class="ct-field">
                 <span class="craftools-label">${I18n.t('variablePanel.dateStartLabel')}</span>
                 <input type="date" id="var-date-start" class="craftools-input" style="width:100%;" value="${this._esc(b.startDate)}">
@@ -554,45 +585,6 @@ export class VariablePanel {
             <!-- Active Per-Token Select Dropdowns (FORMATO DE DIA, FORMATO DE MÊS, etc.) -->
             <div id="var-date-active-selects" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
 
-            <div id="var-date-daysbox-options" style="display: ${b.format === 'DAYS_BOX' ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
-                    <div id="var-date-daysbox-color-picker"></div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderRadius')} (px)</span>
-                        <input type="number" id="var-date-daysbox-radius" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderRadius !== undefined ? b.daysBoxBorderRadius : 6}" min="0">
-                    </div>
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.padding')} (px)</span>
-                        <input type="number" id="var-date-daysbox-padding" class="craftools-input" style="width:100%;" value="${b.daysBoxPadding !== undefined ? b.daysBoxPadding : 4}" min="0">
-                    </div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.height')} (px)</span>
-                        <input type="number" id="var-date-daysbox-height" class="craftools-input" style="width:100%;" value="${b.daysBoxHeight !== undefined ? b.daysBoxHeight : 40}" min="10">
-                    </div>
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
-                        <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
-                    </div>
-                </div>
-                <div class="ct-field" style="margin-top:10px;">
-                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
-                    <div id="var-date-daysbox-bordercolor-picker"></div>
-                </div>
-                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-date-daysbox-borderstyle-btn',
-                    ['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style =>
-                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
-                    ), b.daysBoxBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
-                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
-                    <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
-                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateDaysBoxSundayFirst')}</span>
-                </label>
-            </div>
-
             <div id="var-date-custom-options" style="display: block; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
                 <div style="font-size:11px; color:var(--text-muted); line-height:1.6; margin-bottom:8px;">
                     ${I18n.t('variablePanel.dateCustomLegend')}
@@ -610,23 +602,68 @@ export class VariablePanel {
                 ['pt-br', 'Português'],
                 ['en',    'English'],
                 ['es',    'Español'],
-            ], b.dateLanguage ?? 'pt-br', { help: I18n.t('variablePanel.dateLanguageHelp'), wrapStyle: 'margin-top: 10px;' })}
+            // Falls back to the app's current UI language (matching
+            // VariableEngine._dateLocale()'s own fallback) rather than a
+            // hardcoded 'pt-br' -- an unset binding effectively follows
+            // the system language, so the pill should show that as
+            // selected instead of always defaulting to Português.
+            ], b.dateLanguage ?? I18n.currentLang, { help: I18n.t('variablePanel.dateLanguageHelp'), wrapStyle: 'margin-top: 10px;' })}
+        `;
 
-            <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+        // "Configurações dos Dados" tab: everything that's specific to the
+        // CHOSEN format rather than needed by every date variable (DAYS_BOX's
+        // own visual styling, the {holiday}/{season}/{moon,zodiac} tokens'
+        // sub-options) -- shown/hidden the same way it always was (by
+        // `format`/token presence), just moved out of the primary tab.
+        const specific = `
+            <div id="var-date-daysbox-options" style="display: ${b.format === 'DAYS_BOX' ? 'block' : 'none'}; padding: 10px 12px;">
+                <div class="ct-field">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateDaysBoxColor')}</span>
+                    <div id="var-date-daysbox-color-picker"></div>
+                </div>
+                <div class="ct-field ct-field--block">
+                    <span class="craftools-label">${I18n.t('common.borderRadius')}</span>
+                    <input type="number" id="var-date-daysbox-radius" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderRadius !== undefined ? b.daysBoxBorderRadius : 6}" min="0">
+                </div>
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.padding')} (px)</span>
+                    <input type="number" id="var-date-daysbox-padding" class="craftools-input" style="width:100%;" value="${b.daysBoxPadding !== undefined ? b.daysBoxPadding : 4}" min="0">
+                </div>
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.height')} (px)</span>
+                    <input type="number" id="var-date-daysbox-height" class="craftools-input" style="width:100%;" value="${b.daysBoxHeight !== undefined ? b.daysBoxHeight : 40}" min="10">
+                </div>
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
+                    <input type="number" id="var-date-daysbox-borderwidth" class="craftools-input" style="width:100%;" value="${b.daysBoxBorderWidth !== undefined ? b.daysBoxBorderWidth : 1}" min="0">
+                </div>
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('common.borderColor')}</span>
+                    <div id="var-date-daysbox-bordercolor-picker"></div>
+                </div>
+                ${this._pillGroup(I18n.t('common.borderStyle'), 'var-date-daysbox-borderstyle-btn',
+                    ['solid','dashed','dotted','double','groove','ridge','inset','outset','none'].map(style =>
+                        [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
+                    ), b.daysBoxBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top: 6px;">
+                    <input type="checkbox" id="var-date-daysbox-sunday" ${b.daysBoxStartSunday ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateDaysBoxSundayFirst')}</span>
+                </label>
+            </div>
+
+            <div id="var-date-special-options" style="display: ${hasToken('{holiday}') ? 'block' : 'none'}; padding: 10px 12px;">
                 ${this._specialDateCategoriesFields(b)}
                 ${this._holidayScopeFields(b)}
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="ct-field">
-                        <span class="craftools-label">${I18n.t('variablePanel.dateSpecialLimitLabel')}</span>
-                        <input type="number" id="var-date-special-limit" class="craftools-input" style="width:100%;" min="1"
-                            placeholder="${this._esc(I18n.t('variablePanel.dateSpecialLimitPlaceholder'))}"
-                            value="${b.specialDateLimit !== undefined && b.specialDateLimit !== '' ? b.specialDateLimit : ''}">
-                    </div>
-                    <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:18px;">
-                        <input type="checkbox" id="var-date-special-randomize" ${b.specialDateRandomize ? 'checked' : ''}>
-                        <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateSpecialRandomizeLabel')}</span>
-                    </label>
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
+                    <span class="craftools-label">${I18n.t('variablePanel.dateSpecialLimitLabel')}</span>
+                    <input type="number" id="var-date-special-limit" class="craftools-input" style="width:100%;" min="1"
+                        placeholder="${this._esc(I18n.t('variablePanel.dateSpecialLimitPlaceholder'))}"
+                        value="${b.specialDateLimit !== undefined && b.specialDateLimit !== '' ? b.specialDateLimit : ''}">
                 </div>
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:10px;">
+                    <input type="checkbox" id="var-date-special-randomize" ${b.specialDateRandomize ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.dateSpecialRandomizeLabel')}</span>
+                </label>
                 <div class="ct-field" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('variablePanel.dateSpecialSeparatorLabel')}</span>
                     <input type="text" id="var-date-special-separator" class="craftools-input" style="width:100%;"
@@ -650,14 +687,14 @@ export class VariablePanel {
                 </div>
             </div>
 
-            <div id="var-date-season-options" style="display: ${hasToken('{season}') ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-season-options" style="display: ${hasToken('{season}') ? 'block' : 'none'}; padding: 10px 12px;">
                 ${this._pillGroup(I18n.t('variablePanel.dateHemisphereLabel'), 'var-date-hemisphere-btn', [
                     ['south', I18n.t('variablePanel.dateHemisphereSouth')],
                     ['north', I18n.t('variablePanel.dateHemisphereNorth')],
                 ], b.hemisphere ?? 'south')}
             </div>
 
-            <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{season}') || hasToken('{moon}') || hasToken('{zodiac}')) ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+            <div id="var-date-calendar-options" style="display: ${(this._isCalendarPartsFormat(b.format) || hasToken('{season}') || hasToken('{moon}') || hasToken('{zodiac}')) ? 'block' : 'none'}; padding: 10px 12px;">
                 <span class="craftools-label">${I18n.t('variablePanel.dateCalendarModeLabel')}</span>
                 <div class="ct-field-row" style="gap:4px; margin-top:4px;">
                     <button type="button" class="craftools-pill var-date-calendar-mode-btn ${(b.calendarDisplay ?? 'text') === 'text' ? 'active' : ''}" data-mode="text">${I18n.t('variablePanel.dateCalendarModeText')}</button>
@@ -666,6 +703,8 @@ export class VariablePanel {
                 </div>
             </div>
         `;
+
+        return { general, specific };
     }
 
     /**
@@ -748,29 +787,25 @@ export class VariablePanel {
 
     private static _seqNumberConfig(b: VariableBinding): string {
         return `
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.seqNumberStartLabel')}</span>
-                    <input type="number" id="var-seqnum-start" class="craftools-input" style="width:100%;" value="${b.start ?? 1}">
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.seqNumberStepLabel')}</span>
-                    <input type="number" id="var-seqnum-step" class="craftools-input" style="width:100%;" value="${b.step ?? 1}">
-                </div>
+            <div class="ct-field ct-field--block">
+                <span class="craftools-label">${I18n.t('variablePanel.seqNumberStartLabel')}</span>
+                <input type="number" id="var-seqnum-start" class="craftools-input" style="width:100%;" value="${b.start ?? 1}">
             </div>
-            <div class="ct-field">
+            <div class="ct-field ct-field--block" style="margin-top:10px;">
+                <span class="craftools-label">${I18n.t('variablePanel.seqNumberStepLabel')}</span>
+                <input type="number" id="var-seqnum-step" class="craftools-input" style="width:100%;" value="${b.step ?? 1}">
+            </div>
+            <div class="ct-field ct-field--block" style="margin-top:10px;">
                 <span class="craftools-label">${I18n.t('variablePanel.seqNumberPaddingLabel')}</span>
                 <input type="number" id="var-seqnum-padding" class="craftools-input" style="width:100%;" value="${b.padding ?? 0}" min="0" max="10">
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.seqNumberPrefixLabel')}</span>
-                    <input type="text" id="var-seqnum-prefix" class="craftools-input" style="width:100%;" value="${this._esc(b.prefix)}">
-                </div>
-                <div class="ct-field">
-                    <span class="craftools-label">${I18n.t('variablePanel.seqNumberSuffixLabel')}</span>
-                    <input type="text" id="var-seqnum-suffix" class="craftools-input" style="width:100%;" value="${this._esc(b.suffix)}">
-                </div>
+            <div class="ct-field ct-field--block" style="margin-top:10px;">
+                <span class="craftools-label">${I18n.t('variablePanel.seqNumberPrefixLabel')}</span>
+                <input type="text" id="var-seqnum-prefix" class="craftools-input" style="width:100%;" value="${this._esc(b.prefix)}">
+            </div>
+            <div class="ct-field ct-field--block" style="margin-top:10px;">
+                <span class="craftools-label">${I18n.t('variablePanel.seqNumberSuffixLabel')}</span>
+                <input type="text" id="var-seqnum-suffix" class="craftools-input" style="width:100%;" value="${this._esc(b.suffix)}">
             </div>
         `;
     }
@@ -848,11 +883,11 @@ export class VariablePanel {
         `;
     }
 
-    private static _apiPhraseConfig(b: VariableBinding): string {
+    private static _apiPhraseConfig(b: VariableBinding): { general: string; specific: string } {
         const knownFields = ['', 'phrase', 'author', 'category'];
         const isCustom    = !!b.field && !knownFields.includes(b.field);
         const filterField = b.filterField ?? '';
-        return `
+        const general = `
             ${this._pillGroup(I18n.t('variablePanel.apiPhraseFieldLabel'), 'var-api-field-btn', [
                 ['',           I18n.t('variablePanel.apiPhraseFieldAuto')],
                 ['phrase',     I18n.t('variablePanel.apiPhraseFieldPhrase')],
@@ -860,10 +895,13 @@ export class VariablePanel {
                 ['category',   I18n.t('variablePanel.apiPhraseFieldCategory')],
                 ['__custom__', I18n.t('variablePanel.apiPhraseFieldCustom')],
             ], isCustom ? '__custom__' : (b.field ?? ''), { help: I18n.t('variablePanel.apiPhraseFieldHelp') })}
-            <div class="ct-field" id="var-api-field-custom-wrap" style="${isCustom ? '' : 'display:none;'} margin-top:-4px;">
+            <div class="ct-field ct-field--block" id="var-api-field-custom-wrap" style="${isCustom ? '' : 'display:none;'}">
+                <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFieldCustom')}</span>
                 <input type="text" id="var-api-field-custom" class="craftools-input" style="width:100%;" placeholder="${this._esc(I18n.t('variablePanel.apiPhraseFieldPlaceholder'))}" value="${isCustom ? this._esc(b.field) : ''}">
             </div>
-            <div class="ct-field">
+        `;
+        const specific = `
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseCollectionLabel')}</span>
                 <select id="var-api-collection" class="craftools-select" style="width:100%;">
                     <option value="">${I18n.t('variablePanel.apiPhraseCollectionLoading')}</option>
@@ -875,7 +913,7 @@ export class VariablePanel {
                 ['author',   I18n.t('variablePanel.apiPhraseFilterAuthor')],
                 ['category', I18n.t('variablePanel.apiPhraseFilterCategory')],
             ], filterField)}
-            <div class="ct-field" id="var-api-filter-value-wrap" style="${filterField ? '' : 'display:none;'}">
+            <div class="ct-field ct-field--block" id="var-api-filter-value-wrap" style="${filterField ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.apiPhraseFilterValueLabel')}</span>
                 <select id="var-api-filter-value" class="craftools-select" style="width:100%;">
                     <option value="">${I18n.t('variablePanel.apiPhraseFilterLoading')}</option>
@@ -886,11 +924,12 @@ export class VariablePanel {
                 ['random',     I18n.t('variablePanel.apiPhraseModeRandom')],
             ], b.mode === 'random' ? 'random' : 'sequential')}
         `;
+        return { general, specific };
     }
 
-    private static _emojiKitchenConfig(b: VariableBinding): string {
+    private static _emojiKitchenConfig(b: VariableBinding): { general: string; specific: string } {
         const hasLeft = !!(b.leftEmoji ?? '').trim();
-        return `
+        const general = `
             <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.emojiKitchenLeftLabel')}</span>
                 <div id="var-kitchen-left-wrap"></div>
@@ -901,6 +940,8 @@ export class VariablePanel {
                 <div id="var-kitchen-right-grid"></div>
                 <span style="font-size:10px; color:var(--text-muted); display:block; margin-top:4px;">${I18n.t('variablePanel.emojiKitchenRightHelp')}</span>
             </div>
+        `;
+        const specific = `
             <div id="var-kitchen-mode-wrap" style="${hasLeft ? '' : 'display:none;'}">
                 ${this._pillGroup(I18n.t('variablePanel.emojiKitchenModeLabel'), 'var-kitchen-mode-btn', [
                     ['sequential', I18n.t('variablePanel.emojiKitchenModeSequential')],
@@ -908,9 +949,10 @@ export class VariablePanel {
                 ], b.mode === 'random' ? 'random' : 'sequential', { help: I18n.t('variablePanel.emojiKitchenModeHelp') })}
             </div>
         `;
+        return { general, specific };
     }
 
-    private static _miniCalendarConfig(b: VariableBinding, element: VarElement | null): string {
+    private static _miniCalendarConfig(b: VariableBinding, element: VarElement | null): { general: string; specific: string } {
         const highlightDaySource = b.miniCalendarHighlightDaySource ?? 'today';
         const highlightLinked = highlightDaySource === 'linked';
         // Candidates for "link the highlight day to a date variable" -- any
@@ -927,7 +969,7 @@ export class VariablePanel {
             `<option value="${this._esc(c.id)}" ${b.miniCalendarHighlightLinkedTo === c.id ? 'selected' : ''}>${this._esc(c.label)}</option>`
         ).join('');
         const highlightLinkRow = dateLinkCandidates.length ? `
-            <div class="ct-field" id="var-minical-highlightlink-wrap">
+            <div class="ct-field ct-field--block" id="var-minical-highlightlink-wrap">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-highlight-linked-toggle" class="ct-fi" style="display:none;" ${highlightLinked ? 'checked' : ''}>
                     <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${highlightLinked ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
@@ -943,13 +985,13 @@ export class VariablePanel {
                 </div>
             </div>
         ` : '';
-        return `
+        const general = `
             ${highlightLinkRow}
             ${this._pillGroup(I18n.t('variablePanel.miniCalendarModeLabel'), 'var-minical-mode-btn', [
                 ['fixed',             I18n.t('variablePanel.miniCalendarModeFixed')],
                 ['sequentialMonthly', I18n.t('variablePanel.miniCalendarModeSequential')],
             ], b.mode === 'sequentialMonthly' ? 'sequentialMonthly' : 'fixed', { help: I18n.t('variablePanel.miniCalendarModeHelp') })}
-            <div class="ct-field">
+            <div class="ct-field ct-field--block">
                 <span class="craftools-label">${I18n.t('variablePanel.miniCalendarMonthYearLabel')}</span>
                 <input type="month" id="var-minical-monthyear" class="craftools-input"
                     value="${String(b.year ?? new Date().getFullYear()).padStart(4, '0')}-${String(b.month ?? (new Date().getMonth() + 1)).padStart(2, '0')}">
@@ -963,7 +1005,7 @@ export class VariablePanel {
                 ['16', I18n.t('miniCalendarTool.calendarType16')],
                 ['20', I18n.t('miniCalendarTool.calendarType20')],
             ], b.calendarType ?? '1')}
-            <div class="ct-field" id="var-minical-singlemonth-wrap" style="margin-top:6px; display:${(b.calendarType ?? '1') !== '1' ? '' : 'none'};">
+            <div class="ct-field ct-field--block" id="var-minical-singlemonth-wrap" style="margin-top:6px; display:${(b.calendarType ?? '1') !== '1' ? '' : 'none'};">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-singlemonth" class="ct-fi" style="display:none;" ${b.singleMonthMode ? 'checked' : ''}>
                     <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.singleMonthMode ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
@@ -981,7 +1023,7 @@ export class VariablePanel {
                 ['complete1',   I18n.t('miniCalendarTool.modeComplete1')],
                 ['complete2',   I18n.t('miniCalendarTool.modeComplete2')],
             ], b.displayMode ?? 'complete1')}
-            <div class="ct-field" style="margin-top:6px;">
+            <div class="ct-field ct-field--block" style="margin-top:6px;">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-week-sunday" class="ct-fi" style="display:none;" ${b.weekStartSunday !== false ? 'checked' : ''}>
                     <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.weekStartSunday !== false ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
@@ -990,8 +1032,10 @@ export class VariablePanel {
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarWeekStartSunday')}</span>
                 </label>
             </div>
-            <div id="var-minical-style-sections" style="margin-top:10px;"></div>
-            <div class="ct-field" style="margin-top:6px;">
+        `;
+        const specific = `
+            <div id="var-minical-style-sections"></div>
+            <div class="ct-field ct-field--block" style="margin-top:6px;">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-highlight-enabled" class="ct-fi" style="display:none;" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
                     <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.miniCalendarHighlightEnabled ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
@@ -1000,12 +1044,12 @@ export class VariablePanel {
                     <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.miniCalendarHighlightToggle')}</span>
                 </label>
             </div>
-            <div id="var-minical-highlight-options" style="display: ${b.miniCalendarHighlightEnabled ? 'block' : 'none'}; margin-top: 10px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
-                <div class="ct-field">
+            <div id="var-minical-highlight-options" style="display: ${b.miniCalendarHighlightEnabled ? 'block' : 'none'}; padding: 10px 12px;">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightBg')}</span>
                     <div id="var-minical-highlight-bg-picker"></div>
                 </div>
-                <div class="ct-field">
+                <div class="ct-field ct-field--block">
                     <span class="craftools-label">${I18n.t('variablePanel.miniCalendarHighlightTextColor')}</span>
                     <div id="var-minical-highlight-text-picker"></div>
                 </div>
@@ -1013,20 +1057,21 @@ export class VariablePanel {
                     ['solid','dashed','dotted','double','none'].map(style =>
                         [style, I18n.t('common.border' + style.charAt(0).toUpperCase() + style.slice(1))] as [string, string]
                     ), b.miniCalendarHighlightBorderStyle || 'solid', { wrapStyle: 'margin-top:10px;' })}
-                <div class="ct-field" style="margin-top:10px;">
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderWidth')}</span>
                     <input type="number" id="var-minical-highlight-borderwidth" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderWidth !== undefined ? b.miniCalendarHighlightBorderWidth : 1}" min="0">
                 </div>
-                <div class="ct-field" style="margin-top:10px;">
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderColor')}</span>
                     <div id="var-minical-highlight-bordercolor-picker"></div>
                 </div>
-                <div class="ct-field" style="margin-top:10px;">
+                <div class="ct-field ct-field--block" style="margin-top:10px;">
                     <span class="craftools-label">${I18n.t('common.borderRadius')}</span>
                     <input type="number" id="var-minical-highlight-radius" class="craftools-input" style="width:100%;" value="${b.miniCalendarHighlightBorderRadius !== undefined ? b.miniCalendarHighlightBorderRadius : 0}" min="0">
                 </div>
             </div>
         `;
+        return { general, specific };
     }
 
     /**
@@ -1133,6 +1178,25 @@ export class VariablePanel {
         if (!typeSelect) return;
 
         let binding: VariableBinding | null = initialBinding ? { ...initialBinding } : null;
+
+        // Tab-switch wiring for the two internal tabs inside this panel --
+        // "Texto Variável" (general/basic controls) and "Configurações dos
+        // Dados" (format-specific controls, see renderAccordionBody()'s doc
+        // comment). The tab buttons/containers themselves are never re-created
+        // on a type change (only their `display` and inner content are), so
+        // it's safe to query and wire them up just once here.
+        const tabBtnGeneral  = container.querySelector<HTMLButtonElement>('#var-tab-btn-general');
+        const tabBtnSpecific = container.querySelector<HTMLButtonElement>('#var-tab-btn-specific');
+        const tabGeneralEl   = container.querySelector<HTMLElement>('#var-tab-general');
+        const tabSpecificEl  = container.querySelector<HTMLElement>('#var-tab-specific');
+        const switchVarTab = (tab: 'general' | 'specific'): void => {
+            if (tabGeneralEl)  tabGeneralEl.style.display  = tab === 'general'  ? '' : 'none';
+            if (tabSpecificEl) tabSpecificEl.style.display = tab === 'specific' ? '' : 'none';
+            tabBtnGeneral?.classList.toggle('active', tab === 'general');
+            tabBtnSpecific?.classList.toggle('active', tab === 'specific');
+        };
+        if (tabBtnGeneral)  tabBtnGeneral.onclick  = () => switchVarTab('general');
+        if (tabBtnSpecific) tabBtnSpecific.onclick = () => switchVarTab('specific');
 
         const updatePreview = (): void => {
             const previewBox   = container.querySelector<HTMLElement>('#var-preview');
@@ -2044,8 +2108,18 @@ export class VariablePanel {
             const newType = typeSelect.value;
             binding = newType ? VariableEngine.defaultBinding(newType) : null;
             if (element && binding) this._ensureVarId(element);
-            const configEl = container.querySelector<HTMLElement>('#var-config');
-            if (configEl) configEl.innerHTML = this._renderConfig(binding, element ?? null);
+            const { general, specific } = this._renderConfig(binding, element ?? null);
+            const hasSpecific = specific.trim() !== '';
+            const tabsWrap = container.querySelector<HTMLElement>('.ct-var-tabs');
+            if (tabsWrap) tabsWrap.style.display = (newType && hasSpecific) ? 'flex' : 'none';
+            if (tabGeneralEl)  tabGeneralEl.innerHTML  = general;
+            if (tabSpecificEl) tabSpecificEl.innerHTML = hasSpecific
+                ? specific
+                : `<div class="ct-field" style="padding:10px 12px;"><span style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.dataSettingsEmpty')}</span></div>`;
+            // Always land back on the general tab whenever the variable type
+            // itself changes -- switching type invalidates whatever the
+            // previous type's "specific" tab held.
+            switchVarTab('general');
             bindConfigFields();
             updatePreview();
             onChange(binding);
