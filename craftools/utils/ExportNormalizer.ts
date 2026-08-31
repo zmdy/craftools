@@ -23,12 +23,14 @@
  *    white-space on contenteditable and AutoFitText elements.
  */
 
-import { ImageEnhancer } from './ImageEnhancer.js';
+import { ImageEnhancer, type EnhanceProfile } from './ImageEnhancer.js';
 
 export interface ImageMeta {
   src?: string;
   originalSrc?: string;
   autoEnhance?: boolean;
+  /** Frozen per-image auto-enhance override (see ImageTool). */
+  enhanceProfile?: EnhanceProfile;
   objectFit?: string;
   contentAlign?: string;
   zoom?: number;
@@ -66,11 +68,13 @@ export class ExportNormalizer {
         if (img && img.src && !img.src.startsWith('data:image/svg+xml')) {
           try {
             const rawSrc = meta?.originalSrc || img.src;
-            // Match the on-canvas result: per-image adaptive analysis with the
-            // global reference-learned profile blended on top as a light
-            // colour "toque" (see ImageEnhancer.enhanceImageAuto).
-            const bias = ImageEnhancer.getProfile();
-            const enhancedUrl = await ImageEnhancer.enhanceImageAuto(rawSrc, bias);
+            // Match the on-canvas result exactly. A per-image manual override
+            // (frozen slider values) is applied verbatim; otherwise per-image
+            // adaptive analysis with the global reference profile blended on
+            // top as a light colour "toque" (see ImageEnhancer.enhanceImageAuto).
+            const enhancedUrl = meta?.enhanceProfile
+              ? await ImageEnhancer.enhanceImage(rawSrc, meta.enhanceProfile)
+              : await ImageEnhancer.enhanceImageAuto(rawSrc, ImageEnhancer.getProfile());
             img.src = enhancedUrl;
           } catch (err) {
             console.warn('[ExportNormalizer] Auto-enhance sync failed for image:', err);

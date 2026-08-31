@@ -13,7 +13,7 @@ import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { borderSection, radiusSection, zIndexSection, backgroundSection, contentAlignSection } from '../../utils/CommonSchema';
 import { ImageFilters } from './ImageFilters.js';
 import { ImageTransform } from './ImageTransform.js';
-import { ImageEnhancer } from '../../utils/ImageEnhancer.js';
+import { ImageEnhancer, type EnhanceProfile } from '../../utils/ImageEnhancer.js';
 import { AppSettings } from '../../utils/AppSettings.js';
 import * as ImageQuality from '../../utils/ImageQuality.js';
 import { renderExtractPalettePanel } from '../../utils/ImagePaletteExtractor.js';
@@ -31,6 +31,16 @@ interface ImageMeta {
   src:         string;
   originalSrc?: string;
   autoEnhance?: boolean;
+  /**
+   * Per-image manual override for the auto-enhance panel. Absent = fully
+   * automatic (each render analyzes the photo and blends the global profile).
+   * Set the moment the user drags a slider in the per-element "Melhorar
+   * Qualidade" panel: the current effective values are frozen here and used
+   * directly (no re-analysis, no global blend) so that photo keeps its own
+   * tuned look. Deep-cloned into project state by StateSerializer like the
+   * rest of meta, so it persists across save/load.
+   */
+  enhanceProfile?: EnhanceProfile;
   objectFit:   string;
   contentAlign: string;
   zoom:        number;
@@ -623,13 +633,19 @@ export class ImageTool extends BaseTool {
       if (!meta.originalSrc) {
         meta.originalSrc = meta.src || img.src;
       }
-      // Per-image adaptive enhancement: analyze THIS photo and correct it
-      // proportionally to its own tone/colour, using the global reference-
-      // learned profile only as a light colour "toque" on top (see
-      // ImageEnhancer.enhanceImageAuto / combineProfiles).
-      const bias = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
+      // Per-image adaptive enhancement. If the user tuned the sliders for this
+      // specific photo, meta.enhanceProfile holds a frozen override -> apply it
+      // verbatim. Otherwise analyze THIS photo and correct it proportionally to
+      // its own tone/colour, using the global reference-learned profile only as
+      // a light colour "toque" on top (ImageEnhancer.enhanceImageAuto).
       try {
-        const enhancedUrl = await ImageEnhancer.enhanceImageAuto(meta.originalSrc, bias);
+        let enhancedUrl: string;
+        if (meta.enhanceProfile) {
+          enhancedUrl = await ImageEnhancer.enhanceImage(meta.originalSrc, meta.enhanceProfile);
+        } else {
+          const bias = AppSettings.get('autoEnhanceProfile') as EnhanceProfile | undefined;
+          enhancedUrl = await ImageEnhancer.enhanceImageAuto(meta.originalSrc, bias);
+        }
         meta.src = enhancedUrl;
         img.src = enhancedUrl;
       } catch (err) {
@@ -793,12 +809,35 @@ export class ImageTool extends BaseTool {
     content.style.cssText = `padding: 4px 12px 10px; display: ${meta.autoEnhance ? 'flex' : 'none'}; flex-direction: column; gap: 8px;`;
     wrap.appendChild(content);
 
-    const buildContent = (): void => {
+    const buildContent = async (): Promise<void> => {
       content.innerHTML = '';
 
-      // Read current profile from AppSettings
-      const profile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
-      const P = profile ?? ImageEnhancer.defaultProfile();
+      // Values shown are the ones ACTUALLY applied to THIS image: the frozen
+      // per-image override if the user already tuned it, otherwise the live
+      // effective profile (this photo's own analysis blended with the global
+      // reference "toque"). Computed async -> show a tiny placeholder meanwhile.
+      const src  = meta.originalSrc || meta.src || '';
+      const bias = AppSettings.get('autoEnhanceProfile') as EnhanceProfile | undefined;
+
+      const loading = document.createElement('div');
+      loading.style.cssText = 'font-size:11px; color:var(--text-muted); padding:6px 0;';
+      loading.textContent = 'Analisando imagem…';
+      content.appendChild(loading);
+
+      const eff: EnhanceProfile = meta.enhanceProfile
+        ?? await ImageEnhancer.getEffectiveProfile(src, bias);
+      loading.remove();
+
+      // First edit freezes the current effective values into a per-image
+      // override; further edits mutate it in place. Re-processing touches only
+      // THIS element (no global dispatch) so sibling photos stay automatic.
+      const ensureOverride = (): EnhanceProfile => {
+        if (!meta.enhanceProfile) meta.enhanceProfile = JSON.parse(JSON.stringify(eff));
+        return meta.enhanceProfile!;
+      };
+      const commit = (): void => {
+        ImageTool._processAutoEnhance(element as HTMLElement & { _craftoolsMeta?: ImageMeta; contentArea?: HTMLElement });
+      };
 
       // ── 4 group navigation buttons ──
       const navWrap = document.createElement('div');
@@ -811,18 +850,17 @@ export class ImageTool extends BaseTool {
         btn.textContent = g.label;
         btn.addEventListener('click', () => {
           activeGroup = g.key;
-          buildContent();
+          void buildContent();
         });
         navWrap.appendChild(btn);
       });
       content.appendChild(navWrap);
 
       // ── Sliders helper (styled like system slider fields) ──
-      const addSlider = (label: string, valueGetter: () => number, valueSetter: (v: number) => void, min: number, max: number): void => {
+      const addSlider = (label: string, curVal: number, valueSetter: (v: number, p: EnhanceProfile) => void, min: number, max: number): void => {
         const row = document.createElement('div');
         row.className = 'ct-field';
         row.style.cssText = 'padding: 0; min-height: unset;';
-        const curVal = valueGetter();
         row.innerHTML = `
           <div class="craftools-label" style="min-width:unset; max-width:unset; flex:1; text-transform:none;">${label}</div>
           <div class="ct-field-row" style="flex:1;">
@@ -835,36 +873,38 @@ export class ImageTool extends BaseTool {
         input.addEventListener('input', () => {
           const v = Number(input.value);
           badge.textContent = String(v);
-          valueSetter(v);
-          const newProfile = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
-          AppSettings.set({ autoEnhanceProfile: newProfile });
-          document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
+          valueSetter(v, ensureOverride());
+          commit();
         });
         content.appendChild(row);
       };
 
       // ── Sliders for active group ──
       if (activeGroup === 'global') {
-        addSlider('Brilho',    () => P.brightness,  v => { P.brightness = v; },  -100, 100);
-        addSlider('Contraste', () => P.contrast,    v => { P.contrast = v; },    -100, 100);
-        addSlider('Saturação', () => P.saturation,  v => { P.saturation = v; },  -100, 100);
+        addSlider('Brilho',    eff.brightness, (v, p) => { p.brightness = v; }, -100, 100);
+        addSlider('Contraste', eff.contrast,   (v, p) => { p.contrast   = v; }, -100, 100);
+        addSlider('Saturação', eff.saturation, (v, p) => { p.saturation = v; }, -100, 100);
       } else {
-        const zone = activeGroup === 'shadows' ? P.shadows : activeGroup === 'highlights' ? P.highlights : P.midtones;
-        addSlider('Ciano – Vermelho', () => zone.cyanRed,      v => { zone.cyanRed = v; },      -50, 50);
-        addSlider('Magenta – Verde',  () => zone.magentaGreen, v => { zone.magentaGreen = v; }, -50, 50);
-        addSlider('Amarelo – Azul',   () => zone.yellowBlue,   v => { zone.yellowBlue = v; },   -50, 50);
+        const zoneOf = (p: EnhanceProfile) => activeGroup === 'shadows' ? p.shadows : activeGroup === 'highlights' ? p.highlights : p.midtones;
+        const z = zoneOf(eff);
+        addSlider('Ciano – Vermelho', z.cyanRed,      (v, p) => { zoneOf(p).cyanRed      = v; }, -50, 50);
+        addSlider('Magenta – Verde',  z.magentaGreen, (v, p) => { zoneOf(p).magentaGreen = v; }, -50, 50);
+        addSlider('Amarelo – Azul',   z.yellowBlue,   (v, p) => { zoneOf(p).yellowBlue   = v; }, -50, 50);
       }
 
-      // ── Reset button ──
+      // ── Reset button: drop the override -> back to fully automatic ──
       const resetBtn = document.createElement('button');
       resetBtn.type = 'button';
       resetBtn.className = 'craftools-pill';
       resetBtn.style.cssText = 'width:100%; justify-content:center; margin-top:4px; font-size:11px;';
-      resetBtn.textContent = 'Restaurar padrões';
+      resetBtn.textContent = 'Reverter para automático';
+      resetBtn.disabled = !meta.enhanceProfile;
+      resetBtn.style.opacity = meta.enhanceProfile ? '1' : '0.5';
       resetBtn.addEventListener('click', () => {
-        AppSettings.set({ autoEnhanceProfile: ImageEnhancer.defaultProfile() });
-        document.dispatchEvent(new CustomEvent('craftools-auto-enhance-update'));
-        buildContent();
+        if (!meta.enhanceProfile) return;
+        delete meta.enhanceProfile;
+        commit();
+        void buildContent();
       });
       content.appendChild(resetBtn);
     };
@@ -884,11 +924,11 @@ export class ImageTool extends BaseTool {
       thumb.style.transform  = chk.checked ? 'translateX(14px)' : 'translateX(0)';
       content.style.display  = chk.checked ? 'flex' : 'none';
 
-      if (chk.checked) buildContent();
+      if (chk.checked) void buildContent();
       ImageTool._processAutoEnhance(metaEl);
     });
 
-    if (meta.autoEnhance) buildContent();
+    if (meta.autoEnhance) void buildContent();
     return wrap;
   }
 }

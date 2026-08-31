@@ -17,32 +17,6 @@ export interface ColorBalanceZone {
   yellowBlue: number;   // -100 to +100 (Blue <-> Yellow)
 }
 
-/**
- * Per-channel auto-levels (tonal-range stretch). Computed individually for
- * each image by {@link ImageEnhancer.analyzeImage} from its own luminance
- * histogram -- black/white points pulled to the image's actual darkest/
- * lightest percentiles, plus a midtone gamma nudge. Optional: a fixed/manual
- * profile (the global "bias") never carries this, so `enhanceImage` skips the
- * whole step when it's absent and behaves exactly as before.
- */
-export interface LevelsAdjust {
-  blackPoint: number;  // 0..255 — input level mapped to 0
-  whitePoint: number;  // 0..255 — input level mapped to 255
-  gamma: number;       // >0 — <1 brightens midtones, >1 darkens
-}
-
-/**
- * Gray-world white-balance gains (multiplicative, per channel, ~1 = neutral).
- * Computed per image to neutralize a measured colour cast; softened and
- * clamped so genuinely colourful photos aren't desaturated. Optional for the
- * same reason as {@link LevelsAdjust}.
- */
-export interface WhiteBalanceGains {
-  r: number;
-  g: number;
-  b: number;
-}
-
 export interface EnhanceProfile {
   brightness: number;  // -100 to +100
   contrast: number;    // -100 to +100
@@ -50,10 +24,6 @@ export interface EnhanceProfile {
   shadows: ColorBalanceZone;
   midtones: ColorBalanceZone;
   highlights: ColorBalanceZone;
-  /** Per-image tonal stretch (auto-levels). Absent on fixed/manual profiles. */
-  levels?: LevelsAdjust;
-  /** Per-image colour-cast correction. Absent on fixed/manual profiles. */
-  whiteBalance?: WhiteBalanceGains;
 }
 
 export const DEFAULT_ENHANCE_PROFILE: EnhanceProfile = {
@@ -229,43 +199,10 @@ export class ImageEnhancer {
     const mZone = profile.midtones;
     const hZone = profile.highlights;
 
-    // Per-image pre-correction factors (present only on analyzed profiles --
-    // a fixed/manual "bias" profile carries neither, so both steps are skipped
-    // and the pipeline is byte-for-byte the legacy one).
-    const wb = profile.whiteBalance;
-    const lv = profile.levels;
-    const lvScale   = lv ? 255 / Math.max(1, lv.whitePoint - lv.blackPoint) : 1;
-    const lvBlack   = lv ? lv.blackPoint : 0;
-    const lvGammaEx = lv && lv.gamma > 0 ? 1 / lv.gamma : 1;
-
     for (let i = 0; i < data.length; i += 4) {
       let r = data[i];
       let g = data[i + 1];
       let b = data[i + 2];
-
-      // 0a. White balance — neutralize the image's own colour cast (gray-world
-      //     gains, softened/clamped in analyzeImage so vivid photos survive).
-      if (wb) {
-        r *= wb.r; g *= wb.g; b *= wb.b;
-        if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
-      }
-
-      // 0b. Auto-levels — stretch this image's actual tonal range to full
-      //     black..white, then a midtone gamma nudge. This is the per-image
-      //     "proportional" correction: a flat/hazy photo gets a big stretch, an
-      //     already-punchy one barely moves.
-      if (lv) {
-        r = (r - lvBlack) * lvScale;
-        g = (g - lvBlack) * lvScale;
-        b = (b - lvBlack) * lvScale;
-        if (r < 0) r = 0; if (g < 0) g = 0; if (b < 0) b = 0;
-        if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
-        if (lvGammaEx !== 1) {
-          r = 255 * Math.pow(r / 255, lvGammaEx);
-          g = 255 * Math.pow(g / 255, lvGammaEx);
-          b = 255 * Math.pow(b / 255, lvGammaEx);
-        }
-      }
 
       // 1. Calculate luminance (0 to 255)
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
@@ -334,23 +271,21 @@ export class ImageEnhancer {
    * Measures ONE image and derives a correction profile tailored to it --
    * the opposite of {@link analyzeReferences}, which learns a look to
    * *reproduce*. Here the goal is to *normalize* each photo proportionally to
-   * its own state:
+   * its own state, expressed ENTIRELY through the same brightness / contrast /
+   * saturation / 3-zone colour-balance knobs the per-image panel exposes --
+   * so the sliders show exactly what's being applied, and differ image to
+   * image:
    *
-   *   - `levels`        — auto-contrast: black/white points pulled to the
-   *                       image's real darkest/lightest percentiles (0.4% /
-   *                       99.6%), plus a midtone gamma nudge toward mid-grey.
-   *                       A flat, low-contrast photo gets a strong stretch; an
-   *                       already well-exposed one barely moves.
-   *   - `whiteBalance`  — gray-world gains that neutralize a measured colour
-   *                       cast, softened and clamped so a genuinely warm/cool
-   *                       or vivid subject isn't flattened to grey.
-   *   - `saturation`    — boosted when the image reads dull, eased back when
-   *                       it's already very saturated.
-   *
-   * brightness/contrast/colour-balance are left near zero on purpose: the
-   * tonal work is done by `levels`, and any deliberate colour *look* is meant
-   * to come from the global reference-learned profile blended on top (see
-   * {@link combineProfiles} / {@link enhanceImageAuto}).
+   *   - `brightness` — from mean luminance vs a mid target: dark photos are
+   *                    lifted, blown-out ones eased down.
+   *   - `contrast`   — from the actual tonal range (0.4% / 99.6% luminance
+   *                    percentiles): a flat, low-range photo gets a real boost,
+   *                    an already-punchy one barely moves.
+   *   - `saturation` — boosted when the image reads dull, eased back when
+   *                    it's already very saturated.
+   *   - `shadows/midtones/highlights` — corrective colour balance that
+   *                    *neutralizes* each zone's measured colour cast (the
+   *                    inverse of the cast, not a reproduction of it).
    *
    * Deterministic per src and memoized. On any failure (load error, tainted
    * cross-origin canvas) it falls back to the legacy fixed default so
@@ -374,9 +309,12 @@ export class ImageEnhancer {
       const data = ctx.getImageData(0, 0, sample, sample).data;
 
       const lumHist = new Array<number>(256).fill(0);
-      let n = 0;
-      let sumR = 0, sumG = 0, sumB = 0, wbN = 0;
-      let satSum = 0;
+      let n = 0, lumSum = 0, satSum = 0;
+
+      // Per-zone channel accumulators (for corrective colour balance).
+      let sR = 0, sG = 0, sB = 0, sN = 0; // shadows   (lum < 85)
+      let mR = 0, mG = 0, mB = 0, mN = 0; // midtones  (85..170)
+      let hR = 0, hG = 0, hB = 0, hN = 0; // highlights (> 170)
 
       for (let i = 0; i < data.length; i += 4) {
         if (data[i + 3] < 8) continue; // skip (near-)transparent pixels
@@ -384,15 +322,16 @@ export class ImageEnhancer {
         const lum = 0.299 * r + 0.587 * g + 0.114 * b;
         const li = lum < 0 ? 0 : lum > 255 ? 255 : lum | 0;
         lumHist[li]++;
+        lumSum += lum;
         n++;
 
         const mx = Math.max(r, g, b);
         const mn = Math.min(r, g, b);
         satSum += mx > 0 ? (mx - mn) / mx : 0;
 
-        // White-balance estimate excludes near-black/near-white pixels: they
-        // carry little reliable hue and clipped highlights would bias the cast.
-        if (lum > 25 && lum < 235) { sumR += r; sumG += g; sumB += b; wbN++; }
+        if (lum < 85)       { sR += r; sG += g; sB += b; sN++; }
+        else if (lum > 170) { hR += r; hG += g; hB += b; hN++; }
+        else                { mR += r; mG += g; mB += b; mN++; }
       }
 
       if (!n) return this.defaultProfile();
@@ -408,63 +347,46 @@ export class ImageEnhancer {
         return 255;
       };
 
-      // ── Auto-levels ──────────────────────────────────────────────────────
-      let bp = Math.max(0, Math.min(60, pAt(0.004)));
-      let wp = Math.max(195, Math.min(255, pAt(0.996)));
-      if (wp - bp < 32) { bp = 0; wp = 255; } // degenerate: skip stretch
+      const clampI = (v: number, lo: number, hi: number) =>
+        Math.max(lo, Math.min(hi, Math.round(v)));
 
-      const hasHeadroom = bp > 4 || wp < 251;
-      let levels: LevelsAdjust | undefined;
-      if (hasHeadroom) {
-        // Partial stretch (85%) rather than snapping fully to 0..255 -- keeps a
-        // little shadow/highlight headroom so the correction reads natural, not
-        // clipped.
-        const LV = 0.85;
-        const blackPoint = bp * LV;
-        const whitePoint = 255 - (255 - wp) * LV;
+      // ── Brightness: pull mean luminance toward a mid target ───────────────
+      const avgLum = lumSum / n;
+      const brightness = clampI((120 - avgLum) * 0.22, -25, 25);
 
-        // Midtone gamma: aim the (post-stretch) median toward mid-grey, at 60%
-        // strength and clamped so it never turns into a heavy exposure shove.
-        const median = pAt(0.5);
-        const mStretched = Math.max(0, Math.min(255, (median - blackPoint) * (255 / Math.max(1, whitePoint - blackPoint))));
-        const mNorm = Math.max(0.05, Math.min(0.95, mStretched / 255));
-        let gamma = Math.log(0.5) / Math.log(mNorm);
-        gamma = Math.max(0.75, Math.min(1.35, 1 + (gamma - 1) * 0.6));
+      // ── Contrast: from the real tonal range (flat range -> boost) ─────────
+      const bp = pAt(0.004);
+      const wp = pAt(0.996);
+      const range = Math.max(1, wp - bp);
+      const contrast = clampI((205 - range) * 0.18, -8, 35);
 
-        levels = { blackPoint, whitePoint, gamma };
-      }
-
-      // ── White balance (gray-world) ───────────────────────────────────────
-      let whiteBalance: WhiteBalanceGains | undefined;
-      if (wbN) {
-        const mr = sumR / wbN, mg = sumG / wbN, mb = sumB / wbN;
-        const gray = (mr + mg + mb) / 3;
-        if (gray > 1) {
-          const rawR = gray / Math.max(1, mr);
-          const rawG = gray / Math.max(1, mg);
-          const rawB = gray / Math.max(1, mb);
-          const cast = Math.max(Math.abs(rawR - 1), Math.abs(rawG - 1), Math.abs(rawB - 1));
-          if (cast > 0.03) { // ignore negligible casts
-            const WBK = 0.6; // soften: correct 60% of the measured cast
-            const soft = (x: number) => Math.max(0.8, Math.min(1.25, 1 + (x - 1) * WBK));
-            whiteBalance = { r: soft(rawR), g: soft(rawG), b: soft(rawB) };
-          }
-        }
-      }
-
-      // ── Adaptive saturation ──────────────────────────────────────────────
+      // ── Saturation: dull -> boost, already-vivid -> ease back ─────────────
       const avgSat = satSum / n;
-      const saturation = Math.max(-8, Math.min(28, Math.round((0.42 - avgSat) * 60)));
+      const saturation = clampI((0.42 - avgSat) * 55, -10, 28);
+
+      // ── Corrective per-zone colour balance (neutralize each zone's cast) ──
+      // A zone that skews red gets a NEGATIVE Cyan-Red push (toward cyan), etc.
+      // Signs match enhanceImage's pipeline: +cyanRed adds red, +magentaGreen
+      // adds green, +yellowBlue removes blue.
+      const zoneBalance = (zr: number, zg: number, zb: number, zc: number): ColorBalanceZone => {
+        if (!zc) return { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 };
+        const r = zr / zc, g = zg / zc, b = zb / zc;
+        const gray = (r + g + b) / 3;
+        const K = 0.45; // gentle correction
+        return {
+          cyanRed:      clampI(-(r - gray) * K, -22, 22),
+          magentaGreen: clampI(-(g - gray) * K, -22, 22),
+          yellowBlue:   clampI( (b - gray) * K, -22, 22),
+        };
+      };
 
       profile = {
-        brightness: 0,
-        contrast: 0,
+        brightness,
+        contrast,
         saturation,
-        shadows:    { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
-        midtones:   { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
-        highlights: { cyanRed: 0, magentaGreen: 0, yellowBlue: 0 },
-        levels,
-        whiteBalance,
+        shadows:    zoneBalance(sR, sG, sB, sN),
+        midtones:   zoneBalance(mR, mG, mB, mN),
+        highlights: zoneBalance(hR, hG, hB, hN),
       };
     } catch (err) {
       console.warn('[ImageEnhancer] Per-image analysis failed, using default profile:', err);
@@ -484,10 +406,8 @@ export class ImageEnhancer {
    *   - `colorK` — strong for the 3-zone colour balance, because that IS the
    *                "look" the user teaches via reference images (Settings ->
    *                "Imagens de Referência para Aprendizado de Cor") and it
-   *                should be applied consistently across every photo.
-   *
-   * The per-image `levels`/`whiteBalance` are carried straight through (a
-   * fixed profile never has them to contribute).
+   *                should be applied consistently across every photo, on top of
+   *                the per-image cast correction.
    */
   static combineProfiles(
     base: EnhanceProfile,
@@ -495,22 +415,36 @@ export class ImageEnhancer {
     toneK = 0.30,
     colorK = 0.75,
   ): EnhanceProfile {
-    if (!bias) return base;
+    if (!bias) return { ...base, shadows: { ...base.shadows }, midtones: { ...base.midtones }, highlights: { ...base.highlights } };
     const zone = (a: ColorBalanceZone, b: ColorBalanceZone): ColorBalanceZone => ({
-      cyanRed:      a.cyanRed      + b.cyanRed      * colorK,
-      magentaGreen: a.magentaGreen + b.magentaGreen * colorK,
-      yellowBlue:   a.yellowBlue   + b.yellowBlue   * colorK,
+      cyanRed:      Math.round(a.cyanRed      + b.cyanRed      * colorK),
+      magentaGreen: Math.round(a.magentaGreen + b.magentaGreen * colorK),
+      yellowBlue:   Math.round(a.yellowBlue   + b.yellowBlue   * colorK),
     });
     return {
-      brightness: base.brightness + bias.brightness * toneK,
-      contrast:   base.contrast   + bias.contrast   * toneK,
-      saturation: base.saturation + bias.saturation * toneK,
+      brightness: Math.round(base.brightness + bias.brightness * toneK),
+      contrast:   Math.round(base.contrast   + bias.contrast   * toneK),
+      saturation: Math.round(base.saturation + bias.saturation * toneK),
       shadows:    zone(base.shadows,    bias.shadows),
       midtones:   zone(base.midtones,   bias.midtones),
       highlights: zone(base.highlights, bias.highlights),
-      levels: base.levels,
-      whiteBalance: base.whiteBalance,
     };
+  }
+
+  /**
+   * The profile actually applied to `src` in pure-auto mode: the per-image
+   * analysis blended with the global reference/manual `bias`. This is what the
+   * per-element panel shows in its sliders (so they differ image to image),
+   * and what gets frozen into a per-image override the moment the user edits a
+   * slider there.
+   */
+  static async getEffectiveProfile(
+    src: string,
+    bias?: EnhanceProfile,
+    toneK = 0.30,
+    colorK = 0.75,
+  ): Promise<EnhanceProfile> {
+    return this.combineProfiles(await this.analyzeImage(src), bias, toneK, colorK);
   }
 
   /**
@@ -532,8 +466,7 @@ export class ImageEnhancer {
       : (srcOrImg.src || srcOrImg.getAttribute('src') || '');
     if (!src) throw new Error('Source image is empty');
 
-    const base  = await this.analyzeImage(src);
-    const final = this.combineProfiles(base, bias, toneK, colorK);
+    const final = await this.getEffectiveProfile(src, bias, toneK, colorK);
     return this.enhanceImage(srcOrImg, final);
   }
 
