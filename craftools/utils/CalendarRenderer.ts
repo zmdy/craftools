@@ -224,9 +224,18 @@ export class CalendarRenderer {
       // so this is safe even for legacy themes that never went through the
       // color-picker UI at all.
       const titleBarBg = cssFromValue(normalizeValue(t.titleBar.bg));
+      // Day-header (weekday letters row) background -- was emitted RAW, so any
+      // colour picked through the gradient-capable color-picker (stored as a
+      // JSON ColorPickerValue string) produced invalid CSS and silently showed
+      // no background. Resolved here like every other background field;
+      // idempotent for the plain-hex default ('#1a1a1a').
+      const weekHeaderBgResolved = cssFromValue(normalizeValue(t.weekHeader.bg));
       const cellBgResolved = cssFromValue(normalizeValue(t.cellBg));
       const weekendBgResolved = t.weekendBg ? cssFromValue(normalizeValue(t.weekendBg)) : '';
-      const dayCellBgResolved = (t.dayNumbers.cellStyleEnabled && t.dayNumbers.cellBg)
+      // Per-day-cell background applies as soon as one is set (no longer gated
+      // behind the separate Cell Style toggle) -- an empty default still paints
+      // nothing, so the plain grid is unchanged. 'transparent' counts as unset.
+      const dayCellBgResolved = (t.dayNumbers.cellBg && t.dayNumbers.cellBg !== 'transparent')
           ? cssFromValue(normalizeValue(t.dayNumbers.cellBg)) : '';
       const letterBgResolved = t.weekHeader.letterShape && t.weekHeader.letterBg
           ? cssFromValue(normalizeValue(t.weekHeader.letterBg)) : 'transparent';
@@ -255,12 +264,17 @@ export class CalendarRenderer {
       const holidays = BrazilianHolidays.getHolidaysForMonth(year, month);
       const holidayByDay = new Map(holidays.map((h: any) => [h.day, h.name]));
 
-      // Per-day-cell border/radius/background -- gated behind
-      // `cellStyleEnabled` (see CalendarTheme.dayNumbers's own doc comment)
-      // so the ambient grid stays plain until the user explicitly opts in.
-      const cellStyleOn = !!t.dayNumbers.cellStyleEnabled;
+      // Per-day-cell border/radius/background. Previously ALL of these were
+      // gated behind the `cellStyleEnabled` toggle, so setting a cell
+      // background/border/radius did nothing until the user also found and
+      // flipped that separate switch -- the controls read as broken. They now
+      // self-enable: a set background or a >0 border width (or the explicit
+      // toggle) turns cell styling on, while a pristine theme (empty bg, 0
+      // border) still renders a plain grid exactly as before.
+      const hasCellBorder = t.dayNumbers.innerBorderWidth > 0;
+      const cellStyleOn = !!t.dayNumbers.cellStyleEnabled || !!dayCellBgResolved || hasCellBorder;
       const dayCellRadiusCss = cellStyleOn ? this._radiusCss(t.dayNumbers.radius) : '';
-      const dayCellBorderCss = (cellStyleOn && t.dayNumbers.innerBorderWidth > 0)
+      const dayCellBorderCss = hasCellBorder
           ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
           : '';
       const dayCellBase = [dayCellBorderCss, dayCellRadiusCss].filter(Boolean).join(' ');
@@ -362,7 +376,7 @@ export class CalendarRenderer {
           : '';
 
       const weekHeaderHtml = parts.week ? `
-              <div class="cal-week-header" style="display:flex; background:${this._esc(t.weekHeader.bg)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt; box-sizing:border-box; ${this._radiusCss(t.weekHeader.radius)}">
+              <div class="cal-week-header" style="display:flex; background:${this._esc(weekHeaderBgResolved)}; color:${this._esc(t.weekHeader.color)}; font-family:'${this._esc(t.weekHeader.font)}', sans-serif; font-size:${t.weekHeader.fontSize}pt; box-sizing:border-box; ${this._radiusCss(t.weekHeader.radius)}">
                   ${weekHeaderLetters.map((l, i) => {
                       const isLast = i === weekHeaderLetters.length - 1;
                       const border = (t.weekHeader.innerBorderWidth > 0 && !isLast)
