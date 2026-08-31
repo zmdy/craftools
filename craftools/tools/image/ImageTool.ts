@@ -623,9 +623,13 @@ export class ImageTool extends BaseTool {
       if (!meta.originalSrc) {
         meta.originalSrc = meta.src || img.src;
       }
-      const profile = AppSettings.get('autoEnhanceProfile');
+      // Per-image adaptive enhancement: analyze THIS photo and correct it
+      // proportionally to its own tone/colour, using the global reference-
+      // learned profile only as a light colour "toque" on top (see
+      // ImageEnhancer.enhanceImageAuto / combineProfiles).
+      const bias = AppSettings.get('autoEnhanceProfile') as import('../../utils/ImageEnhancer.js').EnhanceProfile | undefined;
       try {
-        const enhancedUrl = await ImageEnhancer.enhanceImage(meta.originalSrc, profile);
+        const enhancedUrl = await ImageEnhancer.enhanceImageAuto(meta.originalSrc, bias);
         meta.src = enhancedUrl;
         img.src = enhancedUrl;
       } catch (err) {

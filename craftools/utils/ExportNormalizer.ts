@@ -66,8 +66,11 @@ export class ExportNormalizer {
         if (img && img.src && !img.src.startsWith('data:image/svg+xml')) {
           try {
             const rawSrc = meta?.originalSrc || img.src;
-            const profile = ImageEnhancer.getProfile();
-            const enhancedUrl = await ImageEnhancer.enhanceImage(rawSrc, profile);
+            // Match the on-canvas result: per-image adaptive analysis with the
+            // global reference-learned profile blended on top as a light
+            // colour "toque" (see ImageEnhancer.enhanceImageAuto).
+            const bias = ImageEnhancer.getProfile();
+            const enhancedUrl = await ImageEnhancer.enhanceImageAuto(rawSrc, bias);
             img.src = enhancedUrl;
           } catch (err) {
             console.warn('[ExportNormalizer] Auto-enhance sync failed for image:', err);
