@@ -232,6 +232,19 @@ html, body {
     max-height: 500vh;
     opacity: 1;
 }
+/* A collapsed accordion nested inside an open one must still hide its OWN
+   body. The descendant rule above ('.ct-accordion.open .ct-accordion-body')
+   otherwise forces every nested body open whenever any ancestor accordion is
+   open -- which made the calendar style sub-accordions inside the Variable
+   panel ("Configurações dos Dados") all render expanded at once, burying
+   lower sections (Days table, Holidays & Moon...) in a 6000px-tall panel.
+   Higher specificity than that rule (an extra .ct-accordion + :not(.open)) and
+   matched only on a closed accordion's own direct body, so it wins and keeps
+   that body collapsed regardless of an open ancestor. */
+.ct-accordion.open .ct-accordion:not(.open) > .ct-accordion-body {
+    max-height: 0;
+    opacity: 0;
+}
 .ct-accordion-content { padding: 0 0 10px; display: flex; flex-direction: column; gap: 0; }
 
 /* ── Panel field rows (inside accordion) ─────────────────────────────────── */
