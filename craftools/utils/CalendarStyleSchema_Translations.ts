@@ -39,7 +39,11 @@ I18n.addTranslations('calendarStyle', {
 
         sundayHolidayColor: "Cor de domingo/feriado",
         rowGap:             "Espaçamento entre linhas",
+        colGap:             "Espaçamento entre colunas",
         cellStyle:          "Fundo e borda de cada dia",
+        otherMonthDays:     "Dias de outros meses",
+        otherMonthShow:     "Exibir dias de outros meses",
+        otherMonthColor:    "Cor dos dias de outros meses",
         weekendBackground:  "Fundo de fim de semana",
 
         holidays:    "Feriados",
@@ -78,7 +82,11 @@ I18n.addTranslations('calendarStyle', {
 
         sundayHolidayColor: "Sunday/holiday color",
         rowGap:             "Row spacing",
+        colGap:             "Column spacing",
         cellStyle:          "Per-day background and border",
+        otherMonthDays:     "Other-month days",
+        otherMonthShow:     "Show days from other months",
+        otherMonthColor:    "Other-month days color",
         weekendBackground:  "Weekend background",
 
         holidays:    "Holidays",
@@ -117,7 +125,11 @@ I18n.addTranslations('calendarStyle', {
 
         sundayHolidayColor: "Color de domingo/feriado",
         rowGap:             "Espaciado entre filas",
+        colGap:             "Espaciado entre columnas",
         cellStyle:          "Fondo y borde de cada día",
+        otherMonthDays:     "Días de otros meses",
+        otherMonthShow:     "Mostrar días de otros meses",
+        otherMonthColor:    "Color de días de otros meses",
         weekendBackground:  "Fondo de fin de semana",
 
         holidays:    "Feriados",

@@ -93,12 +93,26 @@ export interface CalendarTheme {
    */
   dayNumbers?: {
     color?: string; sundayColor?: string; font?: string; fontSize?: number; rowGap?: number;
+    /** Horizontal gap (px) between the 7 day columns of the grid -- 0 (default)
+     * keeps the original edge-to-edge columns. Pairs with `rowGap`. */
+    colGap?: number;
     /** Horizontal alignment of the day number inside its own cell. */
     align?: 'left' | 'center' | 'right';
     cellStyleEnabled?: boolean;
     cellBg?: string;
     innerBorderWidth?: number; innerBorderStyle?: string; innerBorderColor?: string;
     radius?: RadiusCorners;
+    /**
+     * When true, the leading/trailing grid cells that belong to the PREVIOUS
+     * and NEXT months (the ones normally left blank) render their real day
+     * numbers, styled with `otherMonthColor` + the `otherMonthBorder*` trio.
+     * When false (default), those cells are truly empty spacers with NO border
+     * or background -- so a per-day cell border (the "circle around each day"
+     * look) is not drawn on cells that aren't real days of this month.
+     */
+    otherMonthShow?: boolean;
+    otherMonthColor?: string;
+    otherMonthBorderWidth?: number; otherMonthBorderStyle?: string; otherMonthBorderColor?: string;
   };
   holidays?: { color?: string; font?: string; fontSize?: number; align?: 'left' | 'center' | 'right'; bg?: string; radius?: RadiusCorners };
   moonPhases?: { color?: string; font?: string; fontSize?: number; bg?: string; radius?: RadiusCorners };
@@ -179,9 +193,11 @@ export class CalendarRenderer {
               letterRadius: { tl: 999, tr: 999, br: 999, bl: 999 }, letterSize: 18,
           },
           dayNumbers: {
-              color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, align: 'center',
+              color: '#1a1a1a', sundayColor: '#e11d2e', font: 'DM Sans', fontSize: 5.5, rowGap: 0, colGap: 0, align: 'center',
               cellStyleEnabled: false, cellBg: '',
               innerBorderWidth: 0, innerBorderStyle: 'solid', innerBorderColor: '#cccccc', radius: {},
+              otherMonthShow: false, otherMonthColor: '#c0c0c0',
+              otherMonthBorderWidth: 0, otherMonthBorderStyle: 'solid', otherMonthBorderColor: '#e0e0e0',
           },
           holidays: { color: '#e11d2e', font: 'DM Sans', fontSize: 3.2, align: 'center', bg: '', radius: {} },
           moonPhases: { color: '#1a1a1a', font: 'DM Sans', fontSize: 3.2, bg: '', radius: {} },
@@ -278,10 +294,29 @@ export class CalendarRenderer {
           ? `border:${t.dayNumbers.innerBorderWidth}px ${this._esc(t.dayNumbers.innerBorderStyle)} ${this._esc(t.dayNumbers.innerBorderColor)}; box-sizing:border-box;`
           : '';
       const dayCellBase = [dayCellBorderCss, dayCellRadiusCss].filter(Boolean).join(' ');
+
+      // Previous/next-month "other month" cells (see CalendarTheme.dayNumbers
+      // .otherMonthShow). When shown they render the real prev/next-month day
+      // number styled with otherMonthColor + its own border; when hidden they
+      // are blank spacers with NO styling -- so a per-day cell border isn't
+      // painted on cells that aren't real days of this month.
+      const otherShow = !!t.dayNumbers.otherMonthShow;
+      const otherColor = t.dayNumbers.otherMonthColor || '#c0c0c0';
+      const otherBorderCss = (t.dayNumbers.otherMonthBorderWidth > 0)
+          ? `border:${t.dayNumbers.otherMonthBorderWidth}px ${this._esc(t.dayNumbers.otherMonthBorderStyle)} ${this._esc(t.dayNumbers.otherMonthBorderColor)}; box-sizing:border-box;`
+          : '';
+      const otherCellExtra = [otherBorderCss, dayCellRadiusCss].filter(Boolean).join(' ');
+      const otherCell = (n: number): string =>
+          `<span style="display:flex; align-items:center; justify-content:${this._justify(t.dayNumbers.align)}; box-sizing:border-box; color:${this._esc(otherColor)}; font-weight:400; ${otherCellExtra}">${n}</span>`;
+
       const highlight = options.highlight;
       let cells = '';
+      // Leading cells: trailing days of the previous month.
+      const prevMonthDays = new Date(year, month - 1, 0).getDate();
       for (let i = 0; i < leadingEmpty; i++) {
-          cells += `<span style="display:flex; ${dayCellBase}"></span>`;
+          cells += otherShow
+              ? otherCell(prevMonthDays - leadingEmpty + 1 + i)
+              : `<span style="display:flex;"></span>`;
       }
       for (let day = 1; day <= daysInMonth; day++) {
           const weekday = (startWeekday + day - 1) % 7;
@@ -328,8 +363,16 @@ export class CalendarRenderer {
           cells += `<span style="display:flex; align-items:center; justify-content:${this._justify(t.dayNumbers.align)}; box-sizing:border-box; color:${this._esc(color)}; font-weight:${weight}; ${cellExtra}">${day}</span>`;
       }
 
+      // Trailing cells: leading days of the next month, only rendered when
+      // "other month" days are shown (so the last week row is completed).
+      // Hidden mode adds nothing here -- matching the original look.
+      if (otherShow) {
+          const trailing = (7 - ((leadingEmpty + daysInMonth) % 7)) % 7;
+          for (let i = 1; i <= trailing; i++) cells += otherCell(i);
+      }
+
       const daysGridHtml = parts.days ? `
-          <div class="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); font-family:'${this._esc(t.dayNumbers.font)}', sans-serif; font-size:${t.dayNumbers.fontSize}pt; line-height:1.25; flex:1; row-gap:${t.dayNumbers.rowGap || 0}px;">
+          <div class="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); font-family:'${this._esc(t.dayNumbers.font)}', sans-serif; font-size:${t.dayNumbers.fontSize}pt; line-height:1.25; flex:1; row-gap:${t.dayNumbers.rowGap || 0}px; column-gap:${t.dayNumbers.colGap || 0}px;">
               ${cells}
           </div>
       ` : '';
