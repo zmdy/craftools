@@ -2,6 +2,8 @@
 import { loadPhrases, loadPhraseCollections, loadEmojiKitchenCombo, loadEmojiKitchenPartners, loadCalendarDate } from './ApiDataLoader.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { CalendarRenderer, type CalendarTheme } from './CalendarRenderer.js';
+import { QrCode, type EcLevel } from './QrCode.js';
+import { BarcodeGenerator } from './BarcodeGenerator.js';
 import { MoonPhases } from './MoonPhases.js';
 import { Seasons } from './Seasons.js';
 import { Zodiac } from './Zodiac.js';
@@ -49,7 +51,8 @@ type MiniCalendarPick = {
 
 export type VariableType =
     | 'date' | 'sequenceNumber' | 'sequenceText' | 'pageNumber'
-    | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar' | 'image';
+    | 'link' | 'emoji' | 'apiPhrase' | 'emojiKitchen' | 'miniCalendar' | 'image'
+    | 'qrcode' | 'barcode';
 
 /** Fixed calendar periods AgendaExportTool.ts's Pages tab can auto-compute a
  *  repeat count from, for a page whose leading variable is a 'date' binding
@@ -325,6 +328,21 @@ export interface VariableBinding {
     imageLayout?: 'captionBottom' | 'captionTop' | 'captionLeft' | 'captionRight' | 'imageOnly' | 'captionOnly';
     // `mode` ('sequential' | 'random', declared above under emoji/sequenceText)
     // is reused here too, same convention as apiPhrase/emojiKitchen/emoji.
+
+    // qrcode / barcode
+    /**
+     * The text encoded into the QR code / barcode. Like the 'link' type it can
+     * be a fixed string OR have a per-repetition index appended (reusing
+     * `appendIndex`/`startAt` above) -- e.g. a base ticket URL/number plus an
+     * incrementing counter per page/card. See _resolveCodeData().
+     */
+    codeData?: string;
+    /** QR error-correction level (qrcode only). Default 'M'. */
+    qrEcLevel?: EcLevel;
+    /** Barcode symbology (barcode only). Default 'code39'. */
+    barcodeFormat?: 'code39' | 'ean13';
+    /** Print the human-readable value under the barcode (barcode only). Default true. */
+    barcodeShowText?: boolean;
 }
 
 export interface ResolveContext {
@@ -506,6 +524,8 @@ export class VariableEngine {
             case 'emojiKitchen':   return { type, leftEmoji: '', rightEmoji: '', mode: 'sequential', linkedTo: '' };
             case 'miniCalendar':   return { type, mode: 'fixed', year: today.getFullYear(), month: today.getMonth() + 1, displayMode: 'complete1', linkedTo: '' };
             case 'image':          return { type, images: [], mode: 'sequential', imageLayout: 'captionBottom', linkedTo: '' };
+            case 'qrcode':         return { type, codeData: '', appendIndex: false, startAt: 1, qrEcLevel: 'M', linkedTo: '' };
+            case 'barcode':        return { type, codeData: '', appendIndex: false, startAt: 1, barcodeFormat: 'code39', barcodeShowText: true, linkedTo: '' };
             default:               return null;
         }
     }
@@ -732,6 +752,8 @@ export class VariableEngine {
             case 'emojiKitchen':   return this._pickEmojiKitchen(binding, ctx, apiCache);
             case 'miniCalendar':   return this._pickMiniCalendar(binding, ctx, picks);
             case 'image':          return this._pickImage(binding, ctx);
+            case 'qrcode':
+            case 'barcode':        return this._pickLink(binding, ctx); // index (or null) — same append-index logic
             default:               return null;
         }
     }
@@ -750,8 +772,50 @@ export class VariableEngine {
             case 'emojiKitchen':   return (pick && (pick as { url: string }).url) ? (pick as { url: string }).url : '';
             case 'miniCalendar':   return pick ? this._formatMiniCalendar(pick as MiniCalendarPick) : '';
             case 'image':          return this._formatImage(pick as { url: string; caption: string } | null, binding);
+            case 'qrcode':         return this._formatQrCode(pick as number | null, binding);
+            case 'barcode':        return this._formatBarcode(pick as number | null, binding);
             default:               return '';
         }
+    }
+
+    // ── qrcode / barcode ───────────────────────────────────────────────────────
+
+    /**
+     * Resolves the string actually encoded into the code: the fixed `codeData`
+     * plus, when `appendIndex` is on, the per-repetition counter (startAt +
+     * repetitionIndex, same value _pickLink() computes). Shared by both code
+     * types so a "base value + incrementing suffix" behaves identically.
+     */
+    private static _resolveCodeData(pick: number | null, b: VariableBinding): string {
+        let data = String(b.codeData ?? '');
+        if (b.appendIndex) {
+            const n = pick ?? (parseInt(String(b.startAt), 10) || 1);
+            data += String(n);
+        }
+        return data;
+    }
+
+    private static _formatQrCode(pick: number | null, b: VariableBinding): string {
+        const data = this._resolveCodeData(pick, b);
+        if (!data) return '';
+        // Full-size, background-less SVG so it scales to the element and blends
+        // with whatever the element sits on (same crispEdges SVG QRCodeTool renders).
+        return QrCode.buildSvgString(data, {
+            ecLevel: b.qrEcLevel ?? 'M',
+            darkColor: '#000000',
+            lightColor: 'transparent',
+        });
+    }
+
+    private static _formatBarcode(pick: number | null, b: VariableBinding): string {
+        const data = this._resolveCodeData(pick, b);
+        if (!data) return '';
+        return BarcodeGenerator.buildSvgString(data, {
+            format: b.barcodeFormat ?? 'code39',
+            color: '#000000',
+            background: 'transparent',
+            showText: b.barcodeShowText !== false,
+        });
     }
 
     // ── date ──────────────────────────────────────────────────────────────────

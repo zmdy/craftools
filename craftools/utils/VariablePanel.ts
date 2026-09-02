@@ -71,16 +71,33 @@ export class VariablePanel {
                     <option value="emojiKitchen"    ${type === 'emojiKitchen'    ? 'selected' : ''}>${I18n.t('variablePanel.typeEmojiKitchen')}</option>
                     <option value="miniCalendar"    ${type === 'miniCalendar'    ? 'selected' : ''}>${I18n.t('variablePanel.typeMiniCalendar')}</option>
                     <option value="image"           ${type === 'image'           ? 'selected' : ''}>${I18n.t('variablePanel.typeImage')}</option>
+                    <option value="qrcode"          ${type === 'qrcode'          ? 'selected' : ''}>${I18n.t('variablePanel.typeQrCode')}</option>
+                    <option value="barcode"         ${type === 'barcode'         ? 'selected' : ''}>${I18n.t('variablePanel.typeBarcode')}</option>
                 </select>
             </div>
-            ${type ? `
-            <div class="ct-var-tabs" style="display:flex; gap:4px; padding:0 12px; margin-top:6px; ${hasSpecific ? '' : 'display:none;'}">
-                <button type="button" id="var-tab-btn-general" class="craftools-pill active" style="flex:1; text-align:center; justify-content:center;">${I18n.t('variablePanel.tabGeneral')}</button>
-                <button type="button" id="var-tab-btn-specific" class="craftools-pill" style="flex:1; text-align:center; justify-content:center;">${I18n.t('variablePanel.tabDataSettings')}</button>
-            </div>` : ''}
             <div id="var-config">
                 <div id="var-tab-general">${general}</div>
-                <div id="var-tab-specific" style="display:none;">${hasSpecific ? specific : `<div class="ct-field" style="padding:10px 12px;"><span style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.dataSettingsEmpty')}</span></div>`}</div>
+                <!-- "Configurações dos Dados" is now its OWN collapsible
+                     accordion section, rendered right after the essential
+                     controls instead of a pill sub-tab crammed into the same
+                     view. Shown only for types that actually have
+                     format-specific settings; collapsed by default. Uses the
+                     app's standard .ct-accordion markup so it styles/collapses
+                     exactly like every schema section (and the nested calendar
+                     style sub-accordions inside it collapse correctly too --
+                     see the nested-accordion CSS rule in craftools.css). -->
+                <div class="ct-accordion" id="var-datasettings-accordion" style="${hasSpecific ? '' : 'display:none;'}">
+                    <button class="ct-accordion-header" type="button" id="var-datasettings-toggle">
+                        <span class="ct-accordion-icon"><span class="material-symbols-outlined">tune</span></span>
+                        <span class="ct-accordion-title">${I18n.t('variablePanel.tabDataSettings')}</span>
+                        <span class="ct-accordion-chevron"><span class="material-symbols-outlined">expand_more</span></span>
+                    </button>
+                    <div class="ct-accordion-body">
+                        <div class="ct-accordion-content">
+                            <div id="var-tab-specific">${hasSpecific ? specific : ''}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="ct-field" id="var-preview" style="${type ? '' : 'display:none;'}">
                 <span class="craftools-label">${I18n.t('variablePanel.previewLabel')}</span>
@@ -113,6 +130,8 @@ export class VariablePanel {
             case 'emojiKitchen':   { const c = this._emojiKitchenConfig(binding);       return { general: linkRow + c.general, specific: c.specific }; }
             case 'miniCalendar':   { const c = this._miniCalendarConfig(binding, element); return { general: linkRow + c.general, specific: c.specific }; }
             case 'image':          return { general: linkRow + this._imageConfig(binding), specific: '' };
+            case 'qrcode':         { const c = this._codeConfig(binding, 'qrcode');  return { general: linkRow + c.general, specific: c.specific }; }
+            case 'barcode':        { const c = this._codeConfig(binding, 'barcode'); return { general: linkRow + c.general, specific: c.specific }; }
             default:                return { general: '', specific: '' };
         }
     }
@@ -868,6 +887,44 @@ export class VariablePanel {
         `;
     }
 
+    /**
+     * QR code / barcode config. `general` holds the encoded value: a fixed
+     * text plus the shared "append per-repetition index" option (same
+     * appendIndex/startAt fields the Link type uses). `specific` holds the
+     * per-symbology options -- QR error-correction level, or barcode
+     * format + human-readable-text toggle.
+     */
+    private static _codeConfig(b: VariableBinding, kind: 'qrcode' | 'barcode'): { general: string; specific: string } {
+        const general = `
+            <div class="ct-field ct-field--block">
+                <span class="craftools-label">${I18n.t('variablePanel.codeDataLabel')}</span>
+                <textarea id="var-code-data" class="craftools-input" style="width:100%; min-height:52px; resize:vertical;" placeholder="${this._esc(I18n.t('variablePanel.codeDataPlaceholder'))}">${this._esc(b.codeData ?? '')}</textarea>
+            </div>
+            <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="var-code-append" ${b.appendIndex ? 'checked' : ''}>
+                <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.codeAppendIndexLabel')}</span>
+            </label>
+            <div class="ct-field" id="var-code-startat-field" style="${b.appendIndex ? '' : 'display:none;'}">
+                <span class="craftools-label">${I18n.t('variablePanel.linkStartAtLabel')}</span>
+                <input type="number" id="var-code-startat" class="craftools-input" style="width:100%;" value="${b.startAt ?? 1}" min="1">
+            </div>
+        `;
+        const specific = kind === 'qrcode'
+            ? this._pillGroup(I18n.t('variablePanel.qrEcLevelLabel'), 'var-code-qrec-btn', [
+                  ['L', 'L (7%)'], ['M', 'M (15%)'], ['Q', 'Q (25%)'], ['H', 'H (30%)'],
+              ], b.qrEcLevel ?? 'M', { help: I18n.t('variablePanel.qrEcLevelHelp') })
+            : `
+                ${this._pillGroup(I18n.t('variablePanel.barcodeFormatLabel'), 'var-code-format-btn', [
+                    ['code39', 'Code 39'], ['ean13', 'EAN-13'],
+                ], b.barcodeFormat ?? 'code39')}
+                <label class="ct-field" style="flex-direction:row; align-items:center; gap:6px; cursor:pointer; margin-top:8px;">
+                    <input type="checkbox" id="var-code-showtext" ${b.barcodeShowText !== false ? 'checked' : ''}>
+                    <span class="craftools-label" style="margin:0;">${I18n.t('variablePanel.barcodeShowTextLabel')}</span>
+                </label>
+            `;
+        return { general, specific };
+    }
+
     private static _emojiConfig(b: VariableBinding): string {
         return `
             <div class="ct-field ct-field--block">
@@ -1179,24 +1236,19 @@ export class VariablePanel {
 
         let binding: VariableBinding | null = initialBinding ? { ...initialBinding } : null;
 
-        // Tab-switch wiring for the two internal tabs inside this panel --
-        // "Texto Variável" (general/basic controls) and "Configurações dos
-        // Dados" (format-specific controls, see renderAccordionBody()'s doc
-        // comment). The tab buttons/containers themselves are never re-created
-        // on a type change (only their `display` and inner content are), so
-        // it's safe to query and wire them up just once here.
-        const tabBtnGeneral  = container.querySelector<HTMLButtonElement>('#var-tab-btn-general');
-        const tabBtnSpecific = container.querySelector<HTMLButtonElement>('#var-tab-btn-specific');
+        // "Configurações dos Dados" is its own collapsible accordion section
+        // (see renderAccordionBody()) holding each type's format-specific
+        // controls, separate from the essential controls above it. The
+        // accordion shell (#var-datasettings-accordion / its header) is never
+        // re-created on a type change -- only #var-tab-specific's inner content
+        // and the shell's `display` are -- so its toggle is wired just once here.
         const tabGeneralEl   = container.querySelector<HTMLElement>('#var-tab-general');
         const tabSpecificEl  = container.querySelector<HTMLElement>('#var-tab-specific');
-        const switchVarTab = (tab: 'general' | 'specific'): void => {
-            if (tabGeneralEl)  tabGeneralEl.style.display  = tab === 'general'  ? '' : 'none';
-            if (tabSpecificEl) tabSpecificEl.style.display = tab === 'specific' ? '' : 'none';
-            tabBtnGeneral?.classList.toggle('active', tab === 'general');
-            tabBtnSpecific?.classList.toggle('active', tab === 'specific');
-        };
-        if (tabBtnGeneral)  tabBtnGeneral.onclick  = () => switchVarTab('general');
-        if (tabBtnSpecific) tabBtnSpecific.onclick = () => switchVarTab('specific');
+        const dataSettingsAccordion = container.querySelector<HTMLElement>('#var-datasettings-accordion');
+        const dataSettingsToggle    = container.querySelector<HTMLButtonElement>('#var-datasettings-toggle');
+        if (dataSettingsToggle && dataSettingsAccordion) {
+            dataSettingsToggle.onclick = () => dataSettingsAccordion.classList.toggle('open');
+        }
 
         const updatePreview = (): void => {
             const previewBox   = container.querySelector<HTMLElement>('#var-preview');
@@ -1218,6 +1270,11 @@ export class VariablePanel {
                     // sized to a reasonable preview box instead of a fixed
                     // calendar-card aspect ratio.
                     previewValue.innerHTML = `<div style="width:100%; height:90px; margin:0 auto;">${val}</div>`;
+                } else if ((binding!.type === 'qrcode' || binding!.type === 'barcode') && val) {
+                    // _formatQrCode()/_formatBarcode() return a full <svg>
+                    // string -- render it inline (centered, size-capped)
+                    // instead of showing the raw markup as text.
+                    previewValue.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; max-height:90px;">${val}</div>`;
                 } else if (binding!.type === 'date' && VariableEngine.isHtmlDateFormat(binding!.format) && val) {
                     // _formatDate()'s DAYS_BOX/MOON_PHASE cases return real
                     // markup (a row of day-letter boxes / an icon+emoji+text
@@ -1599,6 +1656,28 @@ export class VariablePanel {
                         notify();
                     };
                     if (startAtInput) startAtInput.oninput = () => { binding!.startAt = startAtInput.value; notify(); };
+                    break;
+                }
+                case 'qrcode':
+                case 'barcode': {
+                    const dataInput    = container.querySelector<HTMLTextAreaElement>('#var-code-data');
+                    const appendInput  = container.querySelector<HTMLInputElement>('#var-code-append');
+                    const startAtField = container.querySelector<HTMLElement>('#var-code-startat-field');
+                    const startAtInput = container.querySelector<HTMLInputElement>('#var-code-startat');
+                    const showTextInput = container.querySelector<HTMLInputElement>('#var-code-showtext');
+                    if (dataInput) dataInput.oninput = () => { binding!.codeData = dataInput.value; notify(); };
+                    if (appendInput) appendInput.onchange = () => {
+                        binding!.appendIndex = appendInput.checked;
+                        if (startAtField) startAtField.style.display = appendInput.checked ? '' : 'none';
+                        notify();
+                    };
+                    if (startAtInput) startAtInput.oninput = () => { binding!.startAt = startAtInput.value; notify(); };
+                    if (binding!.type === 'qrcode') {
+                        this._bindPillGroup(container, 'var-code-qrec-btn', v => { binding!.qrEcLevel = v as VariableBinding['qrEcLevel']; }, notify);
+                    } else {
+                        this._bindPillGroup(container, 'var-code-format-btn', v => { binding!.barcodeFormat = v as VariableBinding['barcodeFormat']; }, notify);
+                        if (showTextInput) showTextInput.onchange = () => { binding!.barcodeShowText = showTextInput.checked; notify(); };
+                    }
                     break;
                 }
                 case 'emoji': {
@@ -2110,16 +2189,16 @@ export class VariablePanel {
             if (element && binding) this._ensureVarId(element);
             const { general, specific } = this._renderConfig(binding, element ?? null);
             const hasSpecific = specific.trim() !== '';
-            const tabsWrap = container.querySelector<HTMLElement>('.ct-var-tabs');
-            if (tabsWrap) tabsWrap.style.display = (newType && hasSpecific) ? 'flex' : 'none';
             if (tabGeneralEl)  tabGeneralEl.innerHTML  = general;
-            if (tabSpecificEl) tabSpecificEl.innerHTML = hasSpecific
-                ? specific
-                : `<div class="ct-field" style="padding:10px 12px;"><span style="font-size:11px; color:var(--text-muted);">${I18n.t('variablePanel.dataSettingsEmpty')}</span></div>`;
-            // Always land back on the general tab whenever the variable type
-            // itself changes -- switching type invalidates whatever the
-            // previous type's "specific" tab held.
-            switchVarTab('general');
+            if (tabSpecificEl) tabSpecificEl.innerHTML = hasSpecific ? specific : '';
+            // Show the "Configurações dos Dados" section only for types that
+            // have format-specific settings, and always collapse it on a type
+            // change (the previous type's controls are gone, and the essential
+            // controls above should be what's visible first).
+            if (dataSettingsAccordion) {
+                dataSettingsAccordion.style.display = (newType && hasSpecific) ? '' : 'none';
+                dataSettingsAccordion.classList.remove('open');
+            }
             bindConfigFields();
             updatePreview();
             onChange(binding);
