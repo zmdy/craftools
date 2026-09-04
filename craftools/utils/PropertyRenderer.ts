@@ -92,10 +92,24 @@ export class PropertyRenderer {
     const fakeEl = tracked._ctSyntheticElement;
     fakeEl.dataset.ctState = JSON.stringify(stateObject);
 
-    PropertyRenderer.render(container, schema, fakeEl, (key, value) => {
+    // Re-runs render() (diffed, safe to call repeatedly -- see render()'s own
+    // doc comment) after every change, the same way an element's own
+    // renderPropertiesPanel() gets re-invoked on its 'craftools-state-change'
+    // (BaseTool.ts's panel-sync flow) elsewhere in the app. Without this, a
+    // field whose "selected" visual only updates INSIDE its own render() call
+    // -- pill-group.field.ts's `.active` class, e.g. Settings > Tela's ctx-bar
+    // mode pickers -- never got its highlight refreshed after a click: bind()
+    // only invokes `onChange`, it never touches the DOM itself, and nothing
+    // here used to call render() again afterward. The underlying value was
+    // always applied correctly (AppSettings.set() ran fine); only the
+    // button's own highlight silently went stale, reading as "not working".
+    const rerender = (key: string, value: unknown): void => {
       PropertyRenderer.applyChange(fakeEl, key, value);
       onChange(key, value);
-    });
+      PropertyRenderer.render(container, schema, fakeEl, rerender);
+    };
+
+    PropertyRenderer.render(container, schema, fakeEl, rerender);
   }
 
   /**

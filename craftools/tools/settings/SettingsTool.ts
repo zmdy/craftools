@@ -113,29 +113,38 @@ export class SettingsTool {
     const refs = cur.autoEnhanceReferences || [];
     const dpiThresholds = cur.dpiQualityThresholds;
 
+    // Every block below uses the SAME classes/padding the schema-driven
+    // panels get for free (`.ct-sublabel` group headers, `.ct-field`/
+    // `.ct-field--block` rows, `.craftools-label`, `select.craftools-select`,
+    // `.ct-field-row` + `.ct-val-badge` sliders, `.craftools-pill` buttons --
+    // see PanelUI.ts's field()/slider()/pillGroup() and fields/*.field.ts for
+    // the canonical versions this mirrors) -- this whole section used to be
+    // built from one-off inline styles (`class="craftools-field"`, a class
+    // that doesn't even exist in craftools.css) with its own bespoke
+    // gaps/padding, which is why it visually stood apart from every other
+    // Settings section instead of reading as one consistent panel.
     const bodyHtml = `
-      <div style="display:flex; flex-direction:column; gap:12px;">
         <!-- Definir Qualidade de Imagem: DPI thresholds used by the Image/Album
              tools' print-quality tabs (ImageQuality.ts's classifyDpi()) -->
-        <div class="craftools-field" style="display:flex; flex-direction:column; gap:8px;">
-          <label style="font-size:11px; font-weight:600; color:var(--text-secondary); display:block;">
-            ${s('fieldDpiQuality')}
-          </label>
-          <p style="font-size:10px; color:var(--text-secondary); margin:0;">${s('fieldDpiQualityHelp')}</p>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            ${SettingsTool._renderDpiSelect('poor', s('dpiLevelPoor'), dpiThresholds.poor)}
-            ${SettingsTool._renderDpiSelect('fair', s('dpiLevelFair'), dpiThresholds.fair)}
-            ${SettingsTool._renderDpiSelect('good', s('dpiLevelGood'), dpiThresholds.good)}
-            ${SettingsTool._renderDpiSelect('excellent', s('dpiLevelExcellent'), dpiThresholds.excellent)}
-          </div>
+        <div class="ct-sublabel">
+          <span class="material-symbols-outlined">tune</span>
+          ${s('fieldDpiQuality')}
         </div>
+        <div class="ct-field ct-field--block">
+          <p style="font-size:10px; color:var(--text-secondary); margin:0; text-transform:none; letter-spacing:normal; font-weight:400;">${s('fieldDpiQualityHelp')}</p>
+        </div>
+        ${SettingsTool._renderDpiSelect('poor', s('dpiLevelPoor'), dpiThresholds.poor)}
+        ${SettingsTool._renderDpiSelect('fair', s('dpiLevelFair'), dpiThresholds.fair)}
+        ${SettingsTool._renderDpiSelect('good', s('dpiLevelGood'), dpiThresholds.good)}
+        ${SettingsTool._renderDpiSelect('excellent', s('dpiLevelExcellent'), dpiThresholds.excellent)}
 
         <!-- Upload Reference Button & Thumbnails -->
-        <div class="craftools-field" style="border-top:1px dashed var(--border,#374151); padding-top:12px;">
-          <label style="font-size:11px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">
-            ${s('fieldUploadReference')}
-          </label>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+        <div class="ct-sublabel">
+          <span class="material-symbols-outlined">auto_fix_high</span>
+          ${s('fieldUploadReference')}
+        </div>
+        <div class="ct-field ct-field--block">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <label class="craftools-topbtn" style="padding:6px 12px; font-size:11px; gap:6px; cursor:pointer;">
               <span class="material-symbols-outlined" style="font-size:16px;">upload_file</span>
               Adicionar Refer&ecirc;ncia(s)
@@ -151,7 +160,7 @@ export class SettingsTool {
           <!-- Thumbnails gallery -->
           <div id="set-enhance-thumbs" style="display:flex; gap:8px; flex-wrap:wrap;">
             ${refs.map((url, idx) => `
-              <div style="position:relative; width:48px; height:48px; border-radius:6px; overflow:hidden; border:1px solid var(--border,#374151);">
+              <div style="position:relative; width:48px; height:48px; border-radius:6px; overflow:hidden; border:1px solid var(--border);">
                 <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
                 <button type="button" class="set-enhance-del-ref" data-idx="${idx}" style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,0.7); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px;">&times;</button>
               </div>
@@ -159,39 +168,44 @@ export class SettingsTool {
           </div>
         </div>
 
-        <!-- 4 Group Navigation Buttons -->
-        <div style="display:flex; flex-wrap:wrap; gap:4px;" id="set-enhance-group-nav">
-          <button type="button" class="craftools-pill set-enhance-group-btn active" data-group="global"    style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Ajustes Globais</button>
-          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="shadows"   style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Sombras</button>
-          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="highlights" style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Realces</button>
-          <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="midtones"  style="flex:1; min-width:calc(50% - 4px); justify-content:center; font-size:11px; padding:7px 4px;">Tons M&eacute;dios</button>
+        <!-- 4 Group Navigation Buttons -- same .ct-field-row.ct-pill-wrap
+             convention pill-group.field.ts uses (e.g. the ctxBarMode/
+             ctxBarPanelMode pickers above), instead of a bespoke flex row. -->
+        <div class="ct-field ct-field--block">
+          <div class="ct-field-row" id="set-enhance-group-nav" style="gap:4px; flex-wrap:wrap;">
+            <button type="button" class="craftools-pill set-enhance-group-btn active" data-group="global"     style="flex:1; min-width:calc(50% - 4px); justify-content:center;">Ajustes Globais</button>
+            <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="shadows"    style="flex:1; min-width:calc(50% - 4px); justify-content:center;">Sombras</button>
+            <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="highlights" style="flex:1; min-width:calc(50% - 4px); justify-content:center;">Realces</button>
+            <button type="button" class="craftools-pill set-enhance-group-btn"        data-group="midtones"   style="flex:1; min-width:calc(50% - 4px); justify-content:center;">Tons M&eacute;dios</button>
+          </div>
         </div>
 
         <!-- Per-group slider panels (only one visible at a time) -->
-        <div id="set-enhance-group-global" class="set-enhance-group-panel" style="display:flex; flex-direction:column; gap:8px;">
+        <div id="set-enhance-group-global" class="set-enhance-group-panel" style="display:flex; flex-direction:column; gap:6px;">
           ${SettingsTool._renderSliderField('brightness', s('fieldBrightness'), profile.brightness, -100, 100)}
           ${SettingsTool._renderSliderField('contrast', s('fieldContrast'), profile.contrast, -100, 100)}
           ${SettingsTool._renderSliderField('saturation', s('fieldSaturation'), profile.saturation, -100, 100)}
         </div>
-        <div id="set-enhance-group-shadows" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+        <div id="set-enhance-group-shadows" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:6px;">
           ${SettingsTool._renderSliderField('shadows.cyanRed',      'Ciano &ndash; Vermelho', profile.shadows.cyanRed,      -50, 50)}
           ${SettingsTool._renderSliderField('shadows.magentaGreen', 'Magenta &ndash; Verde',  profile.shadows.magentaGreen, -50, 50)}
           ${SettingsTool._renderSliderField('shadows.yellowBlue',   'Amarelo &ndash; Azul',   profile.shadows.yellowBlue,   -50, 50)}
         </div>
-        <div id="set-enhance-group-highlights" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+        <div id="set-enhance-group-highlights" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:6px;">
           ${SettingsTool._renderSliderField('highlights.cyanRed',      'Ciano &ndash; Vermelho', profile.highlights.cyanRed,      -50, 50)}
           ${SettingsTool._renderSliderField('highlights.magentaGreen', 'Magenta &ndash; Verde',  profile.highlights.magentaGreen, -50, 50)}
           ${SettingsTool._renderSliderField('highlights.yellowBlue',   'Amarelo &ndash; Azul',   profile.highlights.yellowBlue,   -50, 50)}
         </div>
-        <div id="set-enhance-group-midtones" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:8px;">
+        <div id="set-enhance-group-midtones" class="set-enhance-group-panel" style="display:none; flex-direction:column; gap:6px;">
           ${SettingsTool._renderSliderField('midtones.cyanRed',      'Ciano &ndash; Vermelho', profile.midtones.cyanRed,      -50, 50)}
           ${SettingsTool._renderSliderField('midtones.magentaGreen', 'Magenta &ndash; Verde',  profile.midtones.magentaGreen, -50, 50)}
           ${SettingsTool._renderSliderField('midtones.yellowBlue',   'Amarelo &ndash; Azul',   profile.midtones.yellowBlue,   -50, 50)}
         </div>
 
         <!-- Reset button -->
-        <button type="button" id="set-enhance-reset" class="craftools-pill" style="width:100%; justify-content:center; font-size:11px;">Restaurar padr&otilde;es</button>
-      </div>
+        <div class="ct-field ct-field--block">
+          <button type="button" id="set-enhance-reset" class="craftools-pill" style="width:100%; justify-content:center;">Restaurar padr&otilde;es</button>
+        </div>
     `;
 
     const sectionWrap = document.createElement('div');
@@ -207,39 +221,31 @@ export class SettingsTool {
    *  the values requested for the "Definir Qualidade de Imagem" selects. */
   private static readonly DPI_OPTIONS = [96, 150, 200, 300, 600];
 
+  /** Same row shape as fields/select.field.ts: `.ct-field` > label + `select.craftools-select`. */
   private static _renderDpiSelect(level: 'poor' | 'fair' | 'good' | 'excellent', label: string, value: number): string {
     const options = SettingsTool.DPI_OPTIONS.map(dpi =>
       `<option value="${dpi}" ${dpi === value ? 'selected' : ''}>${dpi} DPI</option>`
     ).join('');
     return `
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span style="font-size:11px; color:var(--text-secondary);">${label}</span>
-        <select class="set-dpi-threshold-select" data-level="${level}" style="font-size:11px; padding:5px 8px; border-radius:6px; border:1px solid var(--border,#374151); background:var(--bg-input,#f4f4f5); color:var(--text-primary,#18181b);">
+      <div class="ct-field">
+        <span class="craftools-label">${label}</span>
+        <select class="craftools-select set-dpi-threshold-select" data-level="${level}">
           ${options}
         </select>
       </div>
     `;
   }
 
+  /** Same row shape as fields/slider.field.ts / ImageTool.ts's enhance-panel
+   *  sliders: `.ct-field` > label + `.ct-field-row` (range input + `.ct-val-badge`). */
   private static _renderSliderField(key: string, label: string, value: number, min = -100, max = 100): string {
     return `
-      <div class="craftools-field" style="display:flex; flex-direction:column; gap:4px;">
-        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-secondary);">
-          <span>${label}</span>
-          <span style="font-weight:700; color:var(--accent,#f97316);">${value}</span>
+      <div class="ct-field">
+        <span class="craftools-label">${label}</span>
+        <div class="ct-field-row">
+          <input type="range" class="set-enhance-slider" data-key="${key}" min="${min}" max="${max}" value="${value}" style="flex:1;">
+          <span class="ct-val-badge">${value}</span>
         </div>
-        <input type="range" class="craftools-slider set-enhance-slider" data-key="${key}" min="${min}" max="${max}" value="${value}" style="width:100%;">
-      </div>
-    `;
-  }
-
-  private static _renderZoneSliders(zone: 'shadows' | 'midtones' | 'highlights', label: string, values: { cyanRed: number; magentaGreen: number; yellowBlue: number }): string {
-    return `
-      <div style="border-top:1px dashed var(--border,#374151); padding-top:8px; display:flex; flex-direction:column; gap:6px;">
-        <div style="font-size:10px; font-weight:700; color:var(--text-primary); uppercase; letter-spacing:0.5px;">${label}</div>
-        ${SettingsTool._renderSliderField(`${zone}.cyanRed`, s('fieldCyanRed'), values.cyanRed, -100, 100)}
-        ${SettingsTool._renderSliderField(`${zone}.magentaGreen`, s('fieldMagentaGreen'), values.magentaGreen, -100, 100)}
-        ${SettingsTool._renderSliderField(`${zone}.yellowBlue`, s('fieldYellowBlue'), values.yellowBlue, -100, 100)}
       </div>
     `;
   }
@@ -384,8 +390,9 @@ export class SettingsTool {
         AppSettings.set({ autoEnhanceProfile: profile });
         ImageEnhancer.clearCache();
 
-        // Update value badge label
-        const labelVal = slider.previousElementSibling?.querySelector('span:last-child');
+        // Update value badge label -- the badge is the slider's own next
+        // sibling inside their shared `.ct-field-row` (see _renderSliderField()).
+        const labelVal = slider.nextElementSibling as HTMLElement | null;
         if (labelVal) labelVal.textContent = String(val);
 
         // Notify active elements to re-run autoEnhance if active
@@ -399,7 +406,7 @@ export class SettingsTool {
       const input = container.querySelector<HTMLInputElement>(`.set-enhance-slider[data-key="${key}"]`);
       if (input) {
         input.value = String(val);
-        const labelVal = input.previousElementSibling?.querySelector('span:last-child');
+        const labelVal = input.nextElementSibling as HTMLElement | null;
         if (labelVal) labelVal.textContent = String(val);
       }
     };
@@ -541,7 +548,12 @@ export class SettingsTool {
         fields: [
           { type: 'toggle', key: 'autoCenter', label: s('fieldAutoCenter'), i18nKey: 'settingsTool.fieldAutoCenter' },
           { type: 'toggle', key: 'allowMultipleAccordions', label: s('fieldAllowMultipleAccordions'), i18nKey: 'settingsTool.fieldAllowMultipleAccordions' },
-          { type: 'divider', key: 'ctxbar-mode-divider', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode', icon: 'dock_to_bottom' },
+          // No leading `divider` here (unlike e.g. snap-align-divider above) --
+          // pill-group.field.ts already renders its own `label` as a
+          // `.craftools-label` above its buttons (see that field's render()),
+          // so a same-labeled divider right before it just repeated the same
+          // text twice (once with the divider's icon+.ct-sublabel styling,
+          // once as the field's own plain label) instead of adding anything.
           {
             type: 'pill-group', key: 'ctxBarMode', label: s('fieldCtxBarMode'), i18nKey: 'settingsTool.fieldCtxBarMode',
             direction: 'vertical',
@@ -550,7 +562,6 @@ export class SettingsTool {
               { value: 'fixed',    label: s('ctxBarModeFixed'),    i18nKey: 'settingsTool.ctxBarModeFixed',    icon: 'dock_to_bottom' },
             ],
           },
-          { type: 'divider', key: 'ctxbar-panelmode-divider', label: s('fieldCtxBarPanelMode'), i18nKey: 'settingsTool.fieldCtxBarPanelMode', icon: 'dashboard_customize' },
           {
             type: 'pill-group', key: 'ctxBarPanelMode', label: s('fieldCtxBarPanelMode'), i18nKey: 'settingsTool.fieldCtxBarPanelMode',
             direction: 'vertical',
