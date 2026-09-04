@@ -42,6 +42,17 @@ export interface AppSettingsData {
   // 'fixed' = pinned below the top toolbar (Canva-style, wider, up to 16 items)
   ctxBarMode: 'floating' | 'fixed';
 
+  // What the ctx-bar's tool-specific buttons DO (orthogonal to ctxBarMode's
+  // POSITION above): 'quickEdit' (default, current behavior) shows each
+  // tool's own quick-adjustment buttons (BaseTool.getCtxOptions()) and the
+  // properties panel renders every schema section as its own collapsible
+  // accordion. 'panelShortcuts' instead shows one button per schema SECTION
+  // (icon + title, single-select like the alignment/font-style button rows)
+  // -- clicking one makes the properties panel show ONLY that section, fully
+  // expanded, instead of the whole accordion stack. See CtxBar.ts's
+  // _buildSectionClusters() and BaseTool.ts's _renderSinglePanelSection().
+  ctxBarPanelMode: 'quickEdit' | 'panelShortcuts';
+
   // Properties-panel accordions
   allowMultipleAccordions: boolean;
 
@@ -68,6 +79,7 @@ const DEFAULTS: AppSettingsData = {
   defaultAutoCenterOnSelect: true,
   defaultIconPack: 'material-symbols',
   ctxBarMode: 'floating',
+  ctxBarPanelMode: 'quickEdit',
   allowMultipleAccordions: true,
   autoEnhanceProfile: { ...DEFAULT_ENHANCE_PROFILE },
   autoEnhanceReferences: [],

@@ -21,6 +21,7 @@ import { Notify } from '../utils/Notify.js';
 import { tr } from '../utils/i18nLabel';
 import { normalizeValue, cssFromValue, cssFromGradient, DEFAULT_VALUE } from '../utils/ColorPickerUI.js';
 import { pageAlignSection } from '../utils/CommonSchema';
+import { AppSettings } from '../utils/AppSettings.js';
 
 // Shape of the clipboard payload copied by the style bar. Kept loose
 // (unknown meta) since `_craftoolsMeta`'s shape varies per tool.
@@ -509,6 +510,18 @@ export abstract class BaseTool {
     return [...schema, pageAlignSection()] as PropertySchema;
   }
 
+  /**
+   * The schema this tool's panel actually renders: getPropertySchema() plus
+   * the auto-injected "Align on page" section (see _withPageAlign() above).
+   * Exposed publicly (unlike _withPageAlign itself) so a caller outside
+   * renderPropertiesPanel sees the exact same section list -- icons, titles,
+   * order -- that the accordion panel shows. Used by CtxBar.ts's
+   * 'panelShortcuts' ctx-bar mode to build one button per section.
+   */
+  static getDisplaySchema(element: HTMLElement): PropertySchema {
+    return this._withPageAlign(this.getPropertySchema(element), element);
+  }
+
   // ── Rendering (do NOT override) ─────────────────────────────────────────────
 
   /**
@@ -534,10 +547,14 @@ export abstract class BaseTool {
     // accordions permanently stuck above every element's own panel from
     // then on, for every tool, since nothing ever cleared them. Track which
     // element `container` currently shows and wipe it on change.
-    const tracked = container as unknown as { _ctRenderedElement?: HTMLElement };
+    const tracked = container as unknown as {
+      _ctRenderedElement?: HTMLElement;
+      _ctPanelRenderMode?: 'full' | 'single';
+    };
     if (tracked._ctRenderedElement !== element) {
       container.innerHTML = '';
       tracked._ctRenderedElement = element;
+      tracked._ctPanelRenderMode = undefined;
     }
 
     // Sticky Copy/Paste bar, always rendered above the accordions --
@@ -550,7 +567,30 @@ export abstract class BaseTool {
     // Prime dataset.ctState from existing DOM/meta state (first render only).
     this._syncFromDOM(element);
     this._syncLockState(element);
-    const schema = this._withPageAlign(this.getPropertySchema(element), element);
+    const schema = this.getDisplaySchema(element);
+
+    // 'panelShortcuts' ctx-bar mode (AppSettings.ctxBarPanelMode -- see its
+    // own doc comment): the ctx-bar itself is what picks which section to
+    // show (one button per section, single-select -- see CtxBar.ts's
+    // _buildSectionClusters()), so the panel here renders ONLY that one
+    // section, fully expanded, instead of every section as its own
+    // collapsible accordion. Switching modes mid-selection (the Settings
+    // toggle) clears whichever tree the OTHER mode left behind, once, so
+    // the two renderers never end up stacked on top of each other.
+    const wantSingle = AppSettings.get('ctxBarPanelMode') === 'panelShortcuts';
+    if (wantSingle && tracked._ctPanelRenderMode !== 'single') {
+      container.querySelectorAll<HTMLElement>('[data-ct-section]').forEach(n => n.remove());
+      tracked._ctPanelRenderMode = 'single';
+    } else if (!wantSingle && tracked._ctPanelRenderMode !== 'full') {
+      container.querySelector('#ct-single-section')?.remove();
+      tracked._ctPanelRenderMode = 'full';
+    }
+
+    if (wantSingle) {
+      this._renderSinglePanelSection(container, schema, element);
+      return;
+    }
+
     PropertyRenderer.render(container, schema, element, (key, value) => {
       // Tags every 'craftools-state-change' this triggers as panel-
       // originated (see PropertyRenderer.runFromPanel()'s doc comment) --
@@ -559,6 +599,53 @@ export abstract class BaseTool {
       // change, which used to destroy/rebuild non-idempotent field DOM
       // (e.g. the color picker's native <input type="color">) while the
       // user still had its native popup open.
+      PropertyRenderer.runFromPanel(() => {
+        this._applyProperty(element, key, value);
+        this._syncLinkedClones(element, key, value);
+      });
+    });
+  }
+
+  /**
+   * Renders exactly ONE schema section, fully expanded, with no accordion
+   * header interactivity (no chevron, not collapsible) -- the 'panelShortcuts'
+   * branch of renderPropertiesPanel() above. Which section is "active" comes
+   * from PropertyRenderer.getActiveSection() (written by CtxBar.ts's section
+   * buttons); defaults to the first icon-bearing section the first time an
+   * element is seen in this mode, or if the previously-active section
+   * doesn't exist in THIS tool's schema (e.g. the selection changed to a
+   * different tool type).
+   */
+  private static _renderSinglePanelSection(container: HTMLElement, schema: PropertySchema, element: HTMLElement): void {
+    const iconSections = schema.filter(sec => !!sec.icon);
+    if (!iconSections.length) return;
+
+    const activeKey = PropertyRenderer.getActiveSection(element);
+    let section = iconSections.find(sec => sec.section === activeKey);
+    if (!section) {
+      section = iconSections[0];
+      PropertyRenderer.setActiveSection(element, section.section);
+    }
+
+    let wrap = container.querySelector<HTMLElement>('#ct-single-section');
+    if (!wrap || wrap.dataset.sectionKey !== section.section) {
+      wrap?.remove();
+      wrap = document.createElement('div');
+      wrap.className = 'ct-accordion open';
+      wrap.id = 'ct-single-section';
+      wrap.dataset.sectionKey = section.section;
+      wrap.innerHTML = `
+        <div class="ct-accordion-header" style="cursor:default; pointer-events:none;">
+          <span class="ct-accordion-icon"><span class="material-symbols-outlined">${section.icon || 'tune'}</span></span>
+          <span class="ct-accordion-title">${tr(section.i18nKey, section.section)}</span>
+        </div>
+        <div class="ct-accordion-content" id="ct-single-section-content"></div>
+      `;
+      container.appendChild(wrap);
+    }
+
+    const contentEl = wrap.querySelector<HTMLElement>('#ct-single-section-content')!;
+    PropertyRenderer.renderSectionFields(contentEl, section, element, (key, value) => {
       PropertyRenderer.runFromPanel(() => {
         this._applyProperty(element, key, value);
         this._syncLinkedClones(element, key, value);

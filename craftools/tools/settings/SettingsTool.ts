@@ -31,6 +31,7 @@
 import { I18n } from '../../settings/Translations.js';
 import { AppSettings, type AppSettingsData } from '../../utils/AppSettings.js';
 import { IconLibrary } from '../../utils/IconLibrary.js';
+import { ToolRegistry } from '../../utils/ToolRegistry.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer.js';
 import { ImageEnhancer, type EnhanceProfile } from '../../utils/ImageEnhancer.js';
 import { PanelUI } from '../../utils/PanelUI.js';
@@ -431,6 +432,7 @@ export class SettingsTool {
       snapAlign:       vhToHv(cur.defaultSnapAlign),
       autoCenter:      cur.defaultAutoCenterOnSelect,
       ctxBarMode:      cur.ctxBarMode,
+      ctxBarPanelMode: cur.ctxBarPanelMode,
       allowMultipleAccordions: cur.allowMultipleAccordions,
       iconPack:        cur.defaultIconPack,
     };
@@ -470,6 +472,23 @@ export class SettingsTool {
         // Notify the running CtxBar so it switches mode immediately without
         // requiring a re-select (same event BaseTool/CtxBar already listen for).
         document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change', { detail: { mode } }));
+        break;
+      }
+      case 'ctxBarPanelMode': {
+        const mode = value as 'quickEdit' | 'panelShortcuts';
+        AppSettings.set({ ctxBarPanelMode: mode });
+        // Same immediate-effect event CtxBar.ts already listens for (see
+        // ctxBarMode above) -- rebuilds the ctx-bar's own buttons right away.
+        document.dispatchEvent(new CustomEvent('craftools-ctxbar-mode-change'));
+        // This setting also changes how the PROPERTIES PANEL itself renders
+        // (every section as its own accordion vs. one section fully open),
+        // not just the ctx-bar's buttons -- so the currently-open panel (if
+        // any element is selected) needs a fresh renderPropertiesPanel() too.
+        const panelBody = document.getElementById('panel-body');
+        const selected  = document.querySelector<HTMLElement>('craftools-element.craftools-selected');
+        const toolType  = selected?.getAttribute('data-craftool') ?? '';
+        const tool      = toolType ? ToolRegistry.get(toolType)?.tool : undefined;
+        if (panelBody && selected && tool) tool.renderPropertiesPanel(panelBody, selected);
         break;
       }
       case 'allowMultipleAccordions':
@@ -529,6 +548,15 @@ export class SettingsTool {
             options: [
               { value: 'floating', label: s('ctxBarModeFloating'), i18nKey: 'settingsTool.ctxBarModeFloating', icon: 'push_pin' },
               { value: 'fixed',    label: s('ctxBarModeFixed'),    i18nKey: 'settingsTool.ctxBarModeFixed',    icon: 'dock_to_bottom' },
+            ],
+          },
+          { type: 'divider', key: 'ctxbar-panelmode-divider', label: s('fieldCtxBarPanelMode'), i18nKey: 'settingsTool.fieldCtxBarPanelMode', icon: 'dashboard_customize' },
+          {
+            type: 'pill-group', key: 'ctxBarPanelMode', label: s('fieldCtxBarPanelMode'), i18nKey: 'settingsTool.fieldCtxBarPanelMode',
+            direction: 'vertical',
+            options: [
+              { value: 'quickEdit',      label: s('ctxBarPanelModeQuickEdit'),      i18nKey: 'settingsTool.ctxBarPanelModeQuickEdit',      icon: 'tune' },
+              { value: 'panelShortcuts', label: s('ctxBarPanelModePanelShortcuts'), i18nKey: 'settingsTool.ctxBarPanelModePanelShortcuts', icon: 'view_agenda' },
             ],
           },
         ],

@@ -19,6 +19,29 @@ import { AppSettings } from './AppSettings.js';
 
 export class PropertyRenderer {
   /**
+   * Which schema section (its raw `Section.section` key, stable regardless
+   * of locale) is currently shown "fully open" for a given element when the
+   * ctx-bar is in 'panelShortcuts' mode (AppSettings.ctxBarPanelMode) --
+   * see CtxBar.ts's _buildSectionClusters() (writes this on a button click)
+   * and BaseTool.ts's _renderSinglePanelSection() (reads it to know which
+   * section to render). A WeakMap keyes this purely in memory, per element
+   * instance -- deliberately NOT persisted (like which accordion happens to
+   * be open, this is ephemeral UI state, not project content) and
+   * automatically forgotten once the element itself is garbage-collected.
+   */
+  private static _activeSections = new WeakMap<HTMLElement, string>();
+
+  /** Returns the active single-section key for `element`, if one was set. */
+  static getActiveSection(element: HTMLElement): string | undefined {
+    return PropertyRenderer._activeSections.get(element);
+  }
+
+  /** Records which section key should render "fully open" for `element`. */
+  static setActiveSection(element: HTMLElement, sectionKey: string): void {
+    PropertyRenderer._activeSections.set(element, sectionKey);
+  }
+
+  /**
    * Renders (or updates) a full property panel inside `container`.
    *
    * Safe to call repeatedly — only changed fields are re-rendered.

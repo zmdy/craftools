@@ -29,6 +29,9 @@ I18n.addTranslations('settingsTool', {
         fieldCtxBarMode: "Comportamento da barra de contexto",
         ctxBarModeFloating: "Acoplada ao elemento",
         ctxBarModeFixed: "Fixo no topo",
+        fieldCtxBarPanelMode: "Conteúdo da barra de contexto",
+        ctxBarPanelModeQuickEdit: "Ajustes rápidos do elemento",
+        ctxBarPanelModePanelShortcuts: "Atalhos do painel de propriedades",
 
         sectionIcons: "Ícones",
         fieldIconPack: "Biblioteca de ícones padrão",
@@ -80,6 +83,9 @@ I18n.addTranslations('settingsTool', {
         fieldCtxBarMode: "Context bar behaviour",
         ctxBarModeFloating: "Coupled to element",
         ctxBarModeFixed: "Fixed at top",
+        fieldCtxBarPanelMode: "Context bar content",
+        ctxBarPanelModeQuickEdit: "Element quick adjustments",
+        ctxBarPanelModePanelShortcuts: "Properties panel shortcuts",
 
         sectionIcons: "Icons",
         fieldIconPack: "Default icon library",
@@ -131,6 +137,9 @@ I18n.addTranslations('settingsTool', {
         fieldCtxBarMode: "Comportamiento de la barra de contexto",
         ctxBarModeFloating: "Acoplada al elemento",
         ctxBarModeFixed: "Fija en la parte superior",
+        fieldCtxBarPanelMode: "Contenido de la barra de contexto",
+        ctxBarPanelModeQuickEdit: "Ajustes rápidos del elemento",
+        ctxBarPanelModePanelShortcuts: "Atajos del panel de propiedades",
 
         sectionIcons: "Íconos",
         fieldIconPack: "Biblioteca de íconos predeterminada",

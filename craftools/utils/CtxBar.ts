@@ -7,6 +7,8 @@ import { AppSettings } from "./AppSettings.js";
 import { PropertyRenderer } from "./PropertyRenderer.js";
 import { SelectionManager } from "./SelectionManager.js";
 import { SnapEngine } from "./SnapEngine.js";
+import { ToolRegistry } from "./ToolRegistry.js";
+import { tr } from "./i18nLabel.js";
 
 export interface CtxOption {
   icon:    string;
@@ -172,6 +174,56 @@ export class CtxBar {
   }
 
   /**
+   * Builds one atomic single-button cluster per icon-bearing schema SECTION
+   * of `element`'s tool -- the ctx-bar's content when AppSettings
+   * .ctxBarPanelMode === 'panelShortcuts' (see that field's own doc comment
+   * in AppSettings.ts). Mirrors MobileToolbar.ts's showElementMode() footer
+   * items (same `getDisplaySchema().filter(s => s.icon)` source), just
+   * rendered as ctx-bar buttons instead of a footer.
+   *
+   * Single-select, like the alignment/font-style button rows: exactly one
+   * button is ever "active" (PropertyRenderer.getActiveSection()'s current
+   * value). Clicking a button sets that section active and re-renders the
+   * properties panel to show ONLY it (BaseTool._renderSinglePanelSection()),
+   * then flips every other button in this same set back off in-place --
+   * cheaper than rebuilding the whole ctx-bar, and avoids any flicker.
+   */
+  private _buildSectionClusters(element: CraftoolsCtxElement): { elements: HTMLElement[]; isGeneral: boolean }[] {
+      const toolType  = element.getAttribute('data-craftool') ?? '';
+      const ToolClass = ToolRegistry.get(toolType)?.tool;
+      if (!ToolClass) return [];
+
+      const sections = ToolClass.getDisplaySchema(element).filter(sec => !!sec.icon);
+      if (!sections.length) return [];
+
+      // Default to the first section the first time this element is seen in
+      // this mode, or if the previously-active section doesn't exist on THIS
+      // tool's schema (selection moved to a different tool type) -- so the
+      // panel never ends up rendering nothing.
+      let activeKey = PropertyRenderer.getActiveSection(element);
+      if (!activeKey || !sections.some(sec => sec.section === activeKey)) {
+          activeKey = sections[0].section;
+          PropertyRenderer.setActiveSection(element, activeKey);
+      }
+
+      const panelBody = document.getElementById('panel-body');
+      const buttons: HTMLButtonElement[] = [];
+
+      sections.forEach(section => {
+          const title = tr(section.i18nKey, section.section);
+          const btn = this.createButton(section.icon!, title, () => {
+              PropertyRenderer.setActiveSection(element, section.section);
+              buttons.forEach(b => this._setButtonActive(b, b === btn));
+              if (panelBody) ToolClass.renderPropertiesPanel(panelBody, element);
+          });
+          this._setButtonActive(btn, section.section === activeKey);
+          buttons.push(btn);
+      });
+
+      return buttons.map(btn => ({ elements: [btn], isGeneral: false }));
+  }
+
+  /**
    * Renders the floating ctx-bar for `element`. Builds an ordered list of
    * atomic clusters -- the calling tool's own `options` first (e.g.
    * TextTool's font/size group, its Bold/Italic/Underline group, its
@@ -217,7 +269,17 @@ export class CtxBar {
       type Cluster = { elements: HTMLElement[]; isGeneral: boolean };
       const clusters: Cluster[] = [];
 
-      if (options && options.length > 0) {
+      // 'panelShortcuts' mode replaces the tool's own quick-adjustment
+      // `options` with one button per schema section instead (see
+      // _buildSectionClusters()'s doc comment) -- `options` itself is still
+      // stored in `_lastOptions` above so a mode switch back to 'quickEdit'
+      // (via 'craftools-ctxbar-mode-change') rebuilds from the right source
+      // without needing the element to be reselected.
+      const panelShortcutsMode = AppSettings.get('ctxBarPanelMode') === 'panelShortcuts';
+
+      if (panelShortcutsMode) {
+          this._buildSectionClusters(element).forEach(c => clusters.push(c));
+      } else if (options && options.length > 0) {
           let currentCluster: HTMLElement[] | null = null;
           let currentGroupId: string | undefined;
           options.forEach(opt => {
