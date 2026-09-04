@@ -7,11 +7,20 @@ import { I18n } from "../settings/Translations.js";
  */
 I18n.addTranslations('calendarStyle', {
     "pt-br": {
+        sectionQuickStyle:   "Estilos Rápidos",
         sectionCard:        "Estilo do Cartão",
         sectionMonthBar:     "Barra do Mês",
         sectionDayHeader:    "Cabeçalho dos Dias",
         sectionDaysTable:    "Tabela de Dias",
         sectionHolidaysMoon: "Feriados e Fases da Lua",
+
+        quickColor:               "Cor do Calendário",
+        quickBg:                  "Fundo do Calendário",
+        quickTextColor:           "Cor do Texto",
+        quickTypographyDivider:   "Tipografia",
+        quickTitleFontSize:       "Tamanho da fonte dos títulos",
+        quickFontSize:            "Tamanho das fontes",
+        quickHolidayMoonFontSize: "Tamanho das fontes de feriados e fases da lua",
 
         font:     "Fonte",
         fontSize: "Tamanho da fonte",
@@ -50,11 +59,20 @@ I18n.addTranslations('calendarStyle', {
         moonPhases:  "Fases da Lua",
     },
     "en": {
+        sectionQuickStyle:   "Quick Styles",
         sectionCard:        "Card Style",
         sectionMonthBar:     "Month Bar",
         sectionDayHeader:    "Day Header",
         sectionDaysTable:    "Days Table",
         sectionHolidaysMoon: "Holidays & Moon Phases",
+
+        quickColor:               "Calendar Color",
+        quickBg:                  "Calendar Background",
+        quickTextColor:           "Text Color",
+        quickTypographyDivider:   "Typography",
+        quickTitleFontSize:       "Title font size",
+        quickFontSize:            "Font sizes",
+        quickHolidayMoonFontSize: "Holidays & moon phases font size",
 
         font:     "Font",
         fontSize: "Font size",
@@ -93,11 +111,20 @@ I18n.addTranslations('calendarStyle', {
         moonPhases:  "Moon Phases",
     },
     "es": {
+        sectionQuickStyle:   "Estilos Rápidos",
         sectionCard:        "Estilo de la Tarjeta",
         sectionMonthBar:     "Barra del Mes",
         sectionDayHeader:    "Encabezado de Días",
         sectionDaysTable:    "Tabla de Días",
         sectionHolidaysMoon: "Feriados y Fases de la Luna",
+
+        quickColor:               "Color del Calendario",
+        quickBg:                  "Fondo del Calendario",
+        quickTextColor:           "Color del Texto",
+        quickTypographyDivider:   "Tipografía",
+        quickTitleFontSize:       "Tamaño de fuente de los títulos",
+        quickFontSize:            "Tamaño de las fuentes",
+        quickHolidayMoonFontSize: "Tamaño de fuente de feriados y fases de la luna",
 
         font:     "Fuente",
         fontSize: "Tamaño de fuente",

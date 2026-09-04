@@ -6,6 +6,7 @@ import { I18n } from "../../settings/Translations.js";
 I18n.addTranslations('calendarTool', {
     "pt-br": {
         panelTitle: "Calendário",
+        tabCalendar: "Calendário",
         tabModel: "Modelo",
         tabLayout: "Layout",
         tabFillMode: "Preenchimento",
@@ -72,6 +73,7 @@ I18n.addTranslations('calendarTool', {
     },
     "en": {
         panelTitle: "Calendar",
+        tabCalendar: "Calendar",
         tabModel: "Model",
         tabLayout: "Layout",
         tabFillMode: "Fill mode",
@@ -138,6 +140,7 @@ I18n.addTranslations('calendarTool', {
     },
     "es": {
         panelTitle: "Calendario",
+        tabCalendar: "Calendario",
         tabModel: "Modelo",
         tabLayout: "Diseño",
         tabFillMode: "Relleno",

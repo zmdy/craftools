@@ -120,3 +120,78 @@ export const CALENDAR_THEME_KEY_PATHS: Record<string, readonly string[]> = {
   moonRadiusTL: ['moonPhases', 'radius', 'tl'], moonRadiusTR: ['moonPhases', 'radius', 'tr'],
   moonRadiusBR: ['moonPhases', 'radius', 'br'], moonRadiusBL: ['moonPhases', 'radius', 'bl'],
 };
+
+/**
+ * "Estilos Rápidos" (CalendarStyleSchema.ts's quickStyleSection()) -- each key
+ * here is a single simplified picker that bulk-applies to SEVERAL of the
+ * canonical CALENDAR_THEME_KEY_PATHS keys above at once, by name (never raw
+ * paths), so the two tables can never drift apart from each other:
+ *
+ *   quickColor               -> month-bar background, holiday colour in the
+ *                                days grid, holiday-box text colour
+ *   quickBg                  -> the card's own background + the month-bar's
+ *                                own text colour
+ *   quickTextColor           -> day-numbers text, moon-phases text, and the
+ *                                day-header's background (the three fields
+ *                                that already share one dark tone by default)
+ *   quickFont                -> every section's font, at once
+ *   quickTitleFontSize        -> the month-bar's font size only
+ *   quickFontSize             -> every OTHER text's font size (day header +
+ *                                day numbers)
+ *   quickHolidayMoonFontSize -> the holidays-box and moon-phases font sizes
+ *
+ * Quick styles and the 5 detailed sections write through the exact SAME
+ * CalendarTheme paths -- there is no separate "quick" storage and no
+ * override-tracking needed: whichever was edited most recently simply wins,
+ * the same as any other shared field.
+ */
+export const QUICK_STYLE_TARGETS: Record<string, readonly string[]> = {
+  quickColor:               ['monthBarBg', 'daysTableSundayColor', 'holidaysTextColor'],
+  quickBg:                  ['cardBg', 'monthBarTextColor'],
+  quickTextColor:           ['daysTableTextColor', 'moonTextColor', 'dayHeaderBg'],
+  quickFont:                ['monthBarFont', 'dayHeaderFont', 'daysTableFont', 'holidaysFont', 'moonFont'],
+  quickTitleFontSize:       ['monthBarFontSize'],
+  quickFontSize:            ['dayHeaderFontSize', 'daysTableFontSize'],
+  quickHolidayMoonFontSize: ['holidaysFontSize', 'moonFontSize'],
+};
+
+/**
+ * Applies one field change from calendarStyleSections()'s 5 detailed
+ * sections OR quickStyleSection()'s bulk pickers onto `theme` in place --
+ * the single onChange body every consumer (CalendarTool.ts,
+ * MiniCalendarTool.ts) should use instead of hand-rolling the "is this a
+ * quick key or a canonical key" branch itself. A quick key fans out to every
+ * one of its QUICK_STYLE_TARGETS entries; anything else falls back to the
+ * plain single-path CALENDAR_THEME_KEY_PATHS lookup.
+ */
+export function applyCalendarStyleChange(theme: Record<string, unknown>, key: string, value: unknown): void {
+  const quickTargets = QUICK_STYLE_TARGETS[key];
+  if (quickTargets) {
+    for (const targetKey of quickTargets) {
+      const path = CALENDAR_THEME_KEY_PATHS[targetKey];
+      if (path) setThemePath(theme, path, value);
+    }
+    return;
+  }
+  const path = CALENDAR_THEME_KEY_PATHS[key];
+  if (path) setThemePath(theme, path, value);
+}
+
+/**
+ * Seeds each quick-style key's own displayed value from its FIRST target's
+ * current value (falling back to `defaults` the same way the canonical
+ * per-key loop does) -- purely a starting point for that picker's own UI;
+ * quick keys have no independent storage of their own (see
+ * QUICK_STYLE_TARGETS's doc comment above).
+ */
+export function deriveQuickStyleState(theme: unknown, defaults: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [quickKey, targets] of Object.entries(QUICK_STYLE_TARGETS)) {
+    const path = CALENDAR_THEME_KEY_PATHS[targets[0]];
+    if (!path) continue;
+    const fromTheme   = getThemePath(theme, path);
+    const fromDefault = getThemePath(defaults, path);
+    out[quickKey] = fromTheme !== undefined ? fromTheme : fromDefault;
+  }
+  return out;
+}

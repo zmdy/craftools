@@ -25,8 +25,8 @@ import { ToolRegistry } from '../../utils/ToolRegistry';
 import { AppSettings } from '../../utils/AppSettings.js';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { FieldRegistry } from '../../utils/FieldRegistry';
-import { calendarStyleSections } from '../../utils/CalendarStyleSchema';
-import { CALENDAR_THEME_KEY_PATHS, getThemePath, setThemePath } from '../../utils/CalendarThemeKeyPaths';
+import { calendarStyleSections, quickStyleSection } from '../../utils/CalendarStyleSchema';
+import { CALENDAR_THEME_KEY_PATHS, getThemePath, applyCalendarStyleChange, deriveQuickStyleState } from '../../utils/CalendarThemeKeyPaths';
 import './CalendarTool_Translations.js';
 import '../../components/CtFontSelect.js';
 
@@ -169,8 +169,7 @@ export class CalendarTool {
     const pad = (html: string): string => `<div style="padding:10px 14px 14px;">${html}</div>`;
 
     const renderPanel = (): void => {
-      const sectionModel    = CalendarTool._renderModelSection(state);
-      const sectionLayout   = CalendarTool._renderLayoutSection(state);
+      const sectionCalendar = CalendarTool._renderCalendarSection(state);
       const sectionFillMode = CalendarTool._renderFillModeSection(state);
       const sectionGenerate = CalendarTool._renderGenerateSection(state, currentPreset());
 
@@ -194,8 +193,7 @@ export class CalendarTool {
         panelBody.innerHTML = `
           <div id="cal-root">
             ${pageSettingsHtml}
-            ${PanelUI.accordion('cal-modelo', 'auto_stories', c('tabModel'), pad(sectionModel), { open: true })}
-            ${PanelUI.accordion('cal-layout', 'grid_view', c('tabLayout'), pad(sectionLayout))}
+            ${PanelUI.accordion('cal-calendario', 'calendar_month', c('tabCalendar'), pad(sectionCalendar), { open: true })}
             ${PanelUI.accordion('cal-preenchimento', 'repeat', c('tabFillMode') + ' / ' + c('tabPeriod'), pad(sectionFillMode))}
             <div id="cal-style-sections"></div>
             ${PanelUI.accordion('cal-gerar', 'auto_awesome', c('tabGenerate'), pad(sectionGenerate))}
@@ -245,13 +243,16 @@ export class CalendarTool {
         });
       }
 
-      // ── Layout ──────────────────────────────────────────────────────
-      root.querySelectorAll<HTMLElement>('.cal-grid-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.gridId = btn.dataset.gridId!;
+      // ── Layout (native select, same convention as MiniCalendarTool.ts's
+      // own "Calendar" tab -- calendarType/displayMode are both `type:
+      // 'select'` there too, not a vertical card list) ────────────────
+      const layoutSelect = root.querySelector<HTMLSelectElement>('#cal-layout-select');
+      if (layoutSelect) {
+        layoutSelect.addEventListener('change', () => {
+          state.gridId = layoutSelect.value;
           renderPanel();
         });
-      });
+      }
 
       // ── Fill mode ───────────────────────────────────────────────────
       root.querySelectorAll<HTMLElement>('.cal-fillmode-btn').forEach(btn => {
@@ -324,9 +325,9 @@ export class CalendarTool {
     renderPanel();
   }
 
-  // ── Tab: Modelo ─────────────────────────────────────────────────────
+  // ── Tab: Calendário (merges the former Modelo + Layout tabs) ─────────
 
-  private static _renderModelSection(state: CalendarState): string {
+  private static _renderCalendarSection(state: CalendarState): string {
     return `
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${(['simples', 'completo'] as CalendarModel[]).map(m => `
@@ -337,23 +338,18 @@ export class CalendarTool {
           </button>
         `).join('')}
       </div>
-      <div id="cal-week-sunday-toggle" style="margin-top:12px;"></div>
-    `;
-  }
-
-  // ── Tab: Layout ─────────────────────────────────────────────────────
-
-  private static _renderLayoutSection(state: CalendarState): string {
-    return `
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        ${GRID_PRESETS.map(p => `
-          <button type="button" class="cal-grid-btn craftools-pill ${state.gridId === p.id ? 'active' : ''}" data-grid-id="${p.id}"
-            style="width:100%; text-align:left; padding:10px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:600;">${c(p.labelKey)}</span>
-            <span style="font-size:10px; color:var(--text-secondary);">${p.cols * p.rows} ${c('slotsSuffix')}</span>
-          </button>
-        `).join('')}
+      <!-- Layout: native select instead of a vertical card list -- same
+           convention MiniCalendarTool.ts's own "Calendar" tab already uses
+           for its calendarType/displayMode pickers. -->
+      <div class="ct-field" style="margin-top:12px;">
+        <span class="craftools-label">${c('tabLayout')}</span>
+        <select id="cal-layout-select" class="craftools-select">
+          ${GRID_PRESETS.map(p => `
+            <option value="${p.id}" ${state.gridId === p.id ? 'selected' : ''}>${c(p.labelKey)} (${p.cols * p.rows} ${c('slotsSuffix')})</option>
+          `).join('')}
+        </select>
       </div>
+      <div id="cal-week-sunday-toggle" style="margin-top:12px;"></div>
     `;
   }
 
@@ -430,17 +426,35 @@ export class CalendarTool {
     if (!wrap) return;
 
     const fakeEl = document.createElement('div');
-    fakeEl.dataset.ctState = JSON.stringify(CalendarTool._themeToCtState(state.theme));
+    // "Estilos Rápidos" (quickStyleSection()) rendered first, ahead of the 5
+    // detailed sections -- same bulk-write-through-the-same-paths model, via
+    // applyCalendarStyleChange() (handles both a quick key's multi-target
+    // fan-out and a plain single-path canonical key with one shared branch).
+    const schema = [quickStyleSection(), ...calendarStyleSections()];
 
-    PropertyRenderer.render(wrap, calendarStyleSections(), fakeEl, (key, value) => {
-      PropertyRenderer.applyChange(fakeEl, key, value);
-      const path = CALENDAR_THEME_KEY_PATHS[key];
-      if (path) setThemePath(state.theme as unknown as Record<string, unknown>, path, value);
+    const onChange = (key: string, value: unknown): void => {
+      applyCalendarStyleChange(state.theme as unknown as Record<string, unknown>, key, value);
+      // Re-derive the WHOLE ctState fresh from the just-mutated theme --
+      // NOT just a single-key PropertyRenderer.applyChange(fakeEl, key,
+      // value) -- because a quick-style key fans out to SEVERAL canonical
+      // keys at once (see QUICK_STYLE_TARGETS). Writing only `key` back
+      // would leave every OTHER cascaded field's own displayed value (e.g.
+      // Barra do Mês's "Fundo" swatch after picking "Cor do Calendário")
+      // stuck showing the OLD colour until the next full renderPanel(),
+      // even though `state.theme` itself -- and therefore the live canvas
+      // preview, which reads it directly -- is already fully correct.
+      fakeEl.dataset.ctState = JSON.stringify(CalendarTool._themeToCtState(state.theme));
+      PropertyRenderer.render(wrap, schema, fakeEl, onChange);
       onThemeChange();
-    });
+    };
+
+    fakeEl.dataset.ctState = JSON.stringify(CalendarTool._themeToCtState(state.theme));
+    PropertyRenderer.render(wrap, schema, fakeEl, onChange);
   }
 
-  /** Maps a CalendarTheme onto CalendarStyleSchema.ts's flat canonical keys, via CALENDAR_THEME_KEY_PATHS. */
+  /** Maps a CalendarTheme onto CalendarStyleSchema.ts's flat canonical keys
+   *  (via CALENDAR_THEME_KEY_PATHS) plus "Estilos Rápidos"'s own bulk keys
+   *  (via deriveQuickStyleState()). */
   private static _themeToCtState(theme: CalendarTheme): Record<string, unknown> {
     const defaults = CalendarRenderer.defaultTheme();
     const state: Record<string, unknown> = {};
@@ -449,6 +463,7 @@ export class CalendarTool {
       const fromDefault = getThemePath(defaults, path);
       state[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
     }
+    Object.assign(state, deriveQuickStyleState(theme, defaults));
     return state;
   }
 

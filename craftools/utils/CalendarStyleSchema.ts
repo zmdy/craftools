@@ -205,3 +205,48 @@ export function calendarStyleSections(): Section[] {
     holidaysMoonSection(),
   ];
 }
+
+/**
+ * "Estilos Rápidos" -- a simplified, single-tab way to set the calendar's
+ * typography/colours all at once, for a user who doesn't want to open the 5
+ * detailed sections above. Each field here bulk-writes several of THOSE
+ * sections' own canonical keys at once (see CalendarThemeKeyPaths.ts's
+ * QUICK_STYLE_TARGETS for exactly which, and applyCalendarStyleChange() for
+ * how a consumer should route both kinds of change through one handler) --
+ * quick and detailed controls read/write the exact same CalendarTheme paths,
+ * so anything picked here can always be fine-tuned (or overridden)
+ * afterward in the matching detailed section, and vice-versa.
+ *
+ * Deliberately solid-colour-only (`type:'color'`, not the gradient-capable
+ * `color-picker` some of its targets use in their own detailed section) --
+ * a single quick pick fans out to several fields at once, some of which are
+ * plain solid-only colours elsewhere (e.g. the holiday text colour), so
+ * mixing in a gradient here has nowhere consistent to go. A plain hex still
+ * renders correctly on every gradient-capable target too (cssFromValue/
+ * normalizeValue treat a bare hex as a solid, same as always) -- so nothing
+ * is lost, just kept to solids for a fast/simple pass; reach for the
+ * detailed section directly for a gradient.
+ *
+ * NOT included in calendarStyleSections() above -- it's opt-in per consumer
+ * (CalendarTool.ts, MiniCalendarTool.ts add it explicitly) rather than
+ * automatically inherited by every surface that renders those 5 sections
+ * (e.g. VariablePanel.ts's miniCalendar binding), since only the standalone
+ * Calendar/Mini Calendar tools asked for this simplified tab.
+ */
+export function quickStyleSection(): Section {
+  return {
+    section: s('sectionQuickStyle'),
+    i18nKey: 'calendarStyle.sectionQuickStyle',
+    icon: 'auto_awesome',
+    fields: [
+      { type: 'color', key: 'quickColor',      label: s('quickColor'),      i18nKey: 'calendarStyle.quickColor' },
+      { type: 'color', key: 'quickBg',         label: s('quickBg'),         i18nKey: 'calendarStyle.quickBg' },
+      { type: 'color', key: 'quickTextColor',  label: s('quickTextColor'),  i18nKey: 'calendarStyle.quickTextColor' },
+      { type: 'divider', key: 'quickstyle-typography-divider', label: s('quickTypographyDivider'), i18nKey: 'calendarStyle.quickTypographyDivider', icon: 'text_fields' },
+      { type: 'font-select', key: 'quickFont', label: s('font'), i18nKey: 'calendarStyle.font' },
+      { type: 'slider', key: 'quickTitleFontSize',       label: s('quickTitleFontSize'),       i18nKey: 'calendarStyle.quickTitleFontSize',       min: 2, max: 30, step: 0.5 },
+      { type: 'slider', key: 'quickFontSize',            label: s('quickFontSize'),            i18nKey: 'calendarStyle.quickFontSize',            min: 2, max: 30, step: 0.5 },
+      { type: 'slider', key: 'quickHolidayMoonFontSize', label: s('quickHolidayMoonFontSize'), i18nKey: 'calendarStyle.quickHolidayMoonFontSize', min: 2, max: 30, step: 0.5 },
+    ],
+  };
+}

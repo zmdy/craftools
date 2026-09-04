@@ -2,8 +2,8 @@ import { BaseTool } from '../BaseTool';
 import { ToolRegistry } from '../../utils/ToolRegistry';
 import { PropertyRenderer } from '../../utils/PropertyRenderer';
 import { zIndexSection } from '../../utils/CommonSchema';
-import { calendarStyleSections } from '../../utils/CalendarStyleSchema';
-import { CALENDAR_THEME_KEY_PATHS, getThemePath, setThemePath } from '../../utils/CalendarThemeKeyPaths';
+import { calendarStyleSections, quickStyleSection } from '../../utils/CalendarStyleSchema';
+import { CALENDAR_THEME_KEY_PATHS, QUICK_STYLE_TARGETS, getThemePath, applyCalendarStyleChange, deriveQuickStyleState } from '../../utils/CalendarThemeKeyPaths';
 import { normalizeValue } from '../../utils/ColorPickerUI.js';
 import { CalendarRenderer, type CalendarTheme, type CalendarOptions } from '../../utils/CalendarRenderer';
 import { AppSettings } from '../../utils/AppSettings.js';
@@ -294,6 +294,12 @@ export class MiniCalendarTool extends BaseTool {
       const fromDefault = getThemePath(defaults, path);
       patch[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
     }
+    // Seeds the "Estilos Rápidos" tab's own pickers the same way, from
+    // whichever detailed field each one stands in for (see
+    // CalendarThemeKeyPaths.ts's QUICK_STYLE_TARGETS/deriveQuickStyleState()).
+    for (const [quickKey, quickValue] of Object.entries(deriveQuickStyleState(theme, defaults))) {
+      if (!(quickKey in existing)) patch[quickKey] = quickValue;
+    }
     if (Object.keys(patch).length)
       element.dataset.ctState = JSON.stringify({ ...existing, ...patch });
   }
@@ -319,6 +325,13 @@ export class MiniCalendarTool extends BaseTool {
           { type: 'toggle', key: 'weekStartSunday', label: 'Start week on Sunday (off = Monday)',  i18nKey: 'miniCalendarTool.weekStartSunday' },
         ],
       },
+      // Simplified single-tab typography/colour picker -- bulk-writes into
+      // the SAME CalendarTheme paths the 5 detailed sections below edit one
+      // at a time (see CalendarStyleSchema.ts's quickStyleSection() and
+      // CalendarThemeKeyPaths.ts's QUICK_STYLE_TARGETS). Not shared with
+      // VariablePanel.ts's miniCalendar config -- opt-in per consumer, see
+      // quickStyleSection()'s own doc comment.
+      quickStyleSection(),
       // Wired to CalendarTheme's real nested shape via THEME_KEY_PATHS below.
       // These 5 sections come from utils/CalendarStyleSchema.ts -- the same
       // canonical field definitions CalendarTool.ts and VariablePanel.ts's
@@ -391,6 +404,7 @@ export class MiniCalendarTool extends BaseTool {
     const e = element as HTMLElement & { _craftoolsMeta?: MiniCalendarMeta };
     if (e._craftoolsMeta) {
       const themePath = CALENDAR_THEME_KEY_PATHS[key];
+      const isQuickStyleKey = key in QUICK_STYLE_TARGETS;
       if (key === 'monthYear') {
         // "YYYY-MM" from the native <input type="month"> -- split back into
         // the two separate numbers _buildCard()/CalendarRenderer still want.
@@ -401,10 +415,33 @@ export class MiniCalendarTool extends BaseTool {
         if (!isNaN(m)) e._craftoolsMeta.month = m;
       } else if (key === 'displayMode' || key === 'weekStartSunday' || key === 'highlightDaySource' || key === 'calendarType' || key === 'singleMonthMode') {
         (e._craftoolsMeta as unknown as Record<string, unknown>)[key] = value;
-      } else if (themePath) {
+      } else if (themePath || isQuickStyleKey) {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
-        setThemePath(theme, themePath, value);
+        applyCalendarStyleChange(theme, key, value);
         (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
+        if (isQuickStyleKey) {
+          // A quick-style key fans out to SEVERAL canonical theme keys at
+          // once (QUICK_STYLE_TARGETS). The PropertyRenderer.applyChange()
+          // at the top of this method only ever wrote the ONE quick key
+          // itself into dataset.ctState -- every cascaded key's own field
+          // (e.g. Barra do Mês's "Fundo" swatch) would stay stuck showing
+          // its OLD value otherwise: _syncFromDOM()'s "only fill genuinely
+          // missing keys" guard never revisits an already-primed key, even
+          // though `theme` above (and therefore the canvas card
+          // _regenerate() rebuilds right after this) is already fully
+          // correct. Batch every cascaded key's new value into
+          // dataset.ctState in one write, then manually re-render this same
+          // panel right now -- same "a change here needs OTHER fields to
+          // refresh immediately" pattern VariableContentTool.ts's own
+          // _applyProperty() already uses for its 'useLettering' toggle.
+          // Safe to call re-entrantly (PropertyRenderer.render() is
+          // explicitly documented safe to call repeatedly).
+          const st = PropertyRenderer._readState(element);
+          for (const targetKey of QUICK_STYLE_TARGETS[key]) st[targetKey] = value;
+          element.dataset.ctState = JSON.stringify(st);
+          const panelBody = document.getElementById('panel-body');
+          if (panelBody) this.renderPropertiesPanel(panelBody, element);
+        }
       } else if (key.startsWith('highlight')) {
         const highlight = (e._craftoolsMeta.highlight as unknown as Record<string, unknown>) ?? {};
         const highlightKey = key.replace('highlight', '').replace(/^./, c => c.toLowerCase());
