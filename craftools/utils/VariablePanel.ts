@@ -7,8 +7,9 @@ import { renderColorPicker, normalizeValue } from './ColorPickerUI.js';
 import { PropertyRenderer } from './PropertyRenderer.js';
 import { parseVariableBinding } from './fields/variable-binding.field.js';
 import { CalendarRenderer, type CalendarTheme } from './CalendarRenderer.js';
-import { calendarStyleSections } from './CalendarStyleSchema.js';
-import { CALENDAR_THEME_KEY_PATHS, getThemePath, setThemePath } from './CalendarThemeKeyPaths.js';
+import { calendarStyleSections, quickStyleSection } from './CalendarStyleSchema.js';
+import { CALENDAR_THEME_KEY_PATHS, getThemePath, applyCalendarStyleChange, deriveQuickStyleState } from './CalendarThemeKeyPaths.js';
+import { PanelUI } from './PanelUI.js';
 import './VariablePanel_Translations.js';
 import '../tools/minicalendar/MiniCalendarTool_Translations.js';
 
@@ -1090,9 +1091,30 @@ export class VariablePanel {
                 </label>
             </div>
         `;
-        const specific = `
-            <div id="var-minical-style-sections"></div>
-            <div class="ct-field ct-field--block" style="margin-top:6px;">
+        // 'specific' is intentionally EMPTY: unlike every other type,
+        // miniCalendar's deeper settings (Estilos Rápidos + the 5 detailed
+        // CalendarStyleSchema sections + Destaque/Highlight) do NOT render
+        // inside "Configurações dos Dados" -- they're built as their OWN
+        // top-level sibling accordions by _renderMiniCalendarSiblingSections()
+        // below, called directly from bind()'s 'miniCalendar' case. An empty
+        // `specific` makes renderAccordionBody() correctly hide the (now
+        // pointless) "Configurações dos Dados" accordion for this type, same
+        // as it already does for sequenceNumber/link/emoji/image/etc.
+        return { general, specific: '' };
+    }
+
+    /**
+     * The "Destaque" (Highlight) accordion's body markup -- a single
+     * day-of-month highlighted independently of the sunday/holiday
+     * coloring, both ultimately feeding CalendarRenderer.ts's `highlight`
+     * option. Extracted out of _miniCalendarConfig() so
+     * _renderMiniCalendarSiblingSections() can wrap it in its OWN top-level
+     * accordion shell (PanelUI.accordion()) instead of nesting it inside
+     * "Configurações dos Dados".
+     */
+    private static _miniCalendarHighlightHtml(b: VariableBinding): string {
+        return `
+            <div class="ct-field ct-field--block">
                 <label class="ct-toggle-label" style="display:flex; align-items:center; cursor:pointer; gap:6px;">
                     <input type="checkbox" id="var-minical-highlight-enabled" class="ct-fi" style="display:none;" ${b.miniCalendarHighlightEnabled ? 'checked' : ''}>
                     <span class="ct-toggle-track" style="width:32px; height:18px; border-radius:99px; background:${b.miniCalendarHighlightEnabled ? 'var(--accent)' : 'var(--border)'}; position:relative; transition:background .15s; flex-shrink:0;">
@@ -1128,7 +1150,136 @@ export class VariablePanel {
                 </div>
             </div>
         `;
-        return { general, specific };
+    }
+
+    /**
+     * Builds miniCalendar's top-level sibling tabs -- "Estilos Rápidos" + the
+     * 5 detailed CalendarStyleSchema sections (each its own real
+     * PropertySchema section, via PropertyRenderer -- so they collapse
+     * independently exactly like any other top-level accordion, no nested-
+     * accordion CSS special-casing needed) plus "Destaque" (Highlight,
+     * hand-rolled HTML + manual binding, same as before) -- inserted as
+     * siblings of "Texto Variável"'s own top-level accordion, in that order,
+     * instead of bundled inside one nested "Configurações dos Dados".
+     *
+     * `container` is the variable-binding field's OWN wrapper (passed into
+     * bind()) -- walking up from it (`.closest('[data-ct-section]')`) finds
+     * "Texto Variável"'s real top-level accordion div, and its OWN parent is
+     * the panel's true root container (#panel-body for a real element panel).
+     * Marks every inserted node `data-ct-varsibling` so the NEXT call (a
+     * fresh selection, or switching the type away from and back to
+     * miniCalendar) can find and remove the previous batch before rebuilding
+     * -- these siblings live OUTSIDE `container`, so PropertyRenderer's own
+     * "wrapper already exists -> reuse it" logic never revisits them.
+     */
+    private static _renderMiniCalendarSiblingSections(container: HTMLElement, binding: VariableBinding, notify: () => void): void {
+        const varSectionEl = container.closest<HTMLElement>('[data-ct-section]');
+        const panelRoot = varSectionEl?.parentElement;
+        if (!varSectionEl || !panelRoot) return;
+
+        panelRoot.querySelectorAll('[data-ct-varsibling]').forEach(el => el.remove());
+
+        // ── Estilos Rápidos + 5 detailed sections ───────────────────────────
+        const styleWrap = document.createElement('div');
+        styleWrap.dataset.ctVarsibling = '1';
+        varSectionEl.insertAdjacentElement('afterend', styleWrap);
+
+        const defaults = CalendarRenderer.defaultTheme();
+        const buildCtState = (theme: Record<string, unknown>): Record<string, unknown> => {
+            const st: Record<string, unknown> = {};
+            for (const [flatKey, path] of Object.entries(CALENDAR_THEME_KEY_PATHS)) {
+                const fromTheme   = getThemePath(theme, path);
+                const fromDefault = getThemePath(defaults, path);
+                st[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
+            }
+            Object.assign(st, deriveQuickStyleState(theme, defaults));
+            return st;
+        };
+
+        const fakeEl = document.createElement('div');
+        const schema = [quickStyleSection(), ...calendarStyleSections()];
+        const styleOnChange = (key: string, value: unknown): void => {
+            const nextTheme: Record<string, unknown> = { ...(binding.miniCalendarTheme ?? {}) };
+            applyCalendarStyleChange(nextTheme, key, value);
+            binding.miniCalendarTheme = nextTheme as CalendarTheme;
+            // Re-derive the WHOLE ctState fresh from the just-mutated theme --
+            // a quick-style key fans out to SEVERAL canonical keys at once
+            // (QUICK_STYLE_TARGETS), so writing only `key` back would leave
+            // every OTHER cascaded field's own displayed value stale until
+            // the next full rebuild, even though `binding.miniCalendarTheme`
+            // itself (and therefore the live preview) is already fully
+            // correct. Same fix as CalendarTool.ts/MiniCalendarTool.ts's own
+            // onChange loops.
+            fakeEl.dataset.ctState = JSON.stringify(buildCtState(nextTheme));
+            PropertyRenderer.render(styleWrap, schema, fakeEl, styleOnChange);
+            notify();
+        };
+        fakeEl.dataset.ctState = JSON.stringify(buildCtState((binding.miniCalendarTheme ?? {}) as unknown as Record<string, unknown>));
+        PropertyRenderer.render(styleWrap, schema, fakeEl, styleOnChange);
+
+        // ── Destaque (Highlight) ─────────────────────────────────────────────
+        const highlightWrap = document.createElement('div');
+        highlightWrap.dataset.ctVarsibling = '1';
+        highlightWrap.innerHTML = PanelUI.accordion(
+            'var-minical-highlight-section', 'star',
+            I18n.t('miniCalendarTool.sectionHighlight'),
+            this._miniCalendarHighlightHtml(binding),
+        );
+        styleWrap.insertAdjacentElement('afterend', highlightWrap);
+        PanelUI.bindAccordions(panelRoot);
+        this._bindMiniCalendarHighlight(highlightWrap, binding, notify);
+    }
+
+    /**
+     * Standard toggle-switch visual update (track background + thumb
+     * translateX) -- same pattern fields/toggle.field.ts's own bind() uses,
+     * scoped to the specific <label> each checkbox lives in.
+     */
+    private static _paintToggle(input: HTMLInputElement): void {
+        const track = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-track');
+        const thumb = input.closest('label')?.querySelector<HTMLElement>('.ct-toggle-thumb');
+        if (track) track.style.background = input.checked ? 'var(--accent)' : 'var(--border)';
+        if (thumb) thumb.style.transform  = input.checked ? 'translateX(14px)' : 'translateX(0)';
+    }
+
+    /** Wires _miniCalendarHighlightHtml()'s controls -- unchanged in substance from before, just scoped to `wrap` (the new sibling accordion) instead of the old nested container. */
+    private static _bindMiniCalendarHighlight(wrap: HTMLElement, binding: VariableBinding, notify: () => void): void {
+        const hlEnabled       = wrap.querySelector<HTMLInputElement>('#var-minical-highlight-enabled');
+        const hlOptions       = wrap.querySelector<HTMLElement>('#var-minical-highlight-options');
+        const hlBgEl          = wrap.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
+        const hlTextEl        = wrap.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
+        const hlBorderWidth   = wrap.querySelector<HTMLInputElement>('#var-minical-highlight-borderwidth');
+        const hlBorderColorEl = wrap.querySelector<HTMLElement>('#var-minical-highlight-bordercolor-picker');
+        const hlRadius        = wrap.querySelector<HTMLInputElement>('#var-minical-highlight-radius');
+
+        if (hlEnabled) hlEnabled.onchange = () => {
+            binding.miniCalendarHighlightEnabled = hlEnabled.checked;
+            if (hlOptions) hlOptions.style.display = hlEnabled.checked ? 'block' : 'none';
+            this._paintToggle(hlEnabled);
+            notify();
+        };
+        this._bindPillGroup(wrap, 'var-minical-highlight-borderstyle-btn', v => { binding.miniCalendarHighlightBorderStyle = v; }, notify);
+        if (hlBorderWidth) hlBorderWidth.oninput = () => { binding.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
+        if (hlRadius)      hlRadius.oninput      = () => { binding.miniCalendarHighlightBorderRadius = parseInt(hlRadius.value, 10);     notify(); };
+
+        if (hlBgEl) {
+            renderColorPicker(hlBgEl, normalizeValue(binding.miniCalendarHighlightBg || '#f97316'), (next) => {
+                binding.miniCalendarHighlightBg = next.solid;
+                notify();
+            }, { allowGradient: false });
+        }
+        if (hlTextEl) {
+            renderColorPicker(hlTextEl, normalizeValue(binding.miniCalendarHighlightTextColor || '#ffffff'), (next) => {
+                binding.miniCalendarHighlightTextColor = next.solid;
+                notify();
+            }, { allowGradient: false });
+        }
+        if (hlBorderColorEl) {
+            renderColorPicker(hlBorderColorEl, normalizeValue(binding.miniCalendarHighlightBorderColor || '#f97316'), (next) => {
+                binding.miniCalendarHighlightBorderColor = next.solid;
+                notify();
+            }, { allowGradient: false });
+        }
     }
 
     /**
@@ -1329,6 +1480,18 @@ export class VariablePanel {
         };
 
         const bindConfigFields = (): void => {
+            // Sweep away any miniCalendar sibling tabs (Estilos Rápidos, the
+            // 5 detailed style sections, Destaque) left over from a PREVIOUS
+            // binding on THIS element -- they live outside `container` (see
+            // _renderMiniCalendarSiblingSections()'s own doc comment), so
+            // switching the type away from 'miniCalendar' would otherwise
+            // leave them orphaned forever (nothing else ever revisits them).
+            // Runs unconditionally, before the type-specific switch below --
+            // harmless/idempotent when the type IS still 'miniCalendar',
+            // since that case immediately rebuilds fresh ones anyway.
+            const varSectionEl = container.closest<HTMLElement>('[data-ct-section]');
+            varSectionEl?.parentElement?.querySelectorAll('[data-ct-varsibling]').forEach(el => el.remove());
+
             if (!binding?.type) return;
             const notify = (): void => { updatePreview(); onChange(binding); };
 
@@ -1933,69 +2096,16 @@ export class VariablePanel {
                         notify();
                     };
 
-                    // Full 5-tab style schema (card / month bar / days table /
-                    // day header / holidays+moon) -- same canonical
-                    // CalendarStyleSchema.ts sections CalendarTool.ts and
-                    // MiniCalendarTool.ts render, via the same synthetic
-                    // detached-element adapter (binding!.miniCalendarTheme is
-                    // a plain object, not a real DOM element).
-                    const styleSectionsWrap = container.querySelector<HTMLElement>('#var-minical-style-sections');
-                    if (styleSectionsWrap) {
-                        const theme = binding!.miniCalendarTheme ?? {};
-                        const defaults = CalendarRenderer.defaultTheme();
-                        const ctState: Record<string, unknown> = {};
-                        for (const [flatKey, path] of Object.entries(CALENDAR_THEME_KEY_PATHS)) {
-                            const fromTheme   = getThemePath(theme, path);
-                            const fromDefault = getThemePath(defaults, path);
-                            ctState[flatKey] = fromTheme !== undefined ? fromTheme : fromDefault;
-                        }
-                        const fakeEl = document.createElement('div');
-                        fakeEl.dataset.ctState = JSON.stringify(ctState);
-
-                        PropertyRenderer.render(styleSectionsWrap, calendarStyleSections(), fakeEl, (key, value) => {
-                            PropertyRenderer.applyChange(fakeEl, key, value);
-                            const path = CALENDAR_THEME_KEY_PATHS[key];
-                            if (path) {
-                                const nextTheme: Record<string, unknown> = { ...(binding!.miniCalendarTheme ?? {}) };
-                                setThemePath(nextTheme, path, value);
-                                binding!.miniCalendarTheme = nextTheme as CalendarTheme;
-                            }
-                            notify();
-                        });
-                    }
-
-                    // Highlight (single day-of-month, styled independently of
-                    // the sunday/holiday coloring) -- same option shape as
-                    // MiniCalendarTool.ts's own "Highlight" schema section,
-                    // both ultimately feed CalendarRenderer.ts's `highlight`
-                    // option. Was previously missing here entirely: the
-                    // miniCalendar variable format rendered through
-                    // CalendarRenderer just like the standalone Mini
-                    // Calendar tool, but had no UI (or binding fields) to
-                    // turn highlighting on.
-                    const hlEnabled     = container.querySelector<HTMLInputElement>('#var-minical-highlight-enabled');
-                    const hlOptions     = container.querySelector<HTMLElement>('#var-minical-highlight-options');
-                    // The "link highlight day to a date variable" toggle lives
-                    // at the TOP of the config (same position the generic
-                    // "Vincular a" row occupies for every other variable
-                    // type), not inside #var-minical-highlight-options --
-                    // it's a source for the highlight day, independent of
-                    // whether highlighting itself is currently switched on.
-                    const hlLinkToggle  = container.querySelector<HTMLInputElement>('#var-minical-highlight-linked-toggle');
-                    const hlLinkedWrap  = container.querySelector<HTMLElement>('#var-minical-highlight-linked-wrap');
-                    const hlLinked      = container.querySelector<HTMLSelectElement>('#var-minical-highlight-linked');
-                    const hlBgEl        = container.querySelector<HTMLElement>('#var-minical-highlight-bg-picker');
-                    const hlTextEl      = container.querySelector<HTMLElement>('#var-minical-highlight-text-picker');
-                    const hlBorderWidth = container.querySelector<HTMLInputElement>('#var-minical-highlight-borderwidth');
-                    const hlBorderColorEl = container.querySelector<HTMLElement>('#var-minical-highlight-bordercolor-picker');
-                    const hlRadius      = container.querySelector<HTMLInputElement>('#var-minical-highlight-radius');
-
-                    if (hlEnabled) hlEnabled.onchange = () => {
-                        binding!.miniCalendarHighlightEnabled = hlEnabled.checked;
-                        if (hlOptions) hlOptions.style.display = hlEnabled.checked ? 'block' : 'none';
-                        _paintToggle(hlEnabled);
-                        notify();
-                    };
+                    // "Link highlight day to a date variable" toggle -- lives
+                    // at the TOP of the config (part of `general`, same
+                    // position the generic "Vincular a" row occupies for
+                    // every other variable type), NOT inside the Destaque
+                    // sibling tab -- it's a source for the highlight day,
+                    // independent of whether highlighting itself is on, and
+                    // still renders inside "Texto Variável" (unchanged).
+                    const hlLinkToggle = container.querySelector<HTMLInputElement>('#var-minical-highlight-linked-toggle');
+                    const hlLinkedWrap = container.querySelector<HTMLElement>('#var-minical-highlight-linked-wrap');
+                    const hlLinked     = container.querySelector<HTMLSelectElement>('#var-minical-highlight-linked');
                     if (hlLinkToggle) hlLinkToggle.onchange = () => {
                         binding!.miniCalendarHighlightDaySource = hlLinkToggle.checked ? 'linked' : 'today';
                         if (hlLinkedWrap) hlLinkedWrap.style.display = hlLinkToggle.checked ? '' : 'none';
@@ -2003,32 +2113,13 @@ export class VariablePanel {
                         notify();
                     };
                     if (hlLinked) hlLinked.onchange = () => { binding!.miniCalendarHighlightLinkedTo = hlLinked.value; notify(); };
-                    // Border style renders as a pill group (see
-                    // _miniCalendarConfig's 'var-minical-highlight-borderstyle-btn'
-                    // group), not a <select> -- must bind via _bindPillGroup like
-                    // every other pill group, not a querySelector<HTMLSelectElement>.
-                    this._bindPillGroup(container, 'var-minical-highlight-borderstyle-btn', v => { binding!.miniCalendarHighlightBorderStyle = v; }, notify);
-                    if (hlBorderWidth) hlBorderWidth.oninput  = () => { binding!.miniCalendarHighlightBorderWidth = parseInt(hlBorderWidth.value, 10); notify(); };
-                    if (hlRadius)      hlRadius.oninput       = () => { binding!.miniCalendarHighlightBorderRadius = parseInt(hlRadius.value, 10);     notify(); };
 
-                    if (hlBgEl) {
-                        renderColorPicker(hlBgEl, normalizeValue(binding!.miniCalendarHighlightBg || '#f97316'), (next) => {
-                            binding!.miniCalendarHighlightBg = next.solid;
-                            notify();
-                        }, { allowGradient: false });
-                    }
-                    if (hlTextEl) {
-                        renderColorPicker(hlTextEl, normalizeValue(binding!.miniCalendarHighlightTextColor || '#ffffff'), (next) => {
-                            binding!.miniCalendarHighlightTextColor = next.solid;
-                            notify();
-                        }, { allowGradient: false });
-                    }
-                    if (hlBorderColorEl) {
-                        renderColorPicker(hlBorderColorEl, normalizeValue(binding!.miniCalendarHighlightBorderColor || '#f97316'), (next) => {
-                            binding!.miniCalendarHighlightBorderColor = next.solid;
-                            notify();
-                        }, { allowGradient: false });
-                    }
+                    // Estilos Rápidos + the 5 detailed CalendarStyleSchema
+                    // sections + Destaque (Highlight) -- built as their OWN
+                    // top-level sibling accordions (not nested inside
+                    // "Configurações dos Dados"), see this method's own doc
+                    // comment.
+                    VariablePanel._renderMiniCalendarSiblingSections(container, binding!, notify);
                     break;
                 }
                 case 'image': {
