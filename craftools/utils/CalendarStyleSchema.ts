@@ -101,6 +101,7 @@ export function cardStyleSection(): Section {
       ...radiusFields('card'),
       { type: 'divider', key: 'card-spacing-divider', label: s('sectionGap'), i18nKey: 'calendarStyle.sectionGap', icon: 'height' },
       { type: 'number', key: 'sectionGap', label: s('sectionGap'), i18nKey: 'calendarStyle.sectionGap', min: 0, max: 60, unit: 'px' },
+      { type: 'number', key: 'cardPadding', label: s('cardPadding'), i18nKey: 'calendarStyle.cardPadding', min: 0, max: 60, unit: 'px' },
     ],
   };
 }
@@ -228,10 +229,15 @@ export function calendarStyleSections(): Section[] {
  * detailed section directly for a gradient.
  *
  * NOT included in calendarStyleSections() above -- it's opt-in per consumer
- * (CalendarTool.ts, MiniCalendarTool.ts add it explicitly) rather than
- * automatically inherited by every surface that renders those 5 sections
- * (e.g. VariablePanel.ts's miniCalendar binding), since only the standalone
- * Calendar/Mini Calendar tools asked for this simplified tab.
+ * (CalendarTool.ts, MiniCalendarTool.ts, and VariablePanel.ts's miniCalendar
+ * binding each add it explicitly) rather than automatically inherited by
+ * every surface that renders those 5 sections, so a future consumer of just
+ * calendarStyleSections() doesn't silently gain a tab it never asked for.
+ *
+ * `cardPadding` also appears in cardStyleSection() above -- the ONE field
+ * here that isn't a multi-target quick pick, just the same single canonical
+ * key surfaced in both tabs for convenience (inner card padding is common
+ * enough to want quick access to, but has nowhere else to "fan out" into).
  */
 export function quickStyleSection(): Section {
   return {
@@ -242,6 +248,7 @@ export function quickStyleSection(): Section {
       { type: 'color', key: 'quickColor',      label: s('quickColor'),      i18nKey: 'calendarStyle.quickColor' },
       { type: 'color', key: 'quickBg',         label: s('quickBg'),         i18nKey: 'calendarStyle.quickBg' },
       { type: 'color', key: 'quickTextColor',  label: s('quickTextColor'),  i18nKey: 'calendarStyle.quickTextColor' },
+      { type: 'number', key: 'cardPadding', label: s('cardPadding'), i18nKey: 'calendarStyle.cardPadding', min: 0, max: 60, unit: 'px' },
       { type: 'divider', key: 'quickstyle-typography-divider', label: s('quickTypographyDivider'), i18nKey: 'calendarStyle.quickTypographyDivider', icon: 'text_fields' },
       { type: 'font-select', key: 'quickFont', label: s('font'), i18nKey: 'calendarStyle.font' },
       { type: 'slider', key: 'quickTitleFontSize',       label: s('quickTitleFontSize'),       i18nKey: 'calendarStyle.quickTitleFontSize',       min: 2, max: 30, step: 0.5 },

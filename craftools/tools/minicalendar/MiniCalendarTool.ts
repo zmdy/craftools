@@ -405,6 +405,12 @@ export class MiniCalendarTool extends BaseTool {
     if (e._craftoolsMeta) {
       const themePath = CALENDAR_THEME_KEY_PATHS[key];
       const isQuickStyleKey = key in QUICK_STYLE_TARGETS;
+      // 'cardPadding' is the one field surfaced in BOTH quickStyleSection()
+      // and cardStyleSection() as the exact same canonical key (not a
+      // fan-out -- see quickStyleSection()'s doc comment) -- editing it from
+      // either tab still needs the OTHER tab's own copy of the field to
+      // refresh, same as a quick key's cascade below.
+      const needsPanelRefresh = isQuickStyleKey || key === 'cardPadding';
       if (key === 'monthYear') {
         // "YYYY-MM" from the native <input type="month"> -- split back into
         // the two separate numbers _buildCard()/CalendarRenderer still want.
@@ -419,17 +425,19 @@ export class MiniCalendarTool extends BaseTool {
         const theme = (e._craftoolsMeta.theme ?? {}) as unknown as Record<string, unknown>;
         applyCalendarStyleChange(theme, key, value);
         (e._craftoolsMeta as unknown as Record<string, unknown>).theme = theme;
-        if (isQuickStyleKey) {
+        if (needsPanelRefresh) {
           // A quick-style key fans out to SEVERAL canonical theme keys at
-          // once (QUICK_STYLE_TARGETS). The PropertyRenderer.applyChange()
-          // at the top of this method only ever wrote the ONE quick key
-          // itself into dataset.ctState -- every cascaded key's own field
-          // (e.g. Barra do Mês's "Fundo" swatch) would stay stuck showing
-          // its OLD value otherwise: _syncFromDOM()'s "only fill genuinely
-          // missing keys" guard never revisits an already-primed key, even
-          // though `theme` above (and therefore the canvas card
+          // once (QUICK_STYLE_TARGETS); 'cardPadding' fans out to nothing but
+          // is duplicated verbatim in a second section (see above). Either
+          // way, the PropertyRenderer.applyChange() at the top of this method
+          // only ever wrote the ONE key the field itself reported into
+          // dataset.ctState -- every OTHER affected field (a cascaded key's
+          // own section, or cardPadding's other copy) would stay stuck
+          // showing its OLD value otherwise: _syncFromDOM()'s "only fill
+          // genuinely missing keys" guard never revisits an already-primed
+          // key, even though `theme` above (and therefore the canvas card
           // _regenerate() rebuilds right after this) is already fully
-          // correct. Batch every cascaded key's new value into
+          // correct. Batch every affected key's new value into
           // dataset.ctState in one write, then manually re-render this same
           // panel right now -- same "a change here needs OTHER fields to
           // refresh immediately" pattern VariableContentTool.ts's own
@@ -437,7 +445,7 @@ export class MiniCalendarTool extends BaseTool {
           // Safe to call re-entrantly (PropertyRenderer.render() is
           // explicitly documented safe to call repeatedly).
           const st = PropertyRenderer._readState(element);
-          for (const targetKey of QUICK_STYLE_TARGETS[key]) st[targetKey] = value;
+          for (const targetKey of QUICK_STYLE_TARGETS[key] ?? []) st[targetKey] = value;
           element.dataset.ctState = JSON.stringify(st);
           const panelBody = document.getElementById('panel-body');
           if (panelBody) this.renderPropertiesPanel(panelBody, element);

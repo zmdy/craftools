@@ -134,6 +134,16 @@ export interface CalendarTheme {
    * matches the original stacked-with-no-gap look.
    */
   sectionGap?: number;
+  /**
+   * Inner padding (px) of the card's own content, i.e. the space between
+   * `.cal-month-card`'s outer edge (border/background) and everything
+   * painted inside it (title bar, week header, days grid, ...) -- 0
+   * (default) matches the original edge-to-edge look. Uniform on all 4
+   * sides; unlike sectionGap (which only separates sections FROM each
+   * other), this also pulls the FIRST/LAST section in from the card's own
+   * outer edge.
+   */
+  cardPadding?: number;
 }
 
 export interface CalendarOptions {
@@ -206,6 +216,7 @@ export class CalendarRenderer {
           cardRadius: {},
           weekendBg: '',
           sectionGap: 0,
+          cardPadding: 0,
       };
   }
 
@@ -227,6 +238,7 @@ export class CalendarRenderer {
           cardRadius: { ...base.cardRadius, ...(theme.cardRadius || {}) },
           weekendBg: theme.weekendBg || base.weekendBg,
           sectionGap: typeof theme.sectionGap === 'number' ? theme.sectionGap : base.sectionGap,
+          cardPadding: typeof theme.cardPadding === 'number' ? theme.cardPadding : base.cardPadding,
       } as Required<CalendarTheme>;
   }
 
@@ -431,7 +443,7 @@ export class CalendarRenderer {
               </div>` : '';
 
       return `
-          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)}; gap:${t.sectionGap || 0}px; ${this._radiusCss(t.cardRadius)}">
+          <div class="cal-month-card" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; background:${this._esc(cellBgResolved)}; border:${t.cellBorder.width}px ${this._esc(t.cellBorder.style)} ${this._esc(t.cellBorder.color)}; gap:${t.sectionGap || 0}px; padding:${t.cardPadding || 0}px; ${this._radiusCss(t.cardRadius)}">
               ${titleBarHtml}
               ${weekHeaderHtml}
               ${daysGridHtml}

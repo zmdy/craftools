@@ -58,6 +58,7 @@ export const CALENDAR_THEME_KEY_PATHS: Record<string, readonly string[]> = {
   cardRadiusTL: ['cardRadius', 'tl'], cardRadiusTR: ['cardRadius', 'tr'],
   cardRadiusBR: ['cardRadius', 'br'], cardRadiusBL: ['cardRadius', 'bl'],
   sectionGap: ['sectionGap'],
+  cardPadding: ['cardPadding'],
 
   monthBarFont: ['titleBar', 'font'],
   monthBarFontSize: ['titleBar', 'fontSize'],

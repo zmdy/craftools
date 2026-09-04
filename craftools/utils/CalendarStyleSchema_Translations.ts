@@ -39,6 +39,7 @@ I18n.addTranslations('calendarStyle', {
         cornerBL: "Inferior esquerdo",
 
         sectionGap: "Espaçamento entre seções",
+        cardPadding: "Espaçamento interno do cartão",
 
         splitMonthYear: "Separar mês e ano nas extremidades",
 
@@ -91,6 +92,7 @@ I18n.addTranslations('calendarStyle', {
         cornerBL: "Bottom left",
 
         sectionGap: "Spacing between sections",
+        cardPadding: "Card inner padding",
 
         splitMonthYear: "Split month and year to opposite ends",
 
@@ -143,6 +145,7 @@ I18n.addTranslations('calendarStyle', {
         cornerBL: "Inferior izquierda",
 
         sectionGap: "Espaciado entre secciones",
+        cardPadding: "Espaciado interno de la tarjeta",
 
         splitMonthYear: "Separar mes y año en los extremos",
 
